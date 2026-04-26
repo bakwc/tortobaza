@@ -12,7 +12,7 @@ export function CategorySection({
 
   return (
     <section id={`category-${category.slug}`} className="scroll-mt-32 py-8">
-      <h2 className="font-display text-3xl font-semibold text-[var(--ink)] md:text-4xl">
+      <h2 className="text-[36px] font-bold leading-tight text-[#666] md:text-[44px]">
         {category.name}
       </h2>
       <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

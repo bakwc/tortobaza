@@ -24,7 +24,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-4 p-5">
-        <h3 className="font-display text-xl text-[var(--ink)]">{product.name}</h3>
+        <h3 className="text-[15px] font-normal text-[#666]">{product.name}</h3>
         <div className="mt-auto">
           <span className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[var(--price)] px-6 text-sm font-medium text-white tracking-wide">
             {formatAed(product.base_price)}

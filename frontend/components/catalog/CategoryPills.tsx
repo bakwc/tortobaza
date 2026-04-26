@@ -65,18 +65,19 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
     <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
       <div
         ref={containerRef}
-        className="scrollbar-none mx-auto flex max-w-[1400px] gap-3 overflow-x-auto"
+        className="scrollbar-none mx-auto flex max-w-[1400px] gap-2 overflow-x-auto"
       >
         {categories.map((c) => (
           <button
             key={c.slug}
             type="button"
             onClick={() => handleClick(c.slug)}
+            style={{ fontSize: 16, fontWeight: 500 }}
             className={cn(
-              "shrink-0 rounded-full px-5 py-2 text-sm font-semibold transition-colors",
+              "shrink-0 rounded-full px-4 py-2 transition-colors duration-200",
               active === c.slug
-                ? "bg-[#4a4a4a] text-white hover:bg-[#4a4a4a]"
-                : "bg-white text-[var(--ink)] hover:bg-[#a8a8a8] hover:text-white",
+                ? "bg-[var(--pill-active)] text-white"
+                : "bg-white text-[#666] hover:bg-[#9aa0ad] hover:text-white",
             )}
           >
             {c.name}

@@ -5,7 +5,7 @@
   --brand-foreground: #f9efe2;
   --cream: #f4ece3;
   --cream-soft: #faf5ee;
-  --ink: #3f3835;
+  --ink: #666666;
   --muted: #b6a89c;
   --line: #e8ddcd;
   --price: #6e6764;
@@ -13,6 +13,8 @@
   --foreground: var(--ink);
   --accent: #c0a16b;
   --danger: #b34a3a;
+  --pill-active: #4a4a4a;
+  --font-base: "Century Gothic", "URW Gothic", "Avant Garde", "Avenir Next", "Avenir", -apple-system, BlinkMacSystemFont, "Helvetica Neue", helvetica, "Segoe UI", arial, roboto, sans-serif;
 }
 
 @theme inline {
@@ -41,11 +43,11 @@ html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-montserrat), system-ui, sans-serif;
+  font-family: var(--font-base);
 }
 
 body {
-  font-feature-settings: "ss01", "cv11";
+  font-size: 15px;
 }
 
 .scrollbar-none::-webkit-scrollbar {
