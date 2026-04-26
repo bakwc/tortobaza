@@ -1,5 +1,76 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanThin.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanLight.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanLightItalic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanRegular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanItalic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanSemiBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanBoldItalic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanExtraBold.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Century Gothic";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("/fonts/century-gothic/CenturyGothicPaneuropeanBlack.ttf") format("truetype");
+}
+
 :root {
   --brand: #5c0f1a;
   --brand-foreground: #f9efe2;
@@ -14,7 +85,7 @@
   --accent: #c0a16b;
   --danger: #b34a3a;
   --pill-active: #4a4a4a;
-  --font-base: "Century Gothic", "URW Gothic", "Avant Garde", "Avenir Next", "Avenir", -apple-system, BlinkMacSystemFont, "Helvetica Neue", helvetica, "Segoe UI", arial, roboto, sans-serif;
+  --font-base: "Century Gothic", -apple-system, BlinkMacSystemFont, "Helvetica Neue", helvetica, "Segoe UI", arial, roboto, sans-serif;
 }
 
 @theme inline {

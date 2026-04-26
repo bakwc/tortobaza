@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Montserrat } from "next/font/google";
+import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Providers } from "./providers";
+
+const jost = Jost({
+  variable: "--font-jost",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+});
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -34,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} ${cormorant.variable} h-full antialiased`}
+      className={`${jost.variable} ${montserrat.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
         <Providers>

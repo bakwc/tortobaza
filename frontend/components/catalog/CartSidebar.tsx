@@ -22,9 +22,9 @@ export function CartSidebar() {
   const isEmpty = items.length === 0;
 
   return (
-    <aside className="sticky top-36 flex h-[calc(100vh-10rem)] flex-col rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+    <aside className="sticky top-36 flex h-[calc(100vh-10rem)] flex-col bg-white p-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-2xl">Your order</h2>
+        <h2 className="text-[22px] font-normal text-[#666]">Your order</h2>
         {!isEmpty ? (
           <button
             type="button"
