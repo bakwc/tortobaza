@@ -54,7 +54,7 @@ class CartTokenMiddleware(MiddlewareMixin):
 
 def get_or_create_cart(request) -> Cart:
     cart = request.cart
-    if cart is not None:
+    if cart:
         return cart
     cart = Cart.objects.create()
     request.cart = cart
