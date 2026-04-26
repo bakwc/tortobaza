@@ -62,7 +62,7 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
   };
 
   return (
-    <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 px-6 py-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
+    <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 px-6 pt-10 pb-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
       <div
         ref={containerRef}
         className="scrollbar-none mx-auto flex max-w-[1400px] gap-2 overflow-x-auto"
