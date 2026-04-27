@@ -11,6 +11,11 @@ SECRET_KEY = "django-insecure-hq&ty(g-ja^q32n15s^o_qf$sh+nb2lr4-ocff&194o@b&r5t^
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://dev.sweet-chill.ge",
+    "https://sweet-chill.ge",
+    "https://www.sweet-chill.ge",
+]
 
 
 INSTALLED_APPS = [
