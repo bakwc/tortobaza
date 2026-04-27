@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from catalog.models import (
@@ -16,11 +17,15 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField(use_url=True)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductImage
         fields = ["id", "image", "alt", "position"]
+
+    def get_image(self, obj: ProductImage) -> str:
+        url = obj.image.url
+        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -64,9 +69,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        request = self.context.get("request")
         url = first.image.url
-        return request.build_absolute_uri(url) if request else url
+        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

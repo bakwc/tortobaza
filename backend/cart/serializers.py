@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from django.conf import settings
 from rest_framework import serializers
 
 from cart.models import Cart, CartItem, CartItemOption
@@ -30,9 +31,8 @@ class CartItemProductSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        request = self.context.get("request")
         url = first.image.url
-        return request.build_absolute_uri(url) if request else url
+        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
 
 
 class CartItemReadSerializer(serializers.ModelSerializer):
