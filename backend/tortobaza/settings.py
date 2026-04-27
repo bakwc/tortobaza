@@ -16,6 +16,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://sweet-chill.ge",
     "https://www.sweet-chill.ge",
 ]
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 INSTALLED_APPS = [
