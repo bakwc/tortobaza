@@ -15,11 +15,8 @@ export function Footer() {
           />
         </Link>
         <nav className="flex flex-wrap items-center gap-6 text-sm tracking-wider uppercase md:justify-center">
-          <Link href="/" className="hover:opacity-80">
-            Online store
-          </Link>
           <Link href="/order" className="hover:opacity-80">
-            Order
+            Online store
           </Link>
           <Link href="/" className="hover:opacity-80">
             Contacts
