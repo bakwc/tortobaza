@@ -6,15 +6,15 @@ export const metadata = {
     "Pickup location, working hours and WhatsApp contact for Sweet & Chill.",
 };
 
-const ADDRESS_QUERY = "Al Quoz Industrial Area 1, Warehouse 9, Dubai";
+const ADDRESS_QUERY = "Fridon Khalvashi 2nd Deadlock, 5, Batumi";
 const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
   ADDRESS_QUERY,
 )}`;
 const MAP_EMBED = `https://maps.google.com/maps?q=${encodeURIComponent(
   ADDRESS_QUERY,
 )}&hl=en&z=12&output=embed`;
-const WHATSAPP_NUMBER = "+971 52 277 1384";
-const WHATSAPP_LINK = "https://wa.me/971522771384";
+const WHATSAPP_NUMBER = "+995 599 87 57 73";
+const WHATSAPP_LINK = "https://wa.me/995599875273";
 
 export default function ContactsPage() {
   return (
@@ -70,8 +70,8 @@ export default function ContactsPage() {
             icon={<MapPin strokeWidth={1.4} className="h-12 w-12" />}
             title="Address"
           >
-            <p>Al Quoz Industrial Area 1</p>
-            <p>Warehouse № 9</p>
+            <p>Fridon Khalvashi 2nd Deadlock, 5</p>
+            <p>Batumi, Georgia</p>
           </InfoColumn>
 
           <InfoColumn
