@@ -13,13 +13,6 @@ import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { TimeslotPicker } from "@/components/checkout/TimeslotPicker";
 import { PromoCodeBox } from "@/components/checkout/PromoCodeBox";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
   clearDraft,
   emptyDraft,
   loadDraft,
@@ -28,18 +21,12 @@ import {
 } from "@/lib/checkout-draft";
 import { rememberOrder } from "@/lib/order-history";
 import type { Order, PaymentMethod, PlaceOrderBody } from "@/lib/api/types";
-import { isMainSweetChillHost } from "@/lib/site-host";
 
-export function CheckoutConfirm({
-  blockOrderPlacement,
-}: {
-  blockOrderPlacement: boolean;
-}) {
+export function CheckoutConfirm() {
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notOpenDialogOpen, setNotOpenDialogOpen] = useState(false);
 
   useEffect(() => {
     const loaded = loadDraft();
@@ -105,15 +92,6 @@ export function CheckoutConfirm({
       setError("Please fill in your contact info and pick a timeslot.");
       return;
     }
-    const browserHost =
-      typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-    if (
-      blockOrderPlacement ||
-      isMainSweetChillHost(browserHost)
-    ) {
-      setNotOpenDialogOpen(true);
-      return;
-    }
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
       timeslot_id: draft.timeslot_id,
@@ -138,33 +116,8 @@ export function CheckoutConfirm({
   }
 
   return (
-    <>
-      <Dialog open={notOpenDialogOpen} onOpenChange={setNotOpenDialogOpen}>
-        <DialogContent className="max-w-lg gap-0 overflow-hidden border-0 p-0 sm:max-w-lg">
-          <div className="bg-gradient-to-br from-[var(--brand)]/15 via-white to-[var(--cream)] px-8 pb-2 pt-10">
-            <DialogTitle className="font-display text-center text-3xl leading-tight text-[var(--ink)]">
-              We are getting ready
-            </DialogTitle>
-          </div>
-          <div className="space-y-4 px-8 pb-8 pt-4">
-            <DialogDescription className="text-center text-base leading-relaxed text-[var(--ink)]/80">
-              Sweet & Chill is not accepting online orders on this site yet. Thank you for your
-              interest — we will open soon. For questions, use the contact options on the home
-              page.
-            </DialogDescription>
-            <Button
-              type="button"
-              size="lg"
-              className="mt-2 w-full"
-              onClick={() => setNotOpenDialogOpen(false)}
-            >
-              OK
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-6">
+    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="space-y-6">
         <Section title="Payment method">
           <div className="grid grid-cols-2 gap-3">
             <PaymentTile
@@ -258,17 +211,16 @@ export function CheckoutConfirm({
         </Section>
 
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-        </div>
-
-        <OrderSummary
-          fulfillmentType={draft.fulfillment_type}
-          promoCode={draft.promo_code}
-          onPlaceOrder={handlePlaceOrder}
-          isPlacing={placeOrder.isPending}
-          canPlace={canPlace}
-        />
       </div>
-    </>
+
+      <OrderSummary
+        fulfillmentType={draft.fulfillment_type}
+        promoCode={draft.promo_code}
+        onPlaceOrder={handlePlaceOrder}
+        isPlacing={placeOrder.isPending}
+        canPlace={canPlace}
+      />
+    </div>
   );
 }
 
