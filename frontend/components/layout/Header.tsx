@@ -6,10 +6,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 bg-[var(--brand)] text-[var(--brand-foreground)] shadow-sm">
       <div className="flex h-[76px] items-center justify-between pr-6">
-        <Link href="/" className="flex h-full items-center" aria-label="Tortobaza">
+        <Link href="/" className="flex h-full items-center" aria-label="Sweet & Chill">
           <Image
             src="/sweet_chill_logo_1.jpg"
-            alt="Tortobaza"
+            alt="Sweet & Chill"
             width={1955}
             height={544}
             priority

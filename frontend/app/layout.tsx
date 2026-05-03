@@ -26,8 +26,8 @@ const cormorant = Cormorant_Garamond({
 
 export const metadata: Metadata = {
   title: {
-    default: "Tortobaza — Cakes",
-    template: "%s | Tortobaza",
+    default: "Sweet & Chill — Cakes",
+    template: "%s | Sweet & Chill",
   },
   description: "Handcrafted cakes, desserts and custom orders.",
 };

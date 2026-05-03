@@ -8,7 +8,7 @@ export function Footer() {
         <Link href="/" className="flex items-center" aria-label="Tortobaza">
           <Image
             src="/sweet_chill_logo_1.jpg"
-            alt="Tortobaza"
+            alt="Sweet & Chill"
             width={1955}
             height={544}
             className="h-12 w-auto"
@@ -26,7 +26,7 @@ export function Footer() {
           </Link>
         </nav>
         <p className="text-xs opacity-70 md:text-right">
-          © {new Date().getFullYear()} Tortobaza
+          © {new Date().getFullYear()} Sweet & Chill
         </p>
       </div>
     </footer>
