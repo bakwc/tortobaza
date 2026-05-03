@@ -1,14 +1,14 @@
 export function formatAed(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
-  if (Number.isNaN(value)) return "AED 0.00";
-  return `AED ${value.toFixed(2)}`;
+  if (Number.isNaN(value)) return "GEL 0.00";
+  return `GEL ${value.toFixed(2)}`;
 }
 
 export function formatPriceDelta(delta: string | number): string {
   const value = typeof delta === "string" ? Number.parseFloat(delta) : delta;
   if (Number.isNaN(value) || value === 0) return "";
   const sign = value > 0 ? "+" : "−";
-  return `${sign}AED ${Math.abs(value).toFixed(2)}`;
+  return `${sign}GEL ${Math.abs(value).toFixed(2)}`;
 }
 
 export function formatTimeslot(start: string, end: string): string {
