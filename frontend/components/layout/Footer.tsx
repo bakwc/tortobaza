@@ -18,7 +18,7 @@ export function Footer() {
           <Link href="/order" className="hover:opacity-80">
             Online store
           </Link>
-          <Link href="/" className="hover:opacity-80">
+          <Link href="/contacts" className="hover:opacity-80">
             Contacts
           </Link>
         </nav>

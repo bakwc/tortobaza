@@ -27,7 +27,7 @@ export function Header() {
             <Link href="/order" className={navClass}>
               Online Store
             </Link>
-            <Link href="/" className={navClass}>
+            <Link href="/contacts" className={navClass}>
               Contacts
             </Link>
           </nav>
