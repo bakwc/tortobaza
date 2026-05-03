@@ -3,10 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { serverApi } from "@/lib/api/server-api";
-import {
-  hostFromHeader,
-  isMainSweetChillHost,
-} from "@/lib/site-host";
+import { isMainSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { CheckoutConfirm } from "./CheckoutConfirm";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +17,7 @@ export default async function CheckoutConfirmPage() {
   }
 
   const headerStore = await headers();
-  const host = hostFromHeader(headerStore.get("host"));
+  const host = publicHostFromRequest((name) => headerStore.get(name));
   const blockOrderPlacement = isMainSweetChillHost(host);
 
   return (

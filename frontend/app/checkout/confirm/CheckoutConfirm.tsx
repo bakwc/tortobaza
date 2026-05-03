@@ -28,6 +28,7 @@ import {
 } from "@/lib/checkout-draft";
 import { rememberOrder } from "@/lib/order-history";
 import type { Order, PaymentMethod, PlaceOrderBody } from "@/lib/api/types";
+import { isMainSweetChillHost } from "@/lib/site-host";
 
 export function CheckoutConfirm({
   blockOrderPlacement,
@@ -104,7 +105,12 @@ export function CheckoutConfirm({
       setError("Please fill in your contact info and pick a timeslot.");
       return;
     }
-    if (blockOrderPlacement) {
+    const browserHost =
+      typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+    if (
+      blockOrderPlacement ||
+      isMainSweetChillHost(browserHost)
+    ) {
       setNotOpenDialogOpen(true);
       return;
     }
@@ -255,11 +261,11 @@ export function CheckoutConfirm({
         </div>
 
         <OrderSummary
-        fulfillmentType={draft.fulfillment_type}
-        promoCode={draft.promo_code}
-        onPlaceOrder={handlePlaceOrder}
-        isPlacing={placeOrder.isPending}
-        canPlace={canPlace}
+          fulfillmentType={draft.fulfillment_type}
+          promoCode={draft.promo_code}
+          onPlaceOrder={handlePlaceOrder}
+          isPlacing={placeOrder.isPending}
+          canPlace={canPlace}
         />
       </div>
     </>

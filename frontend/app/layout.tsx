@@ -5,10 +5,7 @@ import "./globals.css";
 import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import {
-  hostFromHeader,
-  isDevSweetChillHost,
-} from "@/lib/site-host";
+import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { Providers } from "./providers";
 
 const jost = Jost({
@@ -44,7 +41,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const headerStore = await headers();
-  const host = hostFromHeader(headerStore.get("host"));
+  const host = publicHostFromRequest((name) => headerStore.get(name));
   const showDevBanner = isDevSweetChillHost(host);
 
   return (
