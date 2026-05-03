@@ -5,16 +5,23 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from cart.middleware import get_or_create_cart
-from cart.models import CartItem, CartItemOption
+from cart.models import Cart, CartItem, CartItemOption
 from cart.serializers import (
     CartItemCreateSerializer,
-    CartItemReadSerializer,
     CartItemUpdateSerializer,
     CartReadSerializer,
 )
 
 
 def _serialize_cart(cart, request) -> dict:
+    cart = (
+        Cart.objects
+        .prefetch_related(
+            "items__product__images",
+            "items__options__option__group",
+        )
+        .get(pk=cart.pk)
+    )
     return CartReadSerializer(cart, context={"request": request}).data
 
 
@@ -58,15 +65,8 @@ class CartItemListView(APIView):
             )
             cart.save()
 
-        item.refresh_from_db()
-        item = (
-            CartItem.objects
-            .select_related("product")
-            .prefetch_related("options__option__group", "product__images")
-            .get(pk=item.pk)
-        )
         response = Response(
-            CartItemReadSerializer(item, context={"request": request}).data,
+            _serialize_cart(cart, request),
             status=status.HTTP_201_CREATED,
         )
         _attach_token_cookie(response, request)
@@ -99,13 +99,7 @@ class CartItemDetailView(APIView):
                 )
             item.cart.save()
 
-        item = (
-            CartItem.objects
-            .select_related("product")
-            .prefetch_related("options__option__group", "product__images")
-            .get(pk=item.pk)
-        )
-        return Response(CartItemReadSerializer(item, context={"request": request}).data)
+        return Response(_serialize_cart(item.cart, request))
 
     def delete(self, request, item_id: int):
         item = self._get_item(request, item_id)
