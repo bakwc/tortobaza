@@ -6,13 +6,13 @@ export const metadata = {
     "Pickup location, working hours and WhatsApp contact for Sweet & Chill.",
 };
 
-const ADDRESS_QUERY = "Fridon Khalvashi 2nd Deadlock, 5, Batumi";
+const MAP_COORDS = "41.621184,41.614267";
 const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-  ADDRESS_QUERY,
+  MAP_COORDS,
 )}`;
 const MAP_EMBED = `https://maps.google.com/maps?q=${encodeURIComponent(
-  ADDRESS_QUERY,
-)}&hl=en&z=12&output=embed`;
+  MAP_COORDS,
+)}&hl=en&z=15&output=embed`;
 const WHATSAPP_NUMBER = "+995 599 87 57 73";
 const WHATSAPP_LINK = "https://wa.me/995599875273";
 
