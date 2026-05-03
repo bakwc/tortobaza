@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import {
   useCart,
@@ -9,17 +10,36 @@ import {
   useUpdateCartItem,
 } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatAed } from "@/lib/format";
+import { isMainSweetChillHost } from "@/lib/site-host";
 import type { CartItem } from "@/lib/api/types";
 
 export function CartSidebar() {
+  const router = useRouter();
   const { data: cart } = useCart();
   const clear = useClearCart();
   const remove = useRemoveCartItem();
   const update = useUpdateCartItem();
+  const [notOpenDialogOpen, setNotOpenDialogOpen] = useState(false);
 
   const items = cart?.items ?? [];
   const isEmpty = items.length === 0;
+
+  const handleConfirm = () => {
+    const host =
+      typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+    if (isMainSweetChillHost(host)) {
+      setNotOpenDialogOpen(true);
+      return;
+    }
+    router.push("/checkout");
+  };
 
   return (
     <aside className="sticky top-36 flex h-[calc(100vh-10rem)] flex-col bg-white p-6">
@@ -71,11 +91,41 @@ export function CartSidebar() {
             <span className="text-[var(--ink)]/60">Subtotal</span>
             <span className="font-medium">{formatAed(cart?.subtotal ?? "0")}</span>
           </div>
-          <Button asChild size="lg" className="mt-4 w-full">
-            <Link href="/checkout">Confirm</Link>
+          <Button
+            type="button"
+            size="lg"
+            className="mt-4 w-full"
+            onClick={handleConfirm}
+          >
+            Confirm
           </Button>
         </div>
       ) : null}
+
+      <Dialog open={notOpenDialogOpen} onOpenChange={setNotOpenDialogOpen}>
+        <DialogContent className="max-w-lg gap-0 overflow-hidden border-0 p-0 sm:max-w-lg">
+          <div className="bg-gradient-to-br from-[var(--brand)]/15 via-white to-[var(--cream)] px-8 pb-2 pt-10">
+            <DialogTitle className="font-display text-center text-3xl leading-tight text-[var(--ink)]">
+              We are getting ready
+            </DialogTitle>
+          </div>
+          <div className="space-y-4 px-8 pb-8 pt-4">
+            <DialogDescription className="text-center text-base leading-relaxed text-[var(--ink)]/80">
+              Sweet & Chill is not accepting online orders on this site yet. Thank you for your
+              interest — we will open soon. For questions, use the contact options on the home
+              page.
+            </DialogDescription>
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={() => setNotOpenDialogOpen(false)}
+            >
+              OK
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
