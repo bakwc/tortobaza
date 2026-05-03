@@ -20,7 +20,7 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
         <Input
           value={value.street}
           onChange={(e) => update("street", e.target.value)}
-          placeholder="Sheikh Zayed Road"
+          placeholder=""
         />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -28,14 +28,14 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
           <Input
             value={value.building}
             onChange={(e) => update("building", e.target.value)}
-            placeholder="Burj Khalifa"
+            placeholder=""
           />
         </Field>
         <Field label="Apartment / unit" error={errors?.apartment}>
           <Input
             value={value.apartment}
             onChange={(e) => update("apartment", e.target.value)}
-            placeholder="1205"
+            placeholder=""
           />
         </Field>
       </div>
@@ -44,7 +44,7 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
           <Input
             value={value.city}
             onChange={(e) => update("city", e.target.value)}
-            placeholder="Dubai"
+            placeholder="Batumi"
           />
         </Field>
         <Field label="Postal code" error={errors?.postal_code}>

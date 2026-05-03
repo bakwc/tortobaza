@@ -137,7 +137,7 @@ export function CheckoutConfirm() {
 
         <Section
           title={draft.fulfillment_type === "delivery" ? "Delivery time" : "Pickup time"}
-          subtitle="Time slots are shown in the UAE time zone."
+          subtitle="Time slots are shown in the Georgia time zone."
         >
           <TimeslotPicker
             type={draft.fulfillment_type}

@@ -18,7 +18,7 @@ const emptyAddress: OrderAddress = {
   street: "",
   building: "",
   apartment: "",
-  city: "Dubai",
+  city: "Batumi",
   postal_code: "",
   notes: "",
 };
@@ -84,7 +84,7 @@ export function CheckoutStepOne() {
         <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
           <h2 className="font-display text-2xl">Delivery address</h2>
           <p className="mt-1 text-sm text-[var(--ink)]/60">
-            We deliver across Dubai. For other emirates please contact us.
+            We deliver across Batumi. For other cities please contact us.
           </p>
           <div className="mt-4">
             <AddressForm
