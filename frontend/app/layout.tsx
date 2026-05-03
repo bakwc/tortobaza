@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import "./globals.css";
+import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import {
+  hostFromHeader,
+  isDevSweetChillHost,
+} from "@/lib/site-host";
 import { Providers } from "./providers";
 
 const jost = Jost({
@@ -32,11 +38,15 @@ export const metadata: Metadata = {
   description: "Handcrafted cakes, desserts and custom orders.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerStore = await headers();
+  const host = hostFromHeader(headerStore.get("host"));
+  const showDevBanner = isDevSweetChillHost(host);
+
   return (
     <html
       lang="en"
@@ -44,6 +54,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
         <Providers>
+          {showDevBanner ? <DevBanner /> : null}
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

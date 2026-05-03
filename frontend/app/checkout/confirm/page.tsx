@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { serverApi } from "@/lib/api/server-api";
+import {
+  hostFromHeader,
+  isMainSweetChillHost,
+} from "@/lib/site-host";
 import { CheckoutConfirm } from "./CheckoutConfirm";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +19,10 @@ export default async function CheckoutConfirmPage() {
     redirect("/order");
   }
 
+  const headerStore = await headers();
+  const host = hostFromHeader(headerStore.get("host"));
+  const blockOrderPlacement = isMainSweetChillHost(host);
+
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-8">
       <Link
@@ -24,7 +33,7 @@ export default async function CheckoutConfirmPage() {
         Back
       </Link>
       <h1 className="mt-4 font-display text-4xl md:text-5xl">Confirm your order</h1>
-      <CheckoutConfirm />
+      <CheckoutConfirm blockOrderPlacement={blockOrderPlacement} />
     </div>
   );
 }
