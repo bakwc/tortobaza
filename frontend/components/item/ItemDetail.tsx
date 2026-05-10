@@ -87,7 +87,7 @@ export function ItemDetail({
         variant === "modal" && "max-h-[calc(100vh-1.5rem)]",
       )}
     >
-      <div className="bg-[var(--cream)] p-4 md:p-6">
+      <div className="bg-white p-4 md:p-6">
         <div className="flex h-full flex-col gap-3">
           <div className="aspect-square w-full overflow-hidden rounded-3xl bg-white">
             {heroImage ? (
