@@ -14,12 +14,15 @@ export function Footer() {
             className="h-12 w-auto"
           />
         </Link>
-        <nav className="flex flex-wrap items-center gap-6 text-sm tracking-wider uppercase md:justify-center">
-          <Link href="/order" className="hover:opacity-80">
-            Online store
+        <nav className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm tracking-wider uppercase md:justify-center">
+          <Link href="/delivery-and-refunds" className="hover:opacity-80">
+            Delivery &amp; refunds
           </Link>
-          <Link href="/contacts" className="hover:opacity-80">
-            Contacts
+          <Link href="/privacy" className="hover:opacity-80">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:opacity-80">
+            Terms
           </Link>
         </nav>
         <p className="text-xs opacity-70 md:text-right">

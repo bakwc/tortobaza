@@ -1,9 +1,10 @@
-import { Clock, MapPin } from "lucide-react";
+import { Clock, Mail, MapPin, Phone } from "lucide-react";
+import { SITE_INFO } from "@/lib/site-info";
 
 export const metadata = {
   title: "Contacts",
   description:
-    "Pickup location, working hours and WhatsApp contact for Sweet & Chill.",
+    "Pickup location, working hours and contact for Sweet & Chill.",
 };
 
 const MAP_COORDS = "41.621184,41.614267";
@@ -13,8 +14,6 @@ const MAP_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURICom
 const MAP_EMBED = `https://maps.google.com/maps?q=${encodeURIComponent(
   MAP_COORDS,
 )}&hl=en&z=15&output=embed`;
-const WHATSAPP_NUMBER = "+995 599 87 57 73";
-const WHATSAPP_LINK = "https://wa.me/995599875273";
 
 export default function ContactsPage() {
   return (
@@ -53,7 +52,7 @@ export default function ContactsPage() {
       </section>
 
       <section className="mx-auto max-w-[1200px] px-6 py-14 md:py-20">
-        <div className="grid gap-12 text-center md:grid-cols-3 md:gap-8">
+        <div className="grid gap-12 text-center sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:grid-cols-5">
           <InfoColumn
             icon={<Clock strokeWidth={1.4} className="h-12 w-12" />}
             title="Monday – Sunday"
@@ -70,8 +69,28 @@ export default function ContactsPage() {
             icon={<MapPin strokeWidth={1.4} className="h-12 w-12" />}
             title="Address"
           >
-            <p>Fridon Khalvashi 2nd Deadlock, 5</p>
-            <p>Batumi, Georgia</p>
+            <p>{SITE_INFO.address.line1}</p>
+            <p>
+              {SITE_INFO.address.city}, {SITE_INFO.address.country}
+            </p>
+          </InfoColumn>
+
+          <InfoColumn
+            icon={<Phone strokeWidth={1.4} className="h-12 w-12" />}
+            title="Phone"
+          >
+            <a href={SITE_INFO.phoneHref} className="hover:opacity-80">
+              {SITE_INFO.phone}
+            </a>
+          </InfoColumn>
+
+          <InfoColumn
+            icon={<Mail strokeWidth={1.4} className="h-12 w-12" />}
+            title="Email"
+          >
+            <a href={`mailto:${SITE_INFO.email}`} className="hover:opacity-80">
+              {SITE_INFO.email}
+            </a>
           </InfoColumn>
 
           <InfoColumn
@@ -79,12 +98,12 @@ export default function ContactsPage() {
             title="Whats App"
           >
             <a
-              href={WHATSAPP_LINK}
+              href={SITE_INFO.whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80"
             >
-              {WHATSAPP_NUMBER}
+              {SITE_INFO.phone}
             </a>
           </InfoColumn>
         </div>

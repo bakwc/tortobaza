@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { CreditCard, Wallet } from "lucide-react";
@@ -209,6 +210,18 @@ export function CheckoutConfirm() {
             onApplied={(code) => update({ promo_code: code })}
           />
         </Section>
+
+        <p className="text-sm leading-relaxed text-[var(--ink)]/70">
+          By placing the order you agree to our{" "}
+          <Link href="/terms" className="text-[var(--brand)] underline underline-offset-2">
+            Terms &amp; Conditions
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="text-[var(--brand)] underline underline-offset-2">
+            Privacy Policy
+          </Link>
+          .
+        </p>
 
         {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       </div>

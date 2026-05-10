@@ -30,6 +30,9 @@ export function Header() {
             <Link href="/contacts" className={navClass}>
               Contacts
             </Link>
+            <Link href="/about" className={navClass}>
+              About
+            </Link>
           </nav>
         </div>
         <button
