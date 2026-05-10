@@ -146,9 +146,13 @@ function CartLine({
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[var(--cream)]">
         {item.product.primary_image ? (
           <img
-            src={item.product.primary_image}
+            src={item.product.primary_image.src}
+            srcSet={item.product.primary_image.srcset}
+            sizes="80px"
             alt={item.product.name}
             className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
         ) : null}
       </div>

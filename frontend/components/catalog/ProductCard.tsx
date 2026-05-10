@@ -12,10 +12,13 @@ export function ProductCard({ product }: { product: ProductListItem }) {
       <div className="aspect-square w-full overflow-hidden bg-[var(--cream)]">
         {product.primary_image ? (
           <img
-            src={product.primary_image}
+            src={product.primary_image.src}
+            srcSet={product.primary_image.srcset}
+            sizes="(max-width: 767px) 50vw, 33vw"
             alt={product.name}
             className="h-full w-full object-cover"
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[var(--muted-2)]">

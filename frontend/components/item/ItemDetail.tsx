@@ -92,9 +92,12 @@ export function ItemDetail({
           <div className="aspect-square w-full overflow-hidden rounded-3xl bg-white">
             {heroImage ? (
               <img
-                src={heroImage}
+                src={heroImage.src}
+                srcSet={heroImage.srcset}
+                sizes="(min-width: 768px) min(50vw, 560px), 100vw"
                 alt={product.name}
                 className="h-full w-full object-cover"
+                decoding="async"
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[var(--muted-2)]">
@@ -117,9 +120,13 @@ export function ItemDetail({
                   )}
                 >
                   <img
-                    src={img.image}
+                    src={img.image.src}
+                    srcSet={img.image.srcset}
+                    sizes="80px"
                     alt={img.alt ?? `${product.name} ${i + 1}`}
                     className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
               ))}

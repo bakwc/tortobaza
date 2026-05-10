@@ -1,10 +1,10 @@
 from collections import defaultdict
 
-from django.conf import settings
 from rest_framework import serializers
 
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Option, Product, ProductOptionGroup
+from catalog.responsive_urls import list_primary_image
 
 
 class CartItemOptionReadSerializer(serializers.ModelSerializer):
@@ -31,8 +31,7 @@ class CartItemProductSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        url = first.image.url
-        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
+        return list_primary_image(first.image.name)
 
 
 class CartItemReadSerializer(serializers.ModelSerializer):

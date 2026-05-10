@@ -1,4 +1,3 @@
-from django.conf import settings
 from rest_framework import serializers
 
 from catalog.models import (
@@ -8,6 +7,7 @@ from catalog.models import (
     ProductImage,
     ProductOptionGroup,
 )
+from catalog.responsive_urls import detail_image, list_primary_image
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -23,9 +23,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = ["id", "image", "alt", "position"]
 
-    def get_image(self, obj: ProductImage) -> str:
-        url = obj.image.url
-        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
+    def get_image(self, obj: ProductImage) -> dict[str, str]:
+        return detail_image(obj.image.name)
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -69,8 +68,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        url = first.image.url
-        return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/{url.lstrip('/')}"
+        return list_primary_image(first.image.name)
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

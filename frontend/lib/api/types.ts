@@ -7,9 +7,14 @@ export const CategorySchema = z.object({
   position: z.number(),
 });
 
+export const ResponsiveImageSchema = z.object({
+  src: z.string(),
+  srcset: z.string(),
+});
+
 export const ProductImageSchema = z.object({
   id: z.number(),
-  image: z.string(),
+  image: ResponsiveImageSchema,
   alt: z.string().nullable().optional(),
   position: z.number(),
 });
@@ -37,7 +42,7 @@ export const ProductListItemSchema = z.object({
   slug: z.string(),
   name: z.string(),
   base_price: z.string(),
-  primary_image: z.string().nullable(),
+  primary_image: ResponsiveImageSchema.nullable(),
   category: CategorySchema,
 });
 
@@ -74,7 +79,7 @@ export const CartItemSchema = z.object({
     slug: z.string(),
     name: z.string(),
     base_price: z.string(),
-    primary_image: z.string().nullable(),
+    primary_image: ResponsiveImageSchema.nullable(),
   }),
   quantity: z.number(),
   comment: z.string(),
