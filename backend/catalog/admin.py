@@ -13,7 +13,7 @@ from catalog.models import (
 class OptionInline(admin.TabularInline):
     model = Option
     extra = 1
-    fields = ["name", "price_delta", "position", "is_active"]
+    fields = ["name", "image", "price_delta", "position", "is_active"]
 
 
 @admin.register(OptionGroup)

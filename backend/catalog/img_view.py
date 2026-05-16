@@ -23,13 +23,18 @@ def clear_image_cache(relative_path: str) -> None:
 
 
 def _safe_source_path(relative_path: str) -> Path:
-    if not relative_path.startswith("products/") or ".." in relative_path:
+    if ".." in relative_path:
+        raise Http404()
+    media_root = Path(settings.MEDIA_ROOT).resolve()
+    if relative_path.startswith("products/"):
+        root = media_root / "products"
+    elif relative_path.startswith("options/"):
+        root = media_root / "options"
+    else:
         raise Http404()
     raw = Path(settings.MEDIA_ROOT) / relative_path
     resolved = raw.resolve()
-    media_root = Path(settings.MEDIA_ROOT).resolve()
-    products_root = media_root / "products"
-    if not resolved.is_relative_to(products_root):
+    if not resolved.is_relative_to(root):
         raise Http404()
     return resolved
 

@@ -51,9 +51,13 @@ export function OptionGroup({
                 {option.image ? (
                   <span className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--cream)]">
                     <img
-                      src={option.image}
+                      src={option.image.src}
+                      srcSet={option.image.srcset}
+                      sizes="48px"
                       alt={option.name}
                       className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </span>
                 ) : (

@@ -24,7 +24,7 @@ export const OptionSchema = z.object({
   name: z.string(),
   price_delta: z.string(),
   position: z.number(),
-  image: z.string().nullable().optional(),
+  image: ResponsiveImageSchema.nullable().optional(),
 });
 
 export const OptionGroupSchema = z.object({

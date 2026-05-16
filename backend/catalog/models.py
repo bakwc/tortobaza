@@ -38,6 +38,7 @@ class OptionGroup(models.Model):
 class Option(models.Model):
     group = models.ForeignKey(OptionGroup, related_name="options", on_delete=models.CASCADE)
     name = models.CharField(max_length=120)
+    image = models.ImageField(upload_to="options/", blank=True)
     price_delta = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)

@@ -30,10 +30,17 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 class OptionSerializer(serializers.ModelSerializer):
     price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Option
-        fields = ["id", "name", "price_delta", "position"]
+        fields = ["id", "name", "image", "price_delta", "position"]
+
+    def get_image(self, obj: Option):
+        if not obj.image.name:
+            return None
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return list_primary_image(obj.image.name, public_base_url)
 
 
 class ProductOptionGroupSerializer(serializers.ModelSerializer):
@@ -53,7 +60,7 @@ class ProductOptionGroupSerializer(serializers.ModelSerializer):
 
     def get_options(self, obj: ProductOptionGroup):
         active = obj.option_group.options.filter(is_active=True)
-        return OptionSerializer(active, many=True).data
+        return OptionSerializer(active, many=True, context=self.context).data
 
 
 class ProductListSerializer(serializers.ModelSerializer):
