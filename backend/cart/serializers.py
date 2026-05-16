@@ -31,7 +31,8 @@ class CartItemProductSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        return list_primary_image(first.image.name)
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return list_primary_image(first.image.name, public_base_url)
 
 
 class CartItemReadSerializer(serializers.ModelSerializer):

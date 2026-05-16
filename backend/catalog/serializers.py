@@ -24,7 +24,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
         fields = ["id", "image", "alt", "position"]
 
     def get_image(self, obj: ProductImage) -> dict[str, str]:
-        return detail_image(obj.image.name)
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return detail_image(obj.image.name, public_base_url)
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -68,7 +69,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         first = obj.images.order_by("position", "id").first()
         if first is None:
             return None
-        return list_primary_image(first.image.name)
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return list_primary_image(first.image.name, public_base_url)
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

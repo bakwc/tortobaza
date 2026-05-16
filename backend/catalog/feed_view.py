@@ -3,6 +3,7 @@ from xml.etree import ElementTree as ET
 from django.conf import settings
 from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 
 from catalog.models import Product
 
@@ -14,9 +15,9 @@ DESCR_LIMIT = 5000
 ADDTL_IMAGE_LIMIT = 10
 
 
-def _image_link(rel: str) -> str:
+def _image_link(rel: str, public_base_url: str) -> str:
     rel_clean = rel.lstrip("/")
-    base = f"{settings.PUBLIC_BASE_URL.rstrip('/')}/api/img/{rel_clean}"
+    base = f"{public_base_url.rstrip('/')}/api/img/{rel_clean}"
     return f"{base}?w=1200"
 
 
@@ -28,12 +29,13 @@ def _feed_description(product: Product) -> str:
 
 
 @cache_page(60 * 30)
+@vary_on_headers("Host")
 def meta_product_feed(request) -> HttpResponse:
     rss = ET.Element("rss")
     rss.set("version", "2.0")
 
     channel = ET.SubElement(rss, "channel")
-    base_url = settings.PUBLIC_BASE_URL.rstrip("/")
+    base_url = request.build_absolute_uri("/").rstrip("/")
 
     ET.SubElement(channel, "title").text = settings.META_FEED_BRAND
     ET.SubElement(channel, "link").text = base_url
@@ -55,10 +57,10 @@ def meta_product_feed(request) -> HttpResponse:
         ET.SubElement(item, f"{G}title").text = product.name
         ET.SubElement(item, f"{G}description").text = _feed_description(product)
         ET.SubElement(item, f"{G}link").text = f"{base_url}/order/{product.slug}"
-        ET.SubElement(item, f"{G}image_link").text = _image_link(images[0].image.name)
+        ET.SubElement(item, f"{G}image_link").text = _image_link(images[0].image.name, base_url)
 
         for img in images[1 : 1 + ADDTL_IMAGE_LIMIT]:
-            ET.SubElement(item, f"{G}additional_image_link").text = _image_link(img.image.name)
+            ET.SubElement(item, f"{G}additional_image_link").text = _image_link(img.image.name, base_url)
 
         ET.SubElement(item, f"{G}availability").text = "in stock"
         ET.SubElement(item, f"{G}condition").text = "new"
