@@ -36,6 +36,13 @@ export async function serverFetch<T>(
     finalHeaders.set("Cookie", `cart_token=${cartToken}`);
   }
 
+  const incoming = await headers();
+  const exposedHost = incoming.get("x-forwarded-host") ?? incoming.get("host");
+  if (exposedHost) {
+    finalHeaders.set("X-Forwarded-Host", exposedHost);
+  }
+  finalHeaders.set("X-Forwarded-Proto", incoming.get("x-forwarded-proto") ?? "http");
+
   const response = await fetch(url, {
     ...init,
     headers: finalHeaders,
