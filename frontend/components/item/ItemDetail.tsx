@@ -83,7 +83,7 @@ export function ItemDetail({
   return (
     <div
       className={cn(
-        "grid min-h-0 gap-0 bg-white md:h-full md:grid-cols-2",
+        "grid min-h-0 gap-0 bg-white md:grid-cols-2 md:grid-rows-1",
         variant === "page" &&
           "max-h-[calc(100dvh-9rem)] overflow-y-auto md:h-[calc(100dvh-9rem)] md:overflow-hidden",
         variant === "modal" && "h-full max-h-[calc(100vh-1.5rem)] overflow-hidden",
