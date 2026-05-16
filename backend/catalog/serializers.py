@@ -103,4 +103,4 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         links = obj.product_option_groups.select_related("option_group").prefetch_related(
             "option_group__options"
         ).order_by("position", "id")
-        return ProductOptionGroupSerializer(links, many=True).data
+        return ProductOptionGroupSerializer(links, many=True, context=self.context).data
