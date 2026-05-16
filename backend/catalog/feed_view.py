@@ -31,7 +31,6 @@ def _feed_description(product: Product) -> str:
 def meta_product_feed(request) -> HttpResponse:
     rss = ET.Element("rss")
     rss.set("version", "2.0")
-    rss.set("xmlns:g", G_NS)
 
     channel = ET.SubElement(rss, "channel")
     base_url = settings.PUBLIC_BASE_URL.rstrip("/")
