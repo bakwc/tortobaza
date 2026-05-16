@@ -83,12 +83,14 @@ export function ItemDetail({
   return (
     <div
       className={cn(
-        "grid h-full min-h-0 gap-0 bg-white md:grid-cols-2",
-        variant === "modal" && "max-h-[calc(100vh-1.5rem)]",
+        "grid min-h-0 gap-0 bg-white md:h-full md:grid-cols-2",
+        variant === "page" &&
+          "max-h-[calc(100dvh-9rem)] overflow-y-auto md:h-[calc(100dvh-9rem)] md:overflow-hidden",
+        variant === "modal" && "h-full max-h-[calc(100vh-1.5rem)] overflow-hidden",
       )}
     >
-      <div className="bg-white p-4 md:p-6">
-        <div className="flex h-full flex-col gap-3">
+      <div className="min-h-0 bg-white p-4 md:p-6">
+        <div className="flex h-full min-h-0 flex-col gap-3">
           <div className="aspect-square w-full overflow-hidden rounded-3xl bg-white">
             {heroImage ? (
               <img
@@ -136,7 +138,7 @@ export function ItemDetail({
       </div>
 
       <div className="relative flex min-h-0 flex-col">
-        <div className="flex-1 overflow-y-auto px-6 pb-32 pt-6 md:px-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-32 pt-6 md:px-8">
           <h1 className="font-display text-3xl text-[var(--ink)] md:text-4xl">
             {product.name}
           </h1>

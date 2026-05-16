@@ -37,7 +37,7 @@ export function OptionGroup({
           <span className="text-sm text-[var(--danger)]">Required</span>
         ) : null}
       </div>
-      <ul className="divide-y divide-[var(--line)]">
+      <ul className="space-y-1">
         {group.options.map((option) => {
           const isChecked = selected.includes(option.id);
           return (
