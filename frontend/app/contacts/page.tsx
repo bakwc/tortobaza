@@ -52,7 +52,7 @@ export default function ContactsPage() {
       </section>
 
       <section className="mx-auto max-w-[1200px] px-6 py-14 md:py-20">
-        <div className="grid gap-12 text-center sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:grid-cols-5">
+        <div className="grid gap-12 text-center sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:grid-cols-6">
           <InfoColumn
             icon={<Clock strokeWidth={1.4} className="h-12 w-12" />}
             title="Monday – Sunday"
@@ -94,6 +94,20 @@ export default function ContactsPage() {
           </InfoColumn>
 
           <InfoColumn
+            icon={<InstagramIcon className="h-12 w-12" />}
+            title="Instagram"
+          >
+            <a
+              href={SITE_INFO.instagramHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:opacity-80"
+            >
+              @sweet_chill_batumi
+            </a>
+          </InfoColumn>
+
+          <InfoColumn
             icon={<WhatsAppIcon className="h-12 w-12" />}
             title="Whats App"
           >
@@ -129,6 +143,25 @@ function InfoColumn({
       </h2>
       <div className="space-y-1 text-sm md:text-base">{children}</div>
     </div>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 
