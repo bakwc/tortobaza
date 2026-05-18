@@ -58,10 +58,10 @@ export default function ContactsPage() {
             title="Monday – Sunday"
           >
             <p>
-              <span className="font-semibold">Store Hours:</span> 09:00 - 18:00
+              <span className="font-semibold">Store Hours:</span> 11:00 - 21:00
             </p>
             <p>
-              <span className="font-semibold">Manager Hours:</span> 09:00 - 20:00
+              <span className="font-semibold">Manager Hours:</span> 11:00 - 21:00
             </p>
           </InfoColumn>
 
