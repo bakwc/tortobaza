@@ -23,7 +23,7 @@ class OptionGroup(models.Model):
         (SELECTION_MULTI, "Multi"),
     ]
 
-    name = models.CharField(max_length=120, unique=True)
+    name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True)
     selection_type = models.CharField(max_length=10, choices=SELECTION_CHOICES, default=SELECTION_SINGLE)
     is_required_default = models.BooleanField(default=True)
