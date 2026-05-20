@@ -71,21 +71,21 @@ export function OptionGroup({
                     </span>
                   ) : null}
                 </span>
-                <input
-                  type={isSingle ? "radio" : "checkbox"}
-                  name={`group-${group.id}`}
-                  className="sr-only"
-                  checked={isChecked}
-                  onChange={() => toggle(option.id)}
-                />
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center border border-[var(--muted-2)]",
+                    "relative flex h-5 w-5 items-center justify-center border border-[var(--muted-2)]",
                     isSingle ? "rounded-full" : "rounded-md",
                     isChecked && "border-[var(--brand)]",
                   )}
                 >
+                  <input
+                    type={isSingle ? "radio" : "checkbox"}
+                    name={`group-${group.id}`}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    checked={isChecked}
+                    onChange={() => toggle(option.id)}
+                  />
                   {isChecked ? (
                     <span
                       className={cn(
