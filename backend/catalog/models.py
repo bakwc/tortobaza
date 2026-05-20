@@ -45,9 +45,6 @@ class Option(models.Model):
 
     class Meta:
         ordering = ["position", "name"]
-        constraints = [
-            models.UniqueConstraint(fields=["group", "name"], name="uniq_option_per_group"),
-        ]
 
     def __str__(self) -> str:
         return f"{self.group.name}: {self.name}"
