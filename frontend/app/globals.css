@@ -72,7 +72,7 @@
 }
 
 :root {
-  --brand: #752336;
+  --brand: #cc767f;
   --brand-foreground: #f9efe2;
   --cream: #f4ece3;
   --cream-soft: #faf5ee;
@@ -84,7 +84,7 @@
   --foreground: var(--ink);
   --accent: #c0a16b;
   --danger: #b34a3a;
-  --pill-active: #4a4a4a;
+  --pill-active: #d58a91;
   --font-base: "Century Gothic", -apple-system, BlinkMacSystemFont, "Helvetica Neue", helvetica, "Segoe UI", arial, roboto, sans-serif;
 }
 
@@ -126,4 +126,12 @@ body {
 }
 .scrollbar-none {
   scrollbar-width: none;
+}
+
+.site-header-bar {
+  padding-left: 62px;
+}
+
+.site-header-logo {
+  margin-right: 30px;
 }

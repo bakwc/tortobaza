@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 
@@ -8,15 +7,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-[var(--brand)] text-[var(--brand-foreground)] shadow-sm">
-      <div className="flex h-[76px] items-center justify-between gap-4 pr-6 pl-2 md:pl-4">
+      <div className="site-header-bar flex h-[76px] items-center justify-between gap-4 pr-6">
         <div className="flex min-w-0 items-center gap-6 sm:gap-8 md:gap-10">
-          <Link href="/" className="flex items-center" aria-label="Sweet & Chill">
-            <Image
-              src="/sweet-chill-logo.svg"
+          <Link href="/" className="site-header-logo flex items-center" aria-label="Sweet & Chill">
+            <img
+              src="/sweet-chill-logo-1.svg"
               alt="Sweet & Chill"
-              width={1020}
+              width={1254}
               height={390}
-              priority
               className="h-16 w-auto"
             />
           </Link>
