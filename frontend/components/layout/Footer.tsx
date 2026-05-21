@@ -7,10 +7,10 @@ export function Footer() {
       <div className="mx-auto grid max-w-[1400px] gap-8 px-6 py-12 md:grid-cols-[auto_1fr_auto_auto] md:items-center">
         <Link href="/" className="flex items-center" aria-label="Tortobaza">
           <Image
-            src="/sweet_chill_logo_1.jpg"
+            src="/sweet-chill-logo.svg"
             alt="Sweet & Chill"
-            width={1955}
-            height={544}
+            width={1020}
+            height={390}
             className="h-12 w-auto"
           />
         </Link>

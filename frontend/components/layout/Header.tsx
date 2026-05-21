@@ -10,14 +10,14 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-[var(--brand)] text-[var(--brand-foreground)] shadow-sm">
       <div className="flex h-[76px] items-center justify-between gap-4 pr-6 pl-2 md:pl-4">
         <div className="flex min-w-0 items-center gap-6 sm:gap-8 md:gap-10">
-          <Link href="/" className="flex h-full min-w-0 shrink items-center" aria-label="Sweet & Chill">
+          <Link href="/" className="flex items-center" aria-label="Sweet & Chill">
             <Image
-              src="/sweet_chill_logo_1.jpg"
+              src="/sweet-chill-logo.svg"
               alt="Sweet & Chill"
-              width={1955}
-              height={544}
+              width={1020}
+              height={390}
               priority
-              className="h-full w-auto max-h-[76px]"
+              className="h-16 w-auto"
             />
           </Link>
           <nav
