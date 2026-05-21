@@ -80,6 +80,7 @@
   --muted: #b6a89c;
   --line: #e8ddcd;
   --price: #6e6764;
+  --product-price-btn: #a0a68a;
   --background: var(--cream-soft);
   --foreground: var(--ink);
   --accent: #c0a16b;
@@ -98,6 +99,7 @@
   --color-muted-2: var(--muted);
   --color-line: var(--line);
   --color-price: var(--price);
+  --color-product-price-btn: var(--product-price-btn);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent-2: var(--accent);

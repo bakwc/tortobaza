@@ -31,7 +31,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           {product.name}
         </h3>
         <div className="mt-6">
-          <span className="inline-flex h-[36px] w-full items-center justify-center rounded-full bg-[#666] px-6 text-[14px] font-normal text-white">
+          <span className="inline-flex h-[36px] w-full items-center justify-center rounded-full bg-product-price-btn px-6 text-[14px] font-normal text-white">
             {formatAed(product.base_price)}
           </span>
         </div>
