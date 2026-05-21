@@ -76,8 +76,8 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
             className={cn(
               "shrink-0 rounded-full px-4 py-2 transition-colors duration-200",
               active === c.slug
-                ? "bg-[var(--pill-active)] text-white"
-                : "bg-white text-[#666] hover:bg-[#9aa0ad] hover:text-white",
+                ? "bg-pill-active text-white"
+                : "bg-white text-[#666] hover:bg-pill-hover hover:text-[var(--ink)]",
             )}
           >
             {c.name}

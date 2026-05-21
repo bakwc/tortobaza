@@ -85,6 +85,7 @@
   --accent: #c0a16b;
   --danger: #b34a3a;
   --pill-active: #d58a91;
+  --pill-hover: #ffffff;
   --font-base: "Century Gothic", -apple-system, BlinkMacSystemFont, "Helvetica Neue", helvetica, "Segoe UI", arial, roboto, sans-serif;
 }
 
@@ -101,6 +102,8 @@
   --color-foreground: var(--foreground);
   --color-accent-2: var(--accent);
   --color-danger: var(--danger);
+  --color-pill-active: var(--pill-active);
+  --color-pill-hover: var(--pill-hover);
   --font-sans: var(--font-montserrat);
   --font-display: var(--font-cormorant);
 }
