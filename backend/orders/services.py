@@ -1,3 +1,4 @@
+import threading
 from decimal import Decimal
 
 from django.db import transaction
@@ -6,6 +7,7 @@ from rest_framework import serializers
 
 from cart.models import Cart
 from orders.schedule import resolve_schedule_selection
+from orders.telegram import send_order_notification
 from orders.models import (
     DeliveryAddress,
     Order,
@@ -152,4 +154,22 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
     cart.is_ordered = True
     cart.save()
 
+    order_id = order.pk
+    transaction.on_commit(
+        lambda: threading.Thread(
+            target=_send_order_telegram_notification,
+            args=(order_id,),
+            daemon=True,
+        ).start()
+    )
+
     return order
+
+
+def _send_order_telegram_notification(order_id: int) -> None:
+    order = (
+        Order.objects.select_related("pickup_location", "delivery_address")
+        .prefetch_related("items__options")
+        .get(pk=order_id)
+    )
+    send_order_notification(order)

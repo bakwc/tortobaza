@@ -2,6 +2,7 @@
 Django settings for tortobaza project.
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -124,3 +125,7 @@ CORS_ALLOW_HEADERS = [
 CART_TOKEN_COOKIE_NAME = "cart_token"
 CART_TOKEN_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 CART_TOKEN_HEADER = "HTTP_X_CART_TOKEN"
+
+SITE_URL = os.environ.get("SITE_URL", "https://sweet-chill.ge").rstrip("/")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
