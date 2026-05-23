@@ -123,6 +123,9 @@ def express_available_for_tier(tier: str, local_now: datetime) -> bool:
     today_d = local_now.date()
     if local_now >= cutoff_dt_on_date(today_d):
         return False
+    work_start = datetime.combine(today_d, time(SLOT_START_HOUR, 0), tzinfo=_TB)
+    if local_now < work_start:
+        return False
     return True
 
 

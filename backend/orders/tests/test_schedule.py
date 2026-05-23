@@ -43,7 +43,7 @@ class ScheduleRulesTests(TestCase):
 
     @patch("django.utils.timezone.now")
     def test_same_day_before_cutoff_express_and_today(self, mock_now):
-        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 30)
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 11, 30)
         self._add_item(self.prod_same)
         opts = build_fulfillment_options(self.cart)
         self.assertTrue(opts["express_available"])
@@ -51,13 +51,24 @@ class ScheduleRulesTests(TestCase):
         self.assertEqual(opts["dates"][0]["date"], "2026-05-21")
 
     @patch("django.utils.timezone.now")
+    def test_before_work_hours_no_express_slots_from_open(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 30)
+        self._add_item(self.prod_same)
+        opts = build_fulfillment_options(self.cart)
+        self.assertFalse(opts["express_available"])
+        self.assertEqual(opts["dates"][0]["date"], "2026-05-21")
+        today_slots = opts["dates"][0]["slots"]
+        self.assertEqual(today_slots[0]["start_time"], "11:00")
+
+    @patch("django.utils.timezone.now")
     def test_scheduled_slots_on_today_skip_next_two_hours(self, mock_now):
-        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 0)
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 11, 0)
         self._add_item(self.prod_same)
         opts = build_fulfillment_options(self.cart)
         today_slots = opts["dates"][0]["slots"]
         self.assertFalse(any(s["start_time"] == "11:00" for s in today_slots))
-        self.assertTrue(any(s["start_time"] == "12:00" for s in today_slots))
+        self.assertFalse(any(s["start_time"] == "12:00" for s in today_slots))
+        self.assertTrue(any(s["start_time"] == "13:00" for s in today_slots))
 
     @patch("django.utils.timezone.now")
     def test_same_day_after_cutoff_no_express_min_tomorrow(self, mock_now):
