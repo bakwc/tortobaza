@@ -1,7 +1,5 @@
 import os
 import django
-from datetime import date, time, timedelta
-
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tortobaza.settings")
 django.setup()
 
@@ -12,7 +10,7 @@ from catalog.models import (
     Product,
     ProductOptionGroup,
 )
-from orders.models import DeliveryTimeslot, PickupLocation
+from orders.models import PickupLocation
 
 
 def main() -> None:
@@ -83,22 +81,71 @@ def main() -> None:
         )
 
     products = [
-        ("simple-cake", "Raspberry Dream", "raspberry-dream", "Light sponge with seasonal raspberries.", "180.00"),
-        ("simple-cake", "Vanilla Cloud", "vanilla-cloud", "Soft vanilla sponge, mascarpone cream.", "160.00"),
-        ("standard-cake", "Pistachio Honey", "pistachio-honey", "Rich pistachio sponge with honey cream.", "260.00"),
-        ("standard-cake", "Chocolate Velvet", "chocolate-velvet", "Three layers of dark chocolate velvet.", "240.00"),
-        ("desserts", "Lemon Tart", "lemon-tart", "Crisp tart shell, silky lemon curd.", "60.00"),
-        ("desserts", "Tiramisu Cup", "tiramisu-cup", "Classic tiramisu in a cup.", "55.00"),
-        ("gifts", "Box of Macarons", "box-of-macarons", "Twelve assorted macarons in a gift box.", "120.00"),
+        (
+            "simple-cake",
+            "Raspberry Dream",
+            "raspberry-dream",
+            "Light sponge with seasonal raspberries.",
+            "180.00",
+            Product.DELIVERY_SCHEDULE_SAME_DAY,
+        ),
+        (
+            "simple-cake",
+            "Vanilla Cloud",
+            "vanilla-cloud",
+            "Soft vanilla sponge, mascarpone cream.",
+            "160.00",
+            Product.DELIVERY_SCHEDULE_SAME_DAY,
+        ),
+        (
+            "standard-cake",
+            "Pistachio Honey",
+            "pistachio-honey",
+            "Rich pistachio sponge with honey cream.",
+            "260.00",
+            Product.DELIVERY_SCHEDULE_NEXT_DAY,
+        ),
+        (
+            "standard-cake",
+            "Chocolate Velvet",
+            "chocolate-velvet",
+            "Three layers of dark chocolate velvet.",
+            "240.00",
+            Product.DELIVERY_SCHEDULE_PLUS_2,
+        ),
+        (
+            "desserts",
+            "Lemon Tart",
+            "lemon-tart",
+            "Crisp tart shell, silky lemon curd.",
+            "60.00",
+            Product.DELIVERY_SCHEDULE_SAME_DAY,
+        ),
+        (
+            "desserts",
+            "Tiramisu Cup",
+            "tiramisu-cup",
+            "Classic tiramisu in a cup.",
+            "55.00",
+            Product.DELIVERY_SCHEDULE_PLUS_3,
+        ),
+        (
+            "gifts",
+            "Box of Macarons",
+            "box-of-macarons",
+            "Twelve assorted macarons in a gift box.",
+            "120.00",
+            Product.DELIVERY_SCHEDULE_SAME_DAY,
+        ),
     ]
-    for cat_slug, name, slug, desc, price in products:
+    for cat_slug, name, slug, desc, price, tier in products:
         prod, _ = Product.objects.update_or_create(
             slug=slug,
             defaults={
                 "category": cat_objs[cat_slug],
                 "name": name,
                 "description": desc,
-                "base_price": price,
+                "delivery_schedule_tier": tier,
                 "is_active": True,
             },
         )
@@ -126,18 +173,6 @@ def main() -> None:
             "is_active": True,
         },
     )
-
-    today = date.today()
-    for offset in range(0, 7):
-        day = today + timedelta(days=offset)
-        for s, e in [(time(10, 0), time(12, 0)), (time(13, 0), time(15, 0)), (time(16, 0), time(18, 0))]:
-            DeliveryTimeslot.objects.update_or_create(
-                date=day,
-                start_time=s,
-                end_time=e,
-                fulfillment_type="both",
-                defaults={"capacity": 5, "is_active": True},
-            )
 
     print("seed done")
 

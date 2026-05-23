@@ -75,7 +75,11 @@ export function CheckoutStepOne() {
         <FulfillmentToggle
           value={draft.fulfillment_type}
           onChange={(value) =>
-            setDraft((prev) => ({ ...prev, fulfillment_type: value }))
+            setDraft((prev) => ({
+              ...prev,
+              fulfillment_type: value,
+              schedule: null,
+            }))
           }
         />
       </section>

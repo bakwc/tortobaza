@@ -45,36 +45,6 @@ class PickupLocation(models.Model):
         return self.name
 
 
-class DeliveryTimeslot(models.Model):
-    FULFILLMENT_DELIVERY = "delivery"
-    FULFILLMENT_PICKUP = "pickup"
-    FULFILLMENT_BOTH = "both"
-    FULFILLMENT_CHOICES = [
-        (FULFILLMENT_DELIVERY, "Delivery"),
-        (FULFILLMENT_PICKUP, "Pickup"),
-        (FULFILLMENT_BOTH, "Both"),
-    ]
-
-    date = models.DateField()
-    start_time = models.TimeField()
-    end_time = models.TimeField()
-    fulfillment_type = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES, default=FULFILLMENT_BOTH)
-    capacity = models.PositiveIntegerField(default=1)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["date", "start_time"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["date", "start_time", "end_time", "fulfillment_type"],
-                name="uniq_timeslot",
-            ),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.date} {self.start_time}-{self.end_time} ({self.fulfillment_type})"
-
-
 def _generate_order_number() -> str:
     return secrets.token_hex(4).upper()
 
@@ -134,9 +104,6 @@ class Order(models.Model):
         PickupLocation, related_name="orders", on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    timeslot = models.ForeignKey(
-        DeliveryTimeslot, related_name="orders", on_delete=models.SET_NULL, null=True, blank=True
-    )
     timeslot_start = models.DateTimeField(null=True, blank=True)
     timeslot_end = models.DateTimeField(null=True, blank=True)
 

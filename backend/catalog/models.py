@@ -51,11 +51,27 @@ class Option(models.Model):
 
 
 class Product(models.Model):
+    DELIVERY_SCHEDULE_SAME_DAY = "same_day"
+    DELIVERY_SCHEDULE_NEXT_DAY = "next_day"
+    DELIVERY_SCHEDULE_PLUS_2 = "plus_2"
+    DELIVERY_SCHEDULE_PLUS_3 = "plus_3"
+    DELIVERY_SCHEDULE_TIER_CHOICES = [
+        (DELIVERY_SCHEDULE_SAME_DAY, "Same day or later"),
+        (DELIVERY_SCHEDULE_NEXT_DAY, "Next day or later"),
+        (DELIVERY_SCHEDULE_PLUS_2, "Two days or later"),
+        (DELIVERY_SCHEDULE_PLUS_3, "Three days or later"),
+    ]
+
     category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
     description = models.TextField(blank=True)
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    delivery_schedule_tier = models.CharField(
+        max_length=20,
+        choices=DELIVERY_SCHEDULE_TIER_CHOICES,
+        default=DELIVERY_SCHEDULE_SAME_DAY,
+    )
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

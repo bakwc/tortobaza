@@ -1,14 +1,13 @@
-from datetime import datetime, time
 from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from cart.models import Cart, CartItem
+from cart.models import Cart
+from orders.schedule import resolve_schedule_selection
 from orders.models import (
     DeliveryAddress,
-    DeliveryTimeslot,
     Order,
     OrderItem,
     OrderItemOption,
@@ -57,37 +56,6 @@ def compute_totals(cart: Cart, promo: PromoCode | None) -> dict:
     return {"subtotal": subtotal, "discount_total": discount, "total": total}
 
 
-def _check_timeslot_capacity(timeslot: DeliveryTimeslot) -> None:
-    if not timeslot.is_active:
-        raise serializers.ValidationError({"timeslot_id": "Timeslot is not available."})
-    booked = Order.objects.filter(timeslot=timeslot).exclude(status=Order.STATUS_CANCELLED).count()
-    if booked >= timeslot.capacity:
-        raise serializers.ValidationError({"timeslot_id": "Timeslot has no remaining capacity."})
-
-
-def _resolve_timeslot(
-    timeslot_id: int | None, fulfillment_type: str
-) -> DeliveryTimeslot | None:
-    if timeslot_id is None:
-        return None
-    timeslot = DeliveryTimeslot.objects.filter(pk=timeslot_id).first()
-    if timeslot is None:
-        raise serializers.ValidationError({"timeslot_id": "Timeslot not found."})
-    if timeslot.fulfillment_type not in (fulfillment_type, DeliveryTimeslot.FULFILLMENT_BOTH):
-        raise serializers.ValidationError(
-            {"timeslot_id": "Timeslot does not match fulfillment type."}
-        )
-    _check_timeslot_capacity(timeslot)
-    return timeslot
-
-
-def _timeslot_datetimes(slot: DeliveryTimeslot) -> tuple[datetime, datetime]:
-    tz = timezone.get_current_timezone()
-    start = timezone.make_aware(datetime.combine(slot.date, slot.start_time), tz)
-    end = timezone.make_aware(datetime.combine(slot.date, slot.end_time), tz)
-    return start, end
-
-
 @transaction.atomic
 def create_order_from_cart(cart: Cart, payload: dict) -> Order:
     if not cart.items.exists():
@@ -114,17 +82,19 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
         if not address_data:
             raise serializers.ValidationError({"address": "Delivery address is required."})
 
-    timeslot = _resolve_timeslot(payload.get("timeslot_id"), fulfillment_type)
+    timeslot_start, timeslot_end = resolve_schedule_selection(
+        cart,
+        payload["schedule_mode"],
+        payload.get("schedule_date"),
+        payload.get("schedule_start_time"),
+        payload.get("schedule_end_time"),
+    )
 
     promo: PromoCode | None = None
     if payload.get("promo_code"):
         promo = get_promo_by_code(payload["promo_code"])
 
     totals = compute_totals(cart, promo)
-
-    timeslot_start = timeslot_end = None
-    if timeslot is not None:
-        timeslot_start, timeslot_end = _timeslot_datetimes(timeslot)
 
     order = Order.objects.create(
         fulfillment_type=fulfillment_type,
@@ -135,7 +105,6 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
         comment=payload.get("comment", ""),
         promo_code=promo,
         pickup_location=pickup_location,
-        timeslot=timeslot,
         timeslot_start=timeslot_start,
         timeslot_end=timeslot_end,
         subtotal=totals["subtotal"],

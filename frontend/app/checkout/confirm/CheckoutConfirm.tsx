@@ -80,7 +80,12 @@ export function CheckoutConfirm() {
   });
 
   const canPlace = useMemo(() => {
-    if (!draft.timeslot_id) return false;
+    if (!draft.schedule) return false;
+    if (draft.schedule.mode === "slot") {
+      if (!draft.schedule.date || !draft.schedule.start_time || !draft.schedule.end_time) {
+        return false;
+      }
+    }
     if (!draft.customer_name.trim()) return false;
     if (!draft.customer_phone.trim()) return false;
     if (!draft.customer_email.trim()) return false;
@@ -89,13 +94,21 @@ export function CheckoutConfirm() {
 
   const handlePlaceOrder = () => {
     setError(null);
-    if (!canPlace || !draft.timeslot_id) {
-      setError("Please fill in your contact info and pick a timeslot.");
+    if (!canPlace || !draft.schedule) {
+      setError("Please fill in your contact info and pick a delivery time.");
       return;
     }
+    const sch = draft.schedule;
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
-      timeslot_id: draft.timeslot_id,
+      schedule_mode: sch.mode,
+      ...(sch.mode === "slot"
+        ? {
+            schedule_date: sch.date,
+            schedule_start_time: sch.start_time,
+            schedule_end_time: sch.end_time,
+          }
+        : {}),
       payment_method: draft.payment_method,
       customer_name: draft.customer_name.trim(),
       customer_phone: draft.customer_phone.trim(),
@@ -142,8 +155,8 @@ export function CheckoutConfirm() {
         >
           <TimeslotPicker
             type={draft.fulfillment_type}
-            value={draft.timeslot_id}
-            onChange={(id) => update({ timeslot_id: id })}
+            value={draft.schedule}
+            onChange={(schedule) => update({ schedule })}
           />
         </Section>
 

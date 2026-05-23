@@ -47,8 +47,16 @@ class ProductOptionGroupInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "base_price", "position", "is_active", "created_at"]
-    list_filter = ["category", "is_active"]
+    list_display = [
+        "name",
+        "category",
+        "delivery_schedule_tier",
+        "base_price",
+        "position",
+        "is_active",
+        "created_at",
+    ]
+    list_filter = ["category", "delivery_schedule_tier", "is_active"]
     list_editable = ["position", "is_active"]
     search_fields = ["name", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}

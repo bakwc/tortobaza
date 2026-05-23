@@ -1,4 +1,9 @@
-import type { FulfillmentType, OrderAddress, PaymentMethod } from "@/lib/api/types";
+import type {
+  CheckoutSchedule,
+  FulfillmentType,
+  OrderAddress,
+  PaymentMethod,
+} from "@/lib/api/types";
 
 const STORAGE_KEY = "tortobaza:checkout-draft";
 
@@ -6,7 +11,7 @@ export type CheckoutDraft = {
   fulfillment_type: FulfillmentType;
   address: OrderAddress | null;
   pickup_location_id: number | null;
-  timeslot_id: number | null;
+  schedule: CheckoutSchedule | null;
   payment_method: PaymentMethod;
   customer_name: string;
   customer_phone: string;
@@ -19,7 +24,7 @@ export const emptyDraft: CheckoutDraft = {
   fulfillment_type: "delivery",
   address: null,
   pickup_location_id: null,
-  timeslot_id: null,
+  schedule: null,
   payment_method: "card",
   customer_name: "",
   customer_phone: "",

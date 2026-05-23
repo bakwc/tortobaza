@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 from orders.models import (
     DeliveryAddress,
-    DeliveryTimeslot,
     Order,
     OrderItem,
     OrderItemOption,
@@ -14,26 +13,6 @@ class PickupLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupLocation
         fields = ["id", "name", "address", "lat", "lng"]
-
-
-class DeliveryTimeslotSerializer(serializers.ModelSerializer):
-    remaining_capacity = serializers.SerializerMethodField()
-
-    class Meta:
-        model = DeliveryTimeslot
-        fields = [
-            "id",
-            "date",
-            "start_time",
-            "end_time",
-            "fulfillment_type",
-            "capacity",
-            "remaining_capacity",
-        ]
-
-    def get_remaining_capacity(self, obj: DeliveryTimeslot) -> int:
-        booked = obj.orders.exclude(status=Order.STATUS_CANCELLED).count()
-        return max(obj.capacity - booked, 0)
 
 
 class OrderItemOptionReadSerializer(serializers.ModelSerializer):
@@ -101,7 +80,6 @@ class OrderPreviewInputSerializer(serializers.Serializer):
     fulfillment_type = serializers.ChoiceField(choices=Order.FULFILLMENT_CHOICES)
     address = AddressInputSerializer(required=False, allow_null=True)
     pickup_location_id = serializers.IntegerField(required=False, allow_null=True)
-    timeslot_id = serializers.IntegerField(required=False, allow_null=True)
     promo_code = serializers.CharField(required=False, allow_blank=True, default="")
 
 
@@ -109,13 +87,46 @@ class OrderCreateInputSerializer(serializers.Serializer):
     fulfillment_type = serializers.ChoiceField(choices=Order.FULFILLMENT_CHOICES)
     address = AddressInputSerializer(required=False, allow_null=True)
     pickup_location_id = serializers.IntegerField(required=False, allow_null=True)
-    timeslot_id = serializers.IntegerField(required=False, allow_null=True)
+    schedule_mode = serializers.ChoiceField(choices=["express", "slot"])
+    schedule_date = serializers.DateField(required=False, allow_null=True)
+    schedule_start_time = serializers.TimeField(required=False, allow_null=True)
+    schedule_end_time = serializers.TimeField(required=False, allow_null=True)
     payment_method = serializers.ChoiceField(choices=Order.PAYMENT_METHOD_CHOICES)
     customer_name = serializers.CharField(max_length=200)
     customer_phone = serializers.CharField(max_length=50)
     customer_email = serializers.EmailField(required=False, allow_blank=True, default="")
     comment = serializers.CharField(required=False, allow_blank=True, default="")
     promo_code = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate(self, attrs):
+        mode = attrs["schedule_mode"]
+        if mode == "slot":
+            if attrs.get("schedule_date") is None:
+                raise serializers.ValidationError(
+                    {"schedule_date": "This field is required for a scheduled slot."}
+                )
+            if attrs.get("schedule_start_time") is None:
+                raise serializers.ValidationError(
+                    {"schedule_start_time": "This field is required for a scheduled slot."}
+                )
+            if attrs.get("schedule_end_time") is None:
+                raise serializers.ValidationError(
+                    {"schedule_end_time": "This field is required for a scheduled slot."}
+                )
+        elif mode == "express":
+            if attrs.get("schedule_date") is not None:
+                raise serializers.ValidationError(
+                    {"schedule_date": "Must be empty when using express scheduling."}
+                )
+            if attrs.get("schedule_start_time") is not None:
+                raise serializers.ValidationError(
+                    {"schedule_start_time": "Must be empty when using express scheduling."}
+                )
+            if attrs.get("schedule_end_time") is not None:
+                raise serializers.ValidationError(
+                    {"schedule_end_time": "Must be empty when using express scheduling."}
+                )
+        return attrs
 
 
 class PromoValidateInputSerializer(serializers.Serializer):

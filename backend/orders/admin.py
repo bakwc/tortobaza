@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from orders.models import (
     DeliveryAddress,
-    DeliveryTimeslot,
     Order,
     OrderItem,
     OrderItemOption,
@@ -83,9 +82,3 @@ class PickupLocationAdmin(admin.ModelAdmin):
     list_display = ["name", "address", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "address"]
-
-
-@admin.register(DeliveryTimeslot)
-class DeliveryTimeslotAdmin(admin.ModelAdmin):
-    list_display = ["date", "start_time", "end_time", "fulfillment_type", "capacity", "is_active"]
-    list_filter = ["fulfillment_type", "is_active", "date"]

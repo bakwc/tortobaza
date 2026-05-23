@@ -105,14 +105,20 @@ export const PickupLocationSchema = z.object({
   lng: z.string().nullable().optional(),
 });
 
-export const DeliveryTimeslotSchema = z.object({
-  id: z.number(),
-  date: z.string(),
+export const FulfillmentSlotSchema = z.object({
   start_time: z.string(),
   end_time: z.string(),
-  fulfillment_type: z.enum(["delivery", "pickup", "both"]),
-  capacity: z.number(),
-  remaining_capacity: z.number(),
+});
+
+export const FulfillmentDateEntrySchema = z.object({
+  date: z.string(),
+  slots: z.array(FulfillmentSlotSchema),
+});
+
+export const FulfillmentOptionsSchema = z.object({
+  timezone: z.string(),
+  express_available: z.boolean(),
+  dates: z.array(FulfillmentDateEntrySchema),
 });
 
 export const PromoValidationSchema = z.object({
@@ -191,7 +197,7 @@ export type CartItemOption = z.infer<typeof CartItemOptionSchema>;
 export type CartItem = z.infer<typeof CartItemSchema>;
 export type Cart = z.infer<typeof CartSchema>;
 export type PickupLocation = z.infer<typeof PickupLocationSchema>;
-export type DeliveryTimeslot = z.infer<typeof DeliveryTimeslotSchema>;
+export type FulfillmentOptions = z.infer<typeof FulfillmentOptionsSchema>;
 export type PromoValidation = z.infer<typeof PromoValidationSchema>;
 export type OrderPreview = z.infer<typeof OrderPreviewSchema>;
 export type OrderItemOption = z.infer<typeof OrderItemOptionSchema>;
@@ -215,11 +221,18 @@ export type UpdateCartItemBody = {
   option_ids?: number[];
 };
 
+export type CheckoutSchedule =
+  | { mode: "express" }
+  | { mode: "slot"; date: string; start_time: string; end_time: string };
+
 export type PlaceOrderBody = {
   fulfillment_type: FulfillmentType;
   address?: OrderAddress;
   pickup_location_id?: number;
-  timeslot_id: number;
+  schedule_mode: "express" | "slot";
+  schedule_date?: string;
+  schedule_start_time?: string;
+  schedule_end_time?: string;
   payment_method: PaymentMethod;
   customer_name: string;
   customer_phone: string;

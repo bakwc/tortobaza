@@ -1,13 +1,11 @@
-from datetime import datetime
-
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from orders.models import DeliveryTimeslot, Order, PickupLocation
+from orders.models import Order, PickupLocation
+from orders.schedule import build_fulfillment_options
 from orders.serializers import (
-    DeliveryTimeslotSerializer,
     OrderCreateInputSerializer,
     OrderPreviewInputSerializer,
     OrderReadSerializer,
@@ -29,22 +27,22 @@ class PickupLocationListView(generics.ListAPIView):
         return PickupLocation.objects.filter(is_active=True)
 
 
-class DeliveryTimeslotListView(generics.ListAPIView):
-    serializer_class = DeliveryTimeslotSerializer
-    pagination_class = None
-
-    def get_queryset(self):
-        qs = DeliveryTimeslot.objects.filter(is_active=True)
-        date_str = self.request.query_params.get("date")
-        if date_str:
-            parsed = datetime.strptime(date_str, "%Y-%m-%d").date()
-            qs = qs.filter(date=parsed)
-        ftype = self.request.query_params.get("type")
-        if ftype:
-            qs = qs.filter(
-                fulfillment_type__in=[ftype, DeliveryTimeslot.FULFILLMENT_BOTH]
+class FulfillmentOptionsView(APIView):
+    def get(self, request):
+        ftype = request.query_params.get("type")
+        if ftype not in ("delivery", "pickup"):
+            return Response(
+                {"detail": "Query parameter type must be delivery or pickup."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        return qs.order_by("date", "start_time")
+        cart = request.cart
+        if cart is None or not cart.items.exists():
+            return Response(
+                {"detail": "Cart is empty."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        data = build_fulfillment_options(cart)
+        return Response(data)
 
 
 class PromoCodeValidateView(APIView):

@@ -1,6 +1,6 @@
 # Tortobaza Backend
 
-REST API for the Tortobaza cake shop. Public catalog, anonymous server-side cart, and guest checkout with mock payments. Staff manage cakes, option groups, promo codes, pickup locations, delivery timeslots, and orders through Django admin.
+REST API for the Tortobaza cake shop. Public catalog, anonymous server-side cart, and guest checkout with mock payments. Staff manage cakes, **`Product.delivery_schedule_tier`** (earliest fulfilment dates per product — strictest across the cart wins), option groups, promo codes, pickup locations, and orders through Django admin.
 
 ## Stack
 
@@ -14,7 +14,7 @@ REST API for the Tortobaza cake shop. Public catalog, anonymous server-side cart
 - `tortobaza/` — Django project (settings, root urls, wsgi/asgi).
 - `catalog/` — `Category`, `Product`, `ProductImage`, `OptionGroup`, `Option`, `ProductOptionGroup`.
 - `cart/` — `Cart`, `CartItem`, `CartItemOption` and `CartTokenMiddleware`.
-- `orders/` — `Order`, `OrderItem`, `OrderItemOption`, `DeliveryAddress`, `PromoCode`, `PickupLocation`, `DeliveryTimeslot`, plus checkout services.
+- `orders/` — `Order`, `OrderItem`, `OrderItemOption`, `DeliveryAddress`, `PromoCode`, `PickupLocation`, plus checkout and auto-generated fulfilment schedules.
 
 `OptionGroup`s are global and reusable: created once in admin (e.g. "Filling", "Size", "Sponge") and attached to products through `ProductOptionGroup`, which carries per-product `position` and an optional `is_required` override. Pricing for an item is `Product.base_price + Σ Option.price_delta` of the selected options. At order placement, item names, prices, and option labels are snapshotted onto `OrderItem` / `OrderItemOption` so historical orders survive catalog edits.
 
@@ -182,22 +182,23 @@ List active pickup locations.
 ]
 ```
 
-#### `GET /api/delivery-timeslots/?date=YYYY-MM-DD&type=delivery|pickup`
+#### `GET /api/fulfillment-options/?type=delivery|pickup`
 
-List active timeslots for the date. `type` is matched against `fulfillment_type` (slots with `both` are always included). `remaining_capacity` is `capacity − non-cancelled bookings`.
+Returns bookable fulfilment choices for **the current cart**, using the strictest (`latest`) `delivery_schedule_tier` across all cart lines (`same_day`, `next_day`, `plus_2`, `plus_3`). All times use `Asia/Tbilisi`. Requires a non-empty cart; returns `400` if empty.
+
+Slots are hourly (`11:00`–last start before `20:00` local); same-day hourly windows respect a `15:00` cut-off and “from now rounded up to the next hour”. When allowed, **`express_available`** is `true`: the client may place the order with `schedule_mode: "express"` (delivery within ~2 hours from server `now`). There are no per-slot capacity limits.
 
 ```json
-[
-  {
-    "id": 5,
-    "date": "2026-05-01",
-    "start_time": "10:00:00",
-    "end_time": "12:00:00",
-    "fulfillment_type": "delivery",
-    "capacity": 5,
-    "remaining_capacity": 3
-  }
-]
+{
+  "timezone": "Asia/Tbilisi",
+  "express_available": false,
+  "dates": [
+    {
+      "date": "2026-05-22",
+      "slots": [{ "start_time": "11:00", "end_time": "12:00" }]
+    }
+  ]
+}
 ```
 
 #### `POST /api/promo-codes/validate/`
@@ -264,7 +265,10 @@ Place an order from the current cart. Inside one transaction: snapshots items + 
     "postal_code": "101000",
     "notes": "Домофон 5К"
   },
-  "timeslot_id": 5,
+  "schedule_mode": "slot",
+  "schedule_date": "2026-05-02",
+  "schedule_start_time": "14:00",
+  "schedule_end_time": "15:00",
   "payment_method": "card",
   "customer_name": "Иван Иванов",
   "customer_phone": "+7 999 123 45 67",
@@ -274,7 +278,9 @@ Place an order from the current cart. Inside one transaction: snapshots items + 
 }
 ```
 
-For pickup orders pass `fulfillment_type: "pickup"` and `pickup_location_id` instead of `address`. Validation rejects an empty cart, missing address for delivery, missing pickup location for pickup, mismatched timeslot type, exhausted timeslot capacity, or invalid promo code.
+For **express**, send `schedule_mode: "express"` and omit date/time fields. For **scheduled** fulfilment send `schedule_mode: "slot"` plus `schedule_date`, `schedule_start_time`, and `schedule_end_time` matching a slot from `GET /api/fulfillment-options/`.
+
+For pickup orders pass `fulfillment_type: "pickup"` and `pickup_location_id` instead of `address`. Validation rejects an empty cart, missing address for delivery, missing pickup location for pickup, a schedule combination not allowed by the cart’s tiers, or an invalid promo code.
 
 Response (`201`):
 
@@ -326,7 +332,7 @@ Public order status lookup. The `token` query parameter is required and must mat
 
 - **Catalog → Categories** — manage header filters.
 - **Catalog → Option groups** — define reusable groups (Filling, Size, Sponge, ...) with their options inline. Created once and reused across products.
-- **Catalog → Products** — set `category`, `name`, `description`, `base_price`, etc. Inlines: `ProductImage` (carousel) and `ProductOptionGroup` (pick existing groups, set per-product `position`, optional `is_required` override).
+- **Catalog → Products** — set `category`, `name`, `description`, `base_price`, **`delivery_schedule_tier`** (controls earliest bookable fulfilment dates for orders containing this product — strictest tier wins across the cart). Inlines: `ProductImage` (carousel) and `ProductOptionGroup` (pick existing groups, set per-product `position`, optional `is_required` override).
 - **Cart → Carts / Cart items** — for debugging anonymous carts.
 - **Orders → Orders** — read-only snapshot inlines (`OrderItem`, `OrderItemOption`, `DeliveryAddress`); mutate `status` / `payment_status`.
-- **Orders → Promo codes / Pickup locations / Delivery timeslots** — operational data.
+- **Orders → Promo codes / Pickup locations** — operational data.

@@ -1,7 +1,7 @@
 import {
   CartSchema,
   CategorySchema,
-  DeliveryTimeslotSchema,
+  FulfillmentOptionsSchema,
   OrderPreviewSchema,
   OrderSchema,
   PickupLocationSchema,
@@ -11,7 +11,7 @@ import {
   type AddCartItemBody,
   type Cart,
   type Category,
-  type DeliveryTimeslot,
+  type FulfillmentOptions,
   type FulfillmentType,
   type Order,
   type OrderPreview,
@@ -97,11 +97,11 @@ export function endpoints(fetcher: Fetcher) {
       return parse(z.array(PickupLocationSchema), raw);
     },
 
-    async getDeliveryTimeslots(date: string, type: FulfillmentType): Promise<DeliveryTimeslot[]> {
-      const raw = await fetcher<unknown>("/api/delivery-timeslots/", {
-        searchParams: { date, type },
+    async getFulfillmentOptions(type: FulfillmentType): Promise<FulfillmentOptions> {
+      const raw = await fetcher<unknown>("/api/fulfillment-options/", {
+        searchParams: { type },
       });
-      return parse(z.array(DeliveryTimeslotSchema), raw);
+      return parse(FulfillmentOptionsSchema, raw);
     },
 
     async validatePromoCode(code: string): Promise<PromoValidation> {
