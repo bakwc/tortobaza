@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { CreditCard, Wallet } from "lucide-react";
+import { Building2, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
@@ -21,13 +21,17 @@ import {
   type CheckoutDraft,
 } from "@/lib/checkout-draft";
 import { rememberOrder } from "@/lib/order-history";
-import type { Order, PaymentMethod, PlaceOrderBody } from "@/lib/api/types";
+import type { Order, PlaceOrderBody } from "@/lib/api/types";
+
+const BANK_ACCOUNT_NUMBER = "GE94BG0000000612361573GEL";
+const BANK_RECIPIENT_NAME = "SWEET CHILL";
 
 export function CheckoutConfirm() {
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bankTransferStep, setBankTransferStep] = useState(false);
 
   useEffect(() => {
     const loaded = loadDraft();
@@ -98,6 +102,10 @@ export function CheckoutConfirm() {
       setError("Please fill in your contact info and pick a delivery time.");
       return;
     }
+    if (draft.payment_method === "bank_transfer" && !bankTransferStep) {
+      setBankTransferStep(true);
+      return;
+    }
     const sch = draft.schedule;
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
@@ -135,19 +143,47 @@ export function CheckoutConfirm() {
         <Section title="Payment method">
           <div className="grid grid-cols-2 gap-3">
             <PaymentTile
-              icon={<CreditCard className="h-5 w-5" />}
-              label="Card"
-              active={draft.payment_method === "card"}
-              onClick={() => update({ payment_method: "card" })}
+              icon={<Building2 className="h-5 w-5" />}
+              label="Bank transfer"
+              active={draft.payment_method === "bank_transfer"}
+              onClick={() => {
+                setBankTransferStep(false);
+                update({ payment_method: "bank_transfer" });
+              }}
             />
             <PaymentTile
               icon={<Wallet className="h-5 w-5" />}
               label="Cash"
               active={draft.payment_method === "cash"}
-              onClick={() => update({ payment_method: "cash" })}
+              onClick={() => {
+                setBankTransferStep(false);
+                update({ payment_method: "cash" });
+              }}
             />
           </div>
         </Section>
+
+        {bankTransferStep ? (
+          <Section title="Bank transfer details">
+            <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
+                  Account number
+                </dt>
+                <dd className="mt-1 font-medium tabular-nums">{BANK_ACCOUNT_NUMBER}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
+                  Recipient name
+                </dt>
+                <dd className="mt-1 font-medium">{BANK_RECIPIENT_NAME}</dd>
+              </div>
+            </dl>
+            <p className="text-sm leading-relaxed text-[var(--ink)]/70">
+              Send the transfer and click confirm after you&apos;ve sent it.
+            </p>
+          </Section>
+        ) : null}
 
         <Section
           title={draft.fulfillment_type === "delivery" ? "Delivery time" : "Pickup time"}
@@ -245,6 +281,11 @@ export function CheckoutConfirm() {
         onPlaceOrder={handlePlaceOrder}
         isPlacing={placeOrder.isPending}
         canPlace={canPlace}
+        placeOrderLabel={
+          draft.payment_method === "bank_transfer" && bankTransferStep
+            ? "I confirm payment"
+            : "Place order"
+        }
       />
     </div>
   );
@@ -296,5 +337,3 @@ function PaymentTile({
     </button>
   );
 }
-
-export type { PaymentMethod };

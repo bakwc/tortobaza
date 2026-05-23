@@ -15,6 +15,12 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+const PAYMENT_LABEL: Record<string, string> = {
+  card: "Card",
+  cash: "Cash",
+  bank_transfer: "Bank transfer",
+};
+
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-900",
   confirmed: "bg-emerald-100 text-emerald-900",
@@ -88,7 +94,7 @@ export function OrderStatusView({ order }: { order: Order }) {
             </Field>
           ) : null}
           <Field label="Payment">
-            {order.payment_method === "card" ? "Card" : "Cash"} ·{" "}
+            {PAYMENT_LABEL[order.payment_method] ?? order.payment_method} ·{" "}
             <span className="text-[var(--ink)]/60">{order.payment_status}</span>
           </Field>
           {order.comment ? (

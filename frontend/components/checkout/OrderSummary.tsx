@@ -14,12 +14,14 @@ export function OrderSummary({
   onPlaceOrder,
   isPlacing,
   canPlace,
+  placeOrderLabel = "Place order",
 }: {
   fulfillmentType: FulfillmentType;
   promoCode: string;
   onPlaceOrder: () => void;
   isPlacing: boolean;
   canPlace: boolean;
+  placeOrderLabel?: string;
 }) {
   const { data: cart } = useCart();
 
@@ -87,7 +89,7 @@ export function OrderSummary({
         disabled={!canPlace || isPlacing}
       >
         {isPlacing ? <Spinner className="mr-2" /> : null}
-        Place order
+        {placeOrderLabel}
       </Button>
     </aside>
   );

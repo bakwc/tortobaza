@@ -206,7 +206,7 @@ export type OrderAddress = z.infer<typeof OrderAddressSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 
 export type FulfillmentType = "delivery" | "pickup";
-export type PaymentMethod = "card" | "cash";
+export type PaymentMethod = "card" | "cash" | "bank_transfer";
 
 export type AddCartItemBody = {
   product_id: number;

@@ -45,8 +45,21 @@ class PickupLocation(models.Model):
         return self.name
 
 
+ORDER_NUMBER_START = 73000
+ORDER_NUMBER_STEP_MIN = 4
+ORDER_NUMBER_STEP_MAX = 18
+
+
 def _generate_order_number() -> str:
-    return secrets.token_hex(4).upper()
+    numeric_numbers = [
+        int(number)
+        for number in Order.objects.values_list("number", flat=True)
+        if number.isdigit()
+    ]
+    if not numeric_numbers:
+        return str(ORDER_NUMBER_START)
+    step = secrets.randbelow(ORDER_NUMBER_STEP_MAX - ORDER_NUMBER_STEP_MIN + 1) + ORDER_NUMBER_STEP_MIN
+    return str(max(numeric_numbers) + step)
 
 
 class Order(models.Model):
@@ -74,9 +87,11 @@ class Order(models.Model):
 
     PAYMENT_CARD = "card"
     PAYMENT_CASH = "cash"
+    PAYMENT_BANK_TRANSFER = "bank_transfer"
     PAYMENT_METHOD_CHOICES = [
         (PAYMENT_CARD, "Card"),
         (PAYMENT_CASH, "Cash"),
+        (PAYMENT_BANK_TRANSFER, "Bank transfer"),
     ]
 
     PAYMENT_UNPAID = "unpaid"
@@ -91,7 +106,7 @@ class Order(models.Model):
 
     fulfillment_type = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
+    payment_method = models.CharField(max_length=15, choices=PAYMENT_METHOD_CHOICES)
     payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_UNPAID)
 
     customer_name = models.CharField(max_length=200)
