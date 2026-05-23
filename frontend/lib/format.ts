@@ -1,3 +1,5 @@
+const BUSINESS_TIMEZONE = "Asia/Tbilisi";
+
 export function formatAed(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(value)) return "0.00 ₾";
@@ -34,11 +36,13 @@ export function formatOrderTimeslot(startIso: string | null, endIso: string | nu
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: BUSINESS_TIMEZONE,
   });
   const timeOpts: Intl.DateTimeFormatOptions = {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: BUSINESS_TIMEZONE,
   };
   const startTime = start.toLocaleTimeString("en-US", timeOpts);
   const endTime = end.toLocaleTimeString("en-US", timeOpts);
