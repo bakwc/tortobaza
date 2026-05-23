@@ -15,16 +15,21 @@ from orders.models import PickupLocation
 
 def main() -> None:
     cats = [
-        ("Simple cake", "simple-cake", 0),
-        ("Standard cake", "standard-cake", 1),
-        ("Desserts", "desserts", 2),
-        ("Gifts", "gifts", 3),
+        ("Simple cake", "simple-cake", 0, Product.DELIVERY_SCHEDULE_SAME_DAY),
+        ("Standard cake", "standard-cake", 1, Product.DELIVERY_SCHEDULE_NEXT_DAY),
+        ("Desserts", "desserts", 2, Product.DELIVERY_SCHEDULE_SAME_DAY),
+        ("Gifts", "gifts", 3, Product.DELIVERY_SCHEDULE_SAME_DAY),
     ]
     cat_objs: dict[str, Category] = {}
-    for name, slug, pos in cats:
+    for name, slug, pos, tier in cats:
         obj, _ = Category.objects.update_or_create(
             slug=slug,
-            defaults={"name": name, "position": pos, "is_active": True},
+            defaults={
+                "name": name,
+                "position": pos,
+                "is_active": True,
+                "delivery_schedule_tier": tier,
+            },
         )
         cat_objs[slug] = obj
 
@@ -87,7 +92,7 @@ def main() -> None:
             "raspberry-dream",
             "Light sponge with seasonal raspberries.",
             "180.00",
-            Product.DELIVERY_SCHEDULE_SAME_DAY,
+            None,
         ),
         (
             "simple-cake",
@@ -95,7 +100,7 @@ def main() -> None:
             "vanilla-cloud",
             "Soft vanilla sponge, mascarpone cream.",
             "160.00",
-            Product.DELIVERY_SCHEDULE_SAME_DAY,
+            None,
         ),
         (
             "standard-cake",
@@ -103,7 +108,7 @@ def main() -> None:
             "pistachio-honey",
             "Rich pistachio sponge with honey cream.",
             "260.00",
-            Product.DELIVERY_SCHEDULE_NEXT_DAY,
+            None,
         ),
         (
             "standard-cake",
@@ -119,7 +124,7 @@ def main() -> None:
             "lemon-tart",
             "Crisp tart shell, silky lemon curd.",
             "60.00",
-            Product.DELIVERY_SCHEDULE_SAME_DAY,
+            None,
         ),
         (
             "desserts",
@@ -135,7 +140,7 @@ def main() -> None:
             "box-of-macarons",
             "Twelve assorted macarons in a gift box.",
             "120.00",
-            Product.DELIVERY_SCHEDULE_SAME_DAY,
+            None,
         ),
     ]
     for cat_slug, name, slug, desc, price, tier in products:

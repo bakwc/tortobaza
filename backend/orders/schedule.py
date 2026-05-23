@@ -70,12 +70,12 @@ _TIER_FROM_RANK: dict[int, str] = {v: k for k, v in _DELIVERY_RANK.items()}
 
 
 def effective_tier_from_cart(cart: Cart) -> str:
-    qs = cart.items.select_related("product").all()
+    qs = cart.items.select_related("product__category").all()
     if not qs:
         raise serializers.ValidationError({"cart": "Cart is empty."})
     max_rank = 0
     for item in qs:
-        tier = item.product.delivery_schedule_tier
+        tier = item.product.effective_delivery_schedule_tier
         r = _DELIVERY_RANK[tier]
         if r > max_rank:
             max_rank = r

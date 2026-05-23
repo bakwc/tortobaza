@@ -26,8 +26,9 @@ class OptionGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "position", "is_active"]
+    list_display = ["name", "slug", "delivery_schedule_tier", "position", "is_active"]
     list_editable = ["position", "is_active"]
+    list_filter = ["delivery_schedule_tier", "is_active"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
 

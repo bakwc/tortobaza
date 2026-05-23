@@ -1,11 +1,27 @@
 from django.db import models
 
+DELIVERY_SCHEDULE_SAME_DAY = "same_day"
+DELIVERY_SCHEDULE_NEXT_DAY = "next_day"
+DELIVERY_SCHEDULE_PLUS_2 = "plus_2"
+DELIVERY_SCHEDULE_PLUS_3 = "plus_3"
+DELIVERY_SCHEDULE_TIER_CHOICES = [
+    (DELIVERY_SCHEDULE_SAME_DAY, "Same day or later"),
+    (DELIVERY_SCHEDULE_NEXT_DAY, "Next day or later"),
+    (DELIVERY_SCHEDULE_PLUS_2, "Two days or later"),
+    (DELIVERY_SCHEDULE_PLUS_3, "Three days or later"),
+]
+
 
 class Category(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True)
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    delivery_schedule_tier = models.CharField(
+        max_length=20,
+        choices=DELIVERY_SCHEDULE_TIER_CHOICES,
+        default=DELIVERY_SCHEDULE_SAME_DAY,
+    )
 
     class Meta:
         ordering = ["position", "name"]
@@ -51,16 +67,11 @@ class Option(models.Model):
 
 
 class Product(models.Model):
-    DELIVERY_SCHEDULE_SAME_DAY = "same_day"
-    DELIVERY_SCHEDULE_NEXT_DAY = "next_day"
-    DELIVERY_SCHEDULE_PLUS_2 = "plus_2"
-    DELIVERY_SCHEDULE_PLUS_3 = "plus_3"
-    DELIVERY_SCHEDULE_TIER_CHOICES = [
-        (DELIVERY_SCHEDULE_SAME_DAY, "Same day or later"),
-        (DELIVERY_SCHEDULE_NEXT_DAY, "Next day or later"),
-        (DELIVERY_SCHEDULE_PLUS_2, "Two days or later"),
-        (DELIVERY_SCHEDULE_PLUS_3, "Three days or later"),
-    ]
+    DELIVERY_SCHEDULE_SAME_DAY = DELIVERY_SCHEDULE_SAME_DAY
+    DELIVERY_SCHEDULE_NEXT_DAY = DELIVERY_SCHEDULE_NEXT_DAY
+    DELIVERY_SCHEDULE_PLUS_2 = DELIVERY_SCHEDULE_PLUS_2
+    DELIVERY_SCHEDULE_PLUS_3 = DELIVERY_SCHEDULE_PLUS_3
+    DELIVERY_SCHEDULE_TIER_CHOICES = DELIVERY_SCHEDULE_TIER_CHOICES
 
     category = models.ForeignKey(Category, related_name="products", on_delete=models.PROTECT)
     name = models.CharField(max_length=200)
@@ -70,7 +81,8 @@ class Product(models.Model):
     delivery_schedule_tier = models.CharField(
         max_length=20,
         choices=DELIVERY_SCHEDULE_TIER_CHOICES,
-        default=DELIVERY_SCHEDULE_SAME_DAY,
+        null=True,
+        blank=True,
     )
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -83,6 +95,12 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def effective_delivery_schedule_tier(self) -> str:
+        if self.delivery_schedule_tier is None:
+            return self.category.delivery_schedule_tier
+        return self.delivery_schedule_tier
 
 
 class ProductImage(models.Model):

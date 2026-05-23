@@ -115,3 +115,36 @@ class ScheduleRulesTests(TestCase):
         s, e = resolve_schedule_selection(self.cart, "slot", d, st, et)
         self.assertIsNotNone(s.tzinfo)
         self.assertIsNotNone(e.tzinfo)
+
+    @patch("django.utils.timezone.now")
+    def test_product_inherits_tier_from_category(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 0)
+        self.cat.delivery_schedule_tier = Product.DELIVERY_SCHEDULE_PLUS_2
+        self.cat.save()
+        inherited = Product.objects.create(
+            category=self.cat,
+            name="Inherited",
+            slug="inherited-p",
+            description="",
+            base_price=Decimal("10.00"),
+        )
+        self._add_item(inherited)
+        opts = build_fulfillment_options(self.cart)
+        self.assertEqual(opts["dates"][0]["date"], "2026-05-23")
+
+    @patch("django.utils.timezone.now")
+    def test_product_override_beats_category(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 0)
+        self.cat.delivery_schedule_tier = Product.DELIVERY_SCHEDULE_SAME_DAY
+        self.cat.save()
+        overridden = Product.objects.create(
+            category=self.cat,
+            name="Override",
+            slug="override-p",
+            description="",
+            base_price=Decimal("10.00"),
+            delivery_schedule_tier=Product.DELIVERY_SCHEDULE_PLUS_3,
+        )
+        self._add_item(overridden)
+        opts = build_fulfillment_options(self.cart)
+        self.assertEqual(opts["dates"][0]["date"], "2026-05-24")
