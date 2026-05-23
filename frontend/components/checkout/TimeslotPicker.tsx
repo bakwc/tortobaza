@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { formatTimeslot, formatTimeslotDateLabel } from "@/lib/format";
@@ -57,10 +58,11 @@ export function TimeslotPicker({
   const dateEntry =
     data?.dates.find((d) => d.date === selectedDate) ?? data?.dates[0];
   const slots = dateEntry?.slots ?? [];
+  const activeDate = selectedDate ?? dateEntry?.date;
   const showScheduledPicker = value?.mode === "slot";
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--ink)]/60">
           <Spinner /> Loading options…
@@ -137,37 +139,46 @@ export function TimeslotPicker({
 
           {showScheduledPicker && data.dates.length ? (
             <>
-              <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1">
-                {data.dates.map((d) => (
-                  <button
-                    key={d.date}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate(d.date);
-                      const first = d.slots[0];
-                      if (first) {
-                        onChange({
-                          mode: "slot",
-                          date: d.date,
-                          start_time: first.start_time,
-                          end_time: first.end_time,
-                        });
-                      }
-                    }}
-                    className={cn(
-                      "shrink-0 rounded-full border px-4 py-2 text-sm",
-                      (selectedDate ?? dateEntry?.date) === d.date
-                        ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-foreground)]"
-                        : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--muted-2)]",
-                    )}
-                  >
-                    {formatTimeslotDateLabel(d.date)}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <label
+                  htmlFor="checkout-schedule-date"
+                  className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50"
+                >
+                  Date
+                </label>
+                <Input
+                  id="checkout-schedule-date"
+                  type="date"
+                  min={data.dates[0].date}
+                  max={data.dates[data.dates.length - 1].date}
+                  value={activeDate ?? ""}
+                  onChange={(e) => {
+                    const date = e.target.value;
+                    if (!date) return;
+                    const entry = data.dates.find((d) => d.date === date);
+                    if (!entry) return;
+                    setSelectedDate(date);
+                    const first = entry.slots[0];
+                    if (first) {
+                      onChange({
+                        mode: "slot",
+                        date,
+                        start_time: first.start_time,
+                        end_time: first.end_time,
+                      });
+                    }
+                  }}
+                  className="max-w-xs rounded-2xl [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                />
+                {activeDate ? (
+                  <p className="text-sm text-[var(--ink)]/60">
+                    {formatTimeslotDateLabel(activeDate)}
+                  </p>
+                ) : null}
               </div>
 
               {slots.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
                   {slots.map((slot) => (
                     <button
                       key={`${slot.start_time}-${slot.end_time}`}
@@ -183,7 +194,7 @@ export function TimeslotPicker({
                         });
                       }}
                       className={cn(
-                        "rounded-2xl border px-3 py-2 text-sm transition",
+                        "min-w-0 rounded-xl border px-1.5 py-2 text-center text-xs transition sm:px-2 sm:text-sm",
                         value?.mode === "slot" &&
                           value.date === (dateEntry?.date ?? selectedDate) &&
                           value.start_time === slot.start_time &&

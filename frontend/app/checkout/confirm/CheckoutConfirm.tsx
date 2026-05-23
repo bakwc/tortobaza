@@ -130,8 +130,8 @@ export function CheckoutConfirm() {
   }
 
   return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-6">
+    <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="min-w-0 space-y-6">
         <Section title="Payment method">
           <div className="grid grid-cols-2 gap-3">
             <PaymentTile
@@ -260,12 +260,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
+    <section className="min-w-0 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
       <h2 className="font-display text-2xl">{title}</h2>
       {subtitle ? (
         <p className="mt-1 text-sm text-[var(--ink)]/60">{subtitle}</p>
       ) : null}
-      <div className="mt-4 space-y-3">{children}</div>
+      <div className="mt-4 min-w-0 space-y-3">{children}</div>
     </section>
   );
 }
