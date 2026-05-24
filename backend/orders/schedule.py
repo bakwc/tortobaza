@@ -16,7 +16,7 @@ from catalog.models import Product
 CUTOFF_HOUR = 15
 SLOT_START_HOUR = 11
 SCHEDULE_LAST_HOUR = 20
-EXPRESS_HOURS = 2
+SLOT_LEAD_HOURS = 3
 SCHEDULE_MAX_DAYS_AHEAD = 60
 TIMEZONE_LABEL = "Asia/Tbilisi"
 _TB = ZoneInfo(TIMEZONE_LABEL)
@@ -33,7 +33,7 @@ _DELIVERY_RANK: dict[str, int] = {
     TIER_PLUS_3: 3,
 }
 
-ScheduleMode = Literal["express", "slot"]
+ScheduleMode = Literal["slot"]
 
 
 @dataclass(frozen=True)
@@ -104,7 +104,7 @@ def hourly_slots_for_date(day: date, local_now: datetime) -> list[TimeSlotRepr]:
 
     slots: list[TimeSlotRepr] = []
     if day == today_d:
-        threshold = local_now + timedelta(hours=EXPRESS_HOURS)
+        threshold = local_now + timedelta(hours=SLOT_LEAD_HOURS)
         floor = ceiling_to_hour(threshold)
         if floor.date() != today_d:
             return []
@@ -118,24 +118,11 @@ def hourly_slots_for_date(day: date, local_now: datetime) -> list[TimeSlotRepr]:
     return slots
 
 
-def express_available_for_tier(tier: str, local_now: datetime) -> bool:
-    if tier != TIER_SAME_DAY:
-        return False
-    today_d = local_now.date()
-    if local_now >= cutoff_dt_on_date(today_d):
-        return False
-    work_start = datetime.combine(today_d, time(SLOT_START_HOUR, 0), tzinfo=_TB)
-    if local_now < work_start:
-        return False
-    return True
-
-
 def build_fulfillment_options(cart: Cart) -> dict:
     tier = effective_tier_from_cart(cart)
     local_now = now_tb()
     today_d = local_now.date()
 
-    express_on = express_available_for_tier(tier, local_now)
     min_d = _min_booking_date(tier, today_d, local_now)
 
     date_entries: list[dict] = []
@@ -153,7 +140,6 @@ def build_fulfillment_options(cart: Cart) -> dict:
 
     return {
         "timezone": TIMEZONE_LABEL,
-        "express_available": express_on,
         "dates": date_entries,
     }
 
@@ -165,19 +151,10 @@ def resolve_schedule_selection(
     slot_start_time: time | None,
     slot_end_time: time | None,
 ) -> tuple[datetime, datetime]:
-    opts = build_fulfillment_options(cart)
-    if mode == "express":
-        if not opts["express_available"]:
-            raise serializers.ValidationError(
-                {"schedule_mode": _("Express delivery is not available for this order.")}
-            )
-        nw = django_timezone.now()
-        start = nw
-        end = nw + timedelta(hours=EXPRESS_HOURS)
-        return start, end
-
     if mode != "slot":
         raise serializers.ValidationError({"schedule_mode": _("Invalid schedule mode.")})
+
+    opts = build_fulfillment_options(cart)
 
     if slot_date is None or slot_start_time is None or slot_end_time is None:
         raise serializers.ValidationError(

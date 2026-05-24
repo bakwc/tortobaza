@@ -117,7 +117,6 @@ export const FulfillmentDateEntrySchema = z.object({
 
 export const FulfillmentOptionsSchema = z.object({
   timezone: z.string(),
-  express_available: z.boolean(),
   dates: z.array(FulfillmentDateEntrySchema),
 });
 
@@ -223,15 +222,18 @@ export type UpdateCartItemBody = {
   option_ids?: number[];
 };
 
-export type CheckoutSchedule =
-  | { mode: "express" }
-  | { mode: "slot"; date: string; start_time: string; end_time: string };
+export type CheckoutSchedule = {
+  mode: "slot";
+  date: string;
+  start_time: string;
+  end_time: string;
+};
 
 export type PlaceOrderBody = {
   fulfillment_type: FulfillmentType;
   address?: OrderAddress;
   pickup_location_id?: number;
-  schedule_mode: "express" | "slot";
+  schedule_mode: "slot";
   schedule_date?: string;
   schedule_start_time?: string;
   schedule_end_time?: string;

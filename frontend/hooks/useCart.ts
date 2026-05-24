@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { AddCartItemBody, Cart, UpdateCartItemBody } from "@/lib/api/types";
 
 export const cartQueryKey = ["cart"] as const;
+export const fulfillmentOptionsQueryKey = ["fulfillment-options"] as const;
 
 export function useCart(initialData?: Cart) {
   return useQuery<Cart>({
@@ -20,6 +21,7 @@ export function useAddCartItem() {
     mutationFn: (body: AddCartItemBody) => api.addCartItem(body),
     onSuccess: (data) => {
       qc.setQueryData(cartQueryKey, data);
+      qc.invalidateQueries({ queryKey: fulfillmentOptionsQueryKey });
     },
   });
 }
@@ -45,6 +47,7 @@ export function useUpdateCartItem() {
     },
     onSuccess: (data) => {
       qc.setQueryData(cartQueryKey, data);
+      qc.invalidateQueries({ queryKey: fulfillmentOptionsQueryKey });
     },
   });
 }
@@ -67,6 +70,7 @@ export function useRemoveCartItem() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: cartQueryKey });
+      qc.invalidateQueries({ queryKey: fulfillmentOptionsQueryKey });
     },
   });
 }
@@ -77,6 +81,7 @@ export function useClearCart() {
     mutationFn: () => api.clearCart(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: cartQueryKey });
+      qc.invalidateQueries({ queryKey: fulfillmentOptionsQueryKey });
     },
   });
 }

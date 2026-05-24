@@ -88,10 +88,8 @@ export function CheckoutConfirm() {
 
   const canPlace = useMemo(() => {
     if (!draft.schedule) return false;
-    if (draft.schedule.mode === "slot") {
-      if (!draft.schedule.date || !draft.schedule.start_time || !draft.schedule.end_time) {
-        return false;
-      }
+    if (!draft.schedule.date || !draft.schedule.start_time || !draft.schedule.end_time) {
+      return false;
     }
     if (!draft.customer_name.trim()) return false;
     if (!draft.customer_phone.trim()) return false;
@@ -111,15 +109,11 @@ export function CheckoutConfirm() {
     const sch = draft.schedule;
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
-      schedule_mode: sch.mode,
+      schedule_mode: "slot",
+      schedule_date: sch.date,
+      schedule_start_time: sch.start_time,
+      schedule_end_time: sch.end_time,
       locale,
-      ...(sch.mode === "slot"
-        ? {
-            schedule_date: sch.date,
-            schedule_start_time: sch.start_time,
-            schedule_end_time: sch.end_time,
-          }
-        : {}),
       payment_method: draft.payment_method,
       customer_name: draft.customer_name.trim(),
       customer_phone: draft.customer_phone.trim(),

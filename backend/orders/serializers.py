@@ -91,7 +91,7 @@ class OrderCreateInputSerializer(serializers.Serializer):
     fulfillment_type = serializers.ChoiceField(choices=Order.FULFILLMENT_CHOICES)
     address = AddressInputSerializer(required=False, allow_null=True)
     pickup_location_id = serializers.IntegerField(required=False, allow_null=True)
-    schedule_mode = serializers.ChoiceField(choices=["express", "slot"])
+    schedule_mode = serializers.ChoiceField(choices=["slot"])
     schedule_date = serializers.DateField(required=False, allow_null=True)
     schedule_start_time = serializers.TimeField(required=False, allow_null=True)
     schedule_end_time = serializers.TimeField(required=False, allow_null=True)
@@ -106,33 +106,18 @@ class OrderCreateInputSerializer(serializers.Serializer):
     locale = serializers.ChoiceField(choices=["en", "ka", "ru"])
 
     def validate(self, attrs):
-        mode = attrs["schedule_mode"]
-        if mode == "slot":
-            if attrs.get("schedule_date") is None:
-                raise serializers.ValidationError(
-                    {"schedule_date": _("This field is required for a scheduled slot.")}
-                )
-            if attrs.get("schedule_start_time") is None:
-                raise serializers.ValidationError(
-                    {"schedule_start_time": _("This field is required for a scheduled slot.")}
-                )
-            if attrs.get("schedule_end_time") is None:
-                raise serializers.ValidationError(
-                    {"schedule_end_time": _("This field is required for a scheduled slot.")}
-                )
-        elif mode == "express":
-            if attrs.get("schedule_date") is not None:
-                raise serializers.ValidationError(
-                    {"schedule_date": _("Must be empty when using express scheduling.")}
-                )
-            if attrs.get("schedule_start_time") is not None:
-                raise serializers.ValidationError(
-                    {"schedule_start_time": _("Must be empty when using express scheduling.")}
-                )
-            if attrs.get("schedule_end_time") is not None:
-                raise serializers.ValidationError(
-                    {"schedule_end_time": _("Must be empty when using express scheduling.")}
-                )
+        if attrs.get("schedule_date") is None:
+            raise serializers.ValidationError(
+                {"schedule_date": _("This field is required for a scheduled slot.")}
+            )
+        if attrs.get("schedule_start_time") is None:
+            raise serializers.ValidationError(
+                {"schedule_start_time": _("This field is required for a scheduled slot.")}
+            )
+        if attrs.get("schedule_end_time") is None:
+            raise serializers.ValidationError(
+                {"schedule_end_time": _("This field is required for a scheduled slot.")}
+            )
         return attrs
 
 
