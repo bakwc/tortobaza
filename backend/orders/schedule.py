@@ -17,20 +17,23 @@ CUTOFF_HOUR = 15
 SLOT_START_HOUR = 11
 SCHEDULE_LAST_HOUR = 20
 SLOT_LEAD_HOURS = 3
+ALL_DAY_SLOT_LEAD_HOURS = 1
 SCHEDULE_MAX_DAYS_AHEAD = 60
 TIMEZONE_LABEL = "Asia/Tbilisi"
 _TB = ZoneInfo(TIMEZONE_LABEL)
 
+TIER_ALL_DAY = Product.DELIVERY_SCHEDULE_ALL_DAY
 TIER_SAME_DAY = Product.DELIVERY_SCHEDULE_SAME_DAY
 TIER_NEXT_DAY = Product.DELIVERY_SCHEDULE_NEXT_DAY
 TIER_PLUS_2 = Product.DELIVERY_SCHEDULE_PLUS_2
 TIER_PLUS_3 = Product.DELIVERY_SCHEDULE_PLUS_3
 
 _DELIVERY_RANK: dict[str, int] = {
-    TIER_SAME_DAY: 0,
-    TIER_NEXT_DAY: 1,
-    TIER_PLUS_2: 2,
-    TIER_PLUS_3: 3,
+    TIER_ALL_DAY: 0,
+    TIER_SAME_DAY: 1,
+    TIER_NEXT_DAY: 2,
+    TIER_PLUS_2: 3,
+    TIER_PLUS_3: 4,
 }
 
 ScheduleMode = Literal["slot"]
@@ -83,7 +86,15 @@ def effective_tier_from_cart(cart: Cart) -> str:
     return _TIER_FROM_RANK[max_rank]
 
 
+def _slot_lead_hours(tier: str) -> int:
+    if tier == TIER_ALL_DAY:
+        return ALL_DAY_SLOT_LEAD_HOURS
+    return SLOT_LEAD_HOURS
+
+
 def _min_booking_date(tier: str, today_tb: date, local_now: datetime) -> date:
+    if tier == TIER_ALL_DAY:
+        return today_tb
     if tier == TIER_SAME_DAY:
         if local_now < cutoff_dt_on_date(today_tb):
             return today_tb
@@ -97,14 +108,14 @@ def _min_booking_date(tier: str, today_tb: date, local_now: datetime) -> date:
     raise serializers.ValidationError({"tier": _("Invalid schedule tier.")})
 
 
-def hourly_slots_for_date(day: date, local_now: datetime) -> list[TimeSlotRepr]:
+def hourly_slots_for_date(day: date, local_now: datetime, tier: str) -> list[TimeSlotRepr]:
     today_d = local_now.date()
     if day < today_d:
         return []
 
     slots: list[TimeSlotRepr] = []
     if day == today_d:
-        threshold = local_now + timedelta(hours=SLOT_LEAD_HOURS)
+        threshold = local_now + timedelta(hours=_slot_lead_hours(tier))
         floor = ceiling_to_hour(threshold)
         if floor.date() != today_d:
             return []
@@ -128,7 +139,7 @@ def build_fulfillment_options(cart: Cart) -> dict:
     date_entries: list[dict] = []
     for delta in range(0, SCHEDULE_MAX_DAYS_AHEAD + 1):
         target = min_d + timedelta(days=delta)
-        slots_repr = hourly_slots_for_date(target, local_now)
+        slots_repr = hourly_slots_for_date(target, local_now, tier)
         if not slots_repr:
             continue
         date_entries.append(

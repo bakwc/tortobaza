@@ -32,6 +32,14 @@ class ScheduleRulesTests(TestCase):
             base_price=Decimal("10.00"),
             delivery_schedule_tier=Product.DELIVERY_SCHEDULE_PLUS_2,
         )
+        self.prod_all_day = Product.objects.create(
+            category=self.cat,
+            name="AllDay",
+            slug="all-day-p",
+            description="",
+            base_price=Decimal("10.00"),
+            delivery_schedule_tier=Product.DELIVERY_SCHEDULE_ALL_DAY,
+        )
         self.cart = Cart.objects.create()
 
     def _add_item(self, product: Product) -> None:
@@ -82,6 +90,22 @@ class ScheduleRulesTests(TestCase):
         self._add_item(self.prod_p2)
         opts = build_fulfillment_options(self.cart)
         self.assertEqual(opts["dates"][0]["date"], "2026-05-23")
+
+    @patch("django.utils.timezone.now")
+    def test_all_day_after_cutoff_today_available(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 16, 0)
+        self._add_item(self.prod_all_day)
+        opts = build_fulfillment_options(self.cart)
+        self.assertEqual(opts["dates"][0]["date"], "2026-05-21")
+
+    @patch("django.utils.timezone.now")
+    def test_all_day_one_hour_lead_on_today(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 11, 0)
+        self._add_item(self.prod_all_day)
+        opts = build_fulfillment_options(self.cart)
+        today_slots = opts["dates"][0]["slots"]
+        self.assertFalse(any(s["start_time"] == "11:00" for s in today_slots))
+        self.assertTrue(any(s["start_time"] == "12:00" for s in today_slots))
 
     @patch("django.utils.timezone.now")
     def test_mixed_cart_uses_strictest_tier(self, mock_now):
