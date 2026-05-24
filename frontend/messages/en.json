@@ -55,7 +55,7 @@
     "viewOrder": "View order",
     "deliveryTier": {
       "all_day": "Today delivery",
-      "same_day": "Same day delivery",
+      "same_day": "Same-day delivery",
       "next_day": "Next day delivery",
       "plus_2": "Two days delivery",
       "plus_3": "Three days delivery"
