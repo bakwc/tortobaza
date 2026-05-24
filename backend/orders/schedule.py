@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone as django_timezone
 from rest_framework import serializers
 
@@ -72,7 +73,7 @@ _TIER_FROM_RANK: dict[int, str] = {v: k for k, v in _DELIVERY_RANK.items()}
 def effective_tier_from_cart(cart: Cart) -> str:
     qs = cart.items.select_related("product__category").all()
     if not qs:
-        raise serializers.ValidationError({"cart": "Cart is empty."})
+        raise serializers.ValidationError({"cart": _("Cart is empty.")})
     max_rank = 0
     for item in qs:
         tier = item.product.effective_delivery_schedule_tier
@@ -93,7 +94,7 @@ def _min_booking_date(tier: str, today_tb: date, local_now: datetime) -> date:
         return today_tb + timedelta(days=2)
     if tier == TIER_PLUS_3:
         return today_tb + timedelta(days=3)
-    raise serializers.ValidationError({"tier": "Invalid schedule tier."})
+    raise serializers.ValidationError({"tier": _("Invalid schedule tier.")})
 
 
 def hourly_slots_for_date(day: date, local_now: datetime) -> list[TimeSlotRepr]:
@@ -168,7 +169,7 @@ def resolve_schedule_selection(
     if mode == "express":
         if not opts["express_available"]:
             raise serializers.ValidationError(
-                {"schedule_mode": "Express delivery is not available for this order."}
+                {"schedule_mode": _("Express delivery is not available for this order.")}
             )
         nw = django_timezone.now()
         start = nw
@@ -176,11 +177,11 @@ def resolve_schedule_selection(
         return start, end
 
     if mode != "slot":
-        raise serializers.ValidationError({"schedule_mode": "Invalid schedule mode."})
+        raise serializers.ValidationError({"schedule_mode": _("Invalid schedule mode.")})
 
     if slot_date is None or slot_start_time is None or slot_end_time is None:
         raise serializers.ValidationError(
-            {"schedule": "Date and time window are required for scheduled delivery."}
+            {"schedule": _("Date and time window are required for scheduled delivery.")}
         )
 
     for entry in opts["dates"]:
@@ -195,7 +196,7 @@ def resolve_schedule_selection(
                 dt_end_local = datetime.combine(slot_date, slot_end_time, tzinfo=_TB)
                 return dt_start_local.astimezone(UTC), dt_end_local.astimezone(UTC)
 
-    raise serializers.ValidationError({"schedule": "Selected time slot is not available."})
+    raise serializers.ValidationError({"schedule": _("Selected time slot is not available.")})
 
 
 def _fmt_time(t: time) -> str:

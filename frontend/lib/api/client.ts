@@ -1,3 +1,5 @@
+import { getClientRequestLocale } from "@/lib/request-locale-shared";
+
 export type ClientFetchOptions = RequestInit & {
   searchParams?: Record<string, string | number | undefined | null>;
 };
@@ -19,6 +21,9 @@ export async function clientFetch<T>(
 ): Promise<T> {
   const finalHeaders = new Headers(headers);
   finalHeaders.set("Accept", "application/json");
+  if (!finalHeaders.has("Accept-Language")) {
+    finalHeaders.set("Accept-Language", getClientRequestLocale());
+  }
   if (body && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
   }

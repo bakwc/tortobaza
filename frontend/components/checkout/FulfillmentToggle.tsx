@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { FulfillmentType } from "@/lib/api/types";
 
@@ -10,6 +11,8 @@ export function FulfillmentToggle({
   value: FulfillmentType;
   onChange: (value: FulfillmentType) => void;
 }) {
+  const t = useTranslations("checkout");
+
   return (
     <div className="grid grid-cols-2 gap-1 rounded-full border border-[var(--line)] bg-white p-1">
       {(["delivery", "pickup"] as const).map((type) => (
@@ -24,7 +27,7 @@ export function FulfillmentToggle({
               : "text-[var(--ink)]/70 hover:bg-[var(--cream)]",
           )}
         >
-          {type === "delivery" ? "Delivery" : "Pick up"}
+          {type === "delivery" ? t("fulfillmentDelivery") : t("fulfillmentPickup")}
         </button>
       ))}
     </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import {
   useCart,
@@ -22,6 +23,7 @@ import type { CartItem } from "@/lib/api/types";
 
 export function CartSidebar() {
   const router = useRouter();
+  const t = useTranslations("catalog");
   const { data: cart } = useCart();
   const clear = useClearCart();
   const remove = useRemoveCartItem();
@@ -44,13 +46,13 @@ export function CartSidebar() {
   return (
     <aside className="sticky top-36 flex h-[calc(100vh-10rem)] flex-col bg-white p-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-[22px] font-normal text-[#666]">Your order</h2>
+        <h2 className="text-[22px] font-normal text-[#666]">{t("yourOrder")}</h2>
         {!isEmpty ? (
           <button
             type="button"
             onClick={() => clear.mutate()}
             disabled={clear.isPending}
-            aria-label="Clear cart"
+            aria-label={t("clearCartAria")}
             className="rounded-full p-2 text-[var(--ink)]/60 hover:bg-[var(--cream)] hover:text-[var(--ink)] disabled:opacity-50"
           >
             <Trash2 className="h-5 w-5" />
@@ -61,7 +63,7 @@ export function CartSidebar() {
       {isEmpty ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-[var(--ink)]/60">
           <ShoppingBag className="h-16 w-16 stroke-[1.2]" />
-          <p className="text-sm">Your basket is empty</p>
+          <p className="text-sm">{t("basketEmpty")}</p>
         </div>
       ) : (
         <div className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
@@ -88,16 +90,11 @@ export function CartSidebar() {
       {!isEmpty ? (
         <div className="mt-4 border-t border-[var(--line)] pt-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-[var(--ink)]/60">Subtotal</span>
+            <span className="text-[var(--ink)]/60">{t("subtotal")}</span>
             <span className="font-medium">{formatAed(cart?.subtotal ?? "0")}</span>
           </div>
-          <Button
-            type="button"
-            size="lg"
-            className="mt-4 w-full"
-            onClick={handleConfirm}
-          >
-            Confirm
+          <Button type="button" size="lg" className="mt-4 w-full" onClick={handleConfirm}>
+            {t("confirm")}
           </Button>
         </div>
       ) : null}
@@ -106,14 +103,12 @@ export function CartSidebar() {
         <DialogContent className="max-w-lg gap-0 overflow-hidden border-0 p-0 sm:max-w-lg">
           <div className="bg-gradient-to-br from-[var(--brand)]/15 via-white to-[var(--cream)] px-8 pb-2 pt-10">
             <DialogTitle className="font-display text-center text-3xl leading-tight text-[var(--ink)]">
-              We are getting ready
+              {t("notReadyTitle")}
             </DialogTitle>
           </div>
           <div className="space-y-4 px-8 pb-8 pt-4">
             <DialogDescription className="text-center text-base leading-relaxed text-[var(--ink)]/80">
-              Sweet & Chill is not accepting online orders on this site yet. Thank you for your
-              interest — we will open soon. For questions, use the contact options on the home
-              page.
+              {t("notReadyBody")}
             </DialogDescription>
             <Button
               type="button"
@@ -121,7 +116,7 @@ export function CartSidebar() {
               className="w-full"
               onClick={() => setNotOpenDialogOpen(false)}
             >
-              OK
+              {t("ok")}
             </Button>
           </div>
         </DialogContent>
@@ -141,6 +136,8 @@ function CartLine({
   onDecrement: () => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations("catalog");
+
   return (
     <div className="flex gap-3">
       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-[var(--cream)]">
@@ -162,7 +159,7 @@ function CartLine({
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Remove"
+            aria-label={t("removeAria")}
             className="text-[var(--ink)]/40 hover:text-[var(--danger)]"
           >
             <Trash2 className="h-4 w-4" />
@@ -185,18 +182,16 @@ function CartLine({
             <button
               type="button"
               onClick={onDecrement}
-              aria-label="Decrease"
+              aria-label={t("decreaseAria")}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[var(--ink)] hover:bg-[var(--cream)]"
             >
               <Minus className="h-3.5 w-3.5" />
             </button>
-            <span className="min-w-[1.5rem] text-center text-sm tabular-nums">
-              {item.quantity}
-            </span>
+            <span className="min-w-[1.5rem] text-center text-sm tabular-nums">{item.quantity}</span>
             <button
               type="button"
               onClick={onIncrement}
-              aria-label="Increase"
+              aria-label={t("increaseAria")}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-[var(--ink)] hover:bg-[var(--cream)]"
             >
               <Plus className="h-3.5 w-3.5" />

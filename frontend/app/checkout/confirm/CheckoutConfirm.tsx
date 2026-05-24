@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Building2, Wallet } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,8 @@ const BANK_ACCOUNT_NUMBER = "GE94BG0000000612361573GEL";
 const BANK_RECIPIENT_NAME = "SWEET CHILL";
 
 export function CheckoutConfirm() {
+  const locale = useLocale();
+  const t = useTranslations("checkout");
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
   const [hydrated, setHydrated] = useState(false);
@@ -69,7 +72,7 @@ export function CheckoutConfirm() {
       router.push(`/orders/${order.number}?token=${order.lookup_token}`);
     },
     onError: (e) => {
-      let message = "Could not place the order. Please try again.";
+      let message = t("genericPlaceError");
       if (e instanceof ApiError) {
         const parsed = e.parsed<Record<string, unknown>>();
         if (parsed) {
@@ -98,7 +101,7 @@ export function CheckoutConfirm() {
   const handlePlaceOrder = () => {
     setError(null);
     if (!canPlace || !draft.schedule) {
-      setError("Please fill in your contact info and pick a delivery time.");
+      setError(t("fillContactsAndSlot"));
       return;
     }
     if (draft.payment_method === "bank_transfer" && !bankTransferStep) {
@@ -109,6 +112,7 @@ export function CheckoutConfirm() {
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
       schedule_mode: sch.mode,
+      locale,
       ...(sch.mode === "slot"
         ? {
             schedule_date: sch.date,
@@ -140,6 +144,9 @@ export function CheckoutConfirm() {
     placeOrder.mutate(body);
   };
 
+  const placeOrderLabel =
+    draft.payment_method === "bank_transfer" && bankTransferStep ? t("confirmPayment") : t("placeOrder");
+
   if (!hydrated) {
     return <div className="mt-8 h-96 animate-pulse rounded-3xl bg-white/40" />;
   }
@@ -147,11 +154,11 @@ export function CheckoutConfirm() {
   return (
     <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0 space-y-6">
-        <Section title="Payment method">
+        <Section title={t("paymentMethod")}>
           <div className="grid grid-cols-2 gap-3">
             <PaymentTile
               icon={<Building2 className="h-5 w-5" />}
-              label="Bank transfer"
+              label={t("bankTransfer")}
               active={draft.payment_method === "bank_transfer"}
               onClick={() => {
                 setBankTransferStep(false);
@@ -160,7 +167,7 @@ export function CheckoutConfirm() {
             />
             <PaymentTile
               icon={<Wallet className="h-5 w-5" />}
-              label="Cash"
+              label={t("cash")}
               active={draft.payment_method === "cash"}
               onClick={() => {
                 setBankTransferStep(false);
@@ -171,30 +178,28 @@ export function CheckoutConfirm() {
         </Section>
 
         {bankTransferStep ? (
-          <Section title="Bank transfer details">
+          <Section title={t("bankTransferDetails")}>
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
-                  Account number
+                  {t("accountNumber")}
                 </dt>
                 <dd className="mt-1 font-medium tabular-nums">{BANK_ACCOUNT_NUMBER}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
-                  Recipient name
+                  {t("recipientName")}
                 </dt>
                 <dd className="mt-1 font-medium">{BANK_RECIPIENT_NAME}</dd>
               </div>
             </dl>
-            <p className="text-sm leading-relaxed text-[var(--ink)]/70">
-              Send the transfer and click confirm after you&apos;ve sent it.
-            </p>
+            <p className="text-sm leading-relaxed text-[var(--ink)]/70">{t("sendTransferHint")}</p>
           </Section>
         ) : null}
 
         <Section
-          title={draft.fulfillment_type === "delivery" ? "Delivery time" : "Pickup time"}
-          subtitle="Time slots are shown in the Georgia time zone."
+          title={draft.fulfillment_type === "delivery" ? t("deliveryTime") : t("pickupTime")}
+          subtitle={t("timezoneGeorgia")}
         >
           <TimeslotPicker
             type={draft.fulfillment_type}
@@ -203,18 +208,15 @@ export function CheckoutConfirm() {
           />
         </Section>
 
-        <Section
-          title="Your contact info"
-          subtitle="Email, Instagram or Telegram — optional, for order updates."
-        >
+        <Section title={t("contactTitle")} subtitle={t("contactSubtitle")}>
           <div className="grid gap-3 sm:grid-cols-2">
             <RequiredInput
-              placeholder="Name"
+              placeholder={t("namePlaceholder")}
               value={draft.customer_name}
               onChange={(e) => update({ customer_name: e.target.value })}
             />
             <RequiredInput
-              placeholder="Phone"
+              placeholder={t("phonePlaceholder")}
               value={draft.customer_phone}
               onChange={(e) => update({ customer_phone: e.target.value })}
             />
@@ -222,17 +224,17 @@ export function CheckoutConfirm() {
           <div className="grid gap-3 sm:grid-cols-3">
             <Input
               type="email"
-              placeholder="Email"
+              placeholder={t("emailPlaceholder")}
               value={draft.customer_email}
               onChange={(e) => update({ customer_email: e.target.value })}
             />
             <Input
-              placeholder="Instagram"
+              placeholder={t("instagramPlaceholder")}
               value={draft.customer_instagram}
               onChange={(e) => update({ customer_instagram: e.target.value })}
             />
             <Input
-              placeholder="Telegram"
+              placeholder={t("telegramPlaceholder")}
               value={draft.customer_telegram}
               onChange={(e) => update({ customer_telegram: e.target.value })}
             />
@@ -240,7 +242,7 @@ export function CheckoutConfirm() {
         </Section>
 
         {draft.fulfillment_type === "delivery" && draft.address ? (
-          <Section title="Deliver to">
+          <Section title={t("deliverTo")}>
             <p className="text-sm leading-relaxed text-[var(--ink)]/80">
               {draft.address.building}, {draft.address.street}
               {draft.address.apartment ? `, ${draft.address.apartment}` : ""}
@@ -250,9 +252,7 @@ export function CheckoutConfirm() {
               {draft.address.notes ? (
                 <>
                   <br />
-                  <span className="italic text-[var(--ink)]/60">
-                    {draft.address.notes}
-                  </span>
+                  <span className="italic text-[var(--ink)]/60">{draft.address.notes}</span>
                 </>
               ) : null}
             </p>
@@ -261,21 +261,21 @@ export function CheckoutConfirm() {
               onClick={() => router.push("/checkout")}
               className="mt-2 text-sm text-[var(--brand)] underline-offset-2 hover:underline"
             >
-              Change address
+              {t("changeAddress")}
             </button>
           </Section>
         ) : null}
 
-        <Section title="Order comment">
+        <Section title={t("orderComment")}>
           <Textarea
             rows={3}
             value={draft.comment}
             onChange={(e) => update({ comment: e.target.value })}
-            placeholder="e.g. without nuts"
+            placeholder={t("commentPlaceholder")}
           />
         </Section>
 
-        <Section title="Promo code">
+        <Section title={t("promoCodeSection")}>
           <PromoCodeBox
             value={draft.promo_code}
             onApplied={(code) => update({ promo_code: code })}
@@ -283,13 +283,13 @@ export function CheckoutConfirm() {
         </Section>
 
         <p className="text-sm leading-relaxed text-[var(--ink)]/70">
-          By placing the order you agree to our{" "}
+          {t("termsLead")}{" "}
           <Link href="/terms" className="text-[var(--brand)] underline underline-offset-2">
-            Terms &amp; Conditions
+            {t("termsLink")}
           </Link>{" "}
-          and{" "}
+          {t("termsMiddle")}{" "}
           <Link href="/privacy" className="text-[var(--brand)] underline underline-offset-2">
-            Privacy Policy
+            {t("privacyLink")}
           </Link>
           .
         </p>
@@ -303,11 +303,7 @@ export function CheckoutConfirm() {
         onPlaceOrder={handlePlaceOrder}
         isPlacing={placeOrder.isPending}
         canPlace={canPlace}
-        placeOrderLabel={
-          draft.payment_method === "bank_transfer" && bankTransferStep
-            ? "I confirm payment"
-            : "Place order"
-        }
+        placeOrderLabel={placeOrderLabel}
       />
     </div>
   );
@@ -339,9 +335,7 @@ function Section({
   return (
     <section className="min-w-0 rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
       <h2 className="font-display text-2xl">{title}</h2>
-      {subtitle ? (
-        <p className="mt-1 text-sm text-[var(--ink)]/60">{subtitle}</p>
-      ) : null}
+      {subtitle ? <p className="mt-1 text-sm text-[var(--ink)]/60">{subtitle}</p> : null}
       <div className="mt-4 min-w-0 space-y-3">{children}</div>
     </section>
   );

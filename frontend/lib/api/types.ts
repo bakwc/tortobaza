@@ -243,6 +243,7 @@ export type PlaceOrderBody = {
   customer_telegram?: string;
   comment: string;
   promo_code?: string;
+  locale: string;
 };
 
 export type PreviewOrderBody = {

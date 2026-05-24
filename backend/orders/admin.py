@@ -1,4 +1,5 @@
 from django.contrib import admin
+from modeltranslation.admin import TranslationAdmin
 
 from orders.models import (
     DeliveryAddress,
@@ -85,7 +86,7 @@ class PromoCodeAdmin(admin.ModelAdmin):
 
 
 @admin.register(PickupLocation)
-class PickupLocationAdmin(admin.ModelAdmin):
+class PickupLocationAdmin(TranslationAdmin):
     list_display = ["name", "address", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "address"]

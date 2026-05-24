@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -10,7 +11,7 @@ import { formatTimeslot, formatTimeslotDateLabel } from "@/lib/format";
 import type { CheckoutSchedule, FulfillmentType } from "@/lib/api/types";
 
 export function TimeslotPicker({
-  type,
+  type: _fulfillmentType,
   value,
   onChange,
 }: {
@@ -18,11 +19,13 @@ export function TimeslotPicker({
   value: CheckoutSchedule | null;
   onChange: (v: CheckoutSchedule | null) => void;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("checkout");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["fulfillment-options", type],
-    queryFn: () => api.getFulfillmentOptions(type),
+    queryKey: ["fulfillment-options", _fulfillmentType],
+    queryFn: () => api.getFulfillmentOptions(_fulfillmentType),
   });
 
   useEffect(() => {
@@ -65,24 +68,20 @@ export function TimeslotPicker({
     <div className="min-w-0 space-y-4">
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--ink)]/60">
-          <Spinner /> Loading options…
+          <Spinner /> {t("timeslotLoading")}
         </div>
       ) : null}
 
-      {error ? (
-        <p className="text-sm text-[var(--danger)]">
-          Could not load delivery options. Ensure your cart has items.
-        </p>
-      ) : null}
+      {error ? <p className="text-sm text-[var(--danger)]">{t("timeslotError")}</p> : null}
 
       {data && !data.express_available && data.dates.length === 0 ? (
-        <p className="text-sm text-[var(--ink)]/60">No delivery windows available.</p>
+        <p className="text-sm text-[var(--ink)]/60">{t("timeslotNoWindows")}</p>
       ) : null}
 
       {data && (data.express_available || data.dates.length > 0) ? (
         <>
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
-            How do you want delivery?
+            {t("howDeliver")}
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {data.express_available ? (
@@ -96,12 +95,8 @@ export function TimeslotPicker({
                     : "border-[var(--line)] bg-white hover:border-[var(--muted-2)]",
                 )}
               >
-                <span className="font-semibold text-[var(--ink)]">
-                  Within 2 hours
-                </span>
-                <span className="mt-1 text-xs leading-snug text-[var(--ink)]/60">
-                  As soon as possible after you place the order
-                </span>
+                <span className="font-semibold text-[var(--ink)]">{t("expressTitle")}</span>
+                <span className="mt-1 text-xs leading-snug text-[var(--ink)]/60">{t("expressDesc")}</span>
               </button>
             ) : null}
             {data.dates.length > 0 ? (
@@ -127,11 +122,9 @@ export function TimeslotPicker({
                     : "border-[var(--line)] bg-white hover:border-[var(--muted-2)]",
                 )}
               >
-                <span className="font-semibold text-[var(--ink)]">
-                  Scheduled time
-                </span>
+                <span className="font-semibold text-[var(--ink)]">{t("scheduledTitle")}</span>
                 <span className="mt-1 text-xs leading-snug text-[var(--ink)]/60">
-                  Pick a date and hour window
+                  {t("scheduledDesc")}
                 </span>
               </button>
             ) : null}
@@ -144,7 +137,7 @@ export function TimeslotPicker({
                   htmlFor="checkout-schedule-date"
                   className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50"
                 >
-                  Date
+                  {t("dateLabel")}
                 </label>
                 <Input
                   id="checkout-schedule-date"
@@ -172,7 +165,7 @@ export function TimeslotPicker({
                 />
                 {activeDate ? (
                   <p className="text-sm text-[var(--ink)]/60">
-                    {formatTimeslotDateLabel(activeDate)}
+                    {formatTimeslotDateLabel(activeDate, locale)}
                   </p>
                 ) : null}
               </div>

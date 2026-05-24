@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from orders.models import (
@@ -45,6 +46,7 @@ class OrderReadSerializer(serializers.ModelSerializer):
         fields = [
             "number",
             "lookup_token",
+            "locale",
             "fulfillment_type",
             "status",
             "payment_method",
@@ -101,34 +103,35 @@ class OrderCreateInputSerializer(serializers.Serializer):
     customer_telegram = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
     comment = serializers.CharField(required=False, allow_blank=True, default="")
     promo_code = serializers.CharField(required=False, allow_blank=True, default="")
+    locale = serializers.ChoiceField(choices=["en", "ka", "ru"])
 
     def validate(self, attrs):
         mode = attrs["schedule_mode"]
         if mode == "slot":
             if attrs.get("schedule_date") is None:
                 raise serializers.ValidationError(
-                    {"schedule_date": "This field is required for a scheduled slot."}
+                    {"schedule_date": _("This field is required for a scheduled slot.")}
                 )
             if attrs.get("schedule_start_time") is None:
                 raise serializers.ValidationError(
-                    {"schedule_start_time": "This field is required for a scheduled slot."}
+                    {"schedule_start_time": _("This field is required for a scheduled slot.")}
                 )
             if attrs.get("schedule_end_time") is None:
                 raise serializers.ValidationError(
-                    {"schedule_end_time": "This field is required for a scheduled slot."}
+                    {"schedule_end_time": _("This field is required for a scheduled slot.")}
                 )
         elif mode == "express":
             if attrs.get("schedule_date") is not None:
                 raise serializers.ValidationError(
-                    {"schedule_date": "Must be empty when using express scheduling."}
+                    {"schedule_date": _("Must be empty when using express scheduling.")}
                 )
             if attrs.get("schedule_start_time") is not None:
                 raise serializers.ValidationError(
-                    {"schedule_start_time": "Must be empty when using express scheduling."}
+                    {"schedule_start_time": _("Must be empty when using express scheduling.")}
                 )
             if attrs.get("schedule_end_time") is not None:
                 raise serializers.ValidationError(
-                    {"schedule_end_time": "Must be empty when using express scheduling."}
+                    {"schedule_end_time": _("Must be empty when using express scheduling.")}
                 )
         return attrs
 

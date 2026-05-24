@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { OrderAddress } from "@/lib/api/types";
@@ -11,27 +12,25 @@ export type AddressFormProps = {
 };
 
 export function AddressForm({ value, onChange, errors }: AddressFormProps) {
+  const t = useTranslations("checkout");
+
   const update = (key: keyof OrderAddress, val: string) =>
     onChange({ ...value, [key]: val });
 
   return (
     <div className="grid gap-3">
-      <Field label="Street" error={errors?.street}>
-        <Input
-          value={value.street}
-          onChange={(e) => update("street", e.target.value)}
-          placeholder=""
-        />
+      <Field label={t("addressStreet")} error={errors?.street}>
+        <Input value={value.street} onChange={(e) => update("street", e.target.value)} placeholder="" />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Building" error={errors?.building}>
+        <Field label={t("addressBuilding")} error={errors?.building}>
           <Input
             value={value.building}
             onChange={(e) => update("building", e.target.value)}
             placeholder=""
           />
         </Field>
-        <Field label="Apartment / unit" error={errors?.apartment}>
+        <Field label={t("addressApartment")} error={errors?.apartment}>
           <Input
             value={value.apartment}
             onChange={(e) => update("apartment", e.target.value)}
@@ -39,19 +38,19 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
           />
         </Field>
       </div>
-      <Field label="City" error={errors?.city}>
+      <Field label={t("addressCity")} error={errors?.city}>
         <Input
           value={value.city}
           onChange={(e) => update("city", e.target.value)}
-          placeholder="Batumi"
+          placeholder={t("cityPlaceholder")}
         />
       </Field>
-      <Field label="Notes for courier" error={errors?.notes}>
+      <Field label={t("addressNotesCourier")} error={errors?.notes}>
         <Textarea
           rows={3}
           value={value.notes}
           onChange={(e) => update("notes", e.target.value)}
-          placeholder="Door code, landmarks, etc."
+          placeholder={t("courierPlaceholder")}
         />
       </Field>
     </div>
@@ -69,9 +68,7 @@ function Field({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-        {label}
-      </span>
+      <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{label}</span>
       {children}
       {error ? <span className="text-xs text-[var(--danger)]">{error}</span> : null}
     </label>

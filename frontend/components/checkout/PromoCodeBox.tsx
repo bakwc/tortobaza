@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,8 +16,9 @@ export function PromoCodeBox({
   onApplied,
 }: {
   value: string;
-  onApplied: (code: string, validation: PromoValidation | null) => void;
+  onApplied: (code: string, validation?: PromoValidation | null) => void;
 }) {
+  const t = useTranslations("checkout");
   const [code, setCode] = useState(value);
   const [validation, setValidation] = useState<PromoValidation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +33,7 @@ export function PromoCodeBox({
       setValidation(result);
       onApplied(code.trim(), result);
     } catch (e) {
-      let message = "Invalid promo code";
+      let message = t("promoInvalid");
       if (e instanceof ApiError) {
         const parsed = e.parsed<{ detail?: string }>();
         if (parsed?.detail) message = parsed.detail;
@@ -57,7 +59,7 @@ export function PromoCodeBox({
         <Input
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          placeholder="Promo code"
+          placeholder={t("promoInputPlaceholder")}
           disabled={Boolean(validation)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -68,7 +70,7 @@ export function PromoCodeBox({
         />
         {validation ? (
           <Button type="button" variant="outline" onClick={handleRemove}>
-            <X className="mr-1 h-4 w-4" /> Remove
+            <X className="mr-1 h-4 w-4" /> {t("promoRemove")}
           </Button>
         ) : (
           <Button
@@ -78,7 +80,7 @@ export function PromoCodeBox({
             disabled={isLoading || !code.trim()}
           >
             {isLoading ? <Spinner className="mr-2" /> : null}
-            Apply
+            {t("promoApply")}
           </Button>
         )}
       </div>
@@ -86,7 +88,7 @@ export function PromoCodeBox({
       {validation ? (
         <p className="inline-flex items-center gap-1 text-xs text-[var(--brand)]">
           <Check className="h-3.5 w-3.5" />
-          Promo applied — saving {formatAed(validation.discount_total)}
+          {t("promoAppliedSaving", { amount: formatAed(validation.discount_total) })}
         </p>
       ) : null}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FulfillmentToggle } from "@/components/checkout/FulfillmentToggle";
 import { AddressForm } from "@/components/checkout/AddressForm";
@@ -24,6 +25,7 @@ const emptyAddress: OrderAddress = {
 };
 
 export function CheckoutStepOne() {
+  const t = useTranslations("checkout");
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
   const [hydrated, setHydrated] = useState(false);
@@ -46,7 +48,7 @@ export function CheckoutStepOne() {
       const required: (keyof OrderAddress)[] = ["street", "building", "city"];
       const missing = required.filter((k) => !address[k].trim());
       if (missing.length > 0) {
-        setError("Please fill in street, building and city.");
+        setError(t("fillStreetBuildingCity"));
         return;
       }
       const next: CheckoutDraft = {
@@ -57,7 +59,7 @@ export function CheckoutStepOne() {
       saveDraft(next);
     } else {
       if (!draft.pickup_location_id) {
-        setError("Please choose a pickup location.");
+        setError(t("pickLocationRequired"));
         return;
       }
       const next: CheckoutDraft = {
@@ -86,10 +88,8 @@ export function CheckoutStepOne() {
 
       {draft.fulfillment_type === "delivery" ? (
         <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
-          <h2 className="font-display text-2xl">Delivery address</h2>
-          <p className="mt-1 text-sm text-[var(--ink)]/60">
-            We deliver across Batumi. For other cities please contact us.
-          </p>
+          <h2 className="font-display text-2xl">{t("deliveryAddress")}</h2>
+          <p className="mt-1 text-sm text-[var(--ink)]/60">{t("deliveryAcrossBatumi")}</p>
           <div className="mt-4">
             <AddressForm
               value={address}
@@ -99,10 +99,8 @@ export function CheckoutStepOne() {
         </section>
       ) : (
         <section className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
-          <h2 className="font-display text-2xl">Pickup location</h2>
-          <p className="mt-1 text-sm text-[var(--ink)]/60">
-            Choose where you would like to pick up your order.
-          </p>
+          <h2 className="font-display text-2xl">{t("pickupLocation")}</h2>
+          <p className="mt-1 text-sm text-[var(--ink)]/60">{t("pickupHint")}</p>
           <div className="mt-4">
             <PickupPicker
               value={draft.pickup_location_id}
@@ -117,7 +115,7 @@ export function CheckoutStepOne() {
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
 
       <Button size="lg" onClick={handleNext} className="w-full sm:w-auto">
-        Continue
+        {t("continue")}
       </Button>
     </div>
   );

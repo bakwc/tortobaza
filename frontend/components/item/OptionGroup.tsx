@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatPriceDelta } from "@/lib/format";
 import type { OptionGroup as OptionGroupType } from "@/lib/api/types";
@@ -15,6 +16,8 @@ export function OptionGroup({
   selected: number[];
   onChange: (next: number[]) => void;
 }) {
+  const tItem = useTranslations("item");
+
   const isSingle = group.selection_type === "single";
 
   const toggle = (optionId: number) => {
@@ -34,7 +37,7 @@ export function OptionGroup({
       <div className="flex items-baseline justify-between">
         <h3 className="font-display text-2xl text-[var(--ink)]">{group.name}</h3>
         {group.is_required ? (
-          <span className="text-sm text-[var(--danger)]">Required</span>
+          <span className="text-sm text-[var(--danger)]">{tItem("required")}</span>
         ) : null}
       </div>
       <ul className="space-y-1">

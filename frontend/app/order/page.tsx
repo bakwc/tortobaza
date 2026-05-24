@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
 import { CategoryPills } from "@/components/catalog/CategoryPills";
 import { CategorySection } from "@/components/catalog/CategorySection";
@@ -6,10 +7,13 @@ import { MobileCartBar } from "@/components/catalog/MobileCartBar";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Order",
-  description: "Browse and order Tortobaza cakes and desserts.",
-};
+export async function generateMetadata() {
+  const t = await getTranslations("metadata");
+  return {
+    title: t("orderTitle"),
+    description: t("orderDescription"),
+  };
+}
 
 export default async function OrderPage() {
   const [categories, productsPage] = await Promise.all([
@@ -24,9 +28,7 @@ export default async function OrderPage() {
     productsByCategory.set(product.category.slug, list);
   }
 
-  const populatedCategories = categories.filter((c) =>
-    productsByCategory.has(c.slug),
-  );
+  const populatedCategories = categories.filter((c) => productsByCategory.has(c.slug));
 
   return (
     <div className="mx-auto max-w-[1400px] px-6">

@@ -1,25 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Check } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { rememberOrder } from "@/lib/order-history";
 import { formatAed, formatOrderTimeslot } from "@/lib/format";
 import type { Order } from "@/lib/api/types";
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Awaiting confirmation",
-  confirmed: "Confirmed",
-  preparing: "Being prepared",
-  ready: "Ready",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-};
-
-const PAYMENT_LABEL: Record<string, string> = {
-  card: "Card",
-  cash: "Cash",
-  bank_transfer: "Bank transfer",
-};
 
 const STATUS_TONE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-900",
@@ -31,12 +17,40 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export function OrderStatusView({ order }: { order: Order }) {
+  const locale = useLocale();
+  const t = useTranslations("orders");
+
+  const statusLabelMap = useMemo(
+    () => ({
+      pending: t("statusPending"),
+      confirmed: t("statusConfirmed"),
+      preparing: t("statusPreparing"),
+      ready: t("statusReady"),
+      delivered: t("statusDelivered"),
+      cancelled: t("statusCancelled"),
+    }),
+    [t],
+  );
+
+  const paymentLabelMap = useMemo(
+    () => ({
+      card: t("paymentCard"),
+      cash: t("paymentCash"),
+      bank_transfer: t("paymentBank"),
+    }),
+    [t],
+  );
+
   useEffect(() => {
     rememberOrder(order.number, order.lookup_token);
   }, [order.number, order.lookup_token]);
 
   const tone = STATUS_TONE[order.status] ?? "bg-amber-100 text-amber-900";
-  const label = STATUS_LABEL[order.status] ?? order.status;
+  const label =
+    statusLabelMap[order.status as keyof typeof statusLabelMap] ?? order.status;
+
+  const paymentMethodLabel =
+    paymentLabelMap[order.payment_method as keyof typeof paymentLabelMap] ?? order.payment_method;
 
   return (
     <div className="mt-6 space-y-6">
@@ -46,18 +60,16 @@ export function OrderStatusView({ order }: { order: Order }) {
             <Check className="h-6 w-6" />
           </span>
           <div>
-            <p className="text-sm text-[var(--ink)]/60">Order placed</p>
-            <h1 className="font-display text-3xl">#{order.number}</h1>
+            <p className="text-sm text-[var(--ink)]/60">{t("orderPlaced")}</p>
+            <h1 className="font-display text-3xl">{t("headingNumber", { number: order.number })}</h1>
           </div>
         </div>
-        <span
-          className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-medium ${tone}`}
-        >
+        <span className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-medium ${tone}`}>
           {label}
         </span>
 
         <dl className="mt-6 grid gap-4 text-sm sm:grid-cols-2">
-          <Field label="Customer">
+          <Field label={t("customerLabel")}>
             {order.customer_name}
             <br />
             {order.customer_phone}
@@ -70,90 +82,77 @@ export function OrderStatusView({ order }: { order: Order }) {
             {order.customer_instagram ? (
               <>
                 <br />
-                Instagram: {order.customer_instagram}
+                {t("instagramColon")} {order.customer_instagram}
               </>
             ) : null}
             {order.customer_telegram ? (
               <>
                 <br />
-                Telegram: {order.customer_telegram}
+                {t("telegramColon")} {order.customer_telegram}
               </>
             ) : null}
           </Field>
-          <Field label="Fulfillment">
-            {order.fulfillment_type === "delivery" ? "Delivery" : "Pickup"}
+          <Field label={t("fulfillmentLabel")}>
+            {order.fulfillment_type === "delivery"
+              ? t("deliveryFulfillment")
+              : t("pickupFulfillment")}
             {order.timeslot_start && order.timeslot_end ? (
               <>
                 <br />
-                {formatOrderTimeslot(order.timeslot_start, order.timeslot_end)}
+                {formatOrderTimeslot(order.timeslot_start, order.timeslot_end, locale)}
               </>
             ) : null}
           </Field>
           {order.delivery_address ? (
-            <Field label="Address">
+            <Field label={t("addressLabel")}>
               {order.delivery_address.building}, {order.delivery_address.street}
-              {order.delivery_address.apartment
-                ? `, ${order.delivery_address.apartment}`
-                : ""}
+              {order.delivery_address.apartment ? `, ${order.delivery_address.apartment}` : ""}
               <br />
               {order.delivery_address.city}
-              {order.delivery_address.postal_code
-                ? `, ${order.delivery_address.postal_code}`
-                : ""}
+              {order.delivery_address.postal_code ? `, ${order.delivery_address.postal_code}` : ""}
             </Field>
           ) : null}
           {order.pickup_location ? (
-            <Field label="Pickup location">
+            <Field label={t("pickupLocationLabel")}>
               {order.pickup_location.name}
               <br />
               {order.pickup_location.address}
             </Field>
           ) : null}
-          <Field label="Payment">
-            {PAYMENT_LABEL[order.payment_method] ?? order.payment_method} ·{" "}
-            <span className="text-[var(--ink)]/60">{order.payment_status}</span>
+          <Field label={t("paymentLabel")}>
+            {paymentMethodLabel} · <span className="text-[var(--ink)]/60">{order.payment_status}</span>
           </Field>
-          {order.comment ? (
-            <Field label="Comment">{order.comment}</Field>
-          ) : null}
+          {order.comment ? <Field label={t("commentLabel")}>{order.comment}</Field> : null}
         </dl>
       </div>
 
       <div className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
-        <h2 className="font-display text-2xl">Items</h2>
+        <h2 className="font-display text-2xl">{t("itemsHeading")}</h2>
         <ul className="mt-4 divide-y divide-[var(--line)]">
           {order.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-baseline justify-between py-3 text-sm"
-            >
+            <li key={item.id} className="flex items-baseline justify-between py-3 text-sm">
               <span className="pr-3">
-                <span className="text-[var(--ink)]/60">x{item.quantity}</span>{" "}
-                {item.product_name}
+                <span className="text-[var(--ink)]/60">x{item.quantity}</span> {item.product_name}
                 {item.options.length > 0 ? (
                   <span className="block text-xs text-[var(--ink)]/60">
-                    {item.options
-                      .map((o) => `${o.group_name}: ${o.option_name}`)
-                      .join(" · ")}
+                    {item.options.map((o) => `${o.group_name}: ${o.option_name}`).join(" · ")}
                   </span>
                 ) : null}
               </span>
-              <span className="font-medium tabular-nums">
-                {formatAed(item.line_total)}
-              </span>
+              <span className="font-medium tabular-nums">{formatAed(item.line_total)}</span>
             </li>
           ))}
         </ul>
         <dl className="mt-4 space-y-1 border-t border-[var(--line)] pt-4 text-sm">
-          <Row label="Subtotal" value={formatAed(order.subtotal)} />
+          <Row label={t("subtotalRow")} value={formatAed(order.subtotal)} />
           {Number.parseFloat(order.discount_total) > 0 ? (
             <Row
-              label="Discount"
+              label={t("discountRow")}
               value={`−${formatAed(order.discount_total)}`}
               tone="text-[var(--brand)]"
             />
           ) : null}
-          <Row label="Total" value={formatAed(order.total)} bold />
+          <Row label={t("totalRow")} value={formatAed(order.total)} bold />
         </dl>
       </div>
     </div>
@@ -163,9 +162,7 @@ export function OrderStatusView({ order }: { order: Order }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">
-        {label}
-      </dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/50">{label}</dt>
       <dd className="mt-1 leading-relaxed text-[var(--ink)]/80">{children}</dd>
     </div>
   );
@@ -185,9 +182,7 @@ function Row({
   return (
     <div className={`flex justify-between ${tone ?? ""} ${bold ? "text-base" : ""}`}>
       <dt className={bold ? "font-medium" : "text-[var(--ink)]/60"}>{label}</dt>
-      <dd className={bold ? "font-semibold tabular-nums" : "tabular-nums"}>
-        {value}
-      </dd>
+      <dd className={bold ? "font-semibold tabular-nums" : "tabular-nums"}>{value}</dd>
     </div>
   );
 }

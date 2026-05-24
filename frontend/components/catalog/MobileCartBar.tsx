@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { formatAed } from "@/lib/format";
 
 export function MobileCartBar() {
+  const t = useTranslations("catalog");
   const { data: cart } = useCart();
   const items = cart?.items ?? [];
   const count = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -24,7 +26,7 @@ export function MobileCartBar() {
             {count}
           </span>
         </span>
-        View order
+        {t("viewOrder")}
       </span>
       <span className="text-sm font-medium">{formatAed(cart?.subtotal ?? "0")}</span>
     </Link>

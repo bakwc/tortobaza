@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
 import { ItemDetail } from "@/components/item/ItemDetail";
 import { ApiError } from "@/lib/api/client";
@@ -13,6 +14,7 @@ export default async function ItemPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const tCheckout = await getTranslations("checkout");
 
   let product;
   try {
@@ -32,7 +34,7 @@ export default async function ItemPage({
           className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/70 hover:text-[var(--ink)]"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to catalog
+          {tCheckout("backToCatalog")}
         </Link>
       </div>
       <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-[var(--line)]">
@@ -55,6 +57,7 @@ export async function generateMetadata({
       description: product.description.slice(0, 160) || product.name,
     };
   } catch {
-    return { title: "Item" };
+    const tStatic = await getTranslations("metadata");
+    return { title: tStatic("orderTitle") };
   }
 }

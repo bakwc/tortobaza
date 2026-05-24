@@ -1,5 +1,11 @@
 const BUSINESS_TIMEZONE = "Asia/Tbilisi";
 
+function intlLocaleTag(locale: string): string {
+  if (locale === "ka") return "ka-GE";
+  if (locale === "ru") return "ru-RU";
+  return "en-GB";
+}
+
 export function formatAed(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(value)) return "0.00 ₾";
@@ -19,20 +25,25 @@ export function formatTimeslot(start: string, end: string): string {
   return `${sh}:${sm} – ${eh}:${em}`;
 }
 
-export function formatTimeslotDateLabel(date: string): string {
+export function formatTimeslotDateLabel(date: string, locale: string): string {
   const d = new Date(`${date}T00:00:00`);
-  return d.toLocaleDateString("en-GB", {
+  return d.toLocaleDateString(intlLocaleTag(locale), {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
 }
 
-export function formatOrderTimeslot(startIso: string | null, endIso: string | null): string {
+export function formatOrderTimeslot(
+  startIso: string | null,
+  endIso: string | null,
+  locale: string,
+): string {
   if (!startIso || !endIso) return "";
   const start = new Date(startIso);
   const end = new Date(endIso);
-  const datePart = start.toLocaleDateString("en-GB", {
+  const tag = intlLocaleTag(locale);
+  const datePart = start.toLocaleDateString(tag, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -41,11 +52,11 @@ export function formatOrderTimeslot(startIso: string | null, endIso: string | nu
   const timeOpts: Intl.DateTimeFormatOptions = {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: locale === "en",
     timeZone: BUSINESS_TIMEZONE,
   };
-  const startTime = start.toLocaleTimeString("en-US", timeOpts);
-  const endTime = end.toLocaleTimeString("en-US", timeOpts);
+  const startTime = start.toLocaleTimeString(tag, timeOpts);
+  const endTime = end.toLocaleTimeString(tag, timeOpts);
   return `${datePart} ${startTime} – ${endTime}`;
 }
 

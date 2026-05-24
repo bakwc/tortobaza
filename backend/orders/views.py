@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils.translation import gettext as _
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,13 +33,13 @@ class FulfillmentOptionsView(APIView):
         ftype = request.query_params.get("type")
         if ftype not in ("delivery", "pickup"):
             return Response(
-                {"detail": "Query parameter type must be delivery or pickup."},
+                {"detail": _("Query parameter type must be delivery or pickup.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         cart = request.cart
         if cart is None or not cart.items.exists():
             return Response(
-                {"detail": "Cart is empty."},
+                {"detail": _("Cart is empty.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         data = build_fulfillment_options(cart)
@@ -50,7 +51,7 @@ class PromoCodeValidateView(APIView):
         cart = request.cart
         if cart is None or not cart.items.exists():
             return Response(
-                {"valid": False, "detail": "Cart is empty."},
+                {"valid": False, "detail": _("Cart is empty.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = PromoValidateInputSerializer(data=request.data)
@@ -75,7 +76,7 @@ class OrderPreviewView(APIView):
         cart = request.cart
         if cart is None or not cart.items.exists():
             return Response(
-                {"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": _("Cart is empty.")}, status=status.HTTP_400_BAD_REQUEST
             )
         serializer = OrderPreviewInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -103,7 +104,7 @@ class OrderCreateView(APIView):
         cart = request.cart
         if cart is None or not cart.items.exists():
             return Response(
-                {"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": _("Cart is empty.")}, status=status.HTTP_400_BAD_REQUEST
             )
 
         serializer = OrderCreateInputSerializer(data=request.data)
@@ -126,7 +127,7 @@ class OrderDetailView(APIView):
         token = request.query_params.get("token")
         if not token:
             return Response(
-                {"detail": "Lookup token is required."},
+                {"detail": _("Lookup token is required.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         order = get_object_or_404(Order, number=number, lookup_token=token)

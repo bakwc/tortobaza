@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
+import { getLocale } from "next-intl/server";
 
 export type ServerFetchOptions = RequestInit & {
   searchParams?: Record<string, string | number | undefined | null>;
@@ -30,6 +31,9 @@ export async function serverFetch<T>(
   const finalHeaders = new Headers(extraHeaders);
   if (!finalHeaders.has("Accept")) {
     finalHeaders.set("Accept", "application/json");
+  }
+  if (!finalHeaders.has("Accept-Language")) {
+    finalHeaders.set("Accept-Language", await getLocale());
   }
   if (cartToken) {
     finalHeaders.set("X-Cart-Token", cartToken);

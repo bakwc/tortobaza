@@ -1,0 +1,134 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tortobaza\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"Language: ru\n"
+
+msgid "Cart is empty."
+msgstr "Корзина пуста."
+
+msgid "Invalid schedule tier."
+msgstr "Недопустимый уровень расписания доставки."
+
+msgid "Express delivery is not available for this order."
+msgstr "Экспресс-доставка для этого заказа недоступна."
+
+msgid "Invalid schedule mode."
+msgstr "Недопустимый режим расписания."
+
+msgid "Date and time window are required for scheduled delivery."
+msgstr "Для назначенной доставки нужны дата и интервал времени."
+
+msgid "Selected time slot is not available."
+msgstr "Выбранное время недоступно."
+
+msgid "This field is required for a scheduled slot."
+msgstr "Это поле обязательно для выбора слота."
+
+msgid "Must be empty when using express scheduling."
+msgstr "При экспресс-доставке это поле должно быть пустым."
+
+msgid "Promo code is not active."
+msgstr "Промокод не активен."
+
+msgid "Promo code is not yet valid."
+msgstr "Промокод ещё не действует."
+
+msgid "Promo code has expired."
+msgstr "Срок промокода истёк."
+
+msgid "Promo code usage limit reached."
+msgstr "Лимит использований промокода исчерпан."
+
+#, python-format
+msgid "Minimum order amount is %(amount)s."
+msgstr "Минимальная сумма заказа — %(amount)s."
+
+msgid "Promo code not found."
+msgstr "Промокод не найден."
+
+msgid "Pickup location is required."
+msgstr "Нужно выбрать пункт самовывоза."
+
+msgid "Pickup location not found."
+msgstr "Пункт самовывоза не найден."
+
+msgid "Delivery address is required."
+msgstr "Нужен адрес доставки."
+
+msgid "Apt."
+msgstr "кв."
+
+msgid "Delivery"
+msgstr "Доставка"
+
+msgid "Pickup"
+msgstr "Самовывоз"
+
+msgid "Card"
+msgstr "Карта"
+
+msgid "Cash"
+msgstr "Наличные"
+
+msgid "Bank transfer"
+msgstr "Банковский перевод"
+
+msgid "Address"
+msgstr "Адрес"
+
+msgid "Pickup point"
+msgstr "Пункт самовывоза"
+
+#, python-format
+msgid "🆕 <b>New order #%(number)s</b>"
+msgstr "🆕 <b>Новый заказ #%(number)s</b>"
+
+msgid "Customer:"
+msgstr "Клиент:"
+
+msgid "Phone:"
+msgstr "Телефон:"
+
+msgid "Email:"
+msgstr "Email:"
+
+msgid "Instagram:"
+msgstr "Instagram:"
+
+msgid "Telegram:"
+msgstr "Telegram:"
+
+msgid "Type:"
+msgstr "Тип:"
+
+msgid "Time:"
+msgstr "Время:"
+
+msgid "Payment:"
+msgstr "Оплата:"
+
+msgid "Total:"
+msgstr "Итого:"
+
+msgid "Discount:"
+msgstr "Скидка:"
+
+msgid "Comment:"
+msgstr "Комментарий:"
+
+msgid "Items:"
+msgstr "Состав:"
+
+msgid "Open in admin"
+msgstr "Открыть в админке"
+
+msgid "Query parameter type must be delivery or pickup."
+msgstr "Параметр type должен быть delivery или pickup."
+
+msgid "Lookup token is required."
+msgstr "Нужен токен для просмотра заказа."

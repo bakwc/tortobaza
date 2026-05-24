@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +15,7 @@ export function PickupPicker({
   value: number | null;
   onChange: (id: number) => void;
 }) {
+  const t = useTranslations("checkout");
   const { data, isLoading, error } = useQuery({
     queryKey: ["pickup-locations"],
     queryFn: () => api.getPickupLocations(),
@@ -30,21 +32,17 @@ export function PickupPicker({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-[var(--ink)]/60">
-        <Spinner /> Loading pickup locations…
+        <Spinner /> {t("pickupLoading")}
       </div>
     );
   }
 
   if (error) {
-    return (
-      <p className="text-sm text-[var(--danger)]">Could not load pickup locations.</p>
-    );
+    return <p className="text-sm text-[var(--danger)]">{t("pickupError")}</p>;
   }
 
   if (locations.length === 0) {
-    return (
-      <p className="text-sm text-[var(--ink)]/60">No pickup locations are available.</p>
-    );
+    return <p className="text-sm text-[var(--ink)]/60">{t("pickupEmpty")}</p>;
   }
 
   return (

@@ -1,0 +1,133 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tortobaza\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: ka\n"
+
+msgid "Cart is empty."
+msgstr "კალათა ცარიელია."
+
+msgid "Invalid schedule tier."
+msgstr "არასწორი მიწოდების დონე."
+
+msgid "Express delivery is not available for this order."
+msgstr "ეს შეკვეთისთვის ექსპრეს მიწოდება შეუძლებელია."
+
+msgid "Invalid schedule mode."
+msgstr "არასწორი განრიგის რეჟიმი."
+
+msgid "Date and time window are required for scheduled delivery."
+msgstr "გეგმით მიწოდებას სჭირდება თარიღი და დროის შუალედი."
+
+msgid "Selected time slot is not available."
+msgstr "არჩეული დრო ხელმიუწვდომელია."
+
+msgid "This field is required for a scheduled slot."
+msgstr "ეს ველი სავალდებულოა დაგეგმილი სლოტის არჩევისას."
+
+msgid "Must be empty when using express scheduling."
+msgstr "ექსპრესის დროს ეს ველი ცარიელი უნდა იყოს."
+
+msgid "Promo code is not active."
+msgstr "პრომო კოდი არ არის აქტიური."
+
+msgid "Promo code is not yet valid."
+msgstr "პრომო კოდი ჯერ არ იწყება."
+
+msgid "Promo code has expired."
+msgstr "პრომო კოდის ვადა გავიდა."
+
+msgid "Promo code usage limit reached."
+msgstr "პრომოს გამოყენების ლიმიტი ამოიწურა."
+
+#, python-format
+msgid "Minimum order amount is %(amount)s."
+msgstr "შეკვეთის მინიმალური თანხაა %(amount)s."
+
+msgid "Promo code not found."
+msgstr "პრომო კოდი არ მოიძებნა."
+
+msgid "Pickup location is required."
+msgstr "აუცილებელია pickup წერტილის არჩევა."
+
+msgid "Pickup location not found."
+msgstr "Pickup წერტილი ვერ მოიძებნა."
+
+msgid "Delivery address is required."
+msgstr "მიწოდების მისამართი საჭიროა."
+
+msgid "Apt."
+msgstr "ბინა"
+
+msgid "Delivery"
+msgstr "მიწოდება"
+
+msgid "Pickup"
+msgstr "Pickup"
+
+msgid "Card"
+msgstr "ბარათი"
+
+msgid "Cash"
+msgstr "ნაღდი"
+
+msgid "Bank transfer"
+msgstr "ბანკის გადარიცხვა"
+
+msgid "Address"
+msgstr "მისამართი"
+
+msgid "Pickup point"
+msgstr "Pickup წერტილი"
+
+#, python-format
+msgid "🆕 <b>New order #%(number)s</b>"
+msgstr "🆕 <b>ახალი შეკვეთა #%(number)s</b>"
+
+msgid "Customer:"
+msgstr "კლიენტი:"
+
+msgid "Phone:"
+msgstr "ტელეფონი:"
+
+msgid "Email:"
+msgstr "ელფოსტა:"
+
+msgid "Instagram:"
+msgstr "Instagram:"
+
+msgid "Telegram:"
+msgstr "Telegram:"
+
+msgid "Type:"
+msgstr "ტიპი:"
+
+msgid "Time:"
+msgstr "დრო:"
+
+msgid "Payment:"
+msgstr "გადახდა:"
+
+msgid "Total:"
+msgstr "ჯამი:"
+
+msgid "Discount:"
+msgstr "ფასდაკლება:"
+
+msgid "Comment:"
+msgstr "კომენტარი:"
+
+msgid "Items:"
+msgstr "პოზიციები:"
+
+msgid "Open in admin"
+msgstr "ადმინში გახსნა"
+
+msgid "Query parameter type must be delivery or pickup."
+msgstr "პარამეტრი type უნდა იყოს delivery ან pickup."
+
+msgid "Lookup token is required."
+msgstr "გამოძახების ჟეტონი საჭიროა."

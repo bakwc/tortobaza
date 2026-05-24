@@ -1,7 +1,15 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useLocale } from "next-intl";
 import { useState, type ReactNode } from "react";
+import { setClientRequestLocale } from "@/lib/request-locale-shared";
+
+function LocaleApiSync() {
+  const locale = useLocale();
+  setClientRequestLocale(locale);
+  return null;
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -17,5 +25,10 @@ export function Providers({ children }: { children: ReactNode }) {
       }),
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <LocaleApiSync />
+      {children}
+    </QueryClientProvider>
+  );
 }

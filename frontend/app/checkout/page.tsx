@@ -1,15 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
 import { CheckoutStepOne } from "./CheckoutStepOne";
 import { CheckoutBasket } from "@/components/checkout/CheckoutBasket";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Checkout" };
+export async function generateMetadata() {
+  const t = await getTranslations("metadata");
+  return {
+    title: t("checkoutTitle"),
+    description: t("checkoutDescription"),
+  };
+}
 
 export default async function CheckoutPage() {
+  const tCheckout = await getTranslations("checkout");
   const cart = await serverApi.getCart();
   if (cart.items.length === 0) {
     redirect("/order");
@@ -22,10 +30,10 @@ export default async function CheckoutPage() {
         className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
       >
         <ChevronLeft className="h-4 w-4" />
-        Back to catalog
+        {tCheckout("backToCatalog")}
       </Link>
 
-      <h1 className="mt-4 font-display text-4xl md:text-5xl">Your delivery</h1>
+      <h1 className="mt-4 font-display text-4xl md:text-5xl">{tCheckout("yourDelivery")}</h1>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
         <CheckoutStepOne />

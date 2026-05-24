@@ -4,19 +4,9 @@ import urllib.request
 
 from django.conf import settings
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from orders.models import Order
-
-FULFILLMENT_LABELS = {
-    Order.FULFILLMENT_DELIVERY: "Доставка",
-    Order.FULFILLMENT_PICKUP: "Самовывоз",
-}
-
-PAYMENT_METHOD_LABELS = {
-    Order.PAYMENT_CARD: "Карта",
-    Order.PAYMENT_CASH: "Наличные",
-    Order.PAYMENT_BANK_TRANSFER: "Банковский перевод",
-}
 
 
 def _esc(value: str) -> str:
@@ -49,7 +39,7 @@ def _format_address(order: Order) -> str:
     if addr.building:
         parts.append(addr.building)
     if addr.apartment:
-        parts.append(f"кв. {addr.apartment}")
+        parts.append(f"{_('Apt.')} {addr.apartment}")
     line = ", ".join(parts)
     if addr.city:
         line = f"{line}, {addr.city}"
@@ -73,43 +63,55 @@ def _format_items(order: Order) -> str:
 
 
 def build_order_notification_text(order: Order) -> str:
+    fulfillment_labels = {
+        Order.FULFILLMENT_DELIVERY: _("Delivery"),
+        Order.FULFILLMENT_PICKUP: _("Pickup"),
+    }
+    payment_method_labels = {
+        Order.PAYMENT_CARD: _("Card"),
+        Order.PAYMENT_CASH: _("Cash"),
+        Order.PAYMENT_BANK_TRANSFER: _("Bank transfer"),
+    }
+
     admin_url = f"{settings.SITE_URL}/admin/orders/order/{order.pk}/change/"
-    fulfillment = FULFILLMENT_LABELS[order.fulfillment_type]
-    payment = PAYMENT_METHOD_LABELS[order.payment_method]
-    location_label = "Адрес" if order.fulfillment_type == Order.FULFILLMENT_DELIVERY else "Самовывоз"
+    fulfillment = fulfillment_labels[order.fulfillment_type]
+    payment = payment_method_labels[order.payment_method]
+    location_label = (
+        _("Address") if order.fulfillment_type == Order.FULFILLMENT_DELIVERY else _("Pickup point")
+    )
 
     lines = [
-        f"🆕 <b>Новый заказ #{_esc(order.number)}</b>",
+        _("🆕 <b>New order #%(number)s</b>") % {"number": _esc(order.number)},
         "",
-        f"<b>Клиент:</b> {_esc(order.customer_name)}",
-        f"<b>Телефон:</b> {_esc(order.customer_phone)}",
+        f"<b>{_('Customer:')}</b> {_esc(order.customer_name)}",
+        f"<b>{_('Phone:')}</b> {_esc(order.customer_phone)}",
     ]
     if order.customer_email:
-        lines.append(f"<b>Email:</b> {_esc(order.customer_email)}")
+        lines.append(f"<b>{_('Email:')}</b> {_esc(order.customer_email)}")
     if order.customer_instagram:
-        lines.append(f"<b>Instagram:</b> {_esc(order.customer_instagram)}")
+        lines.append(f"<b>{_('Instagram:')}</b> {_esc(order.customer_instagram)}")
     if order.customer_telegram:
-        lines.append(f"<b>Telegram:</b> {_esc(order.customer_telegram)}")
+        lines.append(f"<b>{_('Telegram:')}</b> {_esc(order.customer_telegram)}")
     lines.extend(
         [
-            f"<b>Тип:</b> {fulfillment}",
+            f"<b>{_('Type:')}</b> {fulfillment}",
             f"<b>{location_label}:</b> {_esc(_format_address(order))}",
-            f"<b>Время:</b> {_esc(_format_timeslot(order))}",
-            f"<b>Оплата:</b> {payment}",
-            f"<b>Сумма:</b> {_format_money(order.total)}",
+            f"<b>{_('Time:')}</b> {_esc(_format_timeslot(order))}",
+            f"<b>{_('Payment:')}</b> {payment}",
+            f"<b>{_('Total:')}</b> {_format_money(order.total)}",
         ]
     )
     if order.discount_total > 0:
-        lines.append(f"<b>Скидка:</b> −{_format_money(order.discount_total)}")
+        lines.append(f"<b>{_('Discount:')}</b> −{_format_money(order.discount_total)}")
     if order.comment:
-        lines.append(f"<b>Комментарий:</b> {_esc(order.comment)}")
+        lines.append(f"<b>{_('Comment:')}</b> {_esc(order.comment)}")
     lines.extend(
         [
             "",
-            "<b>Состав:</b>",
+            f"<b>{_('Items:')}</b>",
             _format_items(order),
             "",
-            f'<a href="{admin_url}">Открыть в админке</a>',
+            f'<a href="{admin_url}">{_("Open in admin")}</a>',
         ]
     )
     return "\n".join(lines)
@@ -120,7 +122,13 @@ def send_order_notification(order: Order) -> None:
     chat_id = settings.TELEGRAM_CHAT_ID
     if not token or not chat_id:
         return
+    from django.utils import translation
+
+    prev = translation.get_language()
+    translation.activate(order.locale)
     text = build_order_notification_text(order)
+    translation.activate(prev)
+
     payload = json.dumps(
         {
             "chat_id": chat_id,

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { OptionGroup, type OptionSelection } from "./OptionGroup";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +22,7 @@ export function ItemDetail({
   variant?: "page" | "modal";
   onAdded?: () => void;
 }) {
+  const t = useTranslations("item");
   const router = useRouter();
   const addItem = useAddCartItem();
 
@@ -58,7 +60,7 @@ export function ItemDetail({
   const handleAdd = async () => {
     setError(null);
     if (missingRequired.length > 0) {
-      setError(`Please choose: ${missingRequired.join(", ")}`);
+      setError(`${t("pleaseChoosePrefix")} ${missingRequired.join(", ")}`);
       return;
     }
     const optionIds = Object.values(selection).flat();
@@ -72,7 +74,7 @@ export function ItemDetail({
       if (onAdded) onAdded();
       else router.back();
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Failed to add item";
+      const message = e instanceof Error ? e.message : t("failedAdd");
       setError(message);
     }
   };
@@ -103,7 +105,7 @@ export function ItemDetail({
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-[var(--muted-2)]">
-                No image
+                {t("noImage")}
               </div>
             )}
           </div>
@@ -139,13 +141,9 @@ export function ItemDetail({
 
       <div className="relative flex min-h-0 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-32 pt-6 md:px-8">
-          <h1 className="font-display text-3xl text-[var(--ink)] md:text-4xl">
-            {product.name}
-          </h1>
+          <h1 className="font-display text-3xl text-[var(--ink)] md:text-4xl">{product.name}</h1>
           {product.description ? (
-            <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]/70">
-              {product.description}
-            </p>
+            <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]/70">{product.description}</p>
           ) : null}
 
           <div className="mt-8 space-y-8">
@@ -154,9 +152,7 @@ export function ItemDetail({
                 key={group.id}
                 group={group}
                 selected={selection[group.id] ?? []}
-                onChange={(next) =>
-                  setSelection((prev) => ({ ...prev, [group.id]: next }))
-                }
+                onChange={(next) => setSelection((prev) => ({ ...prev, [group.id]: next }))}
               />
             ))}
           </div>
@@ -165,22 +161,20 @@ export function ItemDetail({
             <Textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Notes"
+              placeholder={t("notesPlaceholder")}
               rows={3}
             />
           </div>
         </div>
 
         <div className="absolute inset-x-0 bottom-0 border-t border-[var(--line)] bg-white/95 px-6 py-4 backdrop-blur md:px-8">
-          {error ? (
-            <p className="mb-2 text-xs text-[var(--danger)]">{error}</p>
-          ) : null}
+          {error ? <p className="mb-2 text-xs text-[var(--danger)]">{error}</p> : null}
           <div className="flex items-center gap-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] p-1">
               <button
                 type="button"
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                aria-label="Decrease"
+                aria-label={t("decreaseAria")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--cream)]"
               >
                 <Minus className="h-4 w-4" />
@@ -189,7 +183,7 @@ export function ItemDetail({
               <button
                 type="button"
                 onClick={() => setQuantity((q) => q + 1)}
-                aria-label="Increase"
+                aria-label={t("increaseAria")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full hover:bg-[var(--cream)]"
               >
                 <Plus className="h-4 w-4" />
@@ -204,7 +198,7 @@ export function ItemDetail({
               className="flex-1"
             >
               {addItem.isPending ? <Spinner className="mr-2" /> : null}
-              Add for {formatAed(lineTotal)}
+              {t("addFor", { price: formatAed(lineTotal) })}
             </Button>
           </div>
         </div>

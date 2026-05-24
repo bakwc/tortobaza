@@ -2,6 +2,7 @@ import threading
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -23,16 +24,16 @@ def compute_promo_discount(promo: PromoCode | None, subtotal: Decimal) -> Decima
         return Decimal("0")
     now = timezone.now()
     if not promo.is_active:
-        raise serializers.ValidationError({"promo_code": "Promo code is not active."})
+        raise serializers.ValidationError({"promo_code": _("Promo code is not active.")})
     if promo.valid_from and now < promo.valid_from:
-        raise serializers.ValidationError({"promo_code": "Promo code is not yet valid."})
+        raise serializers.ValidationError({"promo_code": _("Promo code is not yet valid.")})
     if promo.valid_to and now > promo.valid_to:
-        raise serializers.ValidationError({"promo_code": "Promo code has expired."})
+        raise serializers.ValidationError({"promo_code": _("Promo code has expired.")})
     if promo.max_uses is not None and promo.uses_count >= promo.max_uses:
-        raise serializers.ValidationError({"promo_code": "Promo code usage limit reached."})
+        raise serializers.ValidationError({"promo_code": _("Promo code usage limit reached.")})
     if subtotal < promo.min_order_amount:
         raise serializers.ValidationError(
-            {"promo_code": f"Minimum order amount is {promo.min_order_amount}."}
+            {"promo_code": _("Minimum order amount is %(amount)s.") % {"amount": promo.min_order_amount}}
         )
 
     if promo.discount_type == PromoCode.DISCOUNT_PERCENT:
@@ -47,7 +48,7 @@ def compute_promo_discount(promo: PromoCode | None, subtotal: Decimal) -> Decima
 def get_promo_by_code(code: str) -> PromoCode:
     promo = PromoCode.objects.filter(code__iexact=code).first()
     if promo is None:
-        raise serializers.ValidationError({"promo_code": "Promo code not found."})
+        raise serializers.ValidationError({"promo_code": _("Promo code not found.")})
     return promo
 
 
@@ -61,7 +62,7 @@ def compute_totals(cart: Cart, promo: PromoCode | None) -> dict:
 @transaction.atomic
 def create_order_from_cart(cart: Cart, payload: dict) -> Order:
     if not cart.items.exists():
-        raise serializers.ValidationError({"cart": "Cart is empty."})
+        raise serializers.ValidationError({"cart": _("Cart is empty.")})
 
     fulfillment_type = payload["fulfillment_type"]
 
@@ -70,19 +71,19 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
         pickup_id = payload.get("pickup_location_id")
         if pickup_id is None:
             raise serializers.ValidationError(
-                {"pickup_location_id": "Pickup location is required."}
+                {"pickup_location_id": _("Pickup location is required.")}
             )
         pickup_location = PickupLocation.objects.filter(pk=pickup_id, is_active=True).first()
         if pickup_location is None:
             raise serializers.ValidationError(
-                {"pickup_location_id": "Pickup location not found."}
+                {"pickup_location_id": _("Pickup location not found.")}
             )
 
     address_data: dict | None = None
     if fulfillment_type == Order.FULFILLMENT_DELIVERY:
         address_data = payload.get("address")
         if not address_data:
-            raise serializers.ValidationError({"address": "Delivery address is required."})
+            raise serializers.ValidationError({"address": _("Delivery address is required.")})
 
     timeslot_start, timeslot_end = resolve_schedule_selection(
         cart,
@@ -99,6 +100,7 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
     totals = compute_totals(cart, promo)
 
     order = Order.objects.create(
+        locale=payload["locale"],
         fulfillment_type=fulfillment_type,
         payment_method=payload["payment_method"],
         customer_name=payload["customer_name"],

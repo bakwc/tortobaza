@@ -1,4 +1,5 @@
 from django.contrib import admin
+from modeltranslation.admin import TranslationAdmin, TranslationTabularInline
 
 from catalog.models import (
     Category,
@@ -25,7 +26,7 @@ class OptionGroupAdmin(admin.ModelAdmin):
 
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(TranslationAdmin):
     list_display = ["name", "slug", "delivery_schedule_tier", "position", "is_active"]
     list_editable = ["position", "is_active"]
     list_filter = ["delivery_schedule_tier", "is_active"]
@@ -33,7 +34,7 @@ class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
 
 
-class ProductImageInline(admin.TabularInline):
+class ProductImageInline(TranslationTabularInline):
     model = ProductImage
     extra = 1
     fields = ["image", "alt", "position"]
@@ -47,7 +48,7 @@ class ProductOptionGroupInline(admin.TabularInline):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(TranslationAdmin):
     list_display = [
         "name",
         "category",
