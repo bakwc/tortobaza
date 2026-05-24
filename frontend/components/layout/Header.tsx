@@ -11,10 +11,10 @@ export function Header() {
         <div className="flex min-w-0 items-center gap-6 sm:gap-8 md:gap-10">
           <Link href="/" className="site-header-logo flex items-center" aria-label="Sweet & Chill">
             <img
-              src="/sweet-chill-logo-1.svg"
+              src="/sweet-chill-logo-2.svg"
               alt="Sweet & Chill"
               width={1254}
-              height={390}
+              height={365}
               className="h-16 w-auto"
             />
           </Link>
