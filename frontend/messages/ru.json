@@ -142,6 +142,10 @@
     "pleaseChoosePrefix": "Выберите:",
     "addFor": "Добавить за {price}",
     "required": "Обязательно",
+    "chooseRange": "Выберите от {min} до {max}",
+    "chooseUpTo": "Не более {max}",
+    "chooseAtLeast": "Не менее {min}",
+    "chooseExact": "Выберите ровно {count}",
     "decreaseAria": "Уменьшить",
     "increaseAria": "Увеличить"
   },

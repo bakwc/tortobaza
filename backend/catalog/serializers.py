@@ -49,14 +49,32 @@ class ProductOptionGroupSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(source="option_group.slug")
     selection_type = serializers.CharField(source="option_group.selection_type")
     is_required = serializers.SerializerMethodField()
+    min_selections = serializers.SerializerMethodField()
+    max_selections = serializers.SerializerMethodField()
     options = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductOptionGroup
-        fields = ["id", "name", "slug", "selection_type", "is_required", "position", "options"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "selection_type",
+            "is_required",
+            "min_selections",
+            "max_selections",
+            "position",
+            "options",
+        ]
 
     def get_is_required(self, obj: ProductOptionGroup) -> bool:
         return obj.effective_is_required
+
+    def get_min_selections(self, obj: ProductOptionGroup) -> int:
+        return obj.effective_min_selections
+
+    def get_max_selections(self, obj: ProductOptionGroup) -> int | None:
+        return obj.effective_max_selections
 
     def get_options(self, obj: ProductOptionGroup):
         active = obj.option_group.options.filter(is_active=True)

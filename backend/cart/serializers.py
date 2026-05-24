@@ -83,14 +83,16 @@ def _validate_options_for_product(product: Product, option_ids: list[int]) -> li
     for link in links:
         group = link.option_group
         chosen = selected_by_group.get(group.id, [])
-        required = link.effective_is_required
-        if required and len(chosen) == 0:
+        count = len(chosen)
+        min_selections = link.effective_min_selections
+        max_selections = link.effective_max_selections
+        if count < min_selections:
             raise serializers.ValidationError(
-                {"option_ids": f"Option group '{group.name}' is required."}
+                {"option_ids": f"Option group '{group.name}' requires at least {min_selections} option(s)."}
             )
-        if group.selection_type == group.SELECTION_SINGLE and len(chosen) > 1:
+        if max_selections is not None and count > max_selections:
             raise serializers.ValidationError(
-                {"option_ids": f"Option group '{group.name}' allows only one option."}
+                {"option_ids": f"Option group '{group.name}' allows at most {max_selections} option(s)."}
             )
 
     return options

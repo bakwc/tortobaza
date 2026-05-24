@@ -53,14 +53,19 @@ export function ItemDetail({
 
   const lineTotal = unitPrice * quantity;
 
-  const missingRequired = product.option_groups
-    .filter((g) => g.is_required && (selection[g.id]?.length ?? 0) === 0)
+  const invalidGroups = product.option_groups
+    .filter((g) => {
+      const count = selection[g.id]?.length ?? 0;
+      if (count < g.min_selections) return true;
+      if (g.max_selections !== null && count > g.max_selections) return true;
+      return false;
+    })
     .map((g) => g.name);
 
   const handleAdd = async () => {
     setError(null);
-    if (missingRequired.length > 0) {
-      setError(`${t("pleaseChoosePrefix")} ${missingRequired.join(", ")}`);
+    if (invalidGroups.length > 0) {
+      setError(`${t("pleaseChoosePrefix")} ${invalidGroups.join(", ")}`);
       return;
     }
     const optionIds = Object.values(selection).flat();

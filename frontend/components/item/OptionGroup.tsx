@@ -19,6 +19,28 @@ export function OptionGroup({
   const tItem = useTranslations("item");
 
   const isSingle = group.selection_type === "single";
+  const atMax =
+    !isSingle &&
+    group.max_selections !== null &&
+    selected.length >= group.max_selections;
+
+  const selectionHint = (() => {
+    if (isSingle) return null;
+    const { min_selections, max_selections } = group;
+    if (min_selections > 0 && max_selections !== null) {
+      if (min_selections === max_selections) {
+        return tItem("chooseExact", { count: min_selections });
+      }
+      return tItem("chooseRange", { min: min_selections, max: max_selections });
+    }
+    if (max_selections !== null) {
+      return tItem("chooseUpTo", { max: max_selections });
+    }
+    if (min_selections > 0) {
+      return tItem("chooseAtLeast", { min: min_selections });
+    }
+    return null;
+  })();
 
   const toggle = (optionId: number) => {
     if (isSingle) {
@@ -27,27 +49,34 @@ export function OptionGroup({
     }
     if (selected.includes(optionId)) {
       onChange(selected.filter((id) => id !== optionId));
-    } else {
+    } else if (group.max_selections === null || selected.length < group.max_selections) {
       onChange([...selected, optionId]);
     }
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h3 className="font-display text-2xl text-[var(--ink)]">{group.name}</h3>
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <h3 className="font-display text-2xl text-[var(--ink)]">{group.name}</h3>
+          {selectionHint ? (
+            <p className="mt-1 text-sm text-[var(--ink)]/60">{selectionHint}</p>
+          ) : null}
+        </div>
         {group.is_required ? (
-          <span className="text-sm text-[var(--danger)]">{tItem("required")}</span>
+          <span className="shrink-0 text-sm text-[var(--danger)]">{tItem("required")}</span>
         ) : null}
       </div>
       <ul className="space-y-1">
         {group.options.map((option) => {
           const isChecked = selected.includes(option.id);
+          const isDisabled = atMax && !isChecked;
           return (
             <li key={option.id}>
               <label
                 className={cn(
-                  "flex cursor-pointer items-center gap-4 py-3 transition-colors",
+                  "flex items-center gap-4 py-3 transition-colors",
+                  isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                   isChecked ? "text-[var(--ink)]" : "text-[var(--ink)]/90",
                 )}
               >
@@ -85,8 +114,9 @@ export function OptionGroup({
                   <input
                     type={isSingle ? "radio" : "checkbox"}
                     name={`group-${group.id}`}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
                     checked={isChecked}
+                    disabled={isDisabled}
                     onChange={() => toggle(option.id)}
                   />
                   {isChecked ? (

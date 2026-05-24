@@ -40,6 +40,8 @@ export const OptionGroupSchema = z.object({
   slug: z.string(),
   selection_type: z.enum(["single", "multi"]),
   is_required: z.boolean(),
+  min_selections: z.number(),
+  max_selections: z.number().nullable(),
   position: z.number(),
   options: z.array(OptionSchema),
 });

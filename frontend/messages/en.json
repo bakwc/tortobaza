@@ -142,6 +142,10 @@
     "pleaseChoosePrefix": "Please choose:",
     "addFor": "Add for {price}",
     "required": "Required",
+    "chooseRange": "Choose {min} to {max}",
+    "chooseUpTo": "Up to {max}",
+    "chooseAtLeast": "At least {min}",
+    "chooseExact": "Choose exactly {count}",
     "decreaseAria": "Decrease",
     "increaseAria": "Increase"
   },

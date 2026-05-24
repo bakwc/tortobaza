@@ -142,6 +142,10 @@
     "pleaseChoosePrefix": "არჩეული უნდა იყოს:",
     "addFor": "დამატება — {price}",
     "required": "სავალდებულოა",
+    "chooseRange": "აირჩიეთ {min}-დან {max}-მდე",
+    "chooseUpTo": "მაქს. {max}",
+    "chooseAtLeast": "მინ. {min}",
+    "chooseExact": "აირჩიეთ ზუსტად {count}",
     "decreaseAria": "შემცირება",
     "increaseAria": "ზრდა"
   },

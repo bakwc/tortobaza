@@ -45,6 +45,8 @@ class OptionGroup(models.Model):
     slug = models.SlugField(max_length=140, unique=True)
     selection_type = models.CharField(max_length=10, choices=SELECTION_CHOICES, default=SELECTION_SINGLE)
     is_required_default = models.BooleanField(default=True)
+    min_selections = models.PositiveIntegerField(default=0)
+    max_selections = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -139,3 +141,19 @@ class ProductOptionGroup(models.Model):
         if self.is_required is None:
             return self.option_group.is_required_default
         return self.is_required
+
+    @property
+    def effective_min_selections(self) -> int:
+        group = self.option_group
+        if group.selection_type == OptionGroup.SELECTION_SINGLE:
+            return 1 if self.effective_is_required else 0
+        if self.effective_is_required and group.min_selections < 1:
+            return 1
+        return group.min_selections
+
+    @property
+    def effective_max_selections(self) -> int | None:
+        group = self.option_group
+        if group.selection_type == OptionGroup.SELECTION_SINGLE:
+            return 1
+        return group.max_selections

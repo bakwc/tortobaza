@@ -19,7 +19,7 @@ class OptionInline(admin.TabularInline):
 
 @admin.register(OptionGroup)
 class OptionGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "selection_type", "is_required_default"]
+    list_display = ["name", "slug", "selection_type", "min_selections", "max_selections", "is_required_default"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     inlines = [OptionInline]
