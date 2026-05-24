@@ -52,7 +52,15 @@
     "decreaseAria": "Уменьшить",
     "increaseAria": "Увеличить",
     "noImage": "Нет фото",
-    "viewOrder": "К заказу"
+    "viewOrder": "К заказу",
+    "deliveryTier": {
+      "all_day": "Доставка сегодня",
+      "same_day": "В день заказа",
+      "next_day": "С завтра",
+      "plus_2": "Через 2 дня",
+      "plus_3": "Через 3 дня"
+    },
+    "deliveryTierSameDayCutoff": "* при заказе до 15.00"
   },
   "checkout": {
     "backToCatalog": "Назад в каталог",

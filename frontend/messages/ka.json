@@ -52,7 +52,15 @@
     "decreaseAria": "შემცირება",
     "increaseAria": "ზრდა",
     "noImage": "სურათი არაა",
-    "viewOrder": "შეკვეთის ნახვა"
+    "viewOrder": "შეკვეთის ნახვა",
+    "deliveryTier": {
+      "all_day": "მიწოდება დღეს",
+      "same_day": "იმავე დღეს",
+      "next_day": "ხვალიდან",
+      "plus_2": "2 დღეში",
+      "plus_3": "3 დღეში"
+    },
+    "deliveryTierSameDayCutoff": "* შეკვეთისას 15:00-მდე"
   },
   "checkout": {
     "backToCatalog": "დაბრუნება კატალოგზე",

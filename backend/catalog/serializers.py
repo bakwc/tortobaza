@@ -13,7 +13,7 @@ from catalog.responsive_urls import detail_image, list_primary_image
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "slug", "name", "position"]
+        fields = ["id", "slug", "name", "position", "delivery_schedule_tier"]
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

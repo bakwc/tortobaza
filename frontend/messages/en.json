@@ -52,7 +52,15 @@
     "decreaseAria": "Decrease",
     "increaseAria": "Increase",
     "noImage": "No image",
-    "viewOrder": "View order"
+    "viewOrder": "View order",
+    "deliveryTier": {
+      "all_day": "Today delivery",
+      "same_day": "Same day delivery",
+      "next_day": "Next day delivery",
+      "plus_2": "Two days delivery",
+      "plus_3": "Three days delivery"
+    },
+    "deliveryTierSameDayCutoff": "* when ordered before 15:00"
   },
   "checkout": {
     "backToCatalog": "Back to catalog",

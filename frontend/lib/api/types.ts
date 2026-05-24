@@ -5,6 +5,13 @@ export const CategorySchema = z.object({
   slug: z.string(),
   name: z.string(),
   position: z.number(),
+  delivery_schedule_tier: z.enum([
+    "all_day",
+    "same_day",
+    "next_day",
+    "plus_2",
+    "plus_3",
+  ]),
 });
 
 export const ResponsiveImageSchema = z.object({
