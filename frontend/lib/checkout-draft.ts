@@ -16,6 +16,8 @@ export type CheckoutDraft = {
   customer_name: string;
   customer_phone: string;
   customer_email: string;
+  customer_instagram: string;
+  customer_telegram: string;
   comment: string;
   promo_code: string;
 };
@@ -29,6 +31,8 @@ export const emptyDraft: CheckoutDraft = {
   customer_name: "",
   customer_phone: "",
   customer_email: "",
+  customer_instagram: "",
+  customer_telegram: "",
   comment: "",
   promo_code: "",
 };

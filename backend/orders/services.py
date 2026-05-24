@@ -104,6 +104,8 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
         customer_name=payload["customer_name"],
         customer_phone=payload["customer_phone"],
         customer_email=payload.get("customer_email", ""),
+        customer_instagram=payload.get("customer_instagram", ""),
+        customer_telegram=payload.get("customer_telegram", ""),
         comment=payload.get("comment", ""),
         promo_code=promo,
         pickup_location=pickup_location,

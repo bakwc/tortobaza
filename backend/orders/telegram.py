@@ -86,6 +86,10 @@ def build_order_notification_text(order: Order) -> str:
     ]
     if order.customer_email:
         lines.append(f"<b>Email:</b> {_esc(order.customer_email)}")
+    if order.customer_instagram:
+        lines.append(f"<b>Instagram:</b> {_esc(order.customer_instagram)}")
+    if order.customer_telegram:
+        lines.append(f"<b>Telegram:</b> {_esc(order.customer_telegram)}")
     lines.extend(
         [
             f"<b>Тип:</b> {fulfillment}",

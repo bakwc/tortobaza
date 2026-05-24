@@ -174,6 +174,8 @@ export const OrderSchema = z.object({
   customer_name: z.string(),
   customer_phone: z.string(),
   customer_email: z.string(),
+  customer_instagram: z.string(),
+  customer_telegram: z.string(),
   comment: z.string(),
   pickup_location: PickupLocationSchema.nullable(),
   delivery_address: OrderAddressSchema.nullable(),
@@ -236,7 +238,9 @@ export type PlaceOrderBody = {
   payment_method: PaymentMethod;
   customer_name: string;
   customer_phone: string;
-  customer_email: string;
+  customer_email?: string;
+  customer_instagram?: string;
+  customer_telegram?: string;
   comment: string;
   promo_code?: string;
 };

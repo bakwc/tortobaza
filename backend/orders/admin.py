@@ -43,7 +43,14 @@ class OrderAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["status", "fulfillment_type", "payment_method", "payment_status"]
-    search_fields = ["number", "customer_name", "customer_phone", "customer_email"]
+    search_fields = [
+        "number",
+        "customer_name",
+        "customer_phone",
+        "customer_email",
+        "customer_instagram",
+        "customer_telegram",
+    ]
     readonly_fields = [
         "number",
         "lookup_token",

@@ -52,6 +52,8 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "customer_name",
             "customer_phone",
             "customer_email",
+            "customer_instagram",
+            "customer_telegram",
             "comment",
             "pickup_location",
             "delivery_address",
@@ -95,6 +97,8 @@ class OrderCreateInputSerializer(serializers.Serializer):
     customer_name = serializers.CharField(max_length=200)
     customer_phone = serializers.CharField(max_length=50)
     customer_email = serializers.EmailField(required=False, allow_blank=True, default="")
+    customer_instagram = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
+    customer_telegram = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
     comment = serializers.CharField(required=False, allow_blank=True, default="")
     promo_code = serializers.CharField(required=False, allow_blank=True, default="")
 

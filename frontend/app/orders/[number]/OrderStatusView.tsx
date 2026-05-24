@@ -61,8 +61,24 @@ export function OrderStatusView({ order }: { order: Order }) {
             {order.customer_name}
             <br />
             {order.customer_phone}
-            <br />
-            {order.customer_email}
+            {order.customer_email ? (
+              <>
+                <br />
+                {order.customer_email}
+              </>
+            ) : null}
+            {order.customer_instagram ? (
+              <>
+                <br />
+                Instagram: {order.customer_instagram}
+              </>
+            ) : null}
+            {order.customer_telegram ? (
+              <>
+                <br />
+                Telegram: {order.customer_telegram}
+              </>
+            ) : null}
           </Field>
           <Field label="Fulfillment">
             {order.fulfillment_type === "delivery" ? "Delivery" : "Pickup"}

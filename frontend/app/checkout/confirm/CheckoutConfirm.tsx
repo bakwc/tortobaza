@@ -92,7 +92,6 @@ export function CheckoutConfirm() {
     }
     if (!draft.customer_name.trim()) return false;
     if (!draft.customer_phone.trim()) return false;
-    if (!draft.customer_email.trim()) return false;
     return true;
   }, [draft]);
 
@@ -120,7 +119,15 @@ export function CheckoutConfirm() {
       payment_method: draft.payment_method,
       customer_name: draft.customer_name.trim(),
       customer_phone: draft.customer_phone.trim(),
-      customer_email: draft.customer_email.trim(),
+      ...(draft.customer_email.trim()
+        ? { customer_email: draft.customer_email.trim() }
+        : {}),
+      ...(draft.customer_instagram.trim()
+        ? { customer_instagram: draft.customer_instagram.trim() }
+        : {}),
+      ...(draft.customer_telegram.trim()
+        ? { customer_telegram: draft.customer_telegram.trim() }
+        : {}),
       comment: draft.comment.trim(),
       promo_code: draft.promo_code || undefined,
       ...(draft.fulfillment_type === "delivery" && draft.address
@@ -196,25 +203,40 @@ export function CheckoutConfirm() {
           />
         </Section>
 
-        <Section title="Your contact info">
+        <Section
+          title="Your contact info"
+          subtitle="Email, Instagram or Telegram — optional, for order updates."
+        >
           <div className="grid gap-3 sm:grid-cols-2">
-            <Input
-              placeholder="Full name"
+            <RequiredInput
+              placeholder="Name"
               value={draft.customer_name}
               onChange={(e) => update({ customer_name: e.target.value })}
             />
-            <Input
+            <RequiredInput
               placeholder="Phone"
               value={draft.customer_phone}
               onChange={(e) => update({ customer_phone: e.target.value })}
             />
           </div>
-          <Input
-            type="email"
-            placeholder="Email"
-            value={draft.customer_email}
-            onChange={(e) => update({ customer_email: e.target.value })}
-          />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={draft.customer_email}
+              onChange={(e) => update({ customer_email: e.target.value })}
+            />
+            <Input
+              placeholder="Instagram"
+              value={draft.customer_instagram}
+              onChange={(e) => update({ customer_instagram: e.target.value })}
+            />
+            <Input
+              placeholder="Telegram"
+              value={draft.customer_telegram}
+              onChange={(e) => update({ customer_telegram: e.target.value })}
+            />
+          </div>
         </Section>
 
         {draft.fulfillment_type === "delivery" && draft.address ? (
@@ -287,6 +309,20 @@ export function CheckoutConfirm() {
             : "Place order"
         }
       />
+    </div>
+  );
+}
+
+function RequiredInput(props: React.ComponentProps<typeof Input>) {
+  return (
+    <div className="relative">
+      <Input {...props} className={cn("pr-8", props.className)} required aria-required />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-sm text-[var(--danger)]"
+      >
+        *
+      </span>
     </div>
   );
 }
