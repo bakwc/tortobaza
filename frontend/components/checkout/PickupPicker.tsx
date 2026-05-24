@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin } from "lucide-react";
 import { api } from "@/lib/api";
@@ -18,6 +19,14 @@ export function PickupPicker({
     queryFn: () => api.getPickupLocations(),
   });
 
+  const locations = data ?? [];
+
+  useEffect(() => {
+    if (value === null && locations.length > 0) {
+      onChange(locations[0].id);
+    }
+  }, [value, locations, onChange]);
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-[var(--ink)]/60">
@@ -31,8 +40,6 @@ export function PickupPicker({
       <p className="text-sm text-[var(--danger)]">Could not load pickup locations.</p>
     );
   }
-
-  const locations = data ?? [];
 
   if (locations.length === 0) {
     return (
