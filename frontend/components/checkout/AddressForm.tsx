@@ -39,22 +39,13 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
           />
         </Field>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="City" error={errors?.city}>
-          <Input
-            value={value.city}
-            onChange={(e) => update("city", e.target.value)}
-            placeholder="Batumi"
-          />
-        </Field>
-        <Field label="Postal code" error={errors?.postal_code}>
-          <Input
-            value={value.postal_code}
-            onChange={(e) => update("postal_code", e.target.value)}
-            placeholder=""
-          />
-        </Field>
-      </div>
+      <Field label="City" error={errors?.city}>
+        <Input
+          value={value.city}
+          onChange={(e) => update("city", e.target.value)}
+          placeholder="Batumi"
+        />
+      </Field>
       <Field label="Notes for courier" error={errors?.notes}>
         <Textarea
           rows={3}
