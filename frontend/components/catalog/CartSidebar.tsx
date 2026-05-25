@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
@@ -11,14 +10,7 @@ import {
   useUpdateCartItem,
 } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { formatAed } from "@/lib/format";
-import { isMainSweetChillHost } from "@/lib/site-host";
 import type { CartItem } from "@/lib/api/types";
 
 export function CartSidebar() {
@@ -28,20 +20,9 @@ export function CartSidebar() {
   const clear = useClearCart();
   const remove = useRemoveCartItem();
   const update = useUpdateCartItem();
-  const [notOpenDialogOpen, setNotOpenDialogOpen] = useState(false);
 
   const items = cart?.items ?? [];
   const isEmpty = items.length === 0;
-
-  const handleConfirm = () => {
-    const host =
-      typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
-    if (isMainSweetChillHost(host)) {
-      setNotOpenDialogOpen(true);
-      return;
-    }
-    router.push("/checkout");
-  };
 
   return (
     <aside className="sticky top-36 flex h-[calc(100vh-10rem)] flex-col bg-white p-6">
@@ -93,34 +74,16 @@ export function CartSidebar() {
             <span className="text-[var(--ink)]/60">{t("subtotal")}</span>
             <span className="font-medium">{formatAed(cart?.subtotal ?? "0")}</span>
           </div>
-          <Button type="button" size="lg" className="mt-4 w-full" onClick={handleConfirm}>
+          <Button
+            type="button"
+            size="lg"
+            className="mt-4 w-full"
+            onClick={() => router.push("/checkout")}
+          >
             {t("confirm")}
           </Button>
         </div>
       ) : null}
-
-      <Dialog open={notOpenDialogOpen} onOpenChange={setNotOpenDialogOpen}>
-        <DialogContent className="max-w-lg gap-0 overflow-hidden border-0 p-0 sm:max-w-lg">
-          <div className="bg-gradient-to-br from-[var(--brand)]/15 via-white to-[var(--cream)] px-8 pb-2 pt-10">
-            <DialogTitle className="font-display text-center text-3xl leading-tight text-[var(--ink)]">
-              {t("notReadyTitle")}
-            </DialogTitle>
-          </div>
-          <div className="space-y-4 px-8 pb-8 pt-4">
-            <DialogDescription className="text-center text-base leading-relaxed text-[var(--ink)]/80">
-              {t("notReadyBody")}
-            </DialogDescription>
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={() => setNotOpenDialogOpen(false)}
-            >
-              {t("ok")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </aside>
   );
 }
