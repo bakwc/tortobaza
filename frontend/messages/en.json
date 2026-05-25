@@ -56,9 +56,9 @@
     "deliveryTier": {
       "all_day": "Today delivery",
       "same_day": "Same-day delivery",
-      "next_day": "Next day delivery",
-      "plus_2": "Two days delivery",
-      "plus_3": "Three days delivery"
+      "next_day": "Delivery tomorrow",
+      "plus_2": "Delivery in 2 days",
+      "plus_3": "Delivery in 3 days"
     },
     "deliveryTierSameDayCutoff": "* when ordered before 15:00"
   },

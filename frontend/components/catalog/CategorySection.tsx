@@ -14,7 +14,6 @@ export async function CategorySection({
   const t = await getTranslations("catalog");
 
   const tier = category.delivery_schedule_tier;
-  const showTierLabel = tier === "same_day" || tier === "all_day";
 
   return (
     <section id={`category-${category.slug}`} className="scroll-mt-32 py-10">
@@ -22,11 +21,9 @@ export async function CategorySection({
         <h2 className="text-[32px] font-bold leading-[1.05] text-[#666] md:text-[32px]">
           {category.name}
         </h2>
-        {showTierLabel ? (
-          <span className="inline-flex shrink-0 items-center rounded-full bg-product-price-btn px-4 py-1.5 text-[16px] font-bold text-white">
-            {t(`deliveryTier.${tier}`)}
-          </span>
-        ) : null}
+        <span className="inline-flex shrink-0 items-center rounded-full bg-product-price-btn px-4 py-1.5 text-[16px] font-bold text-white">
+          {t(`deliveryTier.${tier}`)}
+        </span>
       </div>
       {tier === "same_day" ? (
         <p className="mt-2 text-sm text-[var(--muted-2)]">{t("deliveryTierSameDayCutoff")}</p>
