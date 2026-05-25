@@ -119,10 +119,16 @@ BACKEND_ORIGIN=http://127.0.0.1:8100
 EOF
 ```
 
-Production build:
+Production build (first deploy or local smoke test):
 
 ```bash
 npm run build
+```
+
+Zero-downtime rebuild while the site is live (builds into `.next-new`, then swaps atomically — the running `next start` keeps serving the old `.next` until you restart):
+
+```bash
+npm run build:deploy
 ```
 
 Smoke test:
@@ -357,7 +363,7 @@ poetry run python manage.py migrate
 
 cd ../frontend
 npm ci
-npm run build
+npm run build:deploy
 
 sudo systemctl restart tortobaza-backend.service
 sudo systemctl restart tortobaza-frontend.service
