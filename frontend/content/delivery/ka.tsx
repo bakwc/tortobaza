@@ -12,34 +12,35 @@ export default function DeliveryContentKa({ updatedLine }: { updatedLine: string
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">მიწოდება</h2>
           <p>
-            We deliver within {SITE_INFO.address.city} and surrounding areas as offered at checkout.
-            Delivery time is the slot you select; if we cannot meet it we contact you using the details
-            you provided. Delivery fees, if any, appear before payment.
+            ვახორციელებთ მიწოდებას {SITE_INFO.address.city}-სა და მის მახლობელ ზონებში, checkout-ისას
+            როგორცაა შეთავაზებული. მიწოდების დრო არის თქვენ მიერ არჩეული დროის სლოტი; თუ ვერ
+            დავასრულებთ, დაგიკავშირდებით თქვენ მიერ მითითებული კონტაქტებით. მიწოდების ღირებულება, თუ
+            არსებობს, ჩანს გადახდამდე.
           </p>
           <p>
-            Risk passes to you when the order is handed over to you or your nominated recipient at the
-            address or pickup point.
+            რისკი გადადის თქვენზე, როცა შეკვეთა გადაეცემა თქვენ ან თქვენ მიერ მითითებულ მიმღებს
+            მისამართზე ან pickup წერტილზე.
           </p>
         </section>
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">Pickup</h2>
           <p>
-            For pickup, bring your order reference if we provide one. Hours and location are on our{" "}
+            Pickup-ისას, თუ მოგცემთ, მოიტანეთ შეკვეთის ნომერი. სამუშაო საათები და მისამართი — ჩვენს{" "}
             <Link href="/contacts" className="underline underline-offset-2">
-              კონტაქტი
+              კონტაქტების
             </Link>{" "}
-            page.
+            გვერდზე.
           </p>
         </section>
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">გაუქმება</h2>
           <p>
-            You may cancel free of charge if we have not yet started production for your order.
-            Contact us as soon as possible at{" "}
+            შეკვეთის უფასოდ გაუქმება შესაძლებელია, თუ ჯერ არ დაგვიწყებია მისი წარმოება. დაგვიკავშირდით
+            რაც შეიძლება სწრაფად{" "}
             <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
               {SITE_INFO.email}
             </Link>{" "}
-            or{" "}
+            ან{" "}
             <Link
               href={SITE_INFO.whatsappHref}
               target="_blank"
@@ -48,28 +49,29 @@ export default function DeliveryContentKa({ updatedLine }: { updatedLine: string
             >
               WhatsApp
             </Link>{" "}
-            with your order number. If production has started, cancellation may not be possible in
-            full; we will confirm the options available.
+            თქვენი შეკვეთის ნომრით. თუ წარმოება დაწყებულია, გაუქმება შეიძლება სრულად შეუძლებელი
+            იყოს; დაგიდასტურებთ ხელმისაწვდომ ვარიანტებს.
           </p>
         </section>
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">დაბრუნება</h2>
           <p>
-            Cakes and desserts are perishable and made to order. There is no right of return for change
-            of mind after handover. If there is a quality defect or a clear error on our side, report it
-            at handover or within two hours with a photo where helpful; we arrange an appropriate remedy.
+            ტორტები და დესერტები სწრაფფორტიანია და ინდივიურად მზადდება. გადაცემის შემდეგ „გადაწყვეტილების
+            შეცვლის“ გამო დაბრუნების უფლება არ გაქვთ. თუ ხარისხის ნაკლი ან ჩვენს მხრიდან ცხადი შეცდომაა,
+            შეატყობინეთ გადაცემისას ან ორი საათის განმავლობაში, სასარგებლო შემთხვევაში ფოტოსთან;
+            განვალაგებთ შესაბამის გამოსწორებას.
           </p>
         </section>
         <section className="space-y-3">
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">გადახდის დაბრუნება</h2>
           <p>
-            Approved refunds for card payments are returned to the original card within fourteen business
-            days after approval, depending on your bank. If you paid another way, we refund using the same
-            method where possible.
+            ბარათით გადახდის დამტკიცებული დაბრუნება ორიგინალ ბარათზე ხდება დამტკიცებიდან თოთხმეტი სამუშაო
+            დღის განმავლობაში, თქვენი ბანკის მიხედვით. სხვა გზით გადახდისას, სადაც შესაძლებელია, იმავე
+            მეთოდით ვაბრუნებთ.
           </p>
           <p>
-            No refund is due after you accept a non-defective perishable order, except where required by
-            law.
+            გადაცემის შემდეგ დამტკიცებული, სრულყოფილი, სწრაფფორტიანი შეკვეთისთვის დაბრუნება არ ითვლება,
+            გარდა იმ შემთხვევებისა, როცა კანონი ამას მოითხოვს.
           </p>
         </section>
       </div>
