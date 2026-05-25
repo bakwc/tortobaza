@@ -45,7 +45,7 @@ export async function Footer() {
             />
           </a>
           <a
-            href="https://wa.me/995599875273"
+            href="https://wa.me/995511747841"
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("whatsappAria")}
