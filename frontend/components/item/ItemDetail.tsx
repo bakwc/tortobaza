@@ -92,8 +92,9 @@ export function ItemDetail({
       className={cn(
         "grid min-h-0 gap-0 bg-white md:grid-cols-2 md:grid-rows-1",
         variant === "page" &&
-          "max-h-[calc(100dvh-9rem)] overflow-y-auto md:h-[calc(100dvh-9rem)] md:overflow-hidden",
-        variant === "modal" && "h-full max-h-[calc(100vh-1.5rem)] overflow-hidden",
+          "h-[calc(100dvh-9rem)] overflow-y-auto md:overflow-hidden",
+        variant === "modal" &&
+          "h-full max-h-[calc(100vh-1.5rem)] overflow-y-auto md:overflow-hidden",
       )}
     >
       <div className="min-h-0 bg-white p-4 md:p-6">
@@ -145,7 +146,7 @@ export function ItemDetail({
       </div>
 
       <div className="relative flex min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-32 pt-6 md:px-8">
+        <div className="min-h-0 flex-1 px-6 pt-6 md:overflow-y-auto md:px-8 md:pb-32">
           <h1 className="font-display text-3xl text-[var(--ink)] md:text-4xl">{product.name}</h1>
           {product.description ? (
             <p className="mt-3 text-sm leading-relaxed text-[var(--ink)]/70">{product.description}</p>
@@ -172,7 +173,7 @@ export function ItemDetail({
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 border-t border-[var(--line)] bg-white/95 px-6 py-4 backdrop-blur md:px-8">
+        <div className="border-t border-[var(--line)] bg-white/95 px-6 py-4 backdrop-blur md:absolute md:inset-x-0 md:bottom-0 md:px-8">
           {error ? <p className="mb-2 text-xs text-[var(--danger)]">{error}</p> : null}
           <div className="flex items-center gap-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] p-1">
