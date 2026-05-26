@@ -28,7 +28,7 @@ export async function CategorySection({
       {tier === "same_day" ? (
         <p className="mt-2 text-sm text-[var(--muted-2)]">{t("deliveryTierSameDayCutoff")}</p>
       ) : null}
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-8 grid grid-cols-2 gap-6 xl:grid-cols-3">
         {products.map((p) => (
           <ProductCard key={p.id} product={p} />
         ))}
