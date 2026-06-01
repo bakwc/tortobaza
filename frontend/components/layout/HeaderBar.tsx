@@ -12,9 +12,9 @@ const B2B_SHEET_URL =
 
 const navLinks = [
   { href: "/order", labelKey: "onlineStore" },
-  { href: B2B_SHEET_URL, labelKey: "b2b" },
   { href: "/contacts", labelKey: "contacts" },
   { href: "/about", labelKey: "about" },
+  { href: B2B_SHEET_URL, labelKey: "b2b" },
 ] as const;
 
 export function HeaderBar() {
