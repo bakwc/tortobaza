@@ -7,8 +7,12 @@ import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 
+const B2B_SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1vhB4DtdogaDWQWoU0mkatRkAsrwv29pH/edit?usp=drivesdk&ouid=113313791403815046269&rtpof=true&sd=true";
+
 const navLinks = [
   { href: "/order", labelKey: "onlineStore" },
+  { href: B2B_SHEET_URL, labelKey: "b2b" },
   { href: "/contacts", labelKey: "contacts" },
   { href: "/about", labelKey: "about" },
 ] as const;
@@ -62,11 +66,23 @@ export function HeaderBar() {
             className="hidden md:flex items-center gap-x-12"
             aria-label={t("primary")}
           >
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className={navClass}>
-                {t(link.labelKey)}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              link.href.startsWith("http") ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={navClass}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t(link.labelKey)}
+                </a>
+              ) : (
+                <Link key={link.href} href={link.href} className={navClass}>
+                  {t(link.labelKey)}
+                </Link>
+              ),
+            )}
           </nav>
         </div>
         <div className="flex items-center gap-2">
@@ -104,16 +120,29 @@ export function HeaderBar() {
             className="flex flex-1 flex-col items-center justify-center gap-10 px-6 pb-[76px]"
             aria-label={t("primary")}
           >
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={mobileNavClass}
-                onClick={() => setOpen(false)}
-              >
-                {t(link.labelKey)}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              link.href.startsWith("http") ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={mobileNavClass}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                >
+                  {t(link.labelKey)}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={mobileNavClass}
+                  onClick={() => setOpen(false)}
+                >
+                  {t(link.labelKey)}
+                </Link>
+              ),
+            )}
           </nav>
         </div>
       ) : null}
