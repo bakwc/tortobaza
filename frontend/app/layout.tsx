@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import "./globals.css";
 import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
+import { buildRootMetadata } from "@/lib/site-metadata";
 import { Providers } from "./providers";
 
 const jost = Jost({
@@ -30,14 +31,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("metadata");
-  return {
-    title: {
-      default: t("rootDefaultTitle"),
-      template: `Sweet & Chill | %s`,
-    },
-    description: t("rootDescription"),
-  };
+  return buildRootMetadata();
 }
 
 export default async function RootLayout({
