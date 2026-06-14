@@ -63,6 +63,7 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "timeslot_end",
             "subtotal",
             "discount_total",
+            "delivery_fee",
             "total",
             "items",
             "created_at",

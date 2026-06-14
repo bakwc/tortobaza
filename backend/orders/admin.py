@@ -57,6 +57,7 @@ class OrderAdmin(admin.ModelAdmin):
         "lookup_token",
         "subtotal",
         "discount_total",
+        "delivery_fee",
         "total",
         "created_at",
     ]

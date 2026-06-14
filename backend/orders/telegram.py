@@ -103,6 +103,8 @@ def build_order_notification_text(order: Order) -> str:
     )
     if order.discount_total > 0:
         lines.append(f"<b>{_('Discount:')}</b> −{_format_money(order.discount_total)}")
+    if order.delivery_fee > 0:
+        lines.append(f"<b>{_('Delivery fee:')}</b> {_format_money(order.delivery_fee)}")
     if order.comment:
         lines.append(f"<b>{_('Comment:')}</b> {_esc(order.comment)}")
     lines.extend(

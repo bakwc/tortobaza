@@ -18,6 +18,8 @@ from orders.models import (
     PromoCode,
 )
 
+DELIVERY_FEE = Decimal("5")
+
 
 def compute_promo_discount(promo: PromoCode | None, subtotal: Decimal) -> Decimal:
     if promo is None:
@@ -52,11 +54,17 @@ def get_promo_by_code(code: str) -> PromoCode:
     return promo
 
 
-def compute_totals(cart: Cart, promo: PromoCode | None) -> dict:
+def compute_totals(cart: Cart, promo: PromoCode | None, fulfillment_type: str) -> dict:
     subtotal = cart.subtotal
     discount = compute_promo_discount(promo, subtotal)
-    total = subtotal - discount
-    return {"subtotal": subtotal, "discount_total": discount, "total": total}
+    delivery_fee = DELIVERY_FEE if fulfillment_type == Order.FULFILLMENT_DELIVERY else Decimal("0")
+    total = subtotal - discount + delivery_fee
+    return {
+        "subtotal": subtotal,
+        "discount_total": discount,
+        "delivery_fee": delivery_fee,
+        "total": total,
+    }
 
 
 @transaction.atomic
@@ -97,7 +105,7 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
     if payload.get("promo_code"):
         promo = get_promo_by_code(payload["promo_code"])
 
-    totals = compute_totals(cart, promo)
+    totals = compute_totals(cart, promo, fulfillment_type)
 
     order = Order.objects.create(
         locale=payload["locale"],
@@ -115,6 +123,7 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
         timeslot_end=timeslot_end,
         subtotal=totals["subtotal"],
         discount_total=totals["discount_total"],
+        delivery_fee=totals["delivery_fee"],
         total=totals["total"],
     )
 

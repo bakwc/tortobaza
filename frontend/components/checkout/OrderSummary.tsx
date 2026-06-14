@@ -68,6 +68,12 @@ export function OrderSummary({
             </dd>
           </div>
         ) : null}
+        {preview && Number.parseFloat(preview.delivery_fee) > 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-[var(--ink)]/60">{t("deliveryFee")}</dt>
+            <dd className="font-medium tabular-nums">{formatAed(preview.delivery_fee)}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between border-t border-[var(--line)] pt-2 text-base">
           <dt className="font-medium">{t("total")}</dt>
           <dd className="font-semibold tabular-nums">

@@ -152,6 +152,9 @@ export function OrderStatusView({ order }: { order: Order }) {
               tone="text-[var(--brand)]"
             />
           ) : null}
+          {Number.parseFloat(order.delivery_fee) > 0 ? (
+            <Row label={t("deliveryFeeRow")} value={formatAed(order.delivery_fee)} />
+          ) : null}
           <Row label={t("totalRow")} value={formatAed(order.total)} bold />
         </dl>
       </div>

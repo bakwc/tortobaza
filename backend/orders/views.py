@@ -57,7 +57,7 @@ class PromoCodeValidateView(APIView):
         serializer = PromoValidateInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         promo = get_promo_by_code(serializer.validated_data["code"])
-        totals = compute_totals(cart, promo)
+        totals = compute_totals(cart, promo, Order.FULFILLMENT_PICKUP)
         return Response(
             {
                 "valid": True,
@@ -66,6 +66,7 @@ class PromoCodeValidateView(APIView):
                 "discount_value": promo.discount_value,
                 "subtotal": totals["subtotal"],
                 "discount_total": totals["discount_total"],
+                "delivery_fee": totals["delivery_fee"],
                 "total": totals["total"],
             }
         )
@@ -87,12 +88,13 @@ class OrderPreviewView(APIView):
         if promo_code:
             promo = get_promo_by_code(promo_code)
 
-        totals = compute_totals(cart, promo)
+        totals = compute_totals(cart, promo, data["fulfillment_type"])
         return Response(
             {
                 "fulfillment_type": data["fulfillment_type"],
                 "subtotal": totals["subtotal"],
                 "discount_total": totals["discount_total"],
+                "delivery_fee": totals["delivery_fee"],
                 "total": totals["total"],
                 "promo_code": promo.code if promo else None,
             }

@@ -136,6 +136,7 @@ export const PromoValidationSchema = z.object({
   discount_value: z.string(),
   subtotal: z.string(),
   discount_total: z.string(),
+  delivery_fee: z.string(),
   total: z.string(),
 });
 
@@ -143,6 +144,7 @@ export const OrderPreviewSchema = z.object({
   fulfillment_type: z.enum(["delivery", "pickup"]),
   subtotal: z.string(),
   discount_total: z.string(),
+  delivery_fee: z.string(),
   total: z.string(),
   promo_code: z.string().nullable(),
 });
@@ -191,6 +193,7 @@ export const OrderSchema = z.object({
   timeslot_end: z.string().nullable(),
   subtotal: z.string(),
   discount_total: z.string(),
+  delivery_fee: z.string(),
   total: z.string(),
   items: z.array(OrderItemSchema),
   created_at: z.string(),
