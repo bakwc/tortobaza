@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
@@ -51,6 +52,11 @@ export default async function RootLayout({
       className={`${jost.variable} ${montserrat.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
+        <Script
+          defer
+          src="https://analytics.q7.su/script.js"
+          data-website-id="b5412135-037c-4f9e-a31d-d7eb820b28a3"
+        />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
             {showDevBanner ? <DevBanner /> : null}
