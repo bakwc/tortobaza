@@ -1,12 +1,22 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Spinner } from "@/components/ui/spinner";
 import { useCart } from "@/hooks/useCart";
+import { useOrderPreview } from "@/hooks/useOrderPreview";
 import { formatAed } from "@/lib/format";
+import type { FulfillmentType } from "@/lib/api/types";
 
-export function CheckoutBasket() {
+export function CheckoutBasket({
+  fulfillmentType,
+  promoCode,
+}: {
+  fulfillmentType: FulfillmentType;
+  promoCode: string;
+}) {
   const t = useTranslations("checkout");
   const { data: cart } = useCart();
+  const { data: preview, isLoading } = useOrderPreview(fulfillmentType, promoCode);
   const items = cart?.items ?? [];
 
   return (
@@ -22,12 +32,32 @@ export function CheckoutBasket() {
           </li>
         ))}
       </ul>
-      <div className="mt-4 border-t border-[var(--line)] pt-4 text-sm">
+      <dl className="mt-4 space-y-2 border-t border-[var(--line)] pt-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-[var(--ink)]/60">{t("subtotal")}</span>
-          <span className="font-medium">{formatAed(cart?.subtotal ?? "0")}</span>
+          <dt className="text-[var(--ink)]/60">{t("subtotal")}</dt>
+          <dd className="font-medium tabular-nums">
+            {formatAed(preview?.subtotal ?? cart?.subtotal ?? "0")}
+          </dd>
         </div>
-      </div>
+        {preview && Number.parseFloat(preview.discount_total) > 0 ? (
+          <div className="flex justify-between text-[var(--brand)]">
+            <dt>{t("discount")}</dt>
+            <dd className="font-medium tabular-nums">−{formatAed(preview.discount_total)}</dd>
+          </div>
+        ) : null}
+        {preview && Number.parseFloat(preview.delivery_fee) > 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-[var(--ink)]/60">{t("deliveryFee")}</dt>
+            <dd className="font-medium tabular-nums">{formatAed(preview.delivery_fee)}</dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between border-t border-[var(--line)] pt-2 text-base">
+          <dt className="font-medium">{t("total")}</dt>
+          <dd className="font-semibold tabular-nums">
+            {isLoading ? <Spinner /> : formatAed(preview?.total ?? cart?.subtotal ?? "0")}
+          </dd>
+        </div>
+      </dl>
     </aside>
   );
 }

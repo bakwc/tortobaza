@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FulfillmentToggle } from "@/components/checkout/FulfillmentToggle";
 import { AddressForm } from "@/components/checkout/AddressForm";
 import { PickupPicker } from "@/components/checkout/PickupPicker";
-import {
-  emptyDraft,
-  loadDraft,
-  saveDraft,
-  type CheckoutDraft,
-} from "@/lib/checkout-draft";
+import { saveDraft, type CheckoutDraft } from "@/lib/checkout-draft";
 import type { OrderAddress } from "@/lib/api/types";
 
 const emptyAddress: OrderAddress = {
@@ -24,21 +19,16 @@ const emptyAddress: OrderAddress = {
   notes: "",
 };
 
-export function CheckoutStepOne() {
+export function CheckoutStepOne({
+  draft,
+  onDraftChange,
+}: {
+  draft: CheckoutDraft;
+  onDraftChange: (updater: (prev: CheckoutDraft) => CheckoutDraft) => void;
+}) {
   const t = useTranslations("checkout");
   const router = useRouter();
-  const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
-  const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDraft(loadDraft());
-    setHydrated(true);
-  }, []);
-
-  if (!hydrated) {
-    return <div className="h-64 animate-pulse rounded-3xl bg-white/40" />;
-  }
 
   const address = draft.address ?? emptyAddress;
 
@@ -57,6 +47,7 @@ export function CheckoutStepOne() {
         pickup_location_id: null,
       };
       saveDraft(next);
+      onDraftChange(() => next);
     } else {
       if (!draft.pickup_location_id) {
         setError(t("pickLocationRequired"));
@@ -67,6 +58,7 @@ export function CheckoutStepOne() {
         address: null,
       };
       saveDraft(next);
+      onDraftChange(() => next);
     }
     router.push("/checkout/confirm");
   };
@@ -77,7 +69,7 @@ export function CheckoutStepOne() {
         <FulfillmentToggle
           value={draft.fulfillment_type}
           onChange={(value) =>
-            setDraft((prev) => ({
+            onDraftChange((prev) => ({
               ...prev,
               fulfillment_type: value,
               schedule: null,
@@ -93,7 +85,7 @@ export function CheckoutStepOne() {
           <div className="mt-4">
             <AddressForm
               value={address}
-              onChange={(next) => setDraft((prev) => ({ ...prev, address: next }))}
+              onChange={(next) => onDraftChange((prev) => ({ ...prev, address: next }))}
             />
           </div>
         </section>
@@ -104,9 +96,7 @@ export function CheckoutStepOne() {
           <div className="mt-4">
             <PickupPicker
               value={draft.pickup_location_id}
-              onChange={(id) =>
-                setDraft((prev) => ({ ...prev, pickup_location_id: id }))
-              }
+              onChange={(id) => onDraftChange((prev) => ({ ...prev, pickup_location_id: id }))}
             />
           </div>
         </section>

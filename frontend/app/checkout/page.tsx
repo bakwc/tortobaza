@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
-import { CheckoutStepOne } from "./CheckoutStepOne";
-import { CheckoutBasket } from "@/components/checkout/CheckoutBasket";
+import { CheckoutPageClient } from "./CheckoutPageClient";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +34,7 @@ export default async function CheckoutPage() {
 
       <h1 className="mt-4 font-display text-4xl md:text-5xl">{tCheckout("yourDelivery")}</h1>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
-        <CheckoutStepOne />
-        <CheckoutBasket />
-      </div>
+      <CheckoutPageClient />
     </div>
   );
 }

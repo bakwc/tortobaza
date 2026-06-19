@@ -1,11 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
-import { api } from "@/lib/api";
+import { useOrderPreview } from "@/hooks/useOrderPreview";
 import { formatAed } from "@/lib/format";
 import type { FulfillmentType } from "@/lib/api/types";
 
@@ -27,15 +26,7 @@ export function OrderSummary({
   const t = useTranslations("checkout");
   const { data: cart } = useCart();
 
-  const { data: preview, isLoading } = useQuery({
-    queryKey: ["order-preview", fulfillmentType, promoCode, cart?.subtotal],
-    queryFn: () =>
-      api.previewOrder({
-        fulfillment_type: fulfillmentType,
-        promo_code: promoCode || undefined,
-      }),
-    enabled: Boolean(cart && cart.items.length > 0),
-  });
+  const { data: preview, isLoading } = useOrderPreview(fulfillmentType, promoCode);
 
   const items = cart?.items ?? [];
 
