@@ -63,11 +63,11 @@ class PromoCodeValidateView(APIView):
                 "valid": True,
                 "code": promo.code,
                 "discount_type": promo.discount_type,
-                "discount_value": promo.discount_value,
-                "subtotal": totals["subtotal"],
-                "discount_total": totals["discount_total"],
-                "delivery_fee": totals["delivery_fee"],
-                "total": totals["total"],
+                "discount_value": str(promo.discount_value),
+                "subtotal": str(totals["subtotal"]),
+                "discount_total": str(totals["discount_total"]),
+                "delivery_fee": str(totals["delivery_fee"]),
+                "total": str(totals["total"]),
             }
         )
 
@@ -92,10 +92,10 @@ class OrderPreviewView(APIView):
         return Response(
             {
                 "fulfillment_type": data["fulfillment_type"],
-                "subtotal": totals["subtotal"],
-                "discount_total": totals["discount_total"],
-                "delivery_fee": totals["delivery_fee"],
-                "total": totals["total"],
+                "subtotal": str(totals["subtotal"]),
+                "discount_total": str(totals["discount_total"]),
+                "delivery_fee": str(totals["delivery_fee"]),
+                "total": str(totals["total"]),
                 "promo_code": promo.code if promo else None,
             }
         )
