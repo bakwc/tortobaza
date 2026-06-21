@@ -15,6 +15,14 @@ function buildPath(path: string, searchParams?: ClientFetchOptions["searchParams
   return `${url.pathname}${url.search}`;
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export async function clientFetch<T>(
   path: string,
   { searchParams, headers, body, ...init }: ClientFetchOptions = {},
@@ -26,6 +34,14 @@ export async function clientFetch<T>(
   }
   if (body && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
+  }
+
+  const method = (init.method ?? "GET").toUpperCase();
+  if (!SAFE_METHODS.has(method) && !finalHeaders.has("X-CSRFToken")) {
+    const csrfToken = readCookie("csrftoken");
+    if (csrfToken) {
+      finalHeaders.set("X-CSRFToken", csrfToken);
+    }
   }
 
   const response = await fetch(buildPath(path, searchParams), {

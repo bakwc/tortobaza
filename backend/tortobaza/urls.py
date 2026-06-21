@@ -8,6 +8,7 @@ from tortobaza.views import health
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", health),
+    path("api/", include("accounts.urls")),
     path("api/", include("catalog.urls")),
     path("api/", include("cart.urls")),
     path("api/", include("orders.urls")),

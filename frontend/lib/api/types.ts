@@ -199,6 +199,20 @@ export const OrderSchema = z.object({
   created_at: z.string(),
 });
 
+export const SessionUserSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+});
+
+export const AttendanceEventSchema = z.object({
+  id: z.number(),
+  user: z.number(),
+  event_type: z.enum(["arrival", "departure"]),
+  timestamp: z.string(),
+});
+
 export type Category = z.infer<typeof CategorySchema>;
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 export type Option = z.infer<typeof OptionSchema>;
@@ -217,6 +231,15 @@ export type OrderItemOption = z.infer<typeof OrderItemOptionSchema>;
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type OrderAddress = z.infer<typeof OrderAddressSchema>;
 export type Order = z.infer<typeof OrderSchema>;
+export type SessionUser = z.infer<typeof SessionUserSchema>;
+export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
+
+export type LoginBody = {
+  username: string;
+  password: string;
+};
+
+export type AttendanceEventType = "arrival" | "departure";
 
 export type FulfillmentType = "delivery" | "pickup";
 export type PaymentMethod = "card" | "cash" | "bank_transfer";

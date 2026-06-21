@@ -1,4 +1,5 @@
 import {
+  AttendanceEventSchema,
   CartSchema,
   CategorySchema,
   FulfillmentOptionsSchema,
@@ -8,11 +9,15 @@ import {
   ProductDetailSchema,
   ProductsPageSchema,
   PromoValidationSchema,
+  SessionUserSchema,
   type AddCartItemBody,
+  type AttendanceEvent,
+  type AttendanceEventType,
   type Cart,
   type Category,
   type FulfillmentOptions,
   type FulfillmentType,
+  type LoginBody,
   type Order,
   type OrderPreview,
   type PickupLocation,
@@ -21,6 +26,7 @@ import {
   type ProductDetail,
   type ProductsPage,
   type PromoValidation,
+  type SessionUser,
   type UpdateCartItemBody,
 } from "./types";
 import { z } from "zod";
@@ -133,6 +139,35 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { token },
       });
       return parse(OrderSchema, raw);
+    },
+
+    async ensureCsrf(): Promise<void> {
+      await fetcher<unknown>("/api/auth/csrf/");
+    },
+
+    async login(body: LoginBody): Promise<SessionUser> {
+      const raw = await fetcher<unknown>("/api/auth/login/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(SessionUserSchema, raw);
+    },
+
+    async logout(): Promise<void> {
+      await fetcher<void>("/api/auth/logout/", { method: "POST" });
+    },
+
+    async getCurrentUser(): Promise<SessionUser> {
+      const raw = await fetcher<unknown>("/api/auth/me/");
+      return parse(SessionUserSchema, raw);
+    },
+
+    async markAttendance(eventType: AttendanceEventType): Promise<AttendanceEvent> {
+      const raw = await fetcher<unknown>("/api/attendance/mark/", {
+        method: "POST",
+        body: JSON.stringify({ event_type: eventType }),
+      });
+      return parse(AttendanceEventSchema, raw);
     },
   };
 }
