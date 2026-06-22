@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.auth.models import User
 from django.template.response import TemplateResponse
 
@@ -11,8 +12,8 @@ class SalaryCalculationForm(forms.Form):
     employee = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by("username"),
     )
-    start_date = forms.DateField()
-    end_date = forms.DateField()
+    start_date = forms.DateField(widget=AdminDateWidget())
+    end_date = forms.DateField(widget=AdminDateWidget())
 
 
 @admin.register(AttendanceEvent)
