@@ -72,7 +72,10 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
-        money = (hours * hourly_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        money = (Decimal(seconds) * hourly_rate / Decimal(3600)).quantize(
+            Decimal("0.01"),
+            rounding=ROUND_HALF_UP,
+        )
         rows.append({"date": current, "hours": hours, "money": money})
         total_hours += hours
         total_money += money

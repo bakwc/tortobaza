@@ -13,18 +13,25 @@ from attendance.salary import compute_day_worked_seconds, compute_salary
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
-def _dt(day: date, hour: int, minute: int) -> datetime:
+def _dt(day: date, hour: int, minute: int, second: int = 0) -> datetime:
     return timezone.make_aware(
-        datetime(day.year, day.month, day.day, hour, minute),
+        datetime(day.year, day.month, day.day, hour, minute, second),
         _TB,
     )
 
 
-def _event(user: User, event_type: str, day: date, hour: int, minute: int) -> AttendanceEvent:
+def _event(
+    user: User,
+    event_type: str,
+    day: date,
+    hour: int,
+    minute: int,
+    second: int = 0,
+) -> AttendanceEvent:
     return AttendanceEvent.objects.create(
         user=user,
         event_type=event_type,
-        timestamp=_dt(day, hour, minute),
+        timestamp=_dt(day, hour, minute, second),
     )
 
 
@@ -194,3 +201,25 @@ class ComputeSalaryTests(TestCase):
         self.assertEqual(result["rows"][1]["hours"], Decimal("4.00"))
         self.assertEqual(result["total_hours"], Decimal("12.00"))
         self.assertEqual(result["total_money"], Decimal("120.00"))
+
+    def test_sub_hour_money(self):
+        _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
+        _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 30)
+        result = compute_salary(self.user, self.day1, self.day1)
+        self.assertEqual(result["rows"][0]["hours"], Decimal("0.50"))
+        self.assertEqual(result["rows"][0]["money"], Decimal("5.00"))
+        self.assertEqual(result["total_money"], Decimal("5.00"))
+
+    def test_money_uses_per_second_not_rounded_hours(self):
+        _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
+        _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 10)
+        result = compute_salary(self.user, self.day1, self.day1)
+        self.assertEqual(result["rows"][0]["money"], Decimal("1.67"))
+        self.assertEqual(result["total_money"], Decimal("1.67"))
+
+    def test_money_counts_seconds(self):
+        _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0, 0)
+        _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 1, 30)
+        result = compute_salary(self.user, self.day1, self.day1)
+        self.assertEqual(result["rows"][0]["money"], Decimal("0.25"))
+        self.assertEqual(result["total_money"], Decimal("0.25"))
