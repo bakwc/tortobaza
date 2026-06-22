@@ -4,9 +4,10 @@
 
 {% block extrahead %}
 {{ block.super }}
-<script src="{% url 'admin:jsi18n' %}"></script>
+<script type="text/javascript" src="/jsi18n/"></script> 
 <script src="{% static 'admin/js/vendor/jquery/jquery.js' %}"></script>
 <script src="{% static 'admin/js/jquery.init.js' %}"></script>
+<script src="{% static 'admin/js/core.js' %}"></script>
 {{ form.media }}
 {% endblock %}
 
