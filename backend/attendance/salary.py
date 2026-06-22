@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 
+from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -42,7 +43,8 @@ def compute_day_worked_seconds(events: list[AttendanceEvent]) -> int:
 
 
 def compute_salary(user, start_date: date, end_date: date) -> dict:
-    hourly_rate = user.profile.hourly_rate
+    profile = UserProfile.objects.filter(user=user).first()
+    hourly_rate = profile.hourly_rate if profile else Decimal("0.00")
 
     start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
     end_dt = timezone.make_aware(

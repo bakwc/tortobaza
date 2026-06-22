@@ -181,6 +181,18 @@ class ComputeSalaryTests(TestCase):
         self.assertEqual(result["total_hours"], Decimal("8.00"))
         self.assertEqual(result["total_money"], Decimal("80.00"))
 
+    def test_user_without_profile(self):
+        user = User.objects.create_user(username="noprofile", password="pass")
+        result = compute_salary(user, self.day1, self.day2)
+        self.assertEqual(len(result["rows"]), 2)
+        self.assertEqual(result["hourly_rate"], Decimal("0.00"))
+        self.assertEqual(result["rows"][0]["hours"], Decimal("0.00"))
+        self.assertEqual(result["rows"][0]["money"], Decimal("0.00"))
+        self.assertEqual(result["rows"][1]["hours"], Decimal("0.00"))
+        self.assertEqual(result["rows"][1]["money"], Decimal("0.00"))
+        self.assertEqual(result["total_hours"], Decimal("0.00"))
+        self.assertEqual(result["total_money"], Decimal("0.00"))
+
     def test_empty_day_in_range(self):
         result = compute_salary(self.user, self.day1, self.day2)
         self.assertEqual(len(result["rows"]), 2)
