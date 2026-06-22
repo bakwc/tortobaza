@@ -9,4 +9,3 @@ class AttendanceEventAdmin(admin.ModelAdmin):
     list_filter = ["event_type", "user"]
     date_hierarchy = "timestamp"
     search_fields = ["user__username"]
-    readonly_fields = ["timestamp"]

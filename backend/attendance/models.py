@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class AttendanceEvent(models.Model):
@@ -16,7 +17,7 @@ class AttendanceEvent(models.Model):
         on_delete=models.CASCADE,
     )
     event_type = models.CharField(max_length=10, choices=EVENT_TYPE_CHOICES)
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["-timestamp"]
