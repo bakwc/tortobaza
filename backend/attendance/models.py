@@ -24,3 +24,10 @@ class AttendanceEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} {self.event_type} {self.timestamp}"
+
+
+class SalaryCalculation(AttendanceEvent):
+    class Meta:
+        proxy = True
+        verbose_name = "Salary calculation"
+        verbose_name_plural = "Salary calculation"
