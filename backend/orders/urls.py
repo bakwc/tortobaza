@@ -3,6 +3,7 @@ from django.urls import path
 from orders.views import (
     FulfillmentOptionsView,
     LibertyCallbackView,
+    LibertyPaymentEnabledView,
     LibertyPaymentStartView,
     OrderCreateView,
     OrderDetailView,
@@ -18,6 +19,7 @@ urlpatterns = [
     path("orders/preview/", OrderPreviewView.as_view(), name="orders-preview"),
     path("orders/", OrderCreateView.as_view(), name="orders-create"),
     path("orders/<str:number>/", OrderDetailView.as_view(), name="orders-detail"),
+    path("payments/liberty/enabled/", LibertyPaymentEnabledView.as_view(), name="liberty-payment-enabled"),
     path("payments/liberty/start/", LibertyPaymentStartView.as_view(), name="liberty-payment-start"),
     path("payments/liberty/callback/", LibertyCallbackView.as_view(), name="liberty-payment-callback"),
 ]

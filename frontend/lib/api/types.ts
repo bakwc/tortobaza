@@ -174,6 +174,10 @@ export const OrderAddressSchema = z.object({
   notes: z.string(),
 });
 
+export const LibertyPaymentEnabledSchema = z.object({
+  enabled: z.boolean(),
+});
+
 export const StartPaymentResponseSchema = z.object({
   action_url: z.string(),
   fields: z.record(z.string(), z.string()),

@@ -11,6 +11,7 @@ import {
   PromoValidationSchema,
   SessionUserSchema,
   StartPaymentResponseSchema,
+  LibertyPaymentEnabledSchema,
   type AddCartItemBody,
   type AttendanceEvent,
   type AttendanceEventType,
@@ -150,6 +151,11 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify(body),
       });
       return parse(StartPaymentResponseSchema, raw);
+    },
+
+    async getLibertyPaymentEnabled(): Promise<{ enabled: boolean }> {
+      const raw = await fetcher<unknown>("/api/payments/liberty/enabled/");
+      return parse(LibertyPaymentEnabledSchema, raw);
     },
 
     async ensureCsrf(): Promise<void> {

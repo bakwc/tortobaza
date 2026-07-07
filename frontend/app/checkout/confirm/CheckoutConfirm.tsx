@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, CreditCard, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -36,6 +36,11 @@ export function CheckoutConfirm() {
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bankTransferStep, setBankTransferStep] = useState(false);
+  const cardPayment = useQuery({
+    queryKey: ["liberty-payment-enabled"],
+    queryFn: () => api.getLibertyPaymentEnabled(),
+  });
+  const cardPaymentEnabled = cardPayment.data?.enabled ?? false;
 
   useEffect(() => {
     const loaded = loadDraft();
@@ -56,6 +61,15 @@ export function CheckoutConfirm() {
     setDraft(loaded);
     setHydrated(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!hydrated || cardPayment.isLoading) return;
+    if (!cardPaymentEnabled && draft.payment_method === "card") {
+      const next = { ...draft, payment_method: "bank_transfer" as const };
+      setDraft(next);
+      saveDraft(next);
+    }
+  }, [hydrated, cardPayment.isLoading, cardPaymentEnabled, draft]);
 
   const update = (patch: Partial<CheckoutDraft>) => {
     setDraft((prev) => {
@@ -158,16 +172,23 @@ export function CheckoutConfirm() {
     <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0 space-y-6">
         <Section title={t("paymentMethod")}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <PaymentTile
-              icon={<CreditCard className="h-5 w-5" />}
-              label={t("card")}
-              active={draft.payment_method === "card"}
-              onClick={() => {
-                setBankTransferStep(false);
-                update({ payment_method: "card" });
-              }}
-            />
+          <div
+            className={cn(
+              "grid grid-cols-1 gap-3",
+              cardPaymentEnabled ? "sm:grid-cols-3" : "sm:grid-cols-2",
+            )}
+          >
+            {cardPaymentEnabled ? (
+              <PaymentTile
+                icon={<CreditCard className="h-5 w-5" />}
+                label={t("card")}
+                active={draft.payment_method === "card"}
+                onClick={() => {
+                  setBankTransferStep(false);
+                  update({ payment_method: "card" });
+                }}
+              />
+            ) : null}
             <PaymentTile
               icon={<Building2 className="h-5 w-5" />}
               label={t("bankTransfer")}

@@ -2,8 +2,24 @@ import hashlib
 import xml.sax.saxutils
 
 from django.conf import settings
+from django.http import HttpRequest
 
 from orders.models import LibertyPayment, Order
+
+
+def request_public_host(request: HttpRequest) -> str:
+    forwarded = request.META.get("HTTP_X_FORWARDED_HOST", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip().split(":")[0].lower()
+    return request.get_host().split(":")[0].lower()
+
+
+def liberty_pay_enabled_for_request(request: HttpRequest) -> bool:
+    explicit = settings.LIBERTY_PAY_ENABLED
+    if explicit is not None:
+        return explicit == "1"
+    host = request_public_host(request)
+    return host == "dev.sweet-chill.ge" or host in ("localhost", "127.0.0.1")
 
 
 def sha256_hex(value: str) -> str:

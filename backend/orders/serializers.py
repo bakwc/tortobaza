@@ -1,6 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
+from orders.liberty import liberty_pay_enabled_for_request
 from orders.models import (
     DeliveryAddress,
     Order,
@@ -118,6 +119,15 @@ class OrderCreateInputSerializer(serializers.Serializer):
         if attrs.get("schedule_end_time") is None:
             raise serializers.ValidationError(
                 {"schedule_end_time": _("This field is required for a scheduled slot.")}
+            )
+        request = self.context.get("request")
+        if (
+            attrs.get("payment_method") == Order.PAYMENT_CARD
+            and request is not None
+            and not liberty_pay_enabled_for_request(request)
+        ):
+            raise serializers.ValidationError(
+                {"payment_method": _("Card payment is not available.")}
             )
         return attrs
 

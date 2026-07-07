@@ -14,6 +14,7 @@ from orders.liberty import (
     build_callback_check,
     build_start_fields,
     callback_response_xml,
+    liberty_pay_enabled_for_request,
     order_amount_tetri,
 )
 from orders.models import LibertyPayment, Order, PickupLocation
@@ -122,7 +123,7 @@ class OrderCreateView(APIView):
                 {"detail": _("Cart is empty.")}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = OrderCreateInputSerializer(data=request.data)
+        serializer = OrderCreateInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         order = create_order_from_cart(cart, serializer.validated_data)
 
@@ -149,8 +150,18 @@ class OrderDetailView(APIView):
         return Response(OrderReadSerializer(order).data)
 
 
+class LibertyPaymentEnabledView(APIView):
+    def get(self, request):
+        return Response({"enabled": liberty_pay_enabled_for_request(request)})
+
+
 class LibertyPaymentStartView(APIView):
     def post(self, request):
+        if not liberty_pay_enabled_for_request(request):
+            return Response(
+                {"detail": _("Card payment is not available.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = LibertyPaymentStartInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
@@ -30,6 +30,11 @@ export function OrderStatusView({
   const locale = useLocale();
   const t = useTranslations("orders");
   const [payError, setPayError] = useState<string | null>(null);
+  const cardPayment = useQuery({
+    queryKey: ["liberty-payment-enabled"],
+    queryFn: () => api.getLibertyPaymentEnabled(),
+  });
+  const cardPaymentEnabled = cardPayment.data?.enabled ?? false;
 
   const statusLabelMap = useMemo(
     () => ({
@@ -95,7 +100,9 @@ export function OrderStatusView({
   }, [paymentResult]);
 
   const showPayButton =
-    order.payment_method === "card" && order.payment_status !== "paid";
+    cardPaymentEnabled &&
+    order.payment_method === "card" &&
+    order.payment_status !== "paid";
 
   const tone = STATUS_TONE[order.status] ?? "bg-amber-100 text-amber-900";
   const label =
