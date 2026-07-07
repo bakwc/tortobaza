@@ -1,12 +1,25 @@
+import uuid
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from orders.models import Order, PickupLocation
+from orders.liberty import (
+    build_callback_check,
+    build_start_fields,
+    callback_response_xml,
+    order_amount_tetri,
+)
+from orders.models import LibertyPayment, Order, PickupLocation
 from orders.schedule import build_fulfillment_options
 from orders.serializers import (
+    LibertyPaymentStartInputSerializer,
     OrderCreateInputSerializer,
     OrderPreviewInputSerializer,
     OrderReadSerializer,
@@ -134,3 +147,97 @@ class OrderDetailView(APIView):
             )
         order = get_object_or_404(Order, number=number, lookup_token=token)
         return Response(OrderReadSerializer(order).data)
+
+
+class LibertyPaymentStartView(APIView):
+    def post(self, request):
+        serializer = LibertyPaymentStartInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        order = get_object_or_404(Order, number=data["number"], lookup_token=data["token"])
+        if order.payment_method != Order.PAYMENT_CARD:
+            return Response(
+                {"detail": _("This order does not use card payment.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if order.payment_status == Order.PAYMENT_PAID:
+            return Response(
+                {"detail": _("This order is already paid.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        testmode = settings.LIBERTY_PAY_TESTMODE == "1"
+        payment = LibertyPayment.objects.create(
+            order=order,
+            ordercode=f"{order.number}-{uuid.uuid4().hex[:12]}",
+            amount_tetri=order_amount_tetri(order),
+            testmode=testmode,
+        )
+        fields = build_start_fields(payment, order)
+        return Response(
+            {
+                "action_url": settings.LIBERTY_PAY_URL,
+                "fields": fields,
+            }
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class LibertyCallbackView(APIView):
+    def post(self, request):
+        params = request.POST
+        status_value = params.get("status", "")
+        transactioncode = params.get("transactioncode", "") or params.get("transaction code", "")
+        amount = params.get("amount", "")
+        currency = params.get("currency", "")
+        ordercode = params.get("ordercode", "")
+        paymethod = params.get("paymethod", "")
+        customdata_value = params.get("customdata", "")
+        testmode = params.get("testmode", "")
+        check = params.get("check", "")
+
+        expected_check = build_callback_check(
+            status_value,
+            transactioncode,
+            amount,
+            currency,
+            ordercode,
+            paymethod,
+            customdata_value,
+            testmode,
+            settings.LIBERTY_PAY_SECRET,
+        )
+        if check != expected_check:
+            xml = callback_response_xml("-3", "Invalid signature", transactioncode)
+            return HttpResponse(xml, content_type="text/xml")
+
+        payment = LibertyPayment.objects.filter(ordercode=ordercode).select_related("order").first()
+        if payment is None:
+            xml = callback_response_xml("-2", "Transaction not found", transactioncode)
+            return HttpResponse(xml, content_type="text/xml")
+
+        if str(payment.amount_tetri) != amount:
+            xml = callback_response_xml("-3", "Amount mismatch", transactioncode)
+            return HttpResponse(xml, content_type="text/xml")
+
+        if payment.status == LibertyPayment.STATUS_COMPLETED:
+            xml = callback_response_xml("1", "Duplicate", transactioncode)
+            return HttpResponse(xml, content_type="text/xml")
+
+        payment.pay_method = paymethod
+        payment.raw_callback = request.body.decode("utf-8", errors="replace")
+
+        if status_value == "COMPLETED":
+            payment.status = LibertyPayment.STATUS_COMPLETED
+            payment.transaction_code = transactioncode
+            payment.save()
+            Order.objects.filter(pk=payment.order_id).update(payment_status=Order.PAYMENT_PAID)
+            xml = callback_response_xml("0", "Ok", transactioncode)
+            return HttpResponse(xml, content_type="text/xml")
+
+        if status_value == "CANCELED":
+            payment.status = LibertyPayment.STATUS_CANCELED
+        else:
+            payment.status = LibertyPayment.STATUS_ERROR
+        payment.save()
+        xml = callback_response_xml("0", "Ok", transactioncode)
+        return HttpResponse(xml, content_type="text/xml")

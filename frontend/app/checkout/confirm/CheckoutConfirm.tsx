@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { Building2, Wallet } from "lucide-react";
+import { Building2, CreditCard, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
@@ -22,6 +22,7 @@ import {
   type CheckoutDraft,
 } from "@/lib/checkout-draft";
 import { rememberOrder } from "@/lib/order-history";
+import { submitLibertyPaymentForm } from "@/lib/liberty-pay";
 import type { Order, PlaceOrderBody } from "@/lib/api/types";
 
 const BANK_ACCOUNT_NUMBER = "GE94BG0000000612361573GEL";
@@ -66,9 +67,17 @@ export function CheckoutConfirm() {
 
   const placeOrder = useMutation({
     mutationFn: (body: PlaceOrderBody) => api.placeOrder(body),
-    onSuccess: (order: Order) => {
+    onSuccess: async (order: Order) => {
       rememberOrder(order.number, order.lookup_token);
       clearDraft();
+      if (order.payment_method === "card") {
+        const payment = await api.startLibertyPayment({
+          number: order.number,
+          token: order.lookup_token,
+        });
+        submitLibertyPaymentForm(payment);
+        return;
+      }
       router.push(`/orders/${order.number}?token=${order.lookup_token}`);
     },
     onError: (e) => {
@@ -149,7 +158,16 @@ export function CheckoutConfirm() {
     <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0 space-y-6">
         <Section title={t("paymentMethod")}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <PaymentTile
+              icon={<CreditCard className="h-5 w-5" />}
+              label={t("card")}
+              active={draft.payment_method === "card"}
+              onClick={() => {
+                setBankTransferStep(false);
+                update({ payment_method: "card" });
+              }}
+            />
             <PaymentTile
               icon={<Building2 className="h-5 w-5" />}
               label={t("bankTransfer")}

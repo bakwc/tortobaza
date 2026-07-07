@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
+import { api } from "@/lib/api";
+import { ApiError } from "@/lib/api/client";
+import { submitLibertyPaymentForm } from "@/lib/liberty-pay";
 import { rememberOrder } from "@/lib/order-history";
 import { formatAed, formatOrderTimeslot } from "@/lib/format";
 import type { Order } from "@/lib/api/types";
@@ -16,9 +20,16 @@ const STATUS_TONE: Record<string, string> = {
   cancelled: "bg-rose-100 text-rose-900",
 };
 
-export function OrderStatusView({ order }: { order: Order }) {
+export function OrderStatusView({
+  order,
+  paymentResult,
+}: {
+  order: Order;
+  paymentResult?: "success" | "error" | "cancel" | null;
+}) {
   const locale = useLocale();
   const t = useTranslations("orders");
+  const [payError, setPayError] = useState<string | null>(null);
 
   const statusLabelMap = useMemo(
     () => ({
@@ -45,6 +56,47 @@ export function OrderStatusView({ order }: { order: Order }) {
     rememberOrder(order.number, order.lookup_token);
   }, [order.number, order.lookup_token]);
 
+  const startPayment = useMutation({
+    mutationFn: () =>
+      api.startLibertyPayment({
+        number: order.number,
+        token: order.lookup_token,
+      }),
+    onSuccess: (payment) => {
+      submitLibertyPaymentForm(payment);
+    },
+    onError: (e) => {
+      let message = t("paymentStartFail");
+      if (e instanceof ApiError) {
+        const parsed = e.parsed<Record<string, unknown>>();
+        if (parsed) {
+          const flat = Object.values(parsed).flat();
+          if (flat.length > 0) message = String(flat[0]);
+        } else if (e.detail) {
+          message = e.detail;
+        }
+      }
+      setPayError(message);
+    },
+  });
+
+  const paymentResultMessage = useMemo(() => {
+    if (paymentResult === "success") return t("paymentSuccess");
+    if (paymentResult === "error") return t("paymentError");
+    if (paymentResult === "cancel") return t("paymentCancel");
+    return null;
+  }, [paymentResult, t]);
+
+  const paymentResultTone = useMemo(() => {
+    if (paymentResult === "success") return "bg-emerald-100 text-emerald-900";
+    if (paymentResult === "error") return "bg-rose-100 text-rose-900";
+    if (paymentResult === "cancel") return "bg-amber-100 text-amber-900";
+    return "";
+  }, [paymentResult]);
+
+  const showPayButton =
+    order.payment_method === "card" && order.payment_status !== "paid";
+
   const tone = STATUS_TONE[order.status] ?? "bg-amber-100 text-amber-900";
   const label =
     statusLabelMap[order.status as keyof typeof statusLabelMap] ?? order.status;
@@ -54,6 +106,11 @@ export function OrderStatusView({ order }: { order: Order }) {
 
   return (
     <div className="mt-6 space-y-6">
+      {paymentResultMessage ? (
+        <div className={`rounded-3xl p-4 text-sm ring-1 ring-[var(--line)] ${paymentResultTone}`}>
+          {paymentResultMessage}
+        </div>
+      ) : null}
       <div className="rounded-3xl bg-white p-6 ring-1 ring-[var(--line)]">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand)] text-[var(--brand-foreground)]">
@@ -122,6 +179,24 @@ export function OrderStatusView({ order }: { order: Order }) {
           <Field label={t("paymentLabel")}>
             {paymentMethodLabel} · <span className="text-[var(--ink)]/60">{order.payment_status}</span>
           </Field>
+          {showPayButton ? (
+            <div className="sm:col-span-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPayError(null);
+                  startPayment.mutate();
+                }}
+                disabled={startPayment.isPending}
+                className="rounded-2xl bg-[var(--brand)] px-5 py-3 text-sm font-medium text-[var(--brand-foreground)] disabled:opacity-60"
+              >
+                {paymentResult === "error" || paymentResult === "cancel"
+                  ? t("retryPayment")
+                  : t("payNow")}
+              </button>
+              {payError ? <p className="mt-2 text-sm text-[var(--danger)]">{payError}</p> : null}
+            </div>
+          ) : null}
           {order.comment ? <Field label={t("commentLabel")}>{order.comment}</Field> : null}
         </dl>
       </div>

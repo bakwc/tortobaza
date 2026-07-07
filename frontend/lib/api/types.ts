@@ -174,6 +174,11 @@ export const OrderAddressSchema = z.object({
   notes: z.string(),
 });
 
+export const StartPaymentResponseSchema = z.object({
+  action_url: z.string(),
+  fields: z.record(z.string(), z.string()),
+});
+
 export const OrderSchema = z.object({
   number: z.string(),
   lookup_token: z.string(),
@@ -281,6 +286,16 @@ export type PlaceOrderBody = {
   comment: string;
   promo_code?: string;
   locale: string;
+};
+
+export type StartPaymentBody = {
+  number: string;
+  token: string;
+};
+
+export type StartPaymentResponse = {
+  action_url: string;
+  fields: Record<string, string>;
 };
 
 export type PreviewOrderBody = {

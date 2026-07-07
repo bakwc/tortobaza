@@ -145,3 +145,8 @@ CART_TOKEN_HEADER = "HTTP_X_CART_TOKEN"
 SITE_URL = os.environ.get("SITE_URL", "https://sweet-chill.ge").rstrip("/")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+LIBERTY_PAY_MERCHANT = os.environ.get("LIBERTY_PAY_MERCHANT", "SWEETCHILL")
+LIBERTY_PAY_SECRET = os.environ.get("LIBERTY_PAY_SECRET", "")
+LIBERTY_PAY_URL = os.environ.get("LIBERTY_PAY_URL", "https://www.pay.ge/pay")
+LIBERTY_PAY_TESTMODE = os.environ.get("LIBERTY_PAY_TESTMODE", "0")

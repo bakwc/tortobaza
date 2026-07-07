@@ -3,6 +3,7 @@ from modeltranslation.admin import TranslationAdmin
 
 from orders.models import (
     DeliveryAddress,
+    LibertyPayment,
     Order,
     OrderItem,
     OrderItemOption,
@@ -91,3 +92,39 @@ class PickupLocationAdmin(TranslationAdmin):
     list_display = ["name", "address", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "address"]
+
+
+@admin.register(LibertyPayment)
+class LibertyPaymentAdmin(admin.ModelAdmin):
+    list_display = [
+        "ordercode",
+        "order",
+        "status",
+        "amount_tetri",
+        "transaction_code",
+        "created_at",
+    ]
+    list_filter = ["status", "testmode"]
+    search_fields = ["ordercode", "transaction_code", "order__number"]
+    readonly_fields = [
+        "order",
+        "ordercode",
+        "transaction_code",
+        "amount_tetri",
+        "currency",
+        "pay_method",
+        "status",
+        "testmode",
+        "raw_callback",
+        "created_at",
+        "updated_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

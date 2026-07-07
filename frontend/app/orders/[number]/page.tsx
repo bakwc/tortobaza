@@ -21,12 +21,14 @@ export default async function OrderStatusPage({
   searchParams,
 }: {
   params: Promise<{ number: string }>;
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ token?: string; payment?: string }>;
 }) {
   const tOrders = await getTranslations("orders");
   const tCheckout = await getTranslations("checkout");
   const { number } = await params;
-  const { token } = await searchParams;
+  const { token, payment } = await searchParams;
+  const paymentResult =
+    payment === "success" || payment === "error" || payment === "cancel" ? payment : null;
 
   if (!token) {
     return (
@@ -56,7 +58,7 @@ export default async function OrderStatusPage({
           <ChevronLeft className="h-4 w-4" />
           {tCheckout("backToCatalog")}
         </Link>
-        <OrderStatusView order={order} />
+        <OrderStatusView order={order} paymentResult={paymentResult} />
       </div>
     );
   } catch (e) {

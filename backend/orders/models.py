@@ -169,6 +169,37 @@ class OrderItemOption(models.Model):
         return f"{self.group_name}: {self.option_name}"
 
 
+class LibertyPayment(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELED = "canceled"
+    STATUS_ERROR = "error"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELED, "Canceled"),
+        (STATUS_ERROR, "Error"),
+    ]
+
+    order = models.ForeignKey(Order, related_name="liberty_payments", on_delete=models.CASCADE)
+    ordercode = models.CharField(max_length=50, unique=True)
+    transaction_code = models.CharField(max_length=20, blank=True)
+    amount_tetri = models.PositiveIntegerField()
+    currency = models.CharField(max_length=3, default="GEL")
+    pay_method = models.CharField(max_length=20, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    testmode = models.BooleanField(default=False)
+    raw_callback = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.ordercode} ({self.status})"
+
+
 class DeliveryAddress(models.Model):
     order = models.OneToOneField(Order, related_name="delivery_address", on_delete=models.CASCADE)
     street = models.CharField(max_length=200)

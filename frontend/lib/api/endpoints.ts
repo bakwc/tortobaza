@@ -10,6 +10,7 @@ import {
   ProductsPageSchema,
   PromoValidationSchema,
   SessionUserSchema,
+  StartPaymentResponseSchema,
   type AddCartItemBody,
   type AttendanceEvent,
   type AttendanceEventType,
@@ -27,6 +28,8 @@ import {
   type ProductsPage,
   type PromoValidation,
   type SessionUser,
+  type StartPaymentBody,
+  type StartPaymentResponse,
   type UpdateCartItemBody,
 } from "./types";
 import { z } from "zod";
@@ -139,6 +142,14 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { token },
       });
       return parse(OrderSchema, raw);
+    },
+
+    async startLibertyPayment(body: StartPaymentBody): Promise<StartPaymentResponse> {
+      const raw = await fetcher<unknown>("/api/payments/liberty/start/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(StartPaymentResponseSchema, raw);
     },
 
     async ensureCsrf(): Promise<void> {
