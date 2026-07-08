@@ -19,7 +19,13 @@ def liberty_pay_enabled_for_request(request: HttpRequest) -> bool:
     if explicit is not None:
         return explicit == "1"
     host = request_public_host(request)
-    return host == "dev.sweet-chill.ge" or host in ("localhost", "127.0.0.1")
+    return host in (
+        "dev.sweet-chill.ge",
+        "sweet-chill.ge",
+        "www.sweet-chill.ge",
+        "localhost",
+        "127.0.0.1",
+    )
 
 
 def order_environment_for_request(request: HttpRequest) -> str:

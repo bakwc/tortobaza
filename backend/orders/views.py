@@ -197,8 +197,15 @@ class LibertyPaymentStartView(APIView):
 
 @method_decorator(csrf_exempt, name="dispatch")
 class LibertyCallbackView(APIView):
+    def get(self, request):
+        return self._handle(request)
+
     def post(self, request):
-        params = request.POST
+        return self._handle(request)
+
+    def _handle(self, request):
+        params = request.query_params.dict()
+        params.update(request.POST.dict())
         status_value = params.get("status", "")
         transactioncode = params.get("transactioncode", "") or params.get("transaction code", "")
         amount = params.get("amount", "")
