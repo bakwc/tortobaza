@@ -8,7 +8,7 @@ from rest_framework import serializers
 
 from cart.models import Cart
 from orders.schedule import resolve_schedule_selection
-from orders.telegram import send_order_notification
+from orders.telegram import send_order_notification, send_order_paid_notification
 from orders.models import (
     DeliveryAddress,
     Order,
@@ -187,3 +187,16 @@ def _send_order_telegram_notification(order_id: int) -> None:
         .get(pk=order_id)
     )
     send_order_notification(order)
+
+
+def notify_order_paid_by_card(order_id: int) -> None:
+    threading.Thread(
+        target=_send_order_paid_telegram_notification,
+        args=(order_id,),
+        daemon=True,
+    ).start()
+
+
+def _send_order_paid_telegram_notification(order_id: int) -> None:
+    order = Order.objects.get(pk=order_id)
+    send_order_paid_notification(order)

@@ -148,3 +148,46 @@ def send_order_notification(order: Order) -> None:
         method="POST",
     )
     urllib.request.urlopen(req)
+
+
+def build_order_paid_notification_text(order: Order) -> str:
+    admin_url = f"{settings.SITE_URL}/admin/orders/order/{order.pk}/change/"
+    lines = [
+        _("✅ <b>Order #%(number)s paid by card</b>") % {"number": _esc(order.number)},
+        "",
+        f"<b>{_('Total:')}</b> {_format_money(order.total)}",
+        "",
+        f'<a href="{admin_url}">{_("Open in admin")}</a>',
+    ]
+    return "\n".join(lines)
+
+
+def send_order_paid_notification(order: Order) -> None:
+    if order.environment == Order.ENV_DEV:
+        return
+    token = settings.TELEGRAM_BOT_TOKEN
+    chat_id = settings.TELEGRAM_CHAT_ID
+    if not token or not chat_id:
+        return
+    from django.utils import translation
+
+    prev = translation.get_language()
+    translation.activate(order.locale)
+    text = build_order_paid_notification_text(order)
+    translation.activate(prev)
+
+    payload = json.dumps(
+        {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    urllib.request.urlopen(req)

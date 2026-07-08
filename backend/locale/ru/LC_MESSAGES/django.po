@@ -132,3 +132,7 @@ msgstr "Параметр type должен быть delivery или pickup."
 
 msgid "Lookup token is required."
 msgstr "Нужен токен для просмотра заказа."
+
+#, python-format
+msgid "✅ <b>Order #%(number)s paid by card</b>"
+msgstr "✅ <b>Заказ #%(number)s оплачен картой</b>"

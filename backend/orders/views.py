@@ -32,6 +32,7 @@ from orders.services import (
     compute_totals,
     create_order_from_cart,
     get_promo_by_code,
+    notify_order_paid_by_card,
 )
 
 
@@ -252,6 +253,7 @@ class LibertyCallbackView(APIView):
             payment.transaction_code = transactioncode
             payment.save()
             Order.objects.filter(pk=payment.order_id).update(payment_status=Order.PAYMENT_PAID)
+            notify_order_paid_by_card(payment.order_id)
             xml = callback_response_xml("0", "Ok", transactioncode)
             return HttpResponse(xml, content_type="text/xml")
 
