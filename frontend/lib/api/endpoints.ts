@@ -156,6 +156,7 @@ export function endpoints(fetcher: Fetcher) {
     },
 
     async getLibertyPaymentEnabled(): Promise<{ enabled: boolean }> {
+      return { enabled: true };
       const raw = await fetcher<unknown>("/api/payments/liberty/enabled/");
       return parse(LibertyPaymentEnabledSchema, raw);
     },

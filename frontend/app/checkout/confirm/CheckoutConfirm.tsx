@@ -208,6 +208,9 @@ export function CheckoutConfirm() {
               }}
             />
           </div>
+          {cardPaymentEnabled ? (
+            <p className="text-sm leading-relaxed text-[var(--ink)]/60">{t("cardHint")}</p>
+          ) : null}
         </Section>
 
         {bankTransferStep ? (

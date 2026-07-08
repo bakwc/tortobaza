@@ -27,7 +27,7 @@ export const emptyDraft: CheckoutDraft = {
   address: null,
   pickup_location_id: null,
   schedule: null,
-  payment_method: "bank_transfer",
+  payment_method: "card",
   customer_name: "",
   customer_phone: "",
   customer_email: "",
