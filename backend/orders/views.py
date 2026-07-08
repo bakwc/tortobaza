@@ -227,7 +227,7 @@ class LibertyCallbackView(APIView):
             testmode,
             settings.LIBERTY_PAY_SECRET,
         )
-        if check != expected_check:
+        if check.lower() != expected_check.lower():
             xml = callback_response_xml("-3", "Invalid signature", transactioncode)
             return HttpResponse(xml, content_type="text/xml")
 
