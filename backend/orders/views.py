@@ -16,6 +16,7 @@ from orders.liberty import (
     callback_response_xml,
     liberty_pay_enabled_for_request,
     order_amount_tetri,
+    order_environment_for_request,
 )
 from orders.models import LibertyPayment, Order, PickupLocation
 from orders.schedule import build_fulfillment_options
@@ -125,7 +126,9 @@ class OrderCreateView(APIView):
 
         serializer = OrderCreateInputSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        order = create_order_from_cart(cart, serializer.validated_data)
+        order = create_order_from_cart(
+            cart, serializer.validated_data, order_environment_for_request(request)
+        )
 
         order = (
             Order.objects

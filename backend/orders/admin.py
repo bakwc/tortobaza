@@ -36,6 +36,7 @@ class DeliveryAddressInline(admin.StackedInline):
 class OrderAdmin(admin.ModelAdmin):
     list_display = [
         "number",
+        "environment",
         "fulfillment_type",
         "status",
         "payment_method",
@@ -44,7 +45,7 @@ class OrderAdmin(admin.ModelAdmin):
         "total",
         "created_at",
     ]
-    list_filter = ["status", "fulfillment_type", "payment_method", "payment_status"]
+    list_filter = ["environment", "status", "fulfillment_type", "payment_method", "payment_status"]
     search_fields = [
         "number",
         "customer_name",

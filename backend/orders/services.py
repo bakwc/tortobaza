@@ -68,7 +68,7 @@ def compute_totals(cart: Cart, promo: PromoCode | None, fulfillment_type: str) -
 
 
 @transaction.atomic
-def create_order_from_cart(cart: Cart, payload: dict) -> Order:
+def create_order_from_cart(cart: Cart, payload: dict, environment: str) -> Order:
     if not cart.items.exists():
         raise serializers.ValidationError({"cart": _("Cart is empty.")})
 
@@ -109,6 +109,7 @@ def create_order_from_cart(cart: Cart, payload: dict) -> Order:
 
     order = Order.objects.create(
         locale=payload["locale"],
+        environment=environment,
         fulfillment_type=fulfillment_type,
         payment_method=payload["payment_method"],
         customer_name=payload["customer_name"],

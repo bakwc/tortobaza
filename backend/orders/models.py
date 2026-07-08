@@ -101,10 +101,18 @@ class Order(models.Model):
         (PAYMENT_PAID, "Paid"),
     ]
 
+    ENV_PROD = "prod"
+    ENV_DEV = "dev"
+    ENVIRONMENT_CHOICES = [
+        (ENV_PROD, "Production"),
+        (ENV_DEV, "Development"),
+    ]
+
     number = models.CharField(max_length=20, unique=True, default=_generate_order_number, editable=False)
     lookup_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     locale = models.CharField(max_length=5, default="en")
+    environment = models.CharField(max_length=10, choices=ENVIRONMENT_CHOICES, default=ENV_PROD)
 
     fulfillment_type = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)

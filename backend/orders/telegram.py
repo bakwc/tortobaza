@@ -120,6 +120,8 @@ def build_order_notification_text(order: Order) -> str:
 
 
 def send_order_notification(order: Order) -> None:
+    if order.environment == Order.ENV_DEV:
+        return
     token = settings.TELEGRAM_BOT_TOKEN
     chat_id = settings.TELEGRAM_CHAT_ID
     if not token or not chat_id:

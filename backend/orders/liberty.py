@@ -22,6 +22,13 @@ def liberty_pay_enabled_for_request(request: HttpRequest) -> bool:
     return host == "dev.sweet-chill.ge" or host in ("localhost", "127.0.0.1")
 
 
+def order_environment_for_request(request: HttpRequest) -> str:
+    host = request_public_host(request)
+    if host == "dev.sweet-chill.ge" or host in ("localhost", "127.0.0.1"):
+        return Order.ENV_DEV
+    return Order.ENV_PROD
+
+
 def sha256_hex(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
