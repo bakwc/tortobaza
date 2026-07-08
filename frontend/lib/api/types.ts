@@ -222,6 +222,21 @@ export const AttendanceEventSchema = z.object({
   timestamp: z.string(),
 });
 
+export const AttendanceSummaryRowSchema = z.object({
+  date: z.string(),
+  arrival: z.string().nullable(),
+  departure: z.string().nullable(),
+  hours: z.string(),
+  money: z.string(),
+});
+
+export const AttendanceSummarySchema = z.object({
+  hourly_rate: z.string(),
+  rows: z.array(AttendanceSummaryRowSchema),
+  total_hours: z.string(),
+  total_money: z.string(),
+});
+
 export type Category = z.infer<typeof CategorySchema>;
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 export type Option = z.infer<typeof OptionSchema>;
@@ -242,6 +257,7 @@ export type OrderAddress = z.infer<typeof OrderAddressSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type SessionUser = z.infer<typeof SessionUserSchema>;
 export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
+export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 
 export type LoginBody = {
   username: string;

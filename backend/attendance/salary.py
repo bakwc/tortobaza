@@ -78,7 +78,21 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
-        rows.append({"date": current, "hours": hours, "money": money})
+        arrivals = [event for event in day_events if event.event_type == AttendanceEvent.ARRIVAL]
+        departures = [
+            event for event in day_events if event.event_type == AttendanceEvent.DEPARTURE
+        ]
+        first_arrival = min((event.timestamp for event in arrivals), default=None)
+        last_departure = max((event.timestamp for event in departures), default=None)
+        rows.append(
+            {
+                "date": current,
+                "arrival": first_arrival,
+                "departure": last_departure,
+                "hours": hours,
+                "money": money,
+            }
+        )
         total_hours += hours
         total_money += money
         current += timedelta(days=1)

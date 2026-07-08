@@ -67,3 +67,21 @@ export function todayIsoDate(): string {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+export function formatAttendanceDate(date: string): string {
+  const d = new Date(`${date}T00:00:00`);
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export function formatAttendanceTime(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: BUSINESS_TIMEZONE,
+  });
+}

@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { isUnauthenticatedError, useCurrentUser, useLogin, useLogout } from "@/hooks/useAuth";
-import { useMarkAttendance } from "@/hooks/useAttendance";
+import { useAttendanceSummary, useMarkAttendance } from "@/hooks/useAttendance";
 import type { AttendanceEvent, AttendanceEventType, SessionUser } from "@/lib/api/types";
+import { formatAed, formatAttendanceDate, formatAttendanceTime } from "@/lib/format";
 
 export default function AttendancePage() {
   const currentUser = useCurrentUser();
@@ -30,7 +31,7 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-12">
+    <div className="mx-auto w-full max-w-2xl px-4 py-12">
       {currentUser.data ? (
         <AttendancePanel user={currentUser.data} />
       ) : (
@@ -101,6 +102,7 @@ function LoginForm() {
 function AttendancePanel({ user }: { user: SessionUser }) {
   const logout = useLogout();
   const mark = useMarkAttendance();
+  const summary = useAttendanceSummary();
   const [lastEvent, setLastEvent] = useState<AttendanceEvent | null>(null);
 
   const displayName =
@@ -113,66 +115,117 @@ function AttendancePanel({ user }: { user: SessionUser }) {
   };
 
   return (
-    <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-            Signed in as
-          </p>
-          <h1 className="text-2xl font-semibold text-[var(--ink)]">{displayName}</h1>
+    <div className="grid gap-6">
+      <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+              Signed in as
+            </p>
+            <h1 className="text-2xl font-semibold text-[var(--ink)]">{displayName}</h1>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => logout.mutate()}
-          disabled={logout.isPending}
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className="h-5 w-5" />
-        </Button>
+
+        <div className="mt-8 grid gap-3">
+          <Button
+            size="lg"
+            className="h-16 text-base"
+            onClick={() => onMark("arrival")}
+            disabled={mark.isPending}
+          >
+            {mark.isPending && mark.variables === "arrival" ? (
+              <Spinner className="h-5 w-5" />
+            ) : (
+              "Mark arrival"
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-16 text-base"
+            onClick={() => onMark("departure")}
+            disabled={mark.isPending}
+          >
+            {mark.isPending && mark.variables === "departure" ? (
+              <Spinner className="h-5 w-5" />
+            ) : (
+              "Mark departure"
+            )}
+          </Button>
+        </div>
+
+        {lastEvent ? (
+          <p className="mt-6 text-center text-sm text-[var(--ink)]/70">
+            {lastEvent.event_type === "arrival" ? "Arrival" : "Departure"} marked at{" "}
+            {new Date(lastEvent.timestamp).toLocaleString()}
+          </p>
+        ) : null}
+
+        {mark.isError ? (
+          <p className="mt-6 text-center text-sm text-[var(--danger)]">
+            Could not mark attendance. Please try again.
+          </p>
+        ) : null}
       </div>
 
-      <div className="mt-8 grid gap-3">
-        <Button
-          size="lg"
-          className="h-16 text-base"
-          onClick={() => onMark("arrival")}
-          disabled={mark.isPending}
-        >
-          {mark.isPending && mark.variables === "arrival" ? (
-            <Spinner className="h-5 w-5" />
-          ) : (
-            "Mark arrival"
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-16 text-base"
-          onClick={() => onMark("departure")}
-          disabled={mark.isPending}
-        >
-          {mark.isPending && mark.variables === "departure" ? (
-            <Spinner className="h-5 w-5" />
-          ) : (
-            "Mark departure"
-          )}
-        </Button>
+      <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
+        <h2 className="text-lg font-semibold text-[var(--ink)]">Last 15 days</h2>
+
+        {summary.isLoading ? (
+          <div className="mt-6 flex justify-center">
+            <Spinner className="h-5 w-5 text-[var(--brand)]" />
+          </div>
+        ) : summary.isError ? (
+          <p className="mt-6 text-sm text-[var(--danger)]">
+            Could not load attendance history. Please try again.
+          </p>
+        ) : summary.data ? (
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-[var(--line)] text-left text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+                  <th className="pb-3 pr-4 font-medium">Date</th>
+                  <th className="pb-3 pr-4 font-medium">Arrival</th>
+                  <th className="pb-3 pr-4 font-medium">Departure</th>
+                  <th className="pb-3 pr-4 font-medium">Hours</th>
+                  <th className="pb-3 font-medium">Salary</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--line)]">
+                {summary.data.rows.map((row) => (
+                  <tr key={row.date}>
+                    <td className="py-3 pr-4 text-[var(--ink)]">
+                      {formatAttendanceDate(row.date)}
+                    </td>
+                    <td className="py-3 pr-4 tabular-nums text-[var(--ink)]/80">
+                      {formatAttendanceTime(row.arrival)}
+                    </td>
+                    <td className="py-3 pr-4 tabular-nums text-[var(--ink)]/80">
+                      {formatAttendanceTime(row.departure)}
+                    </td>
+                    <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">
+                      {row.hours}
+                    </td>
+                    <td className="py-3 tabular-nums font-medium text-[var(--ink)]">
+                      {formatAed(row.money)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </div>
-
-      {lastEvent ? (
-        <p className="mt-6 text-center text-sm text-[var(--ink)]/70">
-          {lastEvent.event_type === "arrival" ? "Arrival" : "Departure"} marked at{" "}
-          {new Date(lastEvent.timestamp).toLocaleString()}
-        </p>
-      ) : null}
-
-      {mark.isError ? (
-        <p className="mt-6 text-center text-sm text-[var(--danger)]">
-          Could not mark attendance. Please try again.
-        </p>
-      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import {
   AttendanceEventSchema,
+  AttendanceSummarySchema,
   CartSchema,
   CategorySchema,
   FulfillmentOptionsSchema,
@@ -15,6 +16,7 @@ import {
   type AddCartItemBody,
   type AttendanceEvent,
   type AttendanceEventType,
+  type AttendanceSummary,
   type Cart,
   type Category,
   type FulfillmentOptions,
@@ -185,6 +187,11 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ event_type: eventType }),
       });
       return parse(AttendanceEventSchema, raw);
+    },
+
+    async getAttendanceSummary(): Promise<AttendanceSummary> {
+      const raw = await fetcher<unknown>("/api/attendance/summary/");
+      return parse(AttendanceSummarySchema, raw);
     },
   };
 }
