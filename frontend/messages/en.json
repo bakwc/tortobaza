@@ -199,6 +199,22 @@
   "dialogs": {
     "closeAria": "Close"
   },
+  "constructor": {
+    "title": "Cake constructor",
+    "subtitle": "Design a cake with text and illustrations. Drag items on the top to place them.",
+    "hint": "Add text or an illustration, then drag it on the cake.",
+    "addText": "Add text",
+    "addIllustration": "Add illustration",
+    "choosePreset": "Choose an illustration",
+    "uploadOwn": "Upload your own",
+    "editText": "Edit text",
+    "editIllustration": "Illustration",
+    "textPlaceholder": "Your message",
+    "defaultText": "Happy Birthday",
+    "scale": "Size",
+    "delete": "Delete",
+    "selectHint": "Tap a decoration on the cake to edit it."
+  },
   "static": {
     "lastUpdated": "Last updated: {date}",
     "aboutTitle": "About",
@@ -210,6 +226,8 @@
     "termsTitle": "Terms & Conditions",
     "termsDescription": "Terms of use for Sweet & Chill orders.",
     "deliveryTitle": "Delivery & refunds",
-    "deliveryDescription": "Delivery, returns, cancellation and refunds for Sweet & Chill."
+    "deliveryDescription": "Delivery, returns, cancellation and refunds for Sweet & Chill.",
+    "constructorTitle": "Cake constructor",
+    "constructorDescription": "Design a custom cake with text and illustrations."
   }
 }

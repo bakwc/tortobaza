@@ -199,6 +199,22 @@
   "dialogs": {
     "closeAria": "დახურვა"
   },
+  "constructor": {
+    "title": "ტორტის კონსტრუქტორი",
+    "subtitle": "დაამატეთ წარწერა და ილუსტრაციები. გადაადგილეთ ელემენტები ტორტის ზედაპირზე.",
+    "hint": "დაამატეთ ტექსტი ან ილუსტრაცია, შემდეგ გადაიტანეთ ტორტზე.",
+    "addText": "ტექსტის დამატება",
+    "addIllustration": "ილუსტრაციის დამატება",
+    "choosePreset": "აირჩიეთ ილუსტრაცია",
+    "uploadOwn": "საკუთარის ატვირთვა",
+    "editText": "ტექსტის რედაქტირება",
+    "editIllustration": "ილუსტრაცია",
+    "textPlaceholder": "თქვენი წარწერა",
+    "defaultText": "გილოცავ დაბადების დღეს",
+    "scale": "ზომა",
+    "delete": "წაშლა",
+    "selectHint": "შეეხეთ ელემენტს ტორტზე რედაქტირებისთვის."
+  },
   "static": {
     "lastUpdated": "ბოლოს განახლდა: {date}",
     "aboutTitle": "ჩვენს შესახებ",
@@ -210,6 +226,8 @@
     "termsTitle": "წესები და პირობები",
     "termsDescription": "Sweet & Chill-ის შეკვეთის წესები.",
     "deliveryTitle": "მიწოდება და თანხის დასაბრუნებლობა",
-    "deliveryDescription": "მიწოდება, დაბრუნება, გაუქმება და ანაზღაურება Sweet & Chill-ისთვის."
+    "deliveryDescription": "მიწოდება, დაბრუნება, გაუქმება და ანაზღაურება Sweet & Chill-ისთვის.",
+    "constructorTitle": "ტორტის კონსტრუქტორი",
+    "constructorDescription": "შექმენით ტორტი წარწერით და ილუსტრაციებით."
   }
 }

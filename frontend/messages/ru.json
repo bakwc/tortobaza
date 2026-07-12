@@ -199,6 +199,22 @@
   "dialogs": {
     "closeAria": "Закрыть"
   },
+  "constructor": {
+    "title": "Конструктор торта",
+    "subtitle": "Добавьте надпись и иллюстрации. Перетаскивайте элементы по верху торта.",
+    "hint": "Добавьте текст или иллюстрацию, затем перетащите на торт.",
+    "addText": "Добавить текст",
+    "addIllustration": "Добавить иллюстрацию",
+    "choosePreset": "Выберите иллюстрацию",
+    "uploadOwn": "Загрузить свою",
+    "editText": "Редактировать текст",
+    "editIllustration": "Иллюстрация",
+    "textPlaceholder": "Ваша надпись",
+    "defaultText": "С днём рождения",
+    "scale": "Размер",
+    "delete": "Удалить",
+    "selectHint": "Нажмите на элемент на торте, чтобы редактировать."
+  },
   "static": {
     "lastUpdated": "Последнее обновление: {date}",
     "aboutTitle": "О нас",
@@ -210,6 +226,8 @@
     "termsTitle": "Условия",
     "termsDescription": "Условия оформления заказов Sweet & Chill.",
     "deliveryTitle": "Доставка и возвраты",
-    "deliveryDescription": "Доставка, отмена, возврат и возмещение для Sweet & Chill."
+    "deliveryDescription": "Доставка, отмена, возврат и возмещение для Sweet & Chill.",
+    "constructorTitle": "Конструктор торта",
+    "constructorDescription": "Соберите торт с надписью и иллюстрациями."
   }
 }
