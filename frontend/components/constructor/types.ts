@@ -19,7 +19,7 @@ export type ImageDecoration = {
 export type Decoration = TextDecoration | ImageDecoration;
 
 export const CAKE_RADIUS = 1.2;
-export const CAKE_HEIGHT = 0.75;
+export const CAKE_HEIGHT = 1.15;
 export const BOARD_RADIUS = 1.55;
 export const BOARD_HEIGHT = 0.06;
 export const DECORATION_Y = CAKE_HEIGHT + 0.015;
