@@ -14,7 +14,7 @@ import { clampToCake, type Decoration } from "@/components/constructor/types";
 const CakeScene = dynamic(() => import("@/components/constructor/CakeScene"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-[var(--cream)]">
+    <div className="flex h-full w-full items-center justify-center bg-white">
       <Spinner className="h-6 w-6 text-[var(--brand)]" />
     </div>
   ),
@@ -119,7 +119,7 @@ export default function ConstructorClient() {
       </div>
 
       <div className="flex flex-col gap-5 md:flex-row md:items-stretch md:gap-6">
-        <div className="h-[50vh] min-h-[280px] w-full overflow-hidden rounded-3xl border border-[var(--line)] bg-[var(--cream)] md:h-auto md:min-h-[70vh] md:w-[62%]">
+        <div className="h-[50vh] min-h-[280px] w-full overflow-hidden rounded-3xl border border-[var(--line)] bg-[#efe5db] md:h-auto md:min-h-[70vh] md:w-[62%]">
           <CakeScene
             decorations={decorations}
             selectedId={selectedId}

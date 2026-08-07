@@ -18,11 +18,11 @@ export type ImageDecoration = {
 
 export type Decoration = TextDecoration | ImageDecoration;
 
-export const CAKE_RADIUS = 1.2;
-export const CAKE_HEIGHT = 1.15;
-export const BOARD_RADIUS = 1.55;
-export const BOARD_HEIGHT = 0.06;
-export const DECORATION_Y = CAKE_HEIGHT + 0.015;
+export const CAKE_RADIUS = 1.4;
+export const CAKE_HEIGHT = 0.55;
+export const BOARD_RADIUS = 1.58;
+export const BOARD_HEIGHT = 0.038;
+export const DECORATION_Y = CAKE_HEIGHT + 0.012;
 
 export function clampToCake(x: number, y: number, margin = 0.15): [number, number] {
   const maxR = CAKE_RADIUS - margin;
