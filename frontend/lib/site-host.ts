@@ -1,3 +1,7 @@
+export const PUBLIC_SITE_ORIGIN =
+  process.env.PUBLIC_SITE_ORIGIN?.replace(/\/$/, "") ??
+  `https://${process.env.PUBLIC_SITE_HOST ?? "sweet-chill.ge"}`;
+
 export function hostFromHeader(hostHeader: string | null): string {
   if (!hostHeader) return "";
   return hostHeader.split(":")[0].toLowerCase();

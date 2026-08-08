@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
-import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
+import {
+  isDevSweetChillHost,
+  PUBLIC_SITE_ORIGIN,
+  publicHostFromRequest,
+} from "@/lib/site-host";
 import { SITE_INFO } from "@/lib/site-info";
-import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
 
 const OG_IMAGE_PATH = "/sweet_chill_logo_1.jpg";
 const OG_IMAGE_WIDTH = 1955;

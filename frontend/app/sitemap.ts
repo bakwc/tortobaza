@@ -3,7 +3,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import { sitemapFetch } from "@/lib/api/sitemap-fetch";
 import type { Category, ProductsPage } from "@/lib/api/types";
 import { absoluteUrl, localePath } from "@/lib/seo";
-import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-host";
 
 export const dynamic = "force-dynamic";
 

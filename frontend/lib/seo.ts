@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { Locale } from "@/i18n/routing";
 import { routing } from "@/i18n/routing";
 import { SITE_INFO } from "@/lib/site-info";
-import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-host";
 
 export function absoluteUrl(origin: string, path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
