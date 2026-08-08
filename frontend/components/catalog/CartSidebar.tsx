@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import {
@@ -12,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { formatAed } from "@/lib/format";
 import type { CartItem } from "@/lib/api/types";
+import { useRouter } from "@/i18n/navigation";
 
 export function CartSidebar() {
   const router = useRouter();

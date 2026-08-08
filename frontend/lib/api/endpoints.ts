@@ -2,6 +2,7 @@ import {
   AttendanceEventSchema,
   AttendanceSummarySchema,
   CartSchema,
+  CategoryDetailSchema,
   CategorySchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
@@ -19,6 +20,7 @@ import {
   type AttendanceSummary,
   type Cart,
   type Category,
+  type CategoryDetail,
   type FulfillmentOptions,
   type FulfillmentType,
   type LoginBody,
@@ -58,6 +60,11 @@ export function endpoints(fetcher: Fetcher) {
     async getCategories(): Promise<Category[]> {
       const raw = await fetcher<unknown>("/api/categories/");
       return parse(z.array(CategorySchema), raw);
+    },
+
+    async getCategory(pageSlug: string): Promise<CategoryDetail> {
+      const raw = await fetcher<unknown>(`/api/categories/${pageSlug}/`);
+      return parse(CategoryDetailSchema, raw);
     },
 
     async getProducts(params: {

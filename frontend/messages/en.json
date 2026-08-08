@@ -13,7 +13,10 @@
     "confirmTitle": "Confirm order",
     "orderStatusTitle": "Order status",
     "checkoutDescription": "Complete your Sweet & Chill order.",
-    "confirmDescription": "Review and confirm your order."
+    "confirmDescription": "Review and confirm your order.",
+    "home": "Home",
+    "categoryFallbackTitle": "{name}",
+    "categoryFallbackDescription": "Browse {name} from Sweet & Chill in Batumi."
   },
   "nav": {
     "sweetChill": "Sweet & Chill",
@@ -62,7 +65,10 @@
       "plus_2": "Delivery in 2 days",
       "plus_3": "Delivery in 3 days"
     },
-    "deliveryTierSameDayCutoff": "* when ordered before 15:00"
+    "deliveryTierSameDayCutoff": "* when ordered before 15:00",
+    "allCategories": "All categories",
+    "breadcrumbsAria": "Breadcrumb",
+    "viewCategory": "View category"
   },
   "checkout": {
     "backToCatalog": "Back to catalog",
@@ -229,5 +235,9 @@
     "deliveryDescription": "Delivery, returns, cancellation and refunds for Sweet & Chill.",
     "constructorTitle": "Cake constructor",
     "constructorDescription": "Design a custom cake with text and illustrations."
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "catalog": "Catalog"
   }
 }

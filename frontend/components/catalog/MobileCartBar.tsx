@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ShoppingBag } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { formatAed } from "@/lib/format";
+import { Link } from "@/i18n/navigation";
 
 export function MobileCartBar() {
   const t = useTranslations("catalog");

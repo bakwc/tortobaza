@@ -13,7 +13,10 @@
     "confirmTitle": "Подтверждение заказа",
     "orderStatusTitle": "Статус заказа",
     "checkoutDescription": "Завершите оформление заказа.",
-    "confirmDescription": "Проверьте заказ перед отправкой."
+    "confirmDescription": "Проверьте заказ перед отправкой.",
+    "home": "Главная",
+    "categoryFallbackTitle": "{name}",
+    "categoryFallbackDescription": "Смотрите {name} от Sweet & Chill в Батуми."
   },
   "nav": {
     "sweetChill": "Sweet & Chill",
@@ -62,7 +65,10 @@
       "plus_2": "Доставка в течение 2 дней",
       "plus_3": "Доставка в течение 3 дней"
     },
-    "deliveryTierSameDayCutoff": "* при заказе до 15.00"
+    "deliveryTierSameDayCutoff": "* при заказе до 15.00",
+    "allCategories": "Все категории",
+    "breadcrumbsAria": "Хлебные крошки",
+    "viewCategory": "Смотреть категорию"
   },
   "checkout": {
     "backToCatalog": "Назад в каталог",
@@ -229,5 +235,9 @@
     "deliveryDescription": "Доставка, отмена, возврат и возмещение для Sweet & Chill.",
     "constructorTitle": "Конструктор торта",
     "constructorDescription": "Соберите торт с надписью и иллюстрациями."
+  },
+  "breadcrumbs": {
+    "home": "Главная",
+    "catalog": "Каталог"
   }
 }

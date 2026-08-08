@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ItemDetail } from "./ItemDetail";
 import type { ProductDetail } from "@/lib/api/types";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
+import { useRouter } from "@/i18n/navigation";
 
 export function ItemDialog({ product }: { product: ProductDetail }) {
   const router = useRouter();

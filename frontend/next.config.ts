@@ -15,12 +15,12 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/constructor",
-        destination: "/cake-constructor",
+        source: "/:locale/constructor",
+        destination: "/:locale/cake-constructor",
       },
       {
-        source: "/constructor/",
-        destination: "/cake-constructor",
+        source: "/:locale/constructor/",
+        destination: "/:locale/cake-constructor",
       },
       {
         source: "/api/:path*/",

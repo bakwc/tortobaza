@@ -13,7 +13,10 @@
     "confirmTitle": "დადასტურება",
     "orderStatusTitle": "შეკვეთის სტატუსი",
     "checkoutDescription": "დაასრულეთ შეკვეთა.",
-    "confirmDescription": "გადაამოწმეთ შეკვეთა."
+    "confirmDescription": "გადაამოწმეთ შეკვეთა.",
+    "home": "მთავარი",
+    "categoryFallbackTitle": "{name}",
+    "categoryFallbackDescription": "ნახეთ {name} Sweet & Chill-დან ბათუმში."
   },
   "nav": {
     "sweetChill": "Sweet & Chill",
@@ -62,7 +65,10 @@
       "plus_2": "მიწოდება 2 დღეში",
       "plus_3": "მიწოდება 3 დღეში"
     },
-    "deliveryTierSameDayCutoff": "* შეკვეთისას 15:00-მდე"
+    "deliveryTierSameDayCutoff": "* შეკვეთისას 15:00-მდე",
+    "allCategories": "ყველა კატეგორია",
+    "breadcrumbsAria": "ნავიგაცია",
+    "viewCategory": "კატეგორიის ნახვა"
   },
   "checkout": {
     "backToCatalog": "დაბრუნება კატალოგზე",
@@ -229,5 +235,9 @@
     "deliveryDescription": "მიწოდება, დაბრუნება, გაუქმება და ანაზღაურება Sweet & Chill-ისთვის.",
     "constructorTitle": "ტორტის კონსტრუქტორი",
     "constructorDescription": "შექმენით ტორტი წარწერით და ილუსტრაციებით."
+  },
+  "breadcrumbs": {
+    "home": "მთავარი",
+    "catalog": "კატალოგი"
   }
 }

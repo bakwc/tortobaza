@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, CreditCard, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -24,6 +22,7 @@ import {
 import { rememberOrder } from "@/lib/order-history";
 import { submitLibertyPaymentForm } from "@/lib/liberty-pay";
 import type { Order, PlaceOrderBody } from "@/lib/api/types";
+import { Link, useRouter } from "@/i18n/navigation";
 
 const BANK_ACCOUNT_NUMBER = "GE94BG0000000612361573GEL";
 const BANK_RECIPIENT_NAME = "SWEET CHILL";

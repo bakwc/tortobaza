@@ -1,20 +1,18 @@
 "use client";
 
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { routing } from "@/i18n/routing";
-
-const NEXT_LOCALE = "NEXT_LOCALE";
+import { Link, usePathname } from "@/i18n/navigation";
+import { routing, type Locale } from "@/i18n/routing";
+import { useLocaleAlternates } from "@/lib/locale-alternates";
 
 export function LanguageSwitcher({
   invert,
 }: {
   invert?: boolean;
 }) {
-  const router = useRouter();
   const active = useLocale();
-  const [pending, startTransition] = useTransition();
+  const pathname = usePathname();
+  const alternates = useLocaleAlternates();
 
   const activeBtn = invert
     ? "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide bg-[var(--brand-foreground)] text-[var(--brand)]"
@@ -25,22 +23,21 @@ export function LanguageSwitcher({
     : "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[var(--ink)]/85 hover:bg-black/[0.05]";
 
   return (
-    <div className={`flex shrink-0 items-center gap-1 ${pending ? "opacity-70" : ""}`}>
-      {routing.locales.map((loc) => (
-        <button
-          key={loc}
-          type="button"
-          onClick={() => {
-            const maxAge = 60 * 60 * 24 * 365;
-            document.cookie = `${NEXT_LOCALE}=${loc}; path=/; max-age=${maxAge}; SameSite=Lax`;
-            startTransition(() => router.refresh());
-          }}
-          className={active === loc ? activeBtn : inactiveBtn}
-          aria-pressed={active === loc}
-        >
-          {loc.toUpperCase()}
-        </button>
-      ))}
+    <div className="flex shrink-0 items-center gap-1">
+      {routing.locales.map((loc) => {
+        const href = alternates?.[loc as Locale] ?? pathname;
+        return (
+          <Link
+            key={loc}
+            href={href}
+            locale={loc}
+            className={active === loc ? activeBtn : inactiveBtn}
+            aria-pressed={active === loc}
+          >
+            {loc.toUpperCase()}
+          </Link>
+        );
+      })}
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
 import { ApiError } from "@/lib/api/client";
 import { OrderStatusView } from "./OrderStatusView";
 import { OrderTokenLookup } from "./OrderTokenLookup";
+import { Link } from "@/i18n/navigation";
 
 export const dynamic = "force-dynamic";
 

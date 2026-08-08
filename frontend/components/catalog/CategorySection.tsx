@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { ProductCard } from "./ProductCard";
 import type { Category, ProductListItem } from "@/lib/api/types";
 
@@ -14,13 +15,24 @@ export async function CategorySection({
   const t = await getTranslations("catalog");
 
   const tier = category.delivery_schedule_tier;
+  const headingClassName =
+    "text-[32px] font-bold leading-[1.05] text-[#666] md:text-[32px]";
 
   return (
     <section id={`category-${category.slug}`} className="scroll-mt-32 py-10">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-[32px] font-bold leading-[1.05] text-[#666] md:text-[32px]">
-          {category.name}
-        </h2>
+        {category.page_slug ? (
+          <h2 className={headingClassName}>
+            <Link
+              href={`/categories/${category.page_slug}`}
+              className="hover:text-[var(--ink)]"
+            >
+              {category.name}
+            </Link>
+          </h2>
+        ) : (
+          <h2 className={headingClassName}>{category.name}</h2>
+        )}
         <span className="inline-flex shrink-0 items-center rounded-full bg-product-price-btn px-4 py-1.5 text-[16px] font-bold text-white">
           {t(`deliveryTier.${tier}`)}
         </span>

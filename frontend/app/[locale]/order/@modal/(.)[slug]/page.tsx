@@ -1,20 +1,22 @@
 import { notFound } from "next/navigation";
-import { serverApi } from "@/lib/api/server-api";
+import { setRequestLocale } from "next-intl/server";
 import { ItemDialog } from "@/components/item/ItemDialog";
 import { ApiError } from "@/lib/api/client";
+import { publicApi } from "@/lib/api/public-api";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function ItemModalPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
 
   let product;
   try {
-    product = await serverApi.getProduct(slug);
+    product = await publicApi.getProduct(slug);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) {
       notFound();

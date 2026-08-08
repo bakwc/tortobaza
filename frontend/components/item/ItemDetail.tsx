@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { Minus, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { OptionGroup, type OptionSelection } from "./OptionGroup";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { formatAed } from "@/lib/format";
 import { useAddCartItem } from "@/hooks/useCart";
 import type { ProductDetail } from "@/lib/api/types";
+import { useRouter } from "@/i18n/navigation";
 
 export function ItemDetail({
   product,

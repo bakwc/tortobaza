@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { SITE_INFO } from "@/lib/site-info";
+import { Link } from "@/i18n/navigation";
 
 export default function AboutContentKa() {
   return (

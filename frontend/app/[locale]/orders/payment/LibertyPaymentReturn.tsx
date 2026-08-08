@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { parseLibertyCustomdata } from "@/lib/liberty-pay";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 
 export function LibertyPaymentReturn({ outcome }: { outcome: "success" | "error" | "cancel" }) {
   const router = useRouter();

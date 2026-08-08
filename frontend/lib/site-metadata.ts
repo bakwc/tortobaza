@@ -41,7 +41,7 @@ export async function buildRootMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       locale,
-      url: metadataBase.origin,
+      url: `${metadataBase.origin}/${locale}`,
       siteName: SITE_INFO.brand,
       title,
       description,

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { FulfillmentToggle } from "@/components/checkout/FulfillmentToggle";
@@ -9,6 +8,7 @@ import { AddressForm } from "@/components/checkout/AddressForm";
 import { PickupPicker } from "@/components/checkout/PickupPicker";
 import { saveDraft, type CheckoutDraft } from "@/lib/checkout-draft";
 import type { OrderAddress } from "@/lib/api/types";
+import { useRouter } from "@/i18n/navigation";
 
 const emptyAddress: OrderAddress = {
   street: "",

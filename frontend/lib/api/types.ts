@@ -1,8 +1,20 @@
 import { z } from "zod";
 
+export const ResponsiveImageSchema = z.object({
+  src: z.string(),
+  srcset: z.string(),
+});
+
+export const CategoryPageSlugsSchema = z.object({
+  en: z.string(),
+  ka: z.string(),
+  ru: z.string(),
+});
+
 export const CategorySchema = z.object({
   id: z.number(),
   slug: z.string(),
+  page_slug: z.string(),
   name: z.string(),
   position: z.number(),
   delivery_schedule_tier: z.enum([
@@ -12,11 +24,16 @@ export const CategorySchema = z.object({
     "plus_2",
     "plus_3",
   ]),
+  page_slugs: CategoryPageSlugsSchema,
+  updated_at: z.string(),
 });
 
-export const ResponsiveImageSchema = z.object({
-  src: z.string(),
-  srcset: z.string(),
+export const CategoryDetailSchema = CategorySchema.extend({
+  page_heading: z.string(),
+  page_description: z.string(),
+  seo_title: z.string(),
+  seo_description: z.string(),
+  image: ResponsiveImageSchema.nullable(),
 });
 
 export const ProductImageSchema = z.object({
@@ -238,6 +255,7 @@ export const AttendanceSummarySchema = z.object({
 });
 
 export type Category = z.infer<typeof CategorySchema>;
+export type CategoryDetail = z.infer<typeof CategoryDetailSchema>;
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 export type Option = z.infer<typeof OptionSchema>;
 export type OptionGroup = z.infer<typeof OptionGroupSchema>;

@@ -10,10 +10,64 @@ from catalog.models import (
 from catalog.responsive_urls import detail_image, list_primary_image
 
 
+def category_page_slugs(obj: Category) -> dict[str, str]:
+    return {
+        "en": obj.page_slug_en or "",
+        "ka": obj.page_slug_ka or "",
+        "ru": obj.page_slug_ru or "",
+    }
+
+
 class CategorySerializer(serializers.ModelSerializer):
+    page_slugs = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = ["id", "slug", "name", "position", "delivery_schedule_tier"]
+        fields = [
+            "id",
+            "slug",
+            "page_slug",
+            "name",
+            "position",
+            "delivery_schedule_tier",
+            "page_slugs",
+            "updated_at",
+        ]
+
+    def get_page_slugs(self, obj: Category) -> dict[str, str]:
+        return category_page_slugs(obj)
+
+
+class CategoryDetailSerializer(serializers.ModelSerializer):
+    page_slugs = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = [
+            "id",
+            "slug",
+            "page_slug",
+            "name",
+            "page_heading",
+            "page_description",
+            "seo_title",
+            "seo_description",
+            "image",
+            "position",
+            "delivery_schedule_tier",
+            "page_slugs",
+            "updated_at",
+        ]
+
+    def get_page_slugs(self, obj: Category) -> dict[str, str]:
+        return category_page_slugs(obj)
+
+    def get_image(self, obj: Category):
+        if not obj.image.name:
+            return None
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return list_primary_image(obj.image.name, public_base_url)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

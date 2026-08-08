@@ -1,9 +1,11 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { getLocale } from "next-intl/server";
+import { ApiError } from "./client";
 
 export type ServerFetchOptions = RequestInit & {
   searchParams?: Record<string, string | number | undefined | null>;
+  next?: { revalidate?: number; tags?: string[] };
 };
 
 const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? "http://localhost:8000";
@@ -47,15 +49,16 @@ export async function serverFetch<T>(
   }
   finalHeaders.set("X-Forwarded-Proto", incoming.get("x-forwarded-proto") ?? "http");
 
+  const hasRevalidate = init.next?.revalidate !== undefined;
   const response = await fetch(url, {
     ...init,
     headers: finalHeaders,
-    cache: init.cache ?? "no-store",
+    cache: init.cache ?? (hasRevalidate ? undefined : "no-store"),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`Request to ${path} failed (${response.status}): ${text}`);
+    throw new ApiError(response.status, text || response.statusText);
   }
 
   if (response.status === 204) {

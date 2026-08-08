@@ -17,6 +17,12 @@ DELIVERY_SCHEDULE_TIER_CHOICES = [
 class Category(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True)
+    page_slug = models.SlugField(max_length=140, blank=True)
+    page_heading = models.CharField(max_length=200, blank=True)
+    page_description = models.TextField(blank=True)
+    seo_title = models.CharField(max_length=200, blank=True)
+    seo_description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="categories/", blank=True)
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     delivery_schedule_tier = models.CharField(
@@ -24,10 +30,28 @@ class Category(models.Model):
         choices=DELIVERY_SCHEDULE_TIER_CHOICES,
         default=DELIVERY_SCHEDULE_SAME_DAY,
     )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["position", "name"]
         verbose_name_plural = "categories"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["page_slug_en"],
+                condition=~models.Q(page_slug_en=""),
+                name="uniq_category_page_slug_en",
+            ),
+            models.UniqueConstraint(
+                fields=["page_slug_ka"],
+                condition=~models.Q(page_slug_ka=""),
+                name="uniq_category_page_slug_ka",
+            ),
+            models.UniqueConstraint(
+                fields=["page_slug_ru"],
+                condition=~models.Q(page_slug_ru=""),
+                name="uniq_category_page_slug_ru",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name

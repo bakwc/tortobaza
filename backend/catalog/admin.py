@@ -27,11 +27,35 @@ class OptionGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(TranslationAdmin):
-    list_display = ["name", "slug", "delivery_schedule_tier", "position", "is_active"]
+    list_display = ["name", "slug", "page_slug", "delivery_schedule_tier", "position", "is_active"]
     list_editable = ["position", "is_active"]
     list_filter = ["delivery_schedule_tier", "is_active"]
-    search_fields = ["name", "slug"]
+    search_fields = ["name", "slug", "page_slug"]
     prepopulated_fields = {"slug": ("name",)}
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "name",
+                    "slug",
+                    "page_slug",
+                    "page_heading",
+                    "page_description",
+                    "image",
+                    "delivery_schedule_tier",
+                    "position",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "SEO",
+            {
+                "fields": ("seo_title", "seo_description"),
+            },
+        ),
+    )
 
 
 class ProductImageInline(TranslationTabularInline):

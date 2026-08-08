@@ -4,7 +4,14 @@ from catalog.models import Category, Option, OptionGroup, Product, ProductImage
 
 
 class CategoryTranslationOptions(TranslationOptions):
-    fields = ("name",)
+    fields = (
+        "name",
+        "page_slug",
+        "page_heading",
+        "page_description",
+        "seo_title",
+        "seo_description",
+    )
 
 
 class ProductTranslationOptions(TranslationOptions):

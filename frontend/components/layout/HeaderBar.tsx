@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Menu, X } from "lucide-react";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
+import { Link, usePathname } from "@/i18n/navigation";
 
 const B2B_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1vhB4DtdogaDWQWoU0mkatRkAsrwv29pH/edit?usp=drivesdk&ouid=113313791403815046269&rtpof=true&sd=true";

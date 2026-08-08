@@ -1,40 +1,42 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { serverApi } from "@/lib/api/server-api";
-import { CheckoutPageClient } from "./CheckoutPageClient";
+import { CheckoutConfirm } from "./CheckoutConfirm";
+import { Link, redirect } from "@/i18n/navigation";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata() {
   const t = await getTranslations("metadata");
   return {
-    title: t("checkoutTitle"),
-    description: t("checkoutDescription"),
+    title: t("confirmTitle"),
+    description: t("confirmDescription"),
   };
 }
 
-export default async function CheckoutPage() {
+export default async function CheckoutConfirmPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const tCheckout = await getTranslations("checkout");
   const cart = await serverApi.getCart();
   if (cart.items.length === 0) {
-    redirect("/order");
+    redirect({ href: "/order", locale });
   }
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-8">
       <Link
-        href="/order"
+        href="/checkout"
         className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
       >
         <ChevronLeft className="h-4 w-4" />
-        {tCheckout("backToCatalog")}
+        {tCheckout("back")}
       </Link>
-
-      <h1 className="mt-4 font-display text-4xl md:text-5xl">{tCheckout("yourDelivery")}</h1>
-
-      <CheckoutPageClient />
+      <h1 className="mt-4 font-display text-4xl md:text-5xl">{tCheckout("confirmHeading")}</h1>
+      <CheckoutConfirm />
     </div>
   );
 }

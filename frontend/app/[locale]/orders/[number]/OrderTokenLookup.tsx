@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getOrderToken } from "@/lib/order-history";
+import { useRouter } from "@/i18n/navigation";
 
 export function OrderTokenLookup({ orderNumber }: { orderNumber: string }) {
   const router = useRouter();
