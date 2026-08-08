@@ -4,7 +4,7 @@ import { ItemDialog } from "@/components/item/ItemDialog";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/public-api";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export default async function ItemModalPage({
   params,

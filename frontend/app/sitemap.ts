@@ -3,15 +3,11 @@ import { routing, type Locale } from "@/i18n/routing";
 import { sitemapFetch } from "@/lib/api/sitemap-fetch";
 import type { Category, ProductsPage } from "@/lib/api/types";
 import { absoluteUrl, localePath } from "@/lib/seo";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
-const PUBLIC_SITE_ORIGIN =
-  process.env.PUBLIC_SITE_ORIGIN?.replace(/\/$/, "") ??
-  `https://${process.env.PUBLIC_SITE_HOST ?? "sweet-chill.ge"}`;
-
 const STATIC_PATHS = [
-  "/",
   "/order",
   "/about",
   "/contacts",
@@ -20,6 +16,21 @@ const STATIC_PATHS = [
   "/terms",
   "/cake-constructor",
 ];
+
+function sitemapAlternates(
+  paths: Partial<Record<Locale, string>>,
+): { languages: Record<string, string> } {
+  const languages: Record<string, string> = {};
+  for (const locale of routing.locales) {
+    const path = paths[locale];
+    if (!path) continue;
+    languages[locale] = absoluteUrl(
+      PUBLIC_SITE_ORIGIN,
+      localePath(locale, path),
+    );
+  }
+  return { languages };
+}
 
 async function allProducts(locale: string): Promise<ProductsPage["results"]> {
   const results: ProductsPage["results"] = [];
@@ -43,8 +54,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const path of STATIC_PATHS) {
       entries.push({
         url: absoluteUrl(PUBLIC_SITE_ORIGIN, localePath(locale, path)),
-        changeFrequency: path === "/order" || path === "/" ? "daily" : "monthly",
-        priority: path === "/order" || path === "/" ? 1 : 0.6,
+        alternates: sitemapAlternates(
+          Object.fromEntries(
+            routing.locales.map((alternateLocale) => [alternateLocale, path]),
+          ) as Record<Locale, string>,
+        ),
+        changeFrequency: path === "/order" ? "daily" : "monthly",
+        priority: path === "/order" ? 1 : 0.6,
       });
     }
   }
@@ -64,6 +80,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           PUBLIC_SITE_ORIGIN,
           localePath(locale, `/categories/${category.page_slug}`),
         ),
+        alternates: sitemapAlternates(
+          Object.fromEntries(
+            routing.locales
+              .filter((alternateLocale) => category.page_slugs[alternateLocale])
+              .map((alternateLocale) => [
+                alternateLocale,
+                `/categories/${category.page_slugs[alternateLocale]}`,
+              ]),
+          ) as Partial<Record<Locale, string>>,
+        ),
         lastModified: category.updated_at,
         changeFrequency: "daily",
         priority: 0.9,
@@ -78,6 +104,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: absoluteUrl(
           PUBLIC_SITE_ORIGIN,
           localePath(locale as Locale, `/order/${product.slug}`),
+        ),
+        alternates: sitemapAlternates(
+          Object.fromEntries(
+            routing.locales.map((alternateLocale) => [
+              alternateLocale,
+              `/order/${product.slug}`,
+            ]),
+          ) as Record<Locale, string>,
         ),
         changeFrequency: "weekly",
         priority: 0.8,

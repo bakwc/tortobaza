@@ -1,9 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
-import { useLocaleAlternates } from "@/lib/locale-alternates";
+import { api } from "@/lib/api";
 
 export function LanguageSwitcher({
   invert,
@@ -12,7 +13,14 @@ export function LanguageSwitcher({
 }) {
   const active = useLocale();
   const pathname = usePathname();
-  const alternates = useLocaleAlternates();
+  const categoryMatch = pathname.match(/^\/categories\/([^/]+)$/);
+  const pageSlug = categoryMatch?.[1];
+  const categoryQuery = useQuery({
+    queryKey: ["category-alternates", active, pageSlug],
+    queryFn: () => api.getCategory(pageSlug!, active),
+    enabled: pageSlug !== undefined,
+    staleTime: 300_000,
+  });
 
   const activeBtn = invert
     ? "rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide bg-[var(--brand-foreground)] text-[var(--brand)]"
@@ -25,7 +33,15 @@ export function LanguageSwitcher({
   return (
     <div className="flex shrink-0 items-center gap-1">
       {routing.locales.map((loc) => {
-        const href = alternates?.[loc as Locale] ?? pathname;
+        const localizedSlug = categoryQuery.data?.page_slugs[loc as Locale];
+        const href =
+          loc === active
+            ? pathname
+            : pageSlug
+              ? localizedSlug
+                ? `/categories/${localizedSlug}`
+                : "/order"
+              : pathname;
         return (
           <Link
             key={loc}

@@ -90,12 +90,13 @@ class CategoryApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["slug"], "wedding")
 
-    def test_category_detail_wrong_locale_slug_404(self):
+    def test_category_detail_wrong_locale_slug_resolves_category(self):
         response = self.client.get(
             "/api/categories/svadebnye-torty/",
             HTTP_ACCEPT_LANGUAGE="en",
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["page_slug"], "wedding-cakes")
 
     def test_inactive_category_404(self):
         response = self.client.get(

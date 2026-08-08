@@ -62,8 +62,10 @@ export function endpoints(fetcher: Fetcher) {
       return parse(z.array(CategorySchema), raw);
     },
 
-    async getCategory(pageSlug: string): Promise<CategoryDetail> {
-      const raw = await fetcher<unknown>(`/api/categories/${pageSlug}/`);
+    async getCategory(pageSlug: string, locale: string): Promise<CategoryDetail> {
+      const raw = await fetcher<unknown>(`/api/categories/${pageSlug}/`, {
+        headers: { "Accept-Language": locale },
+      });
       return parse(CategoryDetailSchema, raw);
     },
 

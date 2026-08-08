@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { CategoryPills } from "@/components/catalog/CategoryPills";
 import { ProductCard } from "@/components/catalog/ProductCard";
@@ -7,7 +7,6 @@ import { CartSidebar } from "@/components/catalog/CartSidebar";
 import { MobileCartBar } from "@/components/catalog/MobileCartBar";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { LocaleAlternatesProvider } from "@/lib/locale-alternates";
 import { ApiError } from "@/lib/api/client";
 import { getAllProducts } from "@/lib/api/catalog";
 import { publicApi } from "@/lib/api/public-api";
@@ -21,11 +20,11 @@ import {
 } from "@/lib/seo";
 import { getPublicSiteOrigin } from "@/lib/site-origin";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
-async function loadCategory(pageSlug: string) {
+async function loadCategory(pageSlug: string, locale: string) {
   try {
-    return await publicApi.getCategory(pageSlug);
+    return await publicApi.getCategory(pageSlug, locale);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return null;
@@ -42,7 +41,7 @@ export async function generateMetadata({
   const { locale, pageSlug } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "metadata" });
-  const category = await loadCategory(pageSlug);
+  const category = await loadCategory(pageSlug, locale);
   if (!category) {
     return { title: t("orderTitle") };
   }
@@ -88,9 +87,17 @@ export default async function CategoryPage({
   const { locale, pageSlug } = await params;
   setRequestLocale(locale);
 
-  const category = await loadCategory(pageSlug);
+  const category = await loadCategory(pageSlug, locale);
   if (!category) {
     notFound();
+  }
+  if (category.page_slug !== pageSlug) {
+    permanentRedirect(
+      localePath(
+        locale as Locale,
+        `/categories/${category.page_slug}`,
+      ),
+    );
   }
 
   const [categories, products, origin, tBreadcrumbs, tCatalog] = await Promise.all([
@@ -109,19 +116,10 @@ export default async function CategoryPage({
   const orderPath = localePath(localeTyped, "/order");
   const homePath = localePath(localeTyped, "/");
 
-  const alternates: Partial<Record<Locale, string>> = {};
-  for (const loc of routing.locales) {
-    const slug = category.page_slugs[loc];
-    if (slug) {
-      alternates[loc] = `/categories/${slug}`;
-    }
-  }
-
   const pillCategories = categories.filter((item) => item.page_slug);
 
   return (
-    <LocaleAlternatesProvider alternates={alternates}>
-      <div className="mx-auto max-w-[1400px] px-6">
+    <div className="mx-auto max-w-[1400px] px-6">
         <JsonLd
           data={[
             breadcrumbJsonLd(origin, [
@@ -186,7 +184,6 @@ export default async function CategoryPage({
         <div className="fixed inset-x-0 bottom-0 z-30 px-4 pb-4 lg:hidden">
           <MobileCartBar />
         </div>
-      </div>
-    </LocaleAlternatesProvider>
+    </div>
   );
 }

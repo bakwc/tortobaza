@@ -33,14 +33,24 @@ class CategoryDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         language = get_language() or "en"
         field = _PAGE_SLUG_FIELDS.get(language, "page_slug_en")
-        return Category.objects.filter(is_active=True).exclude(**{field: ""})
+        return Category.objects.filter(
+            is_active=True,
+            **{f"{field}__isnull": False},
+        ).exclude(**{field: ""})
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
         page_slug = self.kwargs[self.lookup_url_kwarg]
         language = get_language() or "en"
         field = _PAGE_SLUG_FIELDS.get(language, "page_slug_en")
-        obj = get_object_or_404(queryset, **{field: page_slug})
+        obj = queryset.filter(**{field: page_slug}).first()
+        if obj is None:
+            obj = get_object_or_404(
+                queryset,
+                Q(page_slug_en=page_slug)
+                | Q(page_slug_ka=page_slug)
+                | Q(page_slug_ru=page_slug),
+            )
         self.check_object_permissions(self.request, obj)
         return obj
 

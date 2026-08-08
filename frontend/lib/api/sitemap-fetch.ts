@@ -22,7 +22,7 @@ export async function sitemapFetch<T>(
       "X-Forwarded-Host": PUBLIC_SITE_HOST,
       "X-Forwarded-Proto": "https",
     },
-    next: { revalidate: 3600, tags: ["catalog", "sitemap"] },
+    cache: "no-store",
   });
 
   if (!response.ok) {

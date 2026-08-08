@@ -10,7 +10,7 @@ export type PublicServerFetchOptions = RequestInit & {
 
 const BACKEND_ORIGIN = process.env.BACKEND_ORIGIN ?? "http://localhost:8000";
 const PUBLIC_SITE_HOST = process.env.PUBLIC_SITE_HOST;
-const CATALOG_REVALIDATE_SECONDS = 3600;
+const CATALOG_REVALIDATE_SECONDS = 300;
 
 function buildUrl(path: string, searchParams?: PublicServerFetchOptions["searchParams"]) {
   const url = new URL(path.replace(/^\//, ""), `${BACKEND_ORIGIN}/`);

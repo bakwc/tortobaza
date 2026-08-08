@@ -1,15 +1,23 @@
-import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import type { Locale } from "@/i18n/routing";
+import { localizedPageMetadata } from "@/lib/seo";
 import DeliveryContentEn from "@/content/delivery/en";
 import DeliveryContentKa from "@/content/delivery/ka";
 import DeliveryContentRu from "@/content/delivery/ru";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("static");
-  return {
-    title: t("deliveryTitle"),
-    description: t("deliveryDescription"),
-  };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "static" });
+  return localizedPageMetadata(
+    locale as Locale,
+    "/delivery-and-refunds",
+    t("deliveryTitle"),
+    t("deliveryDescription"),
+  );
 }
 
 export default async function DeliveryAndRefundsPage() {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Locale } from "@/i18n/routing";
 import { routing } from "@/i18n/routing";
 import { SITE_INFO } from "@/lib/site-info";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
 
 export function absoluteUrl(origin: string, path: string): string {
   const normalized = path.startsWith("/") ? path : `/${path}`;
@@ -24,6 +25,32 @@ export function languageAlternates(
     languages[locale] = absoluteUrl(origin, localePath(locale, path));
   }
   return { languages };
+}
+
+export function localizedPageMetadata(
+  locale: Locale,
+  path: string,
+  title: string,
+  description: string,
+): Metadata {
+  const pathsByLocale = Object.fromEntries(
+    routing.locales.map((alternateLocale) => [alternateLocale, path]),
+  ) as Record<Locale, string>;
+  const localizedPath = localePath(locale, path);
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: localizedPath,
+      ...languageAlternates(PUBLIC_SITE_ORIGIN, pathsByLocale),
+    },
+    openGraph: {
+      title,
+      description,
+      url: localizedPath,
+    },
+  };
 }
 
 export function jsonLdScript(data: Record<string, unknown> | Record<string, unknown>[]) {

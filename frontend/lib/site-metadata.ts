@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { SITE_INFO } from "@/lib/site-info";
+import { PUBLIC_SITE_ORIGIN } from "@/lib/site-url";
 
 const OG_IMAGE_PATH = "/sweet_chill_logo_1.jpg";
 const OG_IMAGE_WIDTH = 1955;
@@ -15,8 +16,7 @@ export async function buildRootMetadata(): Promise<Metadata> {
     headers(),
   ]);
   const host = publicHostFromRequest((name) => headerStore.get(name));
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const metadataBase = new URL(`${protocol}://${host || "sweet-chill.ge"}`);
+  const metadataBase = new URL(PUBLIC_SITE_ORIGIN);
   const isDev = isDevSweetChillHost(host);
   const title = t("rootDefaultTitle");
   const description = t("rootDescription");

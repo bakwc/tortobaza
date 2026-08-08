@@ -5,7 +5,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ItemDetail } from "@/components/item/ItemDetail";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { LocaleAlternatesProvider } from "@/lib/locale-alternates";
 import { ApiError } from "@/lib/api/client";
 import { publicApi } from "@/lib/api/public-api";
 import { Link } from "@/i18n/navigation";
@@ -19,7 +18,7 @@ import {
 } from "@/lib/seo";
 import { getPublicSiteOrigin } from "@/lib/site-origin";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 async function loadProduct(slug: string) {
   try {
@@ -95,13 +94,8 @@ export default async function ItemPage({
     : "/order";
   const categoryPath = localePath(localeTyped, categoryHref);
   const backHref = categoryHref;
-  const alternates = Object.fromEntries(
-    routing.locales.map((loc) => [loc, `/order/${product.slug}`]),
-  ) as Record<Locale, string>;
-
   return (
-    <LocaleAlternatesProvider alternates={alternates}>
-      <div className="mx-auto max-w-[1100px] px-4 py-6">
+    <div className="mx-auto max-w-[1100px] px-4 py-6">
         <JsonLd
           data={[
             breadcrumbJsonLd(origin, [
@@ -140,7 +134,6 @@ export default async function ItemPage({
         <div className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-[var(--line)]">
           <ItemDetail product={product} variant="page" />
         </div>
-      </div>
-    </LocaleAlternatesProvider>
+    </div>
   );
 }

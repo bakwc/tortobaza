@@ -11,7 +11,7 @@ import { routing } from "@/i18n/routing";
 import { languageAlternates, localePath } from "@/lib/seo";
 import { getPublicSiteOrigin } from "@/lib/site-origin";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,
@@ -27,12 +27,18 @@ export async function generateMetadata({
   const pathsByLocale = Object.fromEntries(
     routing.locales.map((loc) => [loc, "/order"]),
   ) as Record<Locale, string>;
+  const path = localePath(locale as Locale, "/order");
   return {
     title: t("orderTitle"),
     description: t("orderDescription"),
     alternates: {
-      canonical: localePath(locale as Locale, "/order"),
+      canonical: path,
       ...languageAlternates(origin, pathsByLocale),
+    },
+    openGraph: {
+      title: t("orderTitle"),
+      description: t("orderDescription"),
+      url: path,
     },
   };
 }

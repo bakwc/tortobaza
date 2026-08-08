@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 DELIVERY_SCHEDULE_ALL_DAY = "all_day"
@@ -55,6 +56,22 @@ class Category(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def clean(self) -> None:
+        page_slugs = {
+            slug
+            for slug in (self.page_slug_en, self.page_slug_ka, self.page_slug_ru)
+            if slug
+        }
+        if not page_slugs:
+            return
+        conflicts = Category.objects.exclude(pk=self.pk).filter(
+            models.Q(page_slug_en__in=page_slugs)
+            | models.Q(page_slug_ka__in=page_slugs)
+            | models.Q(page_slug_ru__in=page_slugs)
+        )
+        if conflicts.exists():
+            raise ValidationError("Page slugs must be unique across all languages.")
 
 
 class OptionGroup(models.Model):
