@@ -24,6 +24,13 @@ export function languageAlternates(
     if (!path) continue;
     languages[locale] = absoluteUrl(origin, localePath(locale, path));
   }
+  const defaultPath = pathsByLocale[routing.defaultLocale];
+  if (defaultPath) {
+    languages["x-default"] = absoluteUrl(
+      origin,
+      localePath(routing.defaultLocale, defaultPath),
+    );
+  }
   return { languages };
 }
 
@@ -90,6 +97,24 @@ export function itemListJsonLd(
       name: item.name,
       url: absoluteUrl(origin, item.path),
     })),
+  };
+}
+
+export function localBusinessJsonLd(origin: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Bakery",
+    name: SITE_INFO.brand,
+    url: origin.replace(/\/$/, ""),
+    telephone: SITE_INFO.phone,
+    email: SITE_INFO.email,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: SITE_INFO.address.line1,
+      addressLocality: SITE_INFO.address.city,
+      addressCountry: "GE",
+    },
+    sameAs: [SITE_INFO.instagramHref],
   };
 }
 

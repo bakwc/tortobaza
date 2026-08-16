@@ -8,9 +8,12 @@ import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { routing } from "@/i18n/routing";
+import { localBusinessJsonLd } from "@/lib/seo";
 import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { buildRootMetadata } from "@/lib/site-metadata";
+import { getPublicSiteOrigin } from "@/lib/site-origin";
 import { Providers } from "./providers";
 
 const jost = Jost({
@@ -42,9 +45,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function LocaleLayout({
   children,
+  modal,
   params,
 }: Readonly<{
   children: React.ReactNode;
+  modal: React.ReactNode;
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
@@ -53,8 +58,11 @@ export default async function LocaleLayout({
   }
 
   setRequestLocale(locale);
-  const messages = await getMessages();
-  const headerStore = await headers();
+  const [messages, headerStore, origin] = await Promise.all([
+    getMessages(),
+    headers(),
+    getPublicSiteOrigin(),
+  ]);
   const host = publicHostFromRequest((name) => headerStore.get(name));
   const showDevBanner = isDevSweetChillHost(host);
 
@@ -69,11 +77,13 @@ export default async function LocaleLayout({
           src="https://analytics.q7.su/script.js"
           data-website-id="b5412135-037c-4f9e-a31d-d7eb820b28a3"
         />
+        <JsonLd data={localBusinessJsonLd(origin)} />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
             {showDevBanner ? <DevBanner /> : null}
             <Header />
             <main className="flex-1">{children}</main>
+            {modal}
             <Footer />
           </Providers>
         </NextIntlClientProvider>

@@ -23,13 +23,13 @@ export default async function CheckoutPage({
   const tCheckout = await getTranslations("checkout");
   const cart = await serverApi.getCart();
   if (cart.items.length === 0) {
-    redirect({ href: "/order", locale });
+    redirect({ href: "/", locale });
   }
 
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-8">
       <Link
-        href="/order"
+        href="/"
         className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
       >
         <ChevronLeft className="h-4 w-4" />

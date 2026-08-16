@@ -91,7 +91,7 @@ export default async function ItemPage({
   const productPath = localePath(localeTyped, `/order/${product.slug}`);
   const categoryHref = product.category.page_slug
     ? `/categories/${product.category.page_slug}`
-    : "/order";
+    : "/";
   const categoryPath = localePath(localeTyped, categoryHref);
   const backHref = categoryHref;
   return (
@@ -100,7 +100,7 @@ export default async function ItemPage({
           data={[
             breadcrumbJsonLd(origin, [
               { name: tBreadcrumbs("home"), path: localePath(localeTyped, "/") },
-              { name: tBreadcrumbs("catalog"), path: localePath(localeTyped, "/order") },
+              { name: tBreadcrumbs("catalog"), path: localePath(localeTyped, "/") },
               { name: product.category.name, path: categoryPath },
               { name: product.name, path: productPath },
             ]),
@@ -118,7 +118,7 @@ export default async function ItemPage({
           <Breadcrumbs
             items={[
               { name: tBreadcrumbs("home"), href: "/" },
-              { name: tBreadcrumbs("catalog"), href: "/order" },
+              { name: tBreadcrumbs("catalog"), href: "/" },
               { name: product.category.name, href: categoryHref },
               { name: product.name },
             ]}

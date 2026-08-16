@@ -7,13 +7,13 @@ import type { Category } from "@/lib/api/types";
 
 export function CategoryPills({ categories }: { categories: Category[] }) {
   const pathname = usePathname();
-  const isOrderPage = pathname === "/order";
+  const isCatalogPage = pathname === "/";
   const [activeSlug, setActiveSlug] = useState<string | null>(
     categories[0]?.slug ?? null,
   );
 
   useEffect(() => {
-    if (!isOrderPage) return;
+    if (!isCatalogPage) return;
 
     const sections = categories
       .map((category) => document.getElementById(`category-${category.slug}`))
@@ -37,14 +37,14 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
 
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [categories, isOrderPage]);
+  }, [categories, isCatalogPage]);
 
   return (
     <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 px-6 pt-10 pb-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
       <div className="scrollbar-none mx-auto flex max-w-[1400px] gap-2 overflow-x-auto">
         {categories.map((c) => {
-          const href = c.page_slug ? `/categories/${c.page_slug}` : "/order";
-          const isActive = isOrderPage
+          const href = c.page_slug ? `/categories/${c.page_slug}` : "/";
+          const isActive = isCatalogPage
             ? activeSlug === c.slug
             : pathname === `/categories/${c.page_slug}`;
           return (
@@ -53,7 +53,7 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
               href={href}
               onClick={(event) => {
                 if (
-                  !isOrderPage ||
+                  !isCatalogPage ||
                   event.metaKey ||
                   event.ctrlKey ||
                   event.shiftKey ||

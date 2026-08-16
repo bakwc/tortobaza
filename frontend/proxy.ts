@@ -16,14 +16,14 @@ export default function proxy(request: NextRequest) {
   if (!localeMatch) {
     const destination =
       pathname === "/"
-        ? `/${routing.defaultLocale}/order`
+        ? `/${routing.defaultLocale}`
         : `/${routing.defaultLocale}${pathname}`;
     return NextResponse.redirect(new URL(destination, request.url), 308);
   }
 
   const locale = localeMatch[1];
-  if (pathname === `/${locale}` || pathname === `/${locale}/`) {
-    return NextResponse.redirect(new URL(`/${locale}/order`, request.url), 308);
+  if (pathname === `/${locale}/order` || pathname === `/${locale}/order/`) {
+    return NextResponse.redirect(new URL(`/${locale}`, request.url), 308);
   }
 
   return handleI18nRouting(request);

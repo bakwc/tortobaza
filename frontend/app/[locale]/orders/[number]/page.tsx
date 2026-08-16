@@ -34,7 +34,7 @@ export default async function OrderStatusPage({
     return (
       <div className="mx-auto max-w-[700px] px-6 py-12">
         <Link
-          href="/order"
+          href="/"
           className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -52,7 +52,7 @@ export default async function OrderStatusPage({
     return (
       <div className="mx-auto max-w-[900px] px-6 py-8">
         <Link
-          href="/order"
+          href="/"
           className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -66,7 +66,7 @@ export default async function OrderStatusPage({
     return (
       <div className="mx-auto max-w-[700px] px-6 py-12">
         <Link
-          href="/order"
+          href="/"
           className="inline-flex items-center gap-1 text-sm text-[var(--ink)]/60 hover:text-[var(--ink)]"
         >
           <ChevronLeft className="h-4 w-4" />

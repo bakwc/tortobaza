@@ -10,7 +10,7 @@ const B2B_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1vhB4DtdogaDWQWoU0mkatRkAsrwv29pH/edit?usp=drivesdk&ouid=113313791403815046269&rtpof=true&sd=true";
 
 const navLinks = [
-  { href: "/order", labelKey: "onlineStore" },
+  { href: "/", labelKey: "onlineStore" },
   { href: "/contacts", labelKey: "contacts" },
   { href: "/about", labelKey: "about" },
   { href: B2B_SHEET_URL, labelKey: "b2b" },

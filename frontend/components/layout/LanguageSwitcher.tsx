@@ -40,7 +40,7 @@ export function LanguageSwitcher({
             : pageSlug
               ? localizedSlug
                 ? `/categories/${localizedSlug}`
-                : "/order"
+                : "/"
               : pathname;
         return (
           <Link

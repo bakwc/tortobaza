@@ -8,7 +8,7 @@ import { PUBLIC_SITE_ORIGIN } from "@/lib/site-host";
 export const dynamic = "force-dynamic";
 
 const STATIC_PATHS = [
-  "/order",
+  "/",
   "/about",
   "/contacts",
   "/delivery-and-refunds",
@@ -27,6 +27,13 @@ function sitemapAlternates(
     languages[locale] = absoluteUrl(
       PUBLIC_SITE_ORIGIN,
       localePath(locale, path),
+    );
+  }
+  const defaultPath = paths[routing.defaultLocale];
+  if (defaultPath) {
+    languages["x-default"] = absoluteUrl(
+      PUBLIC_SITE_ORIGIN,
+      localePath(routing.defaultLocale, defaultPath),
     );
   }
   return { languages };
@@ -59,8 +66,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             routing.locales.map((alternateLocale) => [alternateLocale, path]),
           ) as Record<Locale, string>,
         ),
-        changeFrequency: path === "/order" ? "daily" : "monthly",
-        priority: path === "/order" ? 1 : 0.6,
+        changeFrequency: path === "/" ? "daily" : "monthly",
+        priority: path === "/" ? 1 : 0.6,
       });
     }
   }

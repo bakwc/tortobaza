@@ -113,7 +113,7 @@ export default async function CategoryPage({
   const tier = category.delivery_schedule_tier;
   const localeTyped = locale as Locale;
   const categoryPath = localePath(localeTyped, `/categories/${category.page_slug}`);
-  const orderPath = localePath(localeTyped, "/order");
+  const catalogPath = localePath(localeTyped, "/");
   const homePath = localePath(localeTyped, "/");
 
   const pillCategories = categories.filter((item) => item.page_slug);
@@ -124,7 +124,7 @@ export default async function CategoryPage({
           data={[
             breadcrumbJsonLd(origin, [
               { name: tBreadcrumbs("home"), path: homePath },
-              { name: tBreadcrumbs("catalog"), path: orderPath },
+              { name: tBreadcrumbs("catalog"), path: catalogPath },
               { name: heading, path: categoryPath },
             ]),
             itemListJsonLd(
@@ -142,7 +142,7 @@ export default async function CategoryPage({
           <Breadcrumbs
             items={[
               { name: tBreadcrumbs("home"), href: "/" },
-              { name: tBreadcrumbs("catalog"), href: "/order" },
+              { name: tBreadcrumbs("catalog"), href: "/" },
               { name: heading },
             ]}
           />

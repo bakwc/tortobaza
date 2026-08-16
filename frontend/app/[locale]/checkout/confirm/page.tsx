@@ -23,7 +23,7 @@ export default async function CheckoutConfirmPage({
   const tCheckout = await getTranslations("checkout");
   const cart = await serverApi.getCart();
   if (cart.items.length === 0) {
-    redirect({ href: "/order", locale });
+    redirect({ href: "/", locale });
   }
 
   return (
