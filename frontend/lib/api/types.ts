@@ -254,6 +254,37 @@ export const AttendanceSummarySchema = z.object({
   total_money: z.string(),
 });
 
+export const CrmOrderImageSchema = z.object({
+  id: z.number(),
+  image: ResponsiveImageSchema,
+  position: z.number(),
+});
+
+export const CrmOrderSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  time_start: z.string(),
+  time_end: z.string().nullable(),
+  contact: z.string(),
+  fulfillment_type: z.enum(["delivery", "pickup"]),
+  is_delivered: z.boolean(),
+  weight: z.string(),
+  filling: z.string(),
+  description: z.string(),
+  cake_price: z.string(),
+  prepayment: z.string(),
+  is_paid: z.boolean(),
+  payment_type: z.enum(["cash", "terminal", "tbc", "bog"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+  images: z.array(CrmOrderImageSchema),
+});
+
+export const CrmOrdersResponseSchema = z.object({
+  date: z.string(),
+  orders: z.array(CrmOrderSchema),
+});
+
 export type Category = z.infer<typeof CategorySchema>;
 export type CategoryDetail = z.infer<typeof CategoryDetailSchema>;
 export type ProductImage = z.infer<typeof ProductImageSchema>;
@@ -276,6 +307,14 @@ export type Order = z.infer<typeof OrderSchema>;
 export type SessionUser = z.infer<typeof SessionUserSchema>;
 export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
+export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
+export type CrmOrder = z.infer<typeof CrmOrderSchema>;
+export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
+
+export type UpdateCrmOrderBody = {
+  is_delivered?: boolean;
+  is_paid?: boolean;
+};
 
 export type LoginBody = {
   username: string;

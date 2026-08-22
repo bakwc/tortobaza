@@ -4,6 +4,8 @@ import {
   CartSchema,
   CategoryDetailSchema,
   CategorySchema,
+  CrmOrderSchema,
+  CrmOrdersResponseSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
   OrderSchema,
@@ -21,6 +23,8 @@ import {
   type Cart,
   type Category,
   type CategoryDetail,
+  type CrmOrder,
+  type CrmOrdersResponse,
   type FulfillmentOptions,
   type FulfillmentType,
   type LoginBody,
@@ -36,6 +40,7 @@ import {
   type StartPaymentBody,
   type StartPaymentResponse,
   type UpdateCartItemBody,
+  type UpdateCrmOrderBody,
 } from "./types";
 import { z } from "zod";
 
@@ -202,6 +207,21 @@ export function endpoints(fetcher: Fetcher) {
     async getAttendanceSummary(): Promise<AttendanceSummary> {
       const raw = await fetcher<unknown>("/api/attendance/summary/");
       return parse(AttendanceSummarySchema, raw);
+    },
+
+    async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {
+      const raw = await fetcher<unknown>("/api/crm/orders/", {
+        searchParams: date ? { date } : undefined,
+      });
+      return parse(CrmOrdersResponseSchema, raw);
+    },
+
+    async patchCrmOrder(id: number, body: UpdateCrmOrderBody): Promise<CrmOrder> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      return parse(CrmOrderSchema, raw);
     },
   };
 }

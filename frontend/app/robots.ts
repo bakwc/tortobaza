@@ -31,6 +31,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/*/orders/",
         "/*/attendance",
         "/*/attendance/",
+        "/*/crm",
+        "/*/crm/",
       ],
     },
     sitemap: `${PUBLIC_SITE_ORIGIN}/sitemap.xml`,

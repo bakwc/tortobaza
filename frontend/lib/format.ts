@@ -85,3 +85,23 @@ export function formatAttendanceTime(iso: string | null): string {
     timeZone: BUSINESS_TIMEZONE,
   });
 }
+
+export function getTbilisiTodayIsoDate(): string {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BUSINESS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date());
+}
+
+export function formatCrmDate(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return d.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
