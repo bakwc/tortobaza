@@ -29,6 +29,7 @@ class CrmOrder(models.Model):
         choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_DELIVERY,
     )
+    is_delivered = models.BooleanField(default=False)
     weight = models.CharField(max_length=50)
     filling = models.CharField(max_length=255)
     description = models.TextField(blank=True)

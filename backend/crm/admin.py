@@ -12,10 +12,12 @@ class CrmOrderImageInline(admin.TabularInline):
 @admin.register(CrmOrder)
 class CrmOrderAdmin(admin.ModelAdmin):
     list_display = [
+        "id",
         "date",
         "time_slot",
         "contact_summary",
         "fulfillment_type",
+        "is_delivered",
         "weight",
         "filling",
         "cake_price",
@@ -23,11 +25,12 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "is_paid",
         "payment_type",
     ]
-    list_filter = ["date", "fulfillment_type", "is_paid", "payment_type"]
-    search_fields = ["contact", "filling", "description", "weight"]
+    list_display_links = ["id", "date"]
+    list_filter = ["date", "fulfillment_type", "is_delivered", "is_paid", "payment_type"]
+    search_fields = ["id", "contact", "filling", "description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["id", "created_at", "updated_at"]
     fieldsets = (
         (
             "Schedule",
@@ -38,7 +41,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Customer & Delivery",
             {
-                "fields": ("contact", "fulfillment_type"),
+                "fields": ("contact", "fulfillment_type", "is_delivered"),
             },
         ),
         (
@@ -56,7 +59,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Metadata",
             {
-                "fields": ("created_at", "updated_at"),
+                "fields": ("id", "created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),
