@@ -30,6 +30,10 @@ def _safe_source_path(relative_path: str) -> Path:
         root = media_root / "products"
     elif relative_path.startswith("options/"):
         root = media_root / "options"
+    elif relative_path.startswith("categories/"):
+        root = media_root / "categories"
+    elif relative_path.startswith("crm_orders/"):
+        root = media_root / "crm_orders"
     else:
         raise Http404()
     raw = Path(settings.MEDIA_ROOT) / relative_path

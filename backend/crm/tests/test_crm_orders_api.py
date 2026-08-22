@@ -1,3 +1,4 @@
+import io
 from datetime import date, time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -6,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
+from PIL import Image
 from rest_framework.test import APIClient
 
 from crm.models import CrmOrder, CrmOrderImage
@@ -145,3 +147,27 @@ class CrmOrdersApiTests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/api/crm/orders/", {"date": "invalid-date"})
         self.assertEqual(response.status_code, 400)
+
+    def test_scaled_crm_order_image(self):
+        buf = io.BytesIO()
+        im = Image.new("RGB", (100, 100), color="pink")
+        im.save(buf, format="JPEG")
+        image_file = SimpleUploadedFile("test_cake.jpg", buf.getvalue(), content_type="image/jpeg")
+
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(10, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("50.00"),
+            prepayment=Decimal("50.00"),
+            is_paid=True,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        crm_img = CrmOrderImage.objects.create(order=order, image=image_file, position=0)
+
+        response = self.client.get(f"/api/img/{crm_img.image.name}?w=600")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/webp")
