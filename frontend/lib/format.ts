@@ -96,9 +96,9 @@ export function getTbilisiTodayIsoDate(): string {
   return formatter.format(new Date());
 }
 
-export function formatCrmDate(dateStr: string): string {
+export function formatCrmDate(dateStr: string, locale: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
-  return d.toLocaleDateString("en-GB", {
+  return d.toLocaleDateString(intlLocaleTag(locale), {
     weekday: "long",
     day: "numeric",
     month: "long",

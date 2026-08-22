@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   Calendar,
@@ -41,7 +42,7 @@ function shiftDate(isoDate: string, days: number): string {
   return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
-function extractDetail(error: ApiError): string {
+function extractDetail(error: ApiError, fallback: string): string {
   const parsed = error.parsed<Record<string, unknown>>();
   if (parsed && typeof parsed === "object") {
     const nonField = parsed["non_field_errors"];
@@ -53,10 +54,11 @@ function extractDetail(error: ApiError): string {
       return detail;
     }
   }
-  return "Invalid username or password.";
+  return fallback;
 }
 
 export default function CrmPage() {
+  const t = useTranslations("crm");
   const currentUser = useCurrentUser();
 
   if (currentUser.isLoading) {
@@ -70,7 +72,7 @@ export default function CrmPage() {
   if (currentUser.isError && !isUnauthenticatedError(currentUser.error)) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--danger)]">
-        Could not reach the server. Please try again.
+        {t("serverUnreachable")}
       </div>
     );
   }
@@ -83,6 +85,7 @@ export default function CrmPage() {
 }
 
 function LoginForm() {
+  const t = useTranslations("crm");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const login = useLogin();
@@ -94,20 +97,20 @@ function LoginForm() {
 
   const errorMessage =
     login.error instanceof ApiError
-      ? extractDetail(login.error)
+      ? extractDetail(login.error, t("invalidCredentials"))
       : login.error
-        ? "Something went wrong. Please try again."
+        ? t("genericError")
         : null;
 
   return (
     <div className="mx-auto max-w-md rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-semibold text-[var(--ink)]">Staff Sign In</h1>
-      <p className="mt-1 text-sm text-[var(--muted-2)]">Sign in to access the CRM order board.</p>
+      <h1 className="text-2xl font-semibold text-[var(--ink)]">{t("signInTitle")}</h1>
+      <p className="mt-1 text-sm text-[var(--muted-2)]">{t("signInSubtitle")}</p>
 
       <form className="mt-6 grid gap-4" onSubmit={onSubmit}>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-            Username
+            {t("username")}
           </span>
           <Input
             value={username}
@@ -118,7 +121,7 @@ function LoginForm() {
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-            Password
+            {t("password")}
           </span>
           <Input
             type="password"
@@ -133,7 +136,7 @@ function LoginForm() {
         ) : null}
 
         <Button type="submit" size="lg" disabled={login.isPending || !username || !password}>
-          {login.isPending ? <Spinner className="h-4 w-4" /> : "Sign In"}
+          {login.isPending ? <Spinner className="h-4 w-4" /> : t("signIn")}
         </Button>
       </form>
     </div>
@@ -141,6 +144,8 @@ function LoginForm() {
 }
 
 function CrmBoard({ user }: { user: SessionUser }) {
+  const t = useTranslations("crm");
+  const locale = useLocale();
   const logout = useLogout();
   const todayStr = getTbilisiTodayIsoDate();
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
@@ -162,13 +167,13 @@ function CrmBoard({ user }: { user: SessionUser }) {
       <div className="flex flex-col gap-4 rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <span className="text-xs font-medium uppercase tracking-wider text-[var(--brand)]">
-            CRM Order Board
+            {t("boardLabel")}
           </span>
-          <h1 className="text-2xl font-bold text-[var(--ink)]">Daily Orders</h1>
+          <h1 className="text-2xl font-bold text-[var(--ink)]">{t("dailyOrders")}</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <span className="text-xs text-[var(--muted-2)]">Signed in as</span>
+            <span className="text-xs text-[var(--muted-2)]">{t("signedInAs")}</span>
             <p className="text-sm font-semibold text-[var(--ink)]">{displayName}</p>
           </div>
           <Button
@@ -176,8 +181,8 @@ function CrmBoard({ user }: { user: SessionUser }) {
             size="icon"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
-            aria-label="Sign out"
-            title="Sign out"
+            aria-label={t("signOut")}
+            title={t("signOut")}
           >
             <LogOut className="h-5 w-5" />
           </Button>
@@ -193,20 +198,20 @@ function CrmBoard({ user }: { user: SessionUser }) {
             className="flex items-center gap-1.5"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span>Previous Day</span>
+            <span>{t("previousDay")}</span>
           </Button>
 
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-[var(--brand)]" />
               <h2 className="text-lg font-bold text-[var(--ink)]">
-                {formatCrmDate(selectedDate)}
+                {formatCrmDate(selectedDate, locale)}
               </h2>
             </div>
             <div className="flex items-center gap-2">
               {isToday ? (
                 <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
-                  Today
+                  {t("today")}
                 </span>
               ) : (
                 <Button
@@ -215,7 +220,7 @@ function CrmBoard({ user }: { user: SessionUser }) {
                   onClick={() => setSelectedDate(todayStr)}
                   className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
                 >
-                  Jump to Today
+                  {t("jumpToToday")}
                 </Button>
               )}
             </div>
@@ -227,7 +232,7 @@ function CrmBoard({ user }: { user: SessionUser }) {
             onClick={() => setSelectedDate((prev) => shiftDate(prev, 1))}
             className="flex items-center gap-1.5"
           >
-            <span>Next Day</span>
+            <span>{t("nextDay")}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -235,19 +240,19 @@ function CrmBoard({ user }: { user: SessionUser }) {
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--line)] pt-4 text-xs sm:gap-6 sm:text-sm">
           <div className="flex items-center gap-1.5 text-[var(--ink)]">
             <Package className="h-4 w-4 text-[var(--muted-2)]" />
-            <span>Total:</span>
+            <span>{t("total")}</span>
             <span className="font-bold">{orders.length}</span>
           </div>
           <div className="flex items-center gap-1.5 text-emerald-700">
             <Check className="h-4 w-4" />
-            <span>Delivered:</span>
+            <span>{t("deliveredCount")}</span>
             <span className="font-bold">
               {deliveredCount} / {orders.length}
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[var(--brand)]">
             <CreditCard className="h-4 w-4" />
-            <span>Paid:</span>
+            <span>{t("paidCount")}</span>
             <span className="font-bold">
               {paidCount} / {orders.length}
             </span>
@@ -261,16 +266,16 @@ function CrmBoard({ user }: { user: SessionUser }) {
         </div>
       ) : ordersQuery.isError ? (
         <div className="rounded-3xl border border-[var(--line)] bg-white p-12 text-center text-sm text-[var(--danger)]">
-          Could not load orders for this date. Please try again.
+          {t("loadError")}
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-white p-12 text-center">
           <Package className="h-12 w-12 text-[var(--muted)]" />
           <p className="mt-4 text-base font-semibold text-[var(--ink)]">
-            No orders scheduled for this day
+            {t("emptyTitle")}
           </p>
           <p className="mt-1 text-sm text-[var(--muted-2)]">
-            Use the arrows above to browse other days.
+            {t("emptyHint")}
           </p>
         </div>
       ) : (
@@ -306,11 +311,11 @@ function formatTimeSlot(start: string, end: string | null): string {
   return `${s} – ${end.slice(0, 5)}`;
 }
 
-function paymentTypeLabel(type: string): string {
-  if (type === "cash") return "Cash";
-  if (type === "terminal") return "Terminal";
-  if (type === "tbc") return "TBC Transfer";
-  if (type === "bog") return "BOG Transfer";
+function paymentTypeLabel(type: string, t: (key: string) => string): string {
+  if (type === "cash") return t("paymentCash");
+  if (type === "terminal") return t("paymentTerminal");
+  if (type === "tbc") return t("paymentTbc");
+  if (type === "bog") return t("paymentBog");
   return type;
 }
 
@@ -325,6 +330,7 @@ function CrmOrderCard({
   onToggleDelivered: () => void;
   onTogglePaid: () => void;
 }) {
+  const t = useTranslations("crm");
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
@@ -359,13 +365,13 @@ function CrmOrderCard({
                 type="button"
                 onClick={() => setIsModalOpen(true)}
                 className="group relative h-full w-full cursor-pointer focus:outline-none"
-                title="Click to enlarge"
+                title={t("enlargeTitle")}
               >
                 <img
                   src={activeImage.image.src}
                   srcSet={activeImage.image.srcset}
                   sizes="(max-width: 1024px) 100vw, 40vw"
-                  alt={`Order #${order.id}`}
+                  alt={t("orderAlt", { id: order.id })}
                   className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                   loading="lazy"
                 />
@@ -376,7 +382,7 @@ function CrmOrderCard({
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted-2)]">
                 <Package className="h-10 w-10 text-[var(--muted)]" />
-                <span className="text-sm">No image</span>
+                <span className="text-sm">{t("noImage")}</span>
               </div>
             )}
           </div>
@@ -400,7 +406,7 @@ function CrmOrderCard({
                     src={img.image.src}
                     srcSet={img.image.srcset}
                     sizes="64px"
-                    alt={`Thumb ${idx + 1}`}
+                    alt={t("thumbAlt", { n: idx + 1 })}
                     className="h-full w-full object-contain"
                   />
                 </button>
@@ -412,7 +418,7 @@ function CrmOrderCard({
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogContent className="max-w-4xl p-4 md:p-6">
                 <VisuallyHidden.Root asChild>
-                  <DialogTitle>Order #{order.id} Image</DialogTitle>
+                  <DialogTitle>{t("orderImageTitle", { id: order.id })}</DialogTitle>
                 </VisuallyHidden.Root>
                 <div className="flex flex-col items-center gap-4">
                   <div className="relative flex max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--cream)] p-2">
@@ -420,7 +426,7 @@ function CrmOrderCard({
                       src={activeImage.image.src}
                       srcSet={activeImage.image.srcset}
                       sizes="(max-width: 1024px) 95vw, 80vw"
-                      alt={`Order #${order.id}`}
+                      alt={t("orderAlt", { id: order.id })}
                       className="max-h-[72vh] w-auto max-w-full object-contain"
                     />
                   </div>
@@ -442,7 +448,7 @@ function CrmOrderCard({
                             src={img.image.src}
                             srcSet={img.image.srcset}
                             sizes="64px"
-                            alt={`Thumb ${idx + 1}`}
+                            alt={t("thumbAlt", { n: idx + 1 })}
                             className="h-full w-full object-contain"
                           />
                         </button>
@@ -481,12 +487,12 @@ function CrmOrderCard({
                   {order.fulfillment_type === "delivery" ? (
                     <>
                       <Truck className="h-3.5 w-3.5" />
-                      <span>Delivery</span>
+                      <span>{t("delivery")}</span>
                     </>
                   ) : (
                     <>
                       <Store className="h-3.5 w-3.5" />
-                      <span>Pickup</span>
+                      <span>{t("pickup")}</span>
                     </>
                   )}
                 </span>
@@ -513,7 +519,7 @@ function CrmOrderCard({
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                 <div>
                   <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
-                    Contact & Address
+                    {t("contactAddress")}
                   </span>
                   <p className="mt-1 whitespace-pre-wrap font-medium">{order.contact}</p>
                 </div>
@@ -530,7 +536,7 @@ function CrmOrderCard({
                 )}
               >
                 <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
-                  Weight
+                  {t("weight")}
                 </span>
                 <p className="mt-1 font-semibold text-[var(--ink)]">{order.weight}</p>
               </div>
@@ -543,7 +549,7 @@ function CrmOrderCard({
                 )}
               >
                 <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
-                  Filling
+                  {t("filling")}
                 </span>
                 <p className="mt-1 font-semibold text-[var(--ink)]">{order.filling}</p>
               </div>
@@ -560,7 +566,7 @@ function CrmOrderCard({
               >
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
                   <FileText className="h-3.5 w-3.5" />
-                  <span>Notes / Description</span>
+                  <span>{t("notes")}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ink)]">
                   {order.description}
@@ -577,19 +583,19 @@ function CrmOrderCard({
               )}
             >
               <div>
-                <span className="text-xs text-[var(--muted-2)]">Price</span>
+                <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
                 <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
                   {formatAed(order.cake_price)}
                 </p>
               </div>
               <div>
-                <span className="text-xs text-[var(--muted-2)]">Prepaid</span>
+                <span className="text-xs text-[var(--muted-2)]">{t("prepaid")}</span>
                 <p className="mt-0.5 text-base font-semibold text-[var(--ink)]">
                   {formatAed(order.prepayment)}
                 </p>
               </div>
               <div>
-                <span className="text-xs text-[var(--muted-2)]">Remaining</span>
+                <span className="text-xs text-[var(--muted-2)]">{t("remaining")}</span>
                 <p
                   className={cn(
                     "mt-0.5 text-base font-bold",
@@ -600,9 +606,9 @@ function CrmOrderCard({
                 </p>
               </div>
               <div>
-                <span className="text-xs text-[var(--muted-2)]">Payment Method</span>
+                <span className="text-xs text-[var(--muted-2)]">{t("paymentMethod")}</span>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-                  {paymentTypeLabel(order.payment_type)}
+                  {paymentTypeLabel(order.payment_type, t)}
                 </p>
               </div>
             </div>
@@ -626,12 +632,12 @@ function CrmOrderCard({
               ) : order.is_delivered ? (
                 <span className="flex items-center gap-2">
                   <Check className="h-5 w-5" />
-                  Delivered
+                  {t("delivered")}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-[var(--muted-2)]" />
-                  Mark Delivered
+                  {t("markDelivered")}
                 </span>
               )}
             </Button>
@@ -653,12 +659,12 @@ function CrmOrderCard({
               ) : order.is_paid ? (
                 <span className="flex items-center gap-2">
                   <Check className="h-5 w-5" />
-                  Paid
+                  {t("paid")}
                 </span>
               ) : (
                 <span className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-[var(--muted-2)]" />
-                  Mark Paid
+                  {t("markPaid")}
                 </span>
               )}
             </Button>
