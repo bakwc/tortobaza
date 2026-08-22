@@ -336,10 +336,24 @@ function CrmOrderCard({
   const remainingNum = Math.max(0, priceNum - prepayNum);
 
   return (
-    <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm md:p-8">
+    <div
+      className={cn(
+        "rounded-3xl border p-6 shadow-sm transition-colors md:p-8",
+        order.is_delivered
+          ? "border-sky-200 bg-sky-50/70"
+          : "border-[var(--line)] bg-white",
+      )}
+    >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-3 lg:col-span-5">
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--cream)]">
+          <div
+            className={cn(
+              "relative aspect-square w-full overflow-hidden rounded-2xl border",
+              order.is_delivered
+                ? "border-sky-200 bg-white"
+                : "border-[var(--line)] bg-[var(--cream)]",
+            )}
+          >
             {activeImage ? (
               <button
                 type="button"
@@ -375,7 +389,8 @@ function CrmOrderCard({
                   key={img.id}
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
-                    "relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-[var(--cream)] transition-all",
+                    "relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-all",
+                    order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
                       : "border-[var(--line)] opacity-70 hover:opacity-100",
@@ -442,7 +457,12 @@ function CrmOrderCard({
 
         <div className="flex flex-col justify-between gap-6 lg:col-span-7">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-4">
+            <div
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-2 border-b pb-4",
+                order.is_delivered ? "border-sky-200" : "border-[var(--line)]",
+              )}
+            >
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-[var(--brand)]" />
                 <span className="text-2xl font-bold tracking-tight text-[var(--ink)]">
@@ -470,13 +490,25 @@ function CrmOrderCard({
                     </>
                   )}
                 </span>
-                <span className="rounded-full bg-[var(--cream)] px-2.5 py-1 text-xs font-medium text-[var(--ink)]">
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)]",
+                    order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
+                  )}
+                >
                   #{order.id}
                 </span>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[var(--cream-soft)] p-4 text-sm text-[var(--ink)]">
+            <div
+              className={cn(
+                "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                order.is_delivered
+                  ? "border border-sky-200/80 bg-white/80"
+                  : "bg-[var(--cream-soft)]",
+              )}
+            >
               <div className="flex items-start gap-2">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                 <div>
@@ -489,13 +521,27 @@ function CrmOrderCard({
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[var(--line)] p-3.5">
+              <div
+                className={cn(
+                  "rounded-2xl border p-3.5",
+                  order.is_delivered
+                    ? "border-sky-200/80 bg-white/70"
+                    : "border-[var(--line)]",
+                )}
+              >
                 <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
                   Weight
                 </span>
                 <p className="mt-1 font-semibold text-[var(--ink)]">{order.weight}</p>
               </div>
-              <div className="rounded-2xl border border-[var(--line)] p-3.5">
+              <div
+                className={cn(
+                  "rounded-2xl border p-3.5",
+                  order.is_delivered
+                    ? "border-sky-200/80 bg-white/70"
+                    : "border-[var(--line)]",
+                )}
+              >
                 <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
                   Filling
                 </span>
@@ -504,7 +550,14 @@ function CrmOrderCard({
             </div>
 
             {order.description ? (
-              <div className="rounded-2xl border border-[var(--line)] p-3.5">
+              <div
+                className={cn(
+                  "rounded-2xl border p-3.5",
+                  order.is_delivered
+                    ? "border-sky-200/80 bg-white/70"
+                    : "border-[var(--line)]",
+                )}
+              >
                 <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
                   <FileText className="h-3.5 w-3.5" />
                   <span>Notes / Description</span>
@@ -515,7 +568,14 @@ function CrmOrderCard({
               </div>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3 rounded-2xl bg-[var(--cream-soft)] p-4 sm:grid-cols-4">
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-3 rounded-2xl p-4 sm:grid-cols-4",
+                order.is_delivered
+                  ? "border border-sky-200/80 bg-white/80"
+                  : "bg-[var(--cream-soft)]",
+              )}
+            >
               <div>
                 <span className="text-xs text-[var(--muted-2)]">Price</span>
                 <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
@@ -557,7 +617,7 @@ function CrmOrderCard({
               className={cn(
                 "h-14 font-semibold transition-all",
                 order.is_delivered
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  ? "bg-sky-600 text-white hover:bg-sky-700"
                   : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
               )}
             >
