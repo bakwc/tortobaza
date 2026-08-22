@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   Calendar,
   Check,
@@ -14,8 +15,10 @@ import {
   Store,
   Truck,
   User,
+  ZoomIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
@@ -323,6 +326,7 @@ function CrmOrderCard({
   onTogglePaid: () => void;
 }) {
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
@@ -337,14 +341,24 @@ function CrmOrderCard({
         <div className="flex flex-col gap-3 lg:col-span-5">
           <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--cream)]">
             {activeImage ? (
-              <img
-                src={activeImage.image.src}
-                srcSet={activeImage.image.srcset}
-                sizes="(max-width: 1024px) 100vw, 40vw"
-                alt={`Order #${order.id}`}
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="group relative h-full w-full cursor-pointer focus:outline-none"
+                title="Click to enlarge"
+              >
+                <img
+                  src={activeImage.image.src}
+                  srcSet={activeImage.image.srcset}
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  alt={`Order #${order.id}`}
+                  className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+                <span className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <ZoomIn className="h-4 w-4" />
+                </span>
+              </button>
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted-2)]">
                 <Package className="h-10 w-10 text-[var(--muted)]" />
@@ -361,7 +375,7 @@ function CrmOrderCard({
                   key={img.id}
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
-                    "relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-all",
+                    "relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-[var(--cream)] transition-all",
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
                       : "border-[var(--line)] opacity-70 hover:opacity-100",
@@ -372,11 +386,57 @@ function CrmOrderCard({
                     srcSet={img.image.srcset}
                     sizes="64px"
                     alt={`Thumb ${idx + 1}`}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 </button>
               ))}
             </div>
+          ) : null}
+
+          {activeImage ? (
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogContent className="max-w-4xl p-4 md:p-6">
+                <VisuallyHidden.Root asChild>
+                  <DialogTitle>Order #{order.id} Image</DialogTitle>
+                </VisuallyHidden.Root>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="relative flex max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--cream)] p-2">
+                    <img
+                      src={activeImage.image.src}
+                      srcSet={activeImage.image.srcset}
+                      sizes="(max-width: 1024px) 95vw, 80vw"
+                      alt={`Order #${order.id}`}
+                      className="max-h-[72vh] w-auto max-w-full object-contain"
+                    />
+                  </div>
+                  {images.length > 1 ? (
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {images.map((img, idx) => (
+                        <button
+                          type="button"
+                          key={img.id}
+                          onClick={() => setActiveImageIndex(idx)}
+                          className={cn(
+                            "relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-[var(--cream)] transition-all",
+                            activeImageIndex === idx
+                              ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
+                              : "border-[var(--line)] opacity-70 hover:opacity-100",
+                          )}
+                        >
+                          <img
+                            src={img.image.src}
+                            srcSet={img.image.srcset}
+                            sizes="64px"
+                            alt={`Thumb ${idx + 1}`}
+                            className="h-full w-full object-contain"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </DialogContent>
+            </Dialog>
           ) : null}
         </div>
 
