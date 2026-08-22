@@ -24,6 +24,7 @@ class CrmOrder(models.Model):
     time_start = models.TimeField()
     time_end = models.TimeField(null=True, blank=True)
     contact = models.TextField()
+    delivery_address = models.TextField(blank=True)
     fulfillment_type = models.CharField(
         max_length=10,
         choices=FULFILLMENT_CHOICES,

@@ -35,6 +35,7 @@ class CrmOrdersApiTests(TestCase):
             date=today,
             time_start=time(12, 0),
             contact="+995555111222",
+            delivery_address="Rustaveli 12, Batumi",
             fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
             weight="2kg",
             filling="Vanilla Strawberry",
@@ -65,6 +66,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(len(data["orders"]), 1)
         self.assertEqual(data["orders"][0]["id"], today_order.id)
         self.assertEqual(data["orders"][0]["contact"], "+995555111222")
+        self.assertEqual(data["orders"][0]["delivery_address"], "Rustaveli 12, Batumi")
 
     def test_get_orders_by_date_and_ordering(self):
         target_date = date(2026, 8, 25)

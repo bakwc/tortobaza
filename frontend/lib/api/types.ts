@@ -266,6 +266,7 @@ export const CrmOrderSchema = z.object({
   time_start: z.string(),
   time_end: z.string().nullable(),
   contact: z.string(),
+  delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
   is_delivered: z.boolean(),
   weight: z.string(),

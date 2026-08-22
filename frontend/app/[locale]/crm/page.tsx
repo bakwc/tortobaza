@@ -12,6 +12,7 @@ import {
   CreditCard,
   FileText,
   LogOut,
+  MapPin,
   Package,
   Store,
   Truck,
@@ -519,12 +520,35 @@ function CrmOrderCard({
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                 <div>
                   <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
-                    {t("contactAddress")}
+                    {t("contact")}
                   </span>
                   <p className="mt-1 whitespace-pre-wrap font-medium">{order.contact}</p>
                 </div>
               </div>
             </div>
+
+            {order.delivery_address ? (
+              <div
+                className={cn(
+                  "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                  order.is_delivered
+                    ? "border border-sky-200/80 bg-white/80"
+                    : "bg-[var(--cream-soft)]",
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  <div>
+                    <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
+                      {t("deliveryAddress")}
+                    </span>
+                    <p className="mt-1 whitespace-pre-wrap font-medium">
+                      {order.delivery_address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div
