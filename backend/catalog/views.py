@@ -3,9 +3,11 @@ from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
 from rest_framework import generics
 
-from catalog.models import Category, Product
+from catalog.models import Category, CategoryLanding, Product
 from catalog.serializers import (
     CategoryDetailSerializer,
+    CategoryLandingDetailSerializer,
+    CategoryLandingListSerializer,
     CategorySerializer,
     ProductDetailSerializer,
     ProductListSerializer,
@@ -26,33 +28,73 @@ class CategoryListView(generics.ListAPIView):
         return Category.objects.filter(is_active=True).order_by("position", "name")
 
 
-class CategoryDetailView(generics.RetrieveAPIView):
-    serializer_class = CategoryDetailSerializer
-    lookup_url_kwarg = "page_slug"
+class CategoryLandingListView(generics.ListAPIView):
+    serializer_class = CategoryLandingListSerializer
+    pagination_class = None
 
     def get_queryset(self):
+        return (
+            CategoryLanding.objects.filter(is_active=True, source__is_active=True)
+            .select_related("source")
+            .order_by("slug")
+        )
+
+
+class CategoryDetailView(generics.RetrieveAPIView):
+    lookup_url_kwarg = "page_slug"
+
+    def get_object(self):
+        page_slug = self.kwargs[self.lookup_url_kwarg]
         language = get_language() or "en"
         field = _PAGE_SLUG_FIELDS.get(language, "page_slug_en")
-        return Category.objects.filter(
+
+        categories = Category.objects.filter(
             is_active=True,
             **{f"{field}__isnull": False},
         ).exclude(**{field: ""})
 
-    def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-        page_slug = self.kwargs[self.lookup_url_kwarg]
-        language = get_language() or "en"
-        field = _PAGE_SLUG_FIELDS.get(language, "page_slug_en")
-        obj = queryset.filter(**{field: page_slug}).first()
+        obj = categories.filter(**{field: page_slug}).first()
         if obj is None:
-            obj = get_object_or_404(
-                queryset,
+            obj = Category.objects.filter(
+                is_active=True,
+            ).filter(
                 Q(page_slug_en=page_slug)
                 | Q(page_slug_ka=page_slug)
                 | Q(page_slug_ru=page_slug),
-            )
+            ).first()
+
+        if obj is None:
+            landings = CategoryLanding.objects.filter(
+                is_active=True,
+                source__is_active=True,
+                **{f"{field}__isnull": False},
+            ).exclude(**{field: ""}).select_related("source")
+
+            obj = landings.filter(**{field: page_slug}).first()
+            if obj is None:
+                obj = get_object_or_404(
+                    CategoryLanding.objects.filter(
+                        is_active=True,
+                        source__is_active=True,
+                    ).select_related("source"),
+                    Q(page_slug_en=page_slug)
+                    | Q(page_slug_ka=page_slug)
+                    | Q(page_slug_ru=page_slug),
+                )
+
+        self._resolved_obj = obj
         self.check_object_permissions(self.request, obj)
         return obj
+
+    def get_serializer(self, *args, **kwargs):
+        if len(args) > 0 and isinstance(args[0], CategoryLanding):
+            serializer_class = CategoryLandingDetailSerializer
+        elif hasattr(self, "_resolved_obj") and isinstance(self._resolved_obj, CategoryLanding):
+            serializer_class = CategoryLandingDetailSerializer
+        else:
+            serializer_class = CategoryDetailSerializer
+        kwargs.setdefault("context", self.get_serializer_context())
+        return serializer_class(*args, **kwargs)
 
 
 class ProductListView(generics.ListAPIView):

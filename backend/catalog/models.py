@@ -72,6 +72,72 @@ class Category(models.Model):
         )
         if conflicts.exists():
             raise ValidationError("Page slugs must be unique across all languages.")
+        landing_conflicts = CategoryLanding.objects.filter(
+            models.Q(page_slug_en__in=page_slugs)
+            | models.Q(page_slug_ka__in=page_slugs)
+            | models.Q(page_slug_ru__in=page_slugs)
+        )
+        if landing_conflicts.exists():
+            raise ValidationError("Page slugs must not collide with existing category landings.")
+
+
+class CategoryLanding(models.Model):
+    slug = models.SlugField(max_length=140, unique=True)
+    source = models.ForeignKey(Category, related_name="landings", on_delete=models.CASCADE)
+    page_slug = models.SlugField(max_length=140, blank=True)
+    page_heading = models.CharField(max_length=200, blank=True)
+    page_description = models.TextField(blank=True)
+    seo_title = models.CharField(max_length=200, blank=True)
+    seo_description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="category_landings/", blank=True)
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["slug"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["page_slug_en"],
+                condition=~models.Q(page_slug_en=""),
+                name="uniq_category_landing_page_slug_en",
+            ),
+            models.UniqueConstraint(
+                fields=["page_slug_ka"],
+                condition=~models.Q(page_slug_ka=""),
+                name="uniq_category_landing_page_slug_ka",
+            ),
+            models.UniqueConstraint(
+                fields=["page_slug_ru"],
+                condition=~models.Q(page_slug_ru=""),
+                name="uniq_category_landing_page_slug_ru",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.slug
+
+    def clean(self) -> None:
+        page_slugs = {
+            slug
+            for slug in (self.page_slug_en, self.page_slug_ka, self.page_slug_ru)
+            if slug
+        }
+        if not page_slugs:
+            return
+        conflicts = CategoryLanding.objects.exclude(pk=self.pk).filter(
+            models.Q(page_slug_en__in=page_slugs)
+            | models.Q(page_slug_ka__in=page_slugs)
+            | models.Q(page_slug_ru__in=page_slugs)
+        )
+        if conflicts.exists():
+            raise ValidationError("Page slugs must be unique across all languages.")
+        category_conflicts = Category.objects.filter(
+            models.Q(page_slug_en__in=page_slugs)
+            | models.Q(page_slug_ka__in=page_slugs)
+            | models.Q(page_slug_ru__in=page_slugs)
+        )
+        if category_conflicts.exists():
+            raise ValidationError("Page slugs must not collide with existing categories.")
 
 
 class OptionGroup(models.Model):

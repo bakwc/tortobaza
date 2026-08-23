@@ -5,7 +5,13 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { Category } from "@/lib/api/types";
 
-export function CategoryPills({ categories }: { categories: Category[] }) {
+export function CategoryPills({
+  categories,
+  activePageSlug,
+}: {
+  categories: Category[];
+  activePageSlug?: string;
+}) {
   const pathname = usePathname();
   const isCatalogPage = pathname === "/";
   const [activeSlug, setActiveSlug] = useState<string | null>(
@@ -46,7 +52,9 @@ export function CategoryPills({ categories }: { categories: Category[] }) {
           const href = c.page_slug ? `/categories/${c.page_slug}` : "/";
           const isActive = isCatalogPage
             ? activeSlug === c.slug
-            : pathname === `/categories/${c.page_slug}`;
+            : activePageSlug
+              ? activePageSlug === c.page_slug
+              : pathname === `/categories/${c.page_slug}`;
           return (
             <Link
               key={c.slug}

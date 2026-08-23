@@ -148,7 +148,10 @@ export default async function CategoryPage({
           />
         </div>
 
-        <CategoryPills categories={pillCategories} />
+        <CategoryPills
+          categories={pillCategories}
+          activePageSlug={category.source_page_slug}
+        />
 
         <div className="grid gap-8 pb-32 lg:grid-cols-[1fr_360px] lg:gap-10 lg:pb-20">
           <section className="py-6">

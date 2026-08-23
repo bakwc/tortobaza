@@ -11,7 +11,6 @@ import {
   Clock,
   CreditCard,
   FileText,
-  LogOut,
   MapPin,
   Package,
   Store,
@@ -24,9 +23,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
-import { isUnauthenticatedError, useCurrentUser, useLogin, useLogout } from "@/hooks/useAuth";
+import { isUnauthenticatedError, useCurrentUser, useLogin } from "@/hooks/useAuth";
 import { useCrmOrders, usePatchCrmOrder } from "@/hooks/useCrmOrders";
-import type { CrmOrder, SessionUser } from "@/lib/api/types";
+import type { CrmOrder } from "@/lib/api/types";
 import { formatAed, formatCrmDate, getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +79,7 @@ export default function CrmPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
-      {currentUser.data ? <CrmBoard user={currentUser.data} /> : <LoginForm />}
+      {currentUser.data ? <CrmBoard /> : <LoginForm />}
     </div>
   );
 }
@@ -144,18 +143,14 @@ function LoginForm() {
   );
 }
 
-function CrmBoard({ user }: { user: SessionUser }) {
+function CrmBoard() {
   const t = useTranslations("crm");
   const locale = useLocale();
-  const logout = useLogout();
   const todayStr = getTbilisiTodayIsoDate();
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const ordersQuery = useCrmOrders(selectedDate);
   const patchMutation = usePatchCrmOrder();
-
-  const displayName =
-    [user.first_name, user.last_name].filter(Boolean).join(" ") || user.username;
 
   const orders = ordersQuery.data?.orders ?? [];
   const isToday = selectedDate === todayStr;
@@ -165,31 +160,6 @@ function CrmBoard({ user }: { user: SessionUser }) {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="text-xs font-medium uppercase tracking-wider text-[var(--brand)]">
-            {t("boardLabel")}
-          </span>
-          <h1 className="text-2xl font-bold text-[var(--ink)]">{t("dailyOrders")}</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <span className="text-xs text-[var(--muted-2)]">{t("signedInAs")}</span>
-            <p className="text-sm font-semibold text-[var(--ink)]">{displayName}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-            aria-label={t("signOut")}
-            title={t("signOut")}
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <Button

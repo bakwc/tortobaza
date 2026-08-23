@@ -3,6 +3,7 @@ from modeltranslation.admin import TranslationAdmin, TranslationTabularInline
 
 from catalog.models import (
     Category,
+    CategoryLanding,
     Option,
     OptionGroup,
     Product,
@@ -45,6 +46,36 @@ class CategoryAdmin(TranslationAdmin):
                     "image",
                     "delivery_schedule_tier",
                     "position",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "SEO",
+            {
+                "fields": ("seo_title", "seo_description"),
+            },
+        ),
+    )
+
+
+@admin.register(CategoryLanding)
+class CategoryLandingAdmin(TranslationAdmin):
+    list_display = ["slug", "source", "page_slug", "is_active", "updated_at"]
+    list_filter = ["is_active", "source"]
+    search_fields = ["slug", "page_slug", "page_heading"]
+    autocomplete_fields = ["source"]
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "slug",
+                    "source",
+                    "page_slug",
+                    "page_heading",
+                    "page_description",
+                    "image",
                     "is_active",
                 )
             },

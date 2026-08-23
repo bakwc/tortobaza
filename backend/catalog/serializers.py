@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from catalog.models import (
     Category,
+    CategoryLanding,
     Option,
     Product,
     ProductImage,
@@ -10,7 +11,7 @@ from catalog.models import (
 from catalog.responsive_urls import detail_image, list_primary_image
 
 
-def category_page_slugs(obj: Category) -> dict[str, str]:
+def category_page_slugs(obj: Category | CategoryLanding) -> dict[str, str]:
     return {
         "en": obj.page_slug_en or "",
         "ka": obj.page_slug_ka or "",
@@ -40,6 +41,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class CategoryDetailSerializer(serializers.ModelSerializer):
     page_slugs = serializers.SerializerMethodField()
+    source_page_slug = serializers.CharField(source="page_slug", read_only=True)
     image = serializers.SerializerMethodField()
 
     class Meta:
@@ -48,6 +50,7 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
             "id",
             "slug",
             "page_slug",
+            "source_page_slug",
             "name",
             "page_heading",
             "page_description",
@@ -68,6 +71,64 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
             return None
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
         return list_primary_image(obj.image.name, public_base_url)
+
+
+class CategoryLandingDetailSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(source="source.slug", read_only=True)
+    source_page_slug = serializers.CharField(source="source.page_slug", read_only=True)
+    name = serializers.CharField(source="source.name", read_only=True)
+    position = serializers.IntegerField(source="source.position", read_only=True)
+    delivery_schedule_tier = serializers.CharField(
+        source="source.delivery_schedule_tier", read_only=True
+    )
+    page_slugs = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CategoryLanding
+        fields = [
+            "id",
+            "slug",
+            "page_slug",
+            "source_page_slug",
+            "name",
+            "page_heading",
+            "page_description",
+            "seo_title",
+            "seo_description",
+            "image",
+            "position",
+            "delivery_schedule_tier",
+            "page_slugs",
+            "updated_at",
+        ]
+
+    def get_page_slugs(self, obj: CategoryLanding) -> dict[str, str]:
+        return category_page_slugs(obj)
+
+    def get_image(self, obj: CategoryLanding):
+        image_name = obj.image.name or obj.source.image.name
+        if not image_name:
+            return None
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return list_primary_image(image_name, public_base_url)
+
+
+class CategoryLandingListSerializer(serializers.ModelSerializer):
+    page_slugs = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CategoryLanding
+        fields = [
+            "id",
+            "slug",
+            "page_slug",
+            "page_slugs",
+            "updated_at",
+        ]
+
+    def get_page_slugs(self, obj: CategoryLanding) -> dict[str, str]:
+        return category_page_slugs(obj)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

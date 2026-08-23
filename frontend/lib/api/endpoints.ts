@@ -3,6 +3,7 @@ import {
   AttendanceSummarySchema,
   CartSchema,
   CategoryDetailSchema,
+  CategoryLandingSchema,
   CategorySchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -23,6 +24,7 @@ import {
   type Cart,
   type Category,
   type CategoryDetail,
+  type CategoryLanding,
   type CrmOrder,
   type CrmOrdersResponse,
   type FulfillmentOptions,
@@ -65,6 +67,13 @@ export function endpoints(fetcher: Fetcher) {
     async getCategories(): Promise<Category[]> {
       const raw = await fetcher<unknown>("/api/categories/");
       return parse(z.array(CategorySchema), raw);
+    },
+
+    async getCategoryLandings(locale?: string): Promise<CategoryLanding[]> {
+      const raw = await fetcher<unknown>("/api/category-landings/", {
+        headers: locale ? { "Accept-Language": locale } : undefined,
+      });
+      return parse(z.array(CategoryLandingSchema), raw);
     },
 
     async getCategory(pageSlug: string, locale: string): Promise<CategoryDetail> {

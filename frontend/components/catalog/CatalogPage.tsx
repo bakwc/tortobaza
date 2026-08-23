@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { publicApi } from "@/lib/api/public-api";
 import { getAllProducts } from "@/lib/api/catalog";
 import { CategoryPills } from "@/components/catalog/CategoryPills";
@@ -7,9 +8,10 @@ import { CartSidebar } from "@/components/catalog/CartSidebar";
 import { MobileCartBar } from "@/components/catalog/MobileCartBar";
 
 export async function CatalogPage() {
-  const [categories, products, t] = await Promise.all([
+  const [categories, products, landings, t] = await Promise.all([
     publicApi.getCategories(),
     getAllProducts(),
+    publicApi.getCategoryLandings(),
     getTranslations("catalog"),
   ]);
 
@@ -24,6 +26,8 @@ export async function CatalogPage() {
     productsByCategory.has(c.slug),
   );
 
+  const birthdayLanding = landings.find((l) => l.slug === "birthday-cakes");
+
   return (
     <div className="mx-auto max-w-[1400px] px-6">
       <div className="pt-10 pb-2">
@@ -33,6 +37,18 @@ export async function CatalogPage() {
         <p className="mt-4 max-w-3xl text-base leading-relaxed text-[var(--ink)]/75">
           {t("homeIntro")}
         </p>
+        {birthdayLanding?.page_slug ? (
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--ink)]/70">
+            {t("birthdayCakesIntro")}{" "}
+            <Link
+              href={`/categories/${birthdayLanding.page_slug}`}
+              className="underline underline-offset-2 hover:text-[var(--ink)]"
+            >
+              {t("birthdayCakesLink")}
+            </Link>
+            .
+          </p>
+        ) : null}
       </div>
 
       <CategoryPills categories={populatedCategories} />

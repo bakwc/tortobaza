@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { routing, type Locale } from "@/i18n/routing";
 import { sitemapFetch } from "@/lib/api/sitemap-fetch";
-import type { Category, ProductsPage } from "@/lib/api/types";
+import type { Category, CategoryLanding, ProductsPage } from "@/lib/api/types";
 import { absoluteUrl, localePath } from "@/lib/seo";
 import { PUBLIC_SITE_ORIGIN } from "@/lib/site-host";
 
@@ -72,12 +72,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const categoriesByLocale = await Promise.all(
-    routing.locales.map(async (locale) => ({
-      locale,
-      categories: await sitemapFetch<Category[]>("/api/categories/", locale),
-    })),
-  );
+  const [categoriesByLocale, landingsByLocale] = await Promise.all([
+    Promise.all(
+      routing.locales.map(async (locale) => ({
+        locale,
+        categories: await sitemapFetch<Category[]>("/api/categories/", locale),
+      })),
+    ),
+    Promise.all(
+      routing.locales.map(async (locale) => ({
+        locale,
+        landings: await sitemapFetch<CategoryLanding[]>(
+          "/api/category-landings/",
+          locale,
+        ),
+      })),
+    ),
+  ]);
 
   for (const { locale, categories } of categoriesByLocale) {
     for (const category of categories) {
@@ -98,6 +109,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ) as Partial<Record<Locale, string>>,
         ),
         lastModified: category.updated_at,
+        changeFrequency: "daily",
+        priority: 0.9,
+      });
+    }
+  }
+
+  for (const { locale, landings } of landingsByLocale) {
+    for (const landing of landings) {
+      if (!landing.page_slug) continue;
+      entries.push({
+        url: absoluteUrl(
+          PUBLIC_SITE_ORIGIN,
+          localePath(locale, `/categories/${landing.page_slug}`),
+        ),
+        alternates: sitemapAlternates(
+          Object.fromEntries(
+            routing.locales
+              .filter((alternateLocale) => landing.page_slugs[alternateLocale])
+              .map((alternateLocale) => [
+                alternateLocale,
+                `/categories/${landing.page_slugs[alternateLocale]}`,
+              ]),
+          ) as Partial<Record<Locale, string>>,
+        ),
+        lastModified: landing.updated_at,
         changeFrequency: "daily",
         priority: 0.9,
       });

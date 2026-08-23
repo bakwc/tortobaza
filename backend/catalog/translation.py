@@ -1,11 +1,28 @@
 from modeltranslation.translator import TranslationOptions, translator
 
-from catalog.models import Category, Option, OptionGroup, Product, ProductImage
+from catalog.models import (
+    Category,
+    CategoryLanding,
+    Option,
+    OptionGroup,
+    Product,
+    ProductImage,
+)
 
 
 class CategoryTranslationOptions(TranslationOptions):
     fields = (
         "name",
+        "page_slug",
+        "page_heading",
+        "page_description",
+        "seo_title",
+        "seo_description",
+    )
+
+
+class CategoryLandingTranslationOptions(TranslationOptions):
+    fields = (
         "page_slug",
         "page_heading",
         "page_description",
@@ -31,6 +48,7 @@ class ProductImageTranslationOptions(TranslationOptions):
 
 
 translator.register(Category, CategoryTranslationOptions)
+translator.register(CategoryLanding, CategoryLandingTranslationOptions)
 translator.register(Product, ProductTranslationOptions)
 translator.register(OptionGroup, OptionGroupTranslationOptions)
 translator.register(Option, OptionTranslationOptions)

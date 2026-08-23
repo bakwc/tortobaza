@@ -72,7 +72,9 @@
     "deliveryTierSameDayCutoff": "* when ordered before 15:00",
     "allCategories": "All categories",
     "breadcrumbsAria": "Breadcrumb",
-    "viewCategory": "View category"
+    "viewCategory": "View category",
+    "birthdayCakesIntro": "Looking for a birthday cake in Batumi?",
+    "birthdayCakesLink": "Explore custom birthday cakes and bento with same-day delivery"
   },
   "checkout": {
     "backToCatalog": "Back to catalog",

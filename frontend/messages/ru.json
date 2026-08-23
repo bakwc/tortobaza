@@ -72,7 +72,9 @@
     "deliveryTierSameDayCutoff": "* при заказе до 15.00",
     "allCategories": "Все категории",
     "breadcrumbsAria": "Хлебные крошки",
-    "viewCategory": "Смотреть категорию"
+    "viewCategory": "Смотреть категорию",
+    "birthdayCakesIntro": "Ищете торт на день рождения в Батуми?",
+    "birthdayCakesLink": "Смотрите торты на день рождения и бенто с доставкой в день заказа"
   },
   "checkout": {
     "backToCatalog": "Назад в каталог",

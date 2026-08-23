@@ -11,6 +11,14 @@ export const CategoryPageSlugsSchema = z.object({
   ru: z.string(),
 });
 
+export const CategoryLandingSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  page_slug: z.string(),
+  page_slugs: CategoryPageSlugsSchema,
+  updated_at: z.string(),
+});
+
 export const CategorySchema = z.object({
   id: z.number(),
   slug: z.string(),
@@ -29,6 +37,7 @@ export const CategorySchema = z.object({
 });
 
 export const CategoryDetailSchema = CategorySchema.extend({
+  source_page_slug: z.string(),
   page_heading: z.string(),
   page_description: z.string(),
   seo_title: z.string(),
@@ -287,6 +296,7 @@ export const CrmOrdersResponseSchema = z.object({
 });
 
 export type Category = z.infer<typeof CategorySchema>;
+export type CategoryLanding = z.infer<typeof CategoryLandingSchema>;
 export type CategoryDetail = z.infer<typeof CategoryDetailSchema>;
 export type ProductImage = z.infer<typeof ProductImageSchema>;
 export type Option = z.infer<typeof OptionSchema>;

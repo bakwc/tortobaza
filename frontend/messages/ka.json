@@ -72,7 +72,9 @@
     "deliveryTierSameDayCutoff": "* შეკვეთისას 15:00-მდე",
     "allCategories": "ყველა კატეგორია",
     "breadcrumbsAria": "ნავიგაცია",
-    "viewCategory": "კატეგორიის ნახვა"
+    "viewCategory": "კატეგორიის ნახვა",
+    "birthdayCakesIntro": "ეძებთ დაბადების დღის ტორტს ბათუმში?",
+    "birthdayCakesLink": "იხილეთ დაბადების დღის ტორტები და ბენტო იმავე დღის მიწოდებით"
   },
   "checkout": {
     "backToCatalog": "დაბრუნება კატალოგზე",

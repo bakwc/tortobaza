@@ -8,6 +8,7 @@ import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { SiteChrome } from "@/components/layout/SiteChrome";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { routing } from "@/i18n/routing";
 import { localBusinessJsonLd } from "@/lib/seo";
@@ -81,10 +82,10 @@ export default async function LocaleLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
             {showDevBanner ? <DevBanner /> : null}
-            <Header />
-            <main className="flex-1">{children}</main>
-            {modal}
-            <Footer />
+            <SiteChrome header={<Header />} footer={<Footer />}>
+              {children}
+              {modal}
+            </SiteChrome>
           </Providers>
         </NextIntlClientProvider>
       </body>
