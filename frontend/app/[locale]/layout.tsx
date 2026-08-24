@@ -73,10 +73,23 @@ export default async function LocaleLayout({
       className={`${jost.variable} ${montserrat.variable} ${cormorant.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.umamiBeforeSend = function(type, payload) {
+  var pathname = new URL(payload.url, window.location.origin).pathname;
+  var isInternal = /^\\/(en|ka|ru)\\/(attendance|crm|login)(\\/|$)/i;
+  if (isInternal.test(pathname)) {
+    return false;
+  }
+  return payload;
+};`,
+          }}
+        />
         <Script
           defer
           src="https://analytics.q7.su/script.js"
           data-website-id="b5412135-037c-4f9e-a31d-d7eb820b28a3"
+          data-before-send="umamiBeforeSend"
         />
         <JsonLd data={localBusinessJsonLd(origin)} />
         <NextIntlClientProvider locale={locale} messages={messages}>
