@@ -36,7 +36,12 @@ export default function DeliveryContentEn({ updatedLine }: { updatedLine: string
           <p>
             You may cancel free of charge if we have not yet started production for your order.
             Contact us as soon as possible at{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="delivery"
+            >
               {SITE_INFO.email}
             </Link>{" "}
             or{" "}
@@ -45,6 +50,8 @@ export default function DeliveryContentEn({ updatedLine }: { updatedLine: string
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2"
+              data-umami-event="outbound-whatsapp"
+              data-umami-event-source="delivery"
             >
               WhatsApp
             </Link>{" "}

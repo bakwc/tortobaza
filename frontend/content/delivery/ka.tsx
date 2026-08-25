@@ -37,7 +37,12 @@ export default function DeliveryContentKa({ updatedLine }: { updatedLine: string
           <p>
             შეკვეთის უფასოდ გაუქმება შესაძლებელია, თუ ჯერ არ დაგვიწყებია მისი წარმოება. დაგვიკავშირდით
             რაც შეიძლება სწრაფად{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="delivery"
+            >
               {SITE_INFO.email}
             </Link>{" "}
             ან{" "}
@@ -46,6 +51,8 @@ export default function DeliveryContentKa({ updatedLine }: { updatedLine: string
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2"
+              data-umami-event="outbound-whatsapp"
+              data-umami-event-source="delivery"
             >
               WhatsApp
             </Link>{" "}

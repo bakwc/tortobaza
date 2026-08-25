@@ -35,7 +35,12 @@ export default function AboutContentKa() {
               ელფოსტა
             </dt>
             <dd className="m-0">
-              <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+              <Link
+                href={`mailto:${SITE_INFO.email}`}
+                className="underline underline-offset-2"
+                data-umami-event="outbound-email"
+                data-umami-event-source="about"
+              >
                 {SITE_INFO.email}
               </Link>
             </dd>
@@ -45,7 +50,12 @@ export default function AboutContentKa() {
               ტელეფონი
             </dt>
             <dd className="m-0">
-              <Link href={SITE_INFO.phoneHref} className="underline underline-offset-2">
+              <Link
+                href={SITE_INFO.phoneHref}
+                className="underline underline-offset-2"
+                data-umami-event="outbound-phone"
+                data-umami-event-source="about"
+              >
                 {SITE_INFO.phone}
               </Link>
             </dd>
@@ -60,6 +70,8 @@ export default function AboutContentKa() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2"
+                data-umami-event="outbound-whatsapp"
+                data-umami-event-source="about"
               >
                 {SITE_INFO.phone}
               </Link>

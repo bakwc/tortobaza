@@ -15,7 +15,12 @@ export default function PrivacyContentRu({ updatedLine }: { updatedLine: string 
             Сайт {SITE_INFO.brand} управляется{" "}
             <span className="font-semibold">{SITE_INFO.legalName}</span> (ID {SITE_INFO.legalId}),{" "}
             {SITE_INFO.address.line1}, {SITE_INFO.address.city}, {SITE_INFO.address.country}. Контакт:{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>
             .
@@ -56,7 +61,12 @@ export default function PrivacyContentRu({ updatedLine }: { updatedLine: string 
           <p>
             По применимому законодательству вы можете иметь право на доступ, исправление, удаление или
             ограничение обработки. Напишите нам на{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>{" "}
             — мы ответим в разумный срок.

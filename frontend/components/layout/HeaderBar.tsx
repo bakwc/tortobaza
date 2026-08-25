@@ -73,6 +73,8 @@ export function HeaderBar() {
                   className={navClass}
                   target="_blank"
                   rel="noopener noreferrer"
+                  data-umami-event="outbound-b2b"
+                  data-umami-event-source="header"
                 >
                   {t(link.labelKey)}
                 </a>
@@ -128,6 +130,8 @@ export function HeaderBar() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setOpen(false)}
+                  data-umami-event="outbound-b2b"
+                  data-umami-event-source="header"
                 >
                   {t(link.labelKey)}
                 </a>

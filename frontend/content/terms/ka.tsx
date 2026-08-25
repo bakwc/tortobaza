@@ -14,11 +14,21 @@ export default function TermsContentKa({ updatedLine }: { updatedLine: string })
             <span className="font-semibold">{SITE_INFO.legalName}</span> (ID {SITE_INFO.legalId}),
             სავაჭრო სახელით {SITE_INFO.brand}. მისამართი: {SITE_INFO.address.line1},{" "}
             {SITE_INFO.address.city}, {SITE_INFO.address.country}.{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="terms"
+            >
               {SITE_INFO.email}
             </Link>
             ,{" "}
-            <Link href={SITE_INFO.phoneHref} className="underline underline-offset-2">
+            <Link
+              href={SITE_INFO.phoneHref}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-phone"
+              data-umami-event-source="terms"
+            >
               {SITE_INFO.phone}
             </Link>
             .

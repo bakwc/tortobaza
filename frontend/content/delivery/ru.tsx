@@ -35,15 +35,22 @@ export default function DeliveryContentRu({ updatedLine }: { updatedLine: string
           <h2 className="text-lg font-semibold tracking-wide uppercase md:text-xl">Отмена</h2>
           <p>
             Бесплатная отмена возможна до начала производства по заказу. Напишите как можно быстрее на{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="delivery"
+            >
               {SITE_INFO.email}
-            </Link>
+            </Link>{" "}
             или в{" "}
             <Link
               href={SITE_INFO.whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
               className="underline underline-offset-2"
+              data-umami-event="outbound-whatsapp"
+              data-umami-event-source="delivery"
             >
               WhatsApp
             </Link>{" "}

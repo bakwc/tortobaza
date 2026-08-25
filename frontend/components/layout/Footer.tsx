@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { SITE_INFO } from "@/lib/site-info";
 
 export async function Footer() {
   const t = await getTranslations("footer");
@@ -31,10 +32,12 @@ export async function Footer() {
         </nav>
         <div className="flex items-center gap-4">
           <a
-            href="https://www.instagram.com/sweet_chill_batumi"
+            href={SITE_INFO.instagramHref}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("instagramAria")}
+            data-umami-event="outbound-instagram"
+            data-umami-event-source="footer"
           >
             <Image
               src="/instagram_white.svg"
@@ -45,10 +48,12 @@ export async function Footer() {
             />
           </a>
           <a
-            href="https://wa.me/995511747841"
+            href={SITE_INFO.whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={t("whatsappAria")}
+            data-umami-event="outbound-whatsapp"
+            data-umami-event-source="footer"
           >
             <Image
               src="/whatsapp_white.png"

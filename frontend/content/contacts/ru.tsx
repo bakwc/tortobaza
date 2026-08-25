@@ -32,6 +32,8 @@ export default function ContactsContentRu() {
               target="_blank"
               rel="noopener noreferrer"
               className="pointer-events-auto inline-flex h-24 w-44 items-center justify-center rounded-full bg-[#5e5e5e]/85 text-[15px] font-medium tracking-[0.06em] uppercase text-white shadow-lg backdrop-blur-sm transition hover:bg-[#4a4a4a]"
+              data-umami-event="outbound-maps"
+              data-umami-event-source="contacts"
             >
               Открыть карту
             </a>
@@ -58,13 +60,23 @@ export default function ContactsContentRu() {
           </InfoColumn>
 
           <InfoColumn icon={<Phone strokeWidth={1.4} className="h-12 w-12" />} title="Телефон">
-            <a href={SITE_INFO.phoneHref} className="hover:opacity-80">
+            <a
+              href={SITE_INFO.phoneHref}
+              className="hover:opacity-80"
+              data-umami-event="outbound-phone"
+              data-umami-event-source="contacts"
+            >
               {SITE_INFO.phone}
             </a>
           </InfoColumn>
 
           <InfoColumn icon={<Mail strokeWidth={1.4} className="h-12 w-12" />} title="Email">
-            <a href={`mailto:${SITE_INFO.email}`} className="hover:opacity-80">
+            <a
+              href={`mailto:${SITE_INFO.email}`}
+              className="hover:opacity-80"
+              data-umami-event="outbound-email"
+              data-umami-event-source="contacts"
+            >
               {SITE_INFO.email}
             </a>
           </InfoColumn>
@@ -75,6 +87,8 @@ export default function ContactsContentRu() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80"
+              data-umami-event="outbound-instagram"
+              data-umami-event-source="contacts"
             >
               @sweet_chill_batumi
             </a>
@@ -86,6 +100,8 @@ export default function ContactsContentRu() {
               target="_blank"
               rel="noopener noreferrer"
               className="hover:opacity-80"
+              data-umami-event="outbound-whatsapp"
+              data-umami-event-source="contacts"
             >
               {SITE_INFO.phone}
             </a>

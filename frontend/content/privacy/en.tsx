@@ -13,7 +13,12 @@ export default function PrivacyContentEn({ updatedLine }: { updatedLine: string 
             {SITE_INFO.brand} is operated by <span className="font-semibold">{SITE_INFO.legalName}</span>{" "}
             (ID {SITE_INFO.legalId}), {SITE_INFO.address.line1}, {SITE_INFO.address.city},{" "}
             {SITE_INFO.address.country}. Contact:{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>
             .
@@ -55,7 +60,12 @@ export default function PrivacyContentEn({ updatedLine }: { updatedLine: string 
           <p>
             Under applicable law you may have access, correction, erasure, or restriction rights. To
             exercise these, contact us at{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>
             . We will respond within a reasonable time.

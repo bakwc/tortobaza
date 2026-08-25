@@ -13,7 +13,12 @@ export default function PrivacyContentKa({ updatedLine }: { updatedLine: string 
             {SITE_INFO.brand} ემსახურება <span className="font-semibold">{SITE_INFO.legalName}</span>{" "}
             (ID {SITE_INFO.legalId}), მისამართი {SITE_INFO.address.line1}, {SITE_INFO.address.city},{" "}
             {SITE_INFO.address.country}. კონტაქტი:{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>
             .
@@ -54,7 +59,12 @@ export default function PrivacyContentKa({ updatedLine }: { updatedLine: string 
           <p>
             კანონმდებლობის შესაბამისად შეიძლება გქონდეთ წვდომა, გასასწორებლად და წასაშლელად განაცხადის
             უფლება. გამოგვიგზავნეთ შეტყობინება აქ:{" "}
-            <Link href={`mailto:${SITE_INFO.email}`} className="underline underline-offset-2">
+            <Link
+              href={`mailto:${SITE_INFO.email}`}
+              className="underline underline-offset-2"
+              data-umami-event="outbound-email"
+              data-umami-event-source="privacy"
+            >
               {SITE_INFO.email}
             </Link>
             .
