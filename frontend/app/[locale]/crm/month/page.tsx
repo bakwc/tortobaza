@@ -24,6 +24,7 @@ import { useCrmOrdersByMonth } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import {
   formatAed,
+  formatCrmCompactDate,
   formatCrmDate,
   formatCrmMonth,
   getTbilisiTodayIsoDate,
@@ -61,7 +62,7 @@ function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder
 
 export default function CrmMonthPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <div className="mx-auto w-full max-w-5xl px-3 py-6 md:px-4 md:py-12">
       <CrmAuthGate>
         <Suspense
           fallback={
@@ -111,22 +112,22 @@ function CrmMonthBoard() {
           </Link>
         </Button>
       </div>
-      <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
-        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+      <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+        <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setSelectedMonth(shiftMonth(selectedMonth, -1))}
-            className="flex items-center gap-1.5"
+            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span>{t("prevMonth")}</span>
+            <span className="hidden sm:inline">{t("prevMonth")}</span>
           </Button>
 
-          <div className="flex w-full max-w-md flex-col items-center gap-1 text-center">
-            <div className="flex items-center gap-2 text-lg font-semibold text-[var(--ink)]">
-              <Calendar className="h-5 w-5 text-[var(--brand)]" />
-              <span>{formatCrmMonth(selectedMonth, locale)}</span>
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-2 text-base font-semibold text-[var(--ink)] md:text-lg">
+              <Calendar className="h-4 w-4 shrink-0 text-[var(--brand)] md:h-5 md:w-5" />
+              <span className="truncate">{formatCrmMonth(selectedMonth, locale)}</span>
             </div>
             <div className="flex items-center gap-2">
               {isCurrentMonth ? (
@@ -150,9 +151,9 @@ function CrmMonthBoard() {
             variant="outline"
             size="sm"
             onClick={() => setSelectedMonth(shiftMonth(selectedMonth, 1))}
-            className="flex items-center gap-1.5"
+            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
           >
-            <span>{t("nextMonth")}</span>
+            <span className="hidden sm:inline">{t("nextMonth")}</span>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -206,10 +207,11 @@ function CrmMonthBoard() {
                 href={`/crm?date=${group.date}`}
                 className="flex items-baseline justify-between gap-3 px-1 text-[var(--ink)] hover:text-[var(--brand)]"
               >
-                <span className="text-base font-semibold">
-                  {formatCrmDate(group.date, locale)}
+                <span className="min-w-0 truncate text-sm font-semibold md:text-base">
+                  <span className="md:hidden">{formatCrmCompactDate(group.date, locale)}</span>
+                  <span className="hidden md:inline">{formatCrmDate(group.date, locale)}</span>
                 </span>
-                <span className="text-xs font-medium text-[var(--muted-2)]">
+                <span className="shrink-0 text-xs font-medium text-[var(--muted-2)]">
                   {group.orders.length}
                 </span>
               </Link>
@@ -231,7 +233,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-3 rounded-2xl border px-3 py-2.5 shadow-sm",
+        "flex items-center gap-2 rounded-xl border px-2 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
         order.is_delivered
           ? "border-sky-200 bg-sky-50/70"
           : "border-[var(--line)] bg-white",
@@ -239,7 +241,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
     >
       <div
         className={cn(
-          "h-12 w-12 shrink-0 overflow-hidden rounded-lg border",
+          "h-10 w-10 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
           order.is_delivered
             ? "border-sky-200 bg-white"
             : "border-[var(--line)] bg-[var(--cream)]",
@@ -261,66 +263,73 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         )}
       </div>
 
-      <div className="flex min-w-[7rem] items-center gap-1.5 text-sm font-semibold text-[var(--ink)]">
-        <Clock className="h-3.5 w-3.5 text-[var(--brand)]" />
-        <span>{formatTimeSlot(order.time_start, order.time_end)}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
+            <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+            <span className="truncate">
+              {formatTimeSlot(order.time_start, order.time_end)}
+            </span>
+          </div>
+          <span className="ml-auto shrink-0 text-sm font-bold text-[var(--ink)]">
+            {formatAed(order.cake_price)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <p className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
+            {order.contact}
+          </p>
+          <span
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+              order.fulfillment_type === "delivery"
+                ? "bg-amber-100 text-amber-900"
+                : "bg-blue-100 text-blue-900",
+            )}
+          >
+            {order.fulfillment_type === "delivery" ? (
+              <Truck className="h-3 w-3" />
+            ) : (
+              <Store className="h-3 w-3" />
+            )}
+            <span className="hidden md:inline">
+              {order.fulfillment_type === "delivery" ? t("delivery") : t("pickup")}
+            </span>
+          </span>
+          <span
+            className={cn(
+              "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+              order.is_delivered
+                ? "bg-sky-600 text-white"
+                : "hidden bg-[var(--cream)] text-[var(--muted-2)] md:flex",
+            )}
+          >
+            <Check className="h-3 w-3 md:hidden" />
+            <span className="hidden md:inline">{t("delivered")}</span>
+          </span>
+          <span
+            className={cn(
+              "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+              order.is_paid
+                ? "bg-emerald-600 text-white"
+                : "hidden bg-[var(--cream)] text-[var(--muted-2)] md:flex",
+            )}
+          >
+            <CreditCard className="h-3 w-3 md:hidden" />
+            <span className="hidden md:inline">{t("paid")}</span>
+          </span>
+        </div>
       </div>
 
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)]">
-        {order.contact}
-      </p>
-
-      <span className="text-sm font-bold text-[var(--ink)]">
-        {formatAed(order.cake_price)}
-      </span>
-
-      <span
-        className={cn(
-          "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          order.fulfillment_type === "delivery"
-            ? "bg-amber-100 text-amber-900"
-            : "bg-blue-100 text-blue-900",
-        )}
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 shrink-0 px-0 md:w-auto md:px-3"
       >
-        {order.fulfillment_type === "delivery" ? (
-          <>
-            <Truck className="h-3 w-3" />
-            <span>{t("delivery")}</span>
-          </>
-        ) : (
-          <>
-            <Store className="h-3 w-3" />
-            <span>{t("pickup")}</span>
-          </>
-        )}
-      </span>
-
-      <span
-        className={cn(
-          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          order.is_delivered
-            ? "bg-sky-600 text-white"
-            : "bg-[var(--cream)] text-[var(--muted-2)]",
-        )}
-      >
-        {t("delivered")}
-      </span>
-
-      <span
-        className={cn(
-          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-          order.is_paid
-            ? "bg-emerald-600 text-white"
-            : "bg-[var(--cream)] text-[var(--muted-2)]",
-        )}
-      >
-        {t("paid")}
-      </span>
-
-      <Button asChild variant="outline" size="sm" className="h-8">
         <Link href={`/crm/${order.id}/edit`}>
-          <Pencil className="mr-1 h-3.5 w-3.5" />
-          {t("editOrder")}
+          <Pencil className="h-3.5 w-3.5 md:mr-1" />
+          <span className="hidden md:inline">{t("editOrder")}</span>
         </Link>
       </Button>
     </div>
