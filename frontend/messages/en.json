@@ -324,6 +324,12 @@
     "jumpToThisMonth": "Jump to this month",
     "monthLoadError": "Could not load orders for this month. Please try again.",
     "monthEmptyTitle": "No orders scheduled for this month",
-    "monthEmptyHint": "Use the arrows above to browse other months."
+    "monthEmptyHint": "Use the arrows above to browse other months.",
+    "deleteOrder": "Delete",
+    "deleteConfirmTitle": "Delete this order?",
+    "deleteConfirmBody": "The order will be hidden from the board.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete",
+    "deleteError": "Could not delete the order. Please try again."
   }
 }

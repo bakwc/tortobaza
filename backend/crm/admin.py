@@ -25,9 +25,10 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "prepayment",
         "is_paid",
         "payment_type",
+        "deleted",
     ]
     list_display_links = ["id", "date"]
-    list_filter = ["date", "fulfillment_type", "is_delivered", "is_paid", "payment_type"]
+    list_filter = ["date", "fulfillment_type", "is_delivered", "is_paid", "payment_type", "deleted"]
     search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
@@ -60,7 +61,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Metadata",
             {
-                "fields": ("id", "created_at", "updated_at"),
+                "fields": ("id", "deleted", "created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),

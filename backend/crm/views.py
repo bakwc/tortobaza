@@ -19,6 +19,10 @@ from crm.serializers import (
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
+def live_orders():
+    return CrmOrder.objects.filter(deleted=False)
+
+
 def crm_order_write_payload(request):
     payload = {}
     for key in request.data:
@@ -42,7 +46,7 @@ class CrmOrderListView(APIView):
         month = query_serializer.validated_data.get("month")
         if month:
             year_str, month_str = month.split("-")
-            orders = CrmOrder.objects.filter(
+            orders = live_orders().filter(
                 date__year=int(year_str),
                 date__month=int(month_str),
             ).prefetch_related("images")
@@ -54,7 +58,7 @@ class CrmOrderListView(APIView):
                 }
             )
         target_date = query_serializer.validated_data.get("date") or timezone.now().astimezone(_TB).date()
-        orders = CrmOrder.objects.filter(date=target_date).prefetch_related("images")
+        orders = live_orders().filter(date=target_date).prefetch_related("images")
         serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
         return Response(
             {
@@ -70,7 +74,7 @@ class CrmOrderListView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        order = CrmOrder.objects.prefetch_related("images").get(pk=order.pk)
+        order = live_orders().prefetch_related("images").get(pk=order.pk)
         return Response(
             CrmOrderSerializer(order, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -82,11 +86,11 @@ class CrmOrderDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk: int):
-        order = get_object_or_404(CrmOrder.objects.prefetch_related("images"), pk=pk)
+        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
 
     def put(self, request, pk: int):
-        order = get_object_or_404(CrmOrder.objects.prefetch_related("images"), pk=pk)
+        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
         serializer = CrmOrderWriteSerializer(
             order,
             data=crm_order_write_payload(request),
@@ -94,12 +98,18 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        order = CrmOrder.objects.prefetch_related("images").get(pk=order.pk)
+        order = live_orders().prefetch_related("images").get(pk=order.pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
 
     def patch(self, request, pk: int):
-        order = get_object_or_404(CrmOrder.objects.prefetch_related("images"), pk=pk)
+        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
         serializer = CrmOrderUpdateSerializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
+
+    def delete(self, request, pk: int):
+        order = get_object_or_404(live_orders(), pk=pk)
+        order.deleted = True
+        order.save(update_fields=["deleted", "updated_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)

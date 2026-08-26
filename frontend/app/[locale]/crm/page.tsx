@@ -25,9 +25,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCrmOrders, usePatchCrmOrder } from "@/hooks/useCrmOrders";
+import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { formatAed, getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -236,6 +237,8 @@ function CrmOrderCard({
   const t = useTranslations("crm");
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+  const deleteMutation = useDeleteCrmOrder();
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
@@ -412,6 +415,18 @@ function CrmOrderCard({
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     {t("editOrder")}
                   </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-[var(--danger)] hover:bg-red-50"
+                  onClick={() => {
+                    deleteMutation.reset();
+                    setIsDeleteOpen(true);
+                  }}
+                >
+                  {t("deleteOrder")}
                 </Button>
               </div>
             </div>
@@ -624,6 +639,17 @@ function CrmOrderCard({
           </div>
         </div>
       </div>
+      <CrmDeleteOrderDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        isPending={deleteMutation.isPending}
+        isError={deleteMutation.isError}
+        onConfirm={() =>
+          deleteMutation.mutate(order.id, {
+            onSuccess: () => setIsDeleteOpen(false),
+          })
+        }
+      />
     </div>
   );
 }

@@ -262,5 +262,9 @@ export function endpoints(fetcher: Fetcher) {
       });
       return parse(CrmOrderSchema, raw);
     },
+
+    async deleteCrmOrder(id: number): Promise<void> {
+      await fetcher<void>(`/api/crm/orders/${id}/`, { method: "DELETE" });
+    },
   };
 }

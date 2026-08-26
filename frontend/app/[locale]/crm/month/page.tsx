@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -14,13 +14,15 @@ import {
   Pencil,
   Plus,
   Store,
+  Trash2,
   Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCrmOrdersByMonth } from "@/hooks/useCrmOrders";
+import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import {
   formatAed,
@@ -229,6 +231,8 @@ function CrmMonthBoard() {
 function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
   const thumb = order.images[0];
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const deleteMutation = useDeleteCrmOrder();
 
   return (
     <div
@@ -335,6 +339,30 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           <span className="hidden md:inline">{t("editOrder")}</span>
         </Link>
       </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 shrink-0 px-0 text-[var(--danger)] hover:bg-red-50"
+        aria-label={t("deleteOrder")}
+        onClick={() => {
+          deleteMutation.reset();
+          setIsDeleteOpen(true);
+        }}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+      <CrmDeleteOrderDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        isPending={deleteMutation.isPending}
+        isError={deleteMutation.isError}
+        onConfirm={() =>
+          deleteMutation.mutate(order.id, {
+            onSuccess: () => setIsDeleteOpen(false),
+          })
+        }
+      />
     </div>
   );
 }

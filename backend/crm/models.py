@@ -45,6 +45,7 @@ class CrmOrder(models.Model):
         choices=PAYMENT_TYPE_CHOICES,
         default=PAYMENT_UNKNOWN,
     )
+    deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

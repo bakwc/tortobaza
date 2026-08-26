@@ -36,6 +36,9 @@ class CrmOrdersApiTests(TestCase):
         put_response = self.client.put("/api/crm/orders/1/", {})
         self.assertEqual(put_response.status_code, 403)
 
+        delete_response = self.client.delete("/api/crm/orders/1/")
+        self.assertEqual(delete_response.status_code, 403)
+
     def test_get_orders_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()
         yesterday = date(today.year, today.month, today.day - 1) if today.day > 1 else date(today.year, today.month - 1, 28)
@@ -356,3 +359,89 @@ class CrmOrdersApiTests(TestCase):
         self.assertIn(keep.id, image_ids)
         self.assertNotIn(drop.id, image_ids)
         self.assertFalse(CrmOrderImage.objects.filter(pk=drop.id).exists())
+
+    def test_delete_marks_order_deleted(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(f"/api/crm/orders/{order.id}/")
+        self.assertEqual(response.status_code, 204)
+        order.refresh_from_db()
+        self.assertTrue(order.deleted)
+        self.assertTrue(CrmOrder.objects.filter(pk=order.id).exists())
+
+    def test_deleted_orders_excluded_from_date_and_month_lists(self):
+        target_date = date(2026, 8, 26)
+        live = CrmOrder.objects.create(
+            date=target_date,
+            time_start=time(10, 0),
+            contact="Live",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        CrmOrder.objects.create(
+            date=target_date,
+            time_start=time(11, 0),
+            contact="Deleted",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("70.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            deleted=True,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        by_date = self.client.get("/api/crm/orders/", {"date": "2026-08-26"})
+        self.assertEqual(by_date.status_code, 200)
+        date_ids = [item["id"] for item in by_date.json()["orders"]]
+        self.assertEqual(date_ids, [live.id])
+
+        by_month = self.client.get("/api/crm/orders/", {"month": "2026-08"})
+        self.assertEqual(by_month.status_code, 200)
+        month_ids = [item["id"] for item in by_month.json()["orders"]]
+        self.assertEqual(month_ids, [live.id])
+
+    def test_deleted_order_detail_methods_return_404(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Deleted",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            deleted=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        detail_url = f"/api/crm/orders/{order.id}/"
+
+        get_response = self.client.get(detail_url)
+        self.assertEqual(get_response.status_code, 404)
+
+        put_response = self.client.put(detail_url, self._order_payload(), format="multipart")
+        self.assertEqual(put_response.status_code, 404)
+
+        patch_response = self.client.patch(detail_url, {"is_paid": True}, format="json")
+        self.assertEqual(patch_response.status_code, 404)
+
+        delete_response = self.client.delete(detail_url)
+        self.assertEqual(delete_response.status_code, 404)
+        order.refresh_from_db()
+        self.assertTrue(order.deleted)

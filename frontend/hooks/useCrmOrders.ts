@@ -71,3 +71,13 @@ export function useUpdateCrmOrder() {
     },
   });
 }
+
+export function useDeleteCrmOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteCrmOrder(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-orders"] });
+    },
+  });
+}
