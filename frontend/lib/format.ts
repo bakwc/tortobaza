@@ -114,14 +114,6 @@ export function formatCrmMonth(yyyyMm: string, locale: string): string {
   });
 }
 
-export function formatCrmShortDate(dateStr: string, locale: string): string {
-  const d = new Date(`${dateStr}T00:00:00`);
-  return d.toLocaleDateString(intlLocaleTag(locale), {
-    day: "numeric",
-    month: "short",
-  });
-}
-
 export function mondayFirstWeekdayLabels(locale: string): string[] {
   const tag = intlLocaleTag(locale);
   const monday = new Date(Date.UTC(2021, 5, 7));

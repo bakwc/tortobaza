@@ -12,6 +12,7 @@ import {
   CreditCard,
   Package,
   Pencil,
+  Plus,
   Store,
   Truck,
 } from "lucide-react";
@@ -23,8 +24,8 @@ import { useCrmOrdersByMonth } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import {
   formatAed,
+  formatCrmDate,
   formatCrmMonth,
-  formatCrmShortDate,
   getTbilisiTodayIsoDate,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,19 @@ function formatTimeSlot(start: string, end: string | null): string {
   const s = start.slice(0, 5);
   if (!end) return s;
   return `${s} – ${end.slice(0, 5)}`;
+}
+
+function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder[] }[] {
+  const groups: { date: string; orders: CrmOrder[] }[] = [];
+  for (const order of orders) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === order.date) {
+      last.orders.push(order);
+    } else {
+      groups.push({ date: order.date, orders: [order] });
+    }
+  }
+  return groups;
 }
 
 export default function CrmMonthPage() {
@@ -84,9 +98,17 @@ function CrmMonthBoard() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button asChild variant="outline">
           <Link href="/crm">{t("dailyBoard")}</Link>
+        </Button>
+        <Button asChild>
+          <Link
+            href={`/crm/new?date=${isCurrentMonth ? getTbilisiTodayIsoDate() : `${selectedMonth}-01`}`}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("createOrder")}
+          </Link>
         </Button>
       </div>
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
@@ -177,9 +199,24 @@ function CrmMonthBoard() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-2">
-          {orders.map((order) => (
-            <CrmMonthOrderRow key={order.id} order={order} />
+        <div className="grid gap-6">
+          {groupOrdersByDate(orders).map((group) => (
+            <section key={group.date} className="grid gap-2">
+              <Link
+                href={`/crm?date=${group.date}`}
+                className="flex items-baseline justify-between gap-3 px-1 text-[var(--ink)] hover:text-[var(--brand)]"
+              >
+                <span className="text-base font-semibold">
+                  {formatCrmDate(group.date, locale)}
+                </span>
+                <span className="text-xs font-medium text-[var(--muted-2)]">
+                  {group.orders.length}
+                </span>
+              </Link>
+              {group.orders.map((order) => (
+                <CrmMonthOrderRow key={order.id} order={order} />
+              ))}
+            </section>
           ))}
         </div>
       )}
@@ -189,7 +226,6 @@ function CrmMonthBoard() {
 
 function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
-  const locale = useLocale();
   const thumb = order.images[0];
 
   return (
@@ -224,13 +260,6 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           </div>
         )}
       </div>
-
-      <Link
-        href={`/crm?date=${order.date}`}
-        className="min-w-[4.5rem] text-sm font-semibold text-[var(--brand)] hover:underline"
-      >
-        {formatCrmShortDate(order.date, locale)}
-      </Link>
 
       <div className="flex min-w-[7rem] items-center gap-1.5 text-sm font-semibold text-[var(--ink)]">
         <Clock className="h-3.5 w-3.5 text-[var(--brand)]" />
