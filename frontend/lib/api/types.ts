@@ -272,7 +272,7 @@ export const CrmOrderImageSchema = z.object({
 export const CrmOrderSchema = z.object({
   id: z.number(),
   date: z.string(),
-  time_start: z.string(),
+  time_start: z.string().nullable(),
   time_end: z.string().nullable(),
   contact: z.string(),
   nickname: z.string(),
@@ -338,7 +338,7 @@ export type CrmOrderPaymentType = CrmOrder["payment_type"];
 
 export type CrmOrderWriteFields = {
   date: string;
-  time_start: string;
+  time_start: string | null;
   time_end: string | null;
   contact: string;
   nickname: string;

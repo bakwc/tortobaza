@@ -23,7 +23,7 @@ class CrmOrder(models.Model):
     ]
 
     date = models.DateField()
-    time_start = models.TimeField()
+    time_start = models.TimeField(null=True, blank=True)
     time_end = models.TimeField(null=True, blank=True)
     contact = models.TextField()
     nickname = models.CharField(max_length=100, blank=True)
@@ -53,11 +53,14 @@ class CrmOrder(models.Model):
         ordering = ["date", "time_start"]
 
     def __str__(self) -> str:
-        time_display = (
-            f"{self.time_start.strftime('%H:%M')}-{self.time_end.strftime('%H:%M')}"
-            if self.time_end
-            else self.time_start.strftime("%H:%M")
-        )
+        if self.time_start is None:
+            time_display = "unknown"
+        elif self.time_end:
+            time_display = (
+                f"{self.time_start.strftime('%H:%M')}-{self.time_end.strftime('%H:%M')}"
+            )
+        else:
+            time_display = self.time_start.strftime("%H:%M")
         return f"{self.date} {time_display} - {self.contact[:30]}"
 
 

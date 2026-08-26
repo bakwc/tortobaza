@@ -43,7 +43,8 @@ function shiftMonth(yyyyMm: string, delta: number): string {
   return `${nextYear}-${nextMonth}`;
 }
 
-function formatTimeSlot(start: string, end: string | null): string {
+function formatTimeSlot(start: string | null, end: string | null, unknownLabel: string): string {
+  if (!start) return unknownLabel;
   const s = start.slice(0, 5);
   if (!end) return s;
   return `${s} – ${end.slice(0, 5)}`;
@@ -271,7 +272,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         <div className="flex items-center gap-2">
           <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
             <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-            <span>{formatTimeSlot(order.time_start, order.time_end)}</span>
+            <span>{formatTimeSlot(order.time_start, order.time_end, t("timeUnknown"))}</span>
           </div>
           <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
             <span className="font-semibold text-[var(--ink)]">{order.weight}</span>

@@ -208,7 +208,8 @@ function CrmBoard() {
   );
 }
 
-function formatTimeSlot(start: string, end: string | null): string {
+function formatTimeSlot(start: string | null, end: string | null, unknownLabel: string): string {
+  if (!start) return unknownLabel;
   const s = start.slice(0, 5);
   if (!end) return s;
   return `${s} – ${end.slice(0, 5)}`;
@@ -378,7 +379,7 @@ function CrmOrderCard({
               <div className="flex items-center gap-1.5 lg:gap-2">
                 <Clock className="h-4 w-4 text-[var(--brand)] lg:h-5 lg:w-5" />
                 <span className="text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl">
-                  {formatTimeSlot(order.time_start, order.time_end)}
+                  {formatTimeSlot(order.time_start, order.time_end, t("timeUnknown"))}
                 </span>
               </div>
               <div className="flex items-center gap-2">

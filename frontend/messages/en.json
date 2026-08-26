@@ -309,6 +309,7 @@
     "dateLabel": "Date",
     "timeStart": "Start time",
     "timeEnd": "End time",
+    "timeUnknown": "Unknown",
     "fulfillmentLabel": "Fulfillment",
     "imagesDrop": "Drop images here or click to choose",
     "imagesHint": "You can select several files at once.",

@@ -29,6 +29,8 @@ def crm_order_write_payload(request):
         if key in ("images", "delete_image_ids"):
             continue
         payload[key] = request.data.get(key)
+    if payload.get("time_start") == "":
+        payload["time_start"] = None
     if payload.get("time_end") == "":
         payload["time_end"] = None
     payload["images"] = request.FILES.getlist("images")

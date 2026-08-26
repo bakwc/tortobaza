@@ -69,6 +69,8 @@ class CrmOrderAdmin(admin.ModelAdmin):
 
     @admin.display(description="Time")
     def time_slot(self, obj: CrmOrder) -> str:
+        if obj.time_start is None:
+            return "Unknown"
         if obj.time_end:
             return f"{obj.time_start.strftime('%H:%M')} – {obj.time_end.strftime('%H:%M')}"
         return obj.time_start.strftime("%H:%M")

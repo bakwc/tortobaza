@@ -53,6 +53,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
 
 
 class CrmOrderWriteSerializer(serializers.ModelSerializer):
+    time_start = serializers.TimeField(allow_null=True, required=False)
     time_end = serializers.TimeField(allow_null=True, required=False)
     images = serializers.ListField(
         child=serializers.ImageField(),
