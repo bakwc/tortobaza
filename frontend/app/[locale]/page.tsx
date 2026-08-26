@@ -23,7 +23,7 @@ export async function generateMetadata({
     routing.locales.map((loc) => [loc, "/"]),
   ) as Record<Locale, string>;
   const path = localePath(locale as Locale, "/");
-  const title = t("homeTitle");
+  const title = t("rootTitleTemplate", { title: t("homeTitle") });
   const description = t("homeDescription");
   return {
     title: { absolute: title },

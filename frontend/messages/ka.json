@@ -5,9 +5,10 @@
   "metadata": {
     "rootDefaultTitle": "Sweet & Chill — ტორტები",
     "rootTitleTemplate": "Sweet & Chill | {title}",
+    "pageTitleTemplate": "{title} | Sweet & Chill",
     "rootDescription": "ხელნაკეთი ტორტები, დესერტები და ინდივიდუალური შეკვეთები.",
     "rootKeywords": "ტორტები, დესერტები, ინდივიდუალური ტორტები, ბათუმი, Sweet & Chill, კონდიტერული",
-    "homeTitle": "ტორტები და დესერტები ბათუმში მიწოდებით | Sweet & Chill",
+    "homeTitle": "ტორტები და დესერტები ბათუმში მიწოდებით",
     "homeDescription": "შეუკვეთეთ ხელნაკეთი ტორტები და დესერტები ონლაინ Sweet & Chill-დან ბათუმში. მიწოდება ქალაქში, მათ შორის იმავე დღეს. ონლაინ გადახდა.",
     "orderTitle": "შეკვეთა",
     "orderDescription": "გადაათვალიერეთ და შეუკვეთეთ Sweet & Chill ტორტები და დესერტები.",

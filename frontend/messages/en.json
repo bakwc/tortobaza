@@ -5,9 +5,10 @@
   "metadata": {
     "rootDefaultTitle": "Sweet & Chill — Cakes",
     "rootTitleTemplate": "Sweet & Chill | {title}",
+    "pageTitleTemplate": "{title} | Sweet & Chill",
     "rootDescription": "Handcrafted cakes, desserts and custom orders.",
     "rootKeywords": "cakes, desserts, custom cakes, Batumi, Sweet & Chill, bakery",
-    "homeTitle": "Cakes and Desserts in Batumi with Delivery | Sweet & Chill",
+    "homeTitle": "Cakes and Desserts in Batumi with Delivery",
     "homeDescription": "Order handcrafted cakes and desserts online from Sweet & Chill in Batumi. Same-day delivery available. Custom cakes and online payment.",
     "orderTitle": "Order",
     "orderDescription": "Browse and order Sweet & Chill cakes and desserts.",

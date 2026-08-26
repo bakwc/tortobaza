@@ -47,7 +47,8 @@ export async function generateMetadata({
   }
 
   const origin = await getPublicSiteOrigin();
-  const title = category.seo_title || category.page_heading || category.name;
+  const pageTitle = category.seo_title || category.page_heading || category.name;
+  const title = t("pageTitleTemplate", { title: pageTitle });
   const description =
     category.seo_description ||
     category.page_description ||
@@ -62,7 +63,7 @@ export async function generateMetadata({
   }
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: {
       canonical: localePath(locale as Locale, path),
