@@ -2,6 +2,7 @@ import hashlib
 import html
 import json
 import threading
+import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, time, timedelta
@@ -148,6 +149,17 @@ def _channel_message_link(chat_id: str, message_id: int) -> str:
     return f"https://t.me/c/{internal}/{message_id}"
 
 
+def _urlopen_with_retry(req: urllib.request.Request):
+    for attempt in range(3):
+        try:
+            return urllib.request.urlopen(req, timeout=60)
+        except urllib.error.HTTPError:
+            raise
+        except (TimeoutError, urllib.error.URLError):
+            if attempt == 2:
+                raise
+
+
 def _telegram_json(method: str, payload: dict) -> dict:
     token = settings.TELEGRAM_BOT_TOKEN
     body = json.dumps(payload).encode("utf-8")
@@ -157,7 +169,7 @@ def _telegram_json(method: str, payload: dict) -> dict:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req) as resp:
+    with _urlopen_with_retry(req) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     if not data["ok"]:
         raise RuntimeError(data)
@@ -188,7 +200,7 @@ def _telegram_multipart(method: str, fields: dict[str, str], files: list[tuple[s
         headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
         method="POST",
     )
-    with urllib.request.urlopen(req) as resp:
+    with _urlopen_with_retry(req) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     if not data["ok"]:
         raise RuntimeError(data)

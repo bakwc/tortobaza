@@ -1,5 +1,6 @@
 import html
 import json
+import urllib.error
 import urllib.request
 
 from django.conf import settings
@@ -119,6 +120,17 @@ def build_order_notification_text(order: Order) -> str:
     return "\n".join(lines)
 
 
+def _urlopen_with_retry(req: urllib.request.Request):
+    for attempt in range(3):
+        try:
+            return urllib.request.urlopen(req, timeout=60)
+        except urllib.error.HTTPError:
+            raise
+        except (TimeoutError, urllib.error.URLError):
+            if attempt == 2:
+                raise
+
+
 def send_order_notification(order: Order) -> None:
     if order.environment == Order.ENV_DEV:
         return
@@ -147,7 +159,7 @@ def send_order_notification(order: Order) -> None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    urllib.request.urlopen(req)
+    _urlopen_with_retry(req)
 
 
 def build_order_paid_notification_text(order: Order) -> str:
@@ -190,4 +202,4 @@ def send_order_paid_notification(order: Order) -> None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    urllib.request.urlopen(req)
+    _urlopen_with_retry(req)
