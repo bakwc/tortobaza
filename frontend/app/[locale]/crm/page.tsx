@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
+  AtSign,
   Calendar,
   Check,
   ChevronLeft,
@@ -512,6 +513,27 @@ function CrmOrderCard({
                 </div>
               </div>
             </div>
+
+            {order.nickname ? (
+              <div
+                className={cn(
+                  "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                  order.is_delivered
+                    ? "border border-sky-200/80 bg-white/80"
+                    : "bg-[var(--cream-soft)]",
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <AtSign className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  <div>
+                    <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
+                      {t("nickname")}
+                    </span>
+                    <p className="mt-1 whitespace-pre-wrap font-medium">{order.nickname}</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {order.delivery_address ? (
               <div

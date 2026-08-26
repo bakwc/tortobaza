@@ -282,6 +282,7 @@
     "delivery": "Delivery",
     "pickup": "Pickup",
     "contact": "Contact",
+    "nickname": "Nickname",
     "deliveryAddress": "Delivery address",
     "weight": "Weight",
     "filling": "Filling",

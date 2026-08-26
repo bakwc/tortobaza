@@ -282,6 +282,7 @@
     "delivery": "Доставка",
     "pickup": "Самовывоз",
     "contact": "Контакт",
+    "nickname": "Никнейм",
     "deliveryAddress": "Адрес доставки",
     "weight": "Вес",
     "filling": "Начинка",

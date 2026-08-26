@@ -16,6 +16,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "date",
         "time_slot",
         "contact_summary",
+        "nickname",
         "fulfillment_type",
         "is_delivered",
         "weight",
@@ -27,7 +28,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
     ]
     list_display_links = ["id", "date"]
     list_filter = ["date", "fulfillment_type", "is_delivered", "is_paid", "payment_type"]
-    search_fields = ["id", "contact", "delivery_address", "filling", "description", "weight"]
+    search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
     readonly_fields = ["id", "created_at", "updated_at"]
@@ -41,7 +42,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Customer & Delivery",
             {
-                "fields": ("contact", "delivery_address", "fulfillment_type", "is_delivered"),
+                "fields": ("contact", "nickname", "delivery_address", "fulfillment_type", "is_delivered"),
             },
         ),
         (

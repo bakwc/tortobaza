@@ -29,6 +29,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "time_start",
             "time_end",
             "contact",
+            "nickname",
             "delivery_address",
             "fulfillment_type",
             "is_delivered",
