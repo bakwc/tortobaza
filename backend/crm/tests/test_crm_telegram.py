@@ -1,7 +1,7 @@
 import io
 import json
 import re
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -125,15 +125,32 @@ class CrmTelegramTests(TestCase):
         order.refresh_from_db()
         self.assertIsNone(order.telegram_message_id)
 
-    def test_next_calendar_day_late_slot_posts(self):
+    def test_next_calendar_day_before_noon_does_not_post(self):
         now_tb = timezone.now().astimezone(_TB)
+        frozen = datetime.combine(now_tb.date(), time(11, 59), tzinfo=_TB)
         order = self._create_order(
             delta=timedelta(hours=2),
             date=now_tb.date() + timedelta(days=1),
             time_start=time(23, 0),
             time_end=None,
         )
-        sync_crm_order_to_telegram(order.pk)
+        with patch("crm.telegram.timezone.now", return_value=frozen):
+            sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(self.calls, [])
+        order.refresh_from_db()
+        self.assertIsNone(order.telegram_message_id)
+
+    def test_next_calendar_day_from_noon_posts(self):
+        now_tb = timezone.now().astimezone(_TB)
+        frozen = datetime.combine(now_tb.date(), time(12, 0), tzinfo=_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date() + timedelta(days=1),
+            time_start=time(23, 0),
+            time_end=None,
+        )
+        with patch("crm.telegram.timezone.now", return_value=frozen):
+            sync_crm_order_to_telegram(order.pk)
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.calls[0]["method"], "sendMessage")
 

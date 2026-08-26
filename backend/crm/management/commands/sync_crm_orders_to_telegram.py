@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand
@@ -14,7 +14,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         now = timezone.now().astimezone(_TB)
         start = (now - timedelta(days=7)).date()
-        end = now.date() + timedelta(days=1)
+        end = now.date()
+        if now.time() >= time(12, 0):
+            end = now.date() + timedelta(days=1)
         order_ids = list(
             CrmOrder.objects.filter(
                 telegram_message_id__isnull=True,
