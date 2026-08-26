@@ -1,7 +1,7 @@
 import io
 import json
 import re
-from datetime import timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -115,11 +115,27 @@ class CrmTelegramTests(TestCase):
         return CrmOrder.objects.create(**defaults)
 
     def test_outside_future_window_does_not_post(self):
-        order = self._create_order(delta=timedelta(hours=48))
+        now_tb = timezone.now().astimezone(_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date() + timedelta(days=2),
+        )
         sync_crm_order_to_telegram(order.pk)
         self.assertEqual(self.calls, [])
         order.refresh_from_db()
         self.assertIsNone(order.telegram_message_id)
+
+    def test_next_calendar_day_late_slot_posts(self):
+        now_tb = timezone.now().astimezone(_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date() + timedelta(days=1),
+            time_start=time(23, 0),
+            time_end=None,
+        )
+        sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["method"], "sendMessage")
 
     def test_within_window_posts_to_crm_chat(self):
         order = self._create_order(delta=timedelta(hours=2))

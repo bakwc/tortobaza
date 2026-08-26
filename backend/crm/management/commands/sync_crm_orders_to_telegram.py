@@ -14,7 +14,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         now = timezone.now().astimezone(_TB)
         start = (now - timedelta(days=7)).date()
-        end = (now + timedelta(hours=24)).date()
+        end = now.date() + timedelta(days=1)
         order_ids = list(
             CrmOrder.objects.filter(
                 telegram_message_id__isnull=True,

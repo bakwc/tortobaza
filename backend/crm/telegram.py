@@ -43,7 +43,8 @@ def crm_order_slot_datetime(order: CrmOrder) -> datetime:
 def crm_order_in_telegram_window(order: CrmOrder, now: datetime) -> bool:
     slot = crm_order_slot_datetime(order)
     now_tb = now.astimezone(_TB)
-    return now_tb - timedelta(days=7) <= slot <= now_tb + timedelta(hours=24)
+    last_allowed_date = now_tb.date() + timedelta(days=1)
+    return now_tb - timedelta(days=7) <= slot and order.date <= last_allowed_date
 
 
 def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
