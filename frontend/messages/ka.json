@@ -270,6 +270,7 @@
     "loadError": "Could not load orders for this date. Please try again.",
     "emptyTitle": "No orders scheduled for this day",
     "emptyHint": "Use the arrows above to browse other days.",
+    "paymentUnknown": "Unknown",
     "paymentCash": "Cash",
     "paymentTerminal": "Terminal",
     "paymentTbc": "TBC Transfer",

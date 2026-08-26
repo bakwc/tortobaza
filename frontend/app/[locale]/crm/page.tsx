@@ -211,6 +211,7 @@ function formatTimeSlot(start: string, end: string | null): string {
 }
 
 function paymentTypeLabel(type: string, t: (key: string) => string): string {
+  if (type === "unknown") return t("paymentUnknown");
   if (type === "cash") return t("paymentCash");
   if (type === "terminal") return t("paymentTerminal");
   if (type === "tbc") return t("paymentTbc");

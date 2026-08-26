@@ -101,7 +101,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     cake_price: "",
     prepayment: "0",
     is_paid: false,
-    payment_type: "cash",
+    payment_type: "unknown",
   };
 }
 
@@ -165,6 +165,7 @@ export function CrmOrderForm(
   };
 
   const paymentOptions: { value: CrmOrderPaymentType; label: string }[] = [
+    { value: "unknown", label: t("paymentUnknown") },
     { value: "cash", label: t("paymentCash") },
     { value: "terminal", label: t("paymentTerminal") },
     { value: "tbc", label: t("paymentTbc") },
@@ -369,7 +370,7 @@ export function CrmOrderForm(
               onValueChange={(value) =>
                 setField("payment_type", value as CrmOrderPaymentType)
               }
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-5"
             >
               {paymentOptions.map((option) => (
                 <label

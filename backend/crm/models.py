@@ -9,11 +9,13 @@ class CrmOrder(models.Model):
         (FULFILLMENT_PICKUP, "Pickup"),
     ]
 
+    PAYMENT_UNKNOWN = "unknown"
     PAYMENT_CASH = "cash"
     PAYMENT_TERMINAL = "terminal"
     PAYMENT_TBC = "tbc"
     PAYMENT_BOG = "bog"
     PAYMENT_TYPE_CHOICES = [
+        (PAYMENT_UNKNOWN, "Unknown"),
         (PAYMENT_CASH, "Cash"),
         (PAYMENT_TERMINAL, "Terminal"),
         (PAYMENT_TBC, "TBC Transfer"),
@@ -41,7 +43,7 @@ class CrmOrder(models.Model):
     payment_type = models.CharField(
         max_length=20,
         choices=PAYMENT_TYPE_CHOICES,
-        default=PAYMENT_CASH,
+        default=PAYMENT_UNKNOWN,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
