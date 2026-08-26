@@ -182,7 +182,7 @@ function CrmBoard() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid gap-3 md:gap-6">
           {orders.map((order) => (
             <CrmOrderCard
               key={order.id}
@@ -250,17 +250,17 @@ function CrmOrderCard({
   return (
     <div
       className={cn(
-        "rounded-3xl border p-6 shadow-sm transition-colors md:p-8",
+        "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
         order.is_delivered
           ? "border-sky-200 bg-sky-50/70"
           : "border-[var(--line)] bg-white",
       )}
     >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
-        <div className="flex flex-col gap-3 lg:col-span-5">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-8">
+        <div className="flex flex-col gap-2 lg:col-span-5 lg:gap-3">
           <div
             className={cn(
-              "relative aspect-square w-full overflow-hidden rounded-2xl border",
+              "relative mx-auto aspect-square w-full max-w-44 overflow-hidden rounded-xl border sm:max-w-56 lg:max-w-none lg:rounded-2xl",
               order.is_delivered
                 ? "border-sky-200 bg-white"
                 : "border-[var(--line)] bg-[var(--cream)]",
@@ -276,7 +276,7 @@ function CrmOrderCard({
                 <img
                   src={activeImage.image.src}
                   srcSet={activeImage.image.srcset}
-                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  sizes="(max-width: 1024px) 224px, 40vw"
                   alt={t("orderAlt", { id: order.id })}
                   className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                   loading="lazy"
@@ -287,21 +287,21 @@ function CrmOrderCard({
               </button>
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-[var(--muted-2)]">
-                <Package className="h-10 w-10 text-[var(--muted)]" />
-                <span className="text-sm">{t("noImage")}</span>
+                <Package className="h-7 w-7 text-[var(--muted)] lg:h-10 lg:w-10" />
+                <span className="text-xs lg:text-sm">{t("noImage")}</span>
               </div>
             )}
           </div>
 
           {images.length > 1 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap justify-center gap-1.5 lg:justify-start lg:gap-2">
               {images.map((img, idx) => (
                 <button
                   type="button"
                   key={img.id}
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
-                    "relative h-16 w-16 overflow-hidden rounded-xl border-2 transition-all",
+                    "relative h-11 w-11 overflow-hidden rounded-lg border-2 transition-all lg:h-16 lg:w-16 lg:rounded-xl",
                     order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
@@ -367,17 +367,17 @@ function CrmOrderCard({
           ) : null}
         </div>
 
-        <div className="flex flex-col justify-between gap-6 lg:col-span-7">
-          <div className="flex flex-col gap-4">
+        <div className="flex flex-col justify-between gap-3 lg:col-span-7 lg:gap-6">
+          <div className="flex flex-col gap-2.5 lg:gap-4">
             <div
               className={cn(
-                "flex flex-wrap items-center justify-between gap-2 border-b pb-4",
+                "flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 lg:pb-4",
                 order.is_delivered ? "border-sky-200" : "border-[var(--line)]",
               )}
             >
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-[var(--brand)]" />
-                <span className="text-2xl font-bold tracking-tight text-[var(--ink)]">
+              <div className="flex items-center gap-1.5 lg:gap-2">
+                <Clock className="h-4 w-4 text-[var(--brand)] lg:h-5 lg:w-5" />
+                <span className="text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl">
                   {formatTimeSlot(order.time_start, order.time_end)}
                 </span>
               </div>
@@ -433,7 +433,7 @@ function CrmOrderCard({
 
             <div
               className={cn(
-                "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                 order.is_delivered
                   ? "border border-sky-200/80 bg-white/80"
                   : "bg-[var(--cream-soft)]",
@@ -442,10 +442,10 @@ function CrmOrderCard({
               <div className="flex items-start gap-2">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                 <div>
-                  <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
+                  <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                     {t("contact")}
                   </span>
-                  <p className="mt-1 whitespace-pre-wrap font-medium">{order.contact}</p>
+                  <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.contact}</p>
                 </div>
               </div>
             </div>
@@ -453,7 +453,7 @@ function CrmOrderCard({
             {order.nickname ? (
               <div
                 className={cn(
-                  "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                  "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
                     : "bg-[var(--cream-soft)]",
@@ -462,10 +462,10 @@ function CrmOrderCard({
                 <div className="flex items-start gap-2">
                   <AtSign className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                   <div>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
+                    <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("nickname")}
                     </span>
-                    <p className="mt-1 whitespace-pre-wrap font-medium">{order.nickname}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.nickname}</p>
                   </div>
                 </div>
               </div>
@@ -474,7 +474,7 @@ function CrmOrderCard({
             {order.delivery_address ? (
               <div
                 className={cn(
-                  "rounded-2xl p-4 text-sm text-[var(--ink)]",
+                  "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
                     : "bg-[var(--cream-soft)]",
@@ -483,10 +483,10 @@ function CrmOrderCard({
                 <div className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                   <div>
-                    <span className="font-semibold text-xs uppercase tracking-wider text-[var(--ink)]/60">
+                    <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("deliveryAddress")}
                     </span>
-                    <p className="mt-1 whitespace-pre-wrap font-medium">
+                    <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">
                       {order.delivery_address}
                     </p>
                   </div>
@@ -494,49 +494,49 @@ function CrmOrderCard({
               </div>
             ) : null}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2 lg:gap-3">
               <div
                 className={cn(
-                  "rounded-2xl border p-3.5",
+                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
                     : "border-[var(--line)]",
                 )}
               >
-                <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
                   {t("weight")}
                 </span>
-                <p className="mt-1 font-semibold text-[var(--ink)]">{order.weight}</p>
+                <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.weight}</p>
               </div>
               <div
                 className={cn(
-                  "rounded-2xl border p-3.5",
+                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
                     : "border-[var(--line)]",
                 )}
               >
-                <span className="text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
                   {t("filling")}
                 </span>
-                <p className="mt-1 font-semibold text-[var(--ink)]">{order.filling}</p>
+                <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.filling}</p>
               </div>
             </div>
 
             {order.description ? (
               <div
                 className={cn(
-                  "rounded-2xl border p-3.5",
+                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
                     : "border-[var(--line)]",
                 )}
               >
-                <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-[var(--muted-2)]">
+                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
                   <FileText className="h-3.5 w-3.5" />
                   <span>{t("notes")}</span>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--ink)]">
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-[var(--ink)] lg:mt-1">
                   {order.description}
                 </p>
               </div>
@@ -544,7 +544,7 @@ function CrmOrderCard({
 
             <div
               className={cn(
-                "grid grid-cols-2 gap-3 rounded-2xl p-4 sm:grid-cols-4",
+                "grid grid-cols-2 gap-2 rounded-xl p-2.5 sm:grid-cols-4 lg:gap-3 lg:rounded-2xl lg:p-4",
                 order.is_delivered
                   ? "border border-sky-200/80 bg-white/80"
                   : "bg-[var(--cream-soft)]",
@@ -582,14 +582,14 @@ function CrmOrderCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2 pt-1 sm:gap-3 lg:pt-2">
             <Button
               type="button"
               size="lg"
               onClick={onToggleDelivered}
               disabled={isPatching}
               className={cn(
-                "h-14 font-semibold transition-all",
+                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
                 order.is_delivered
                   ? "bg-sky-600 text-white hover:bg-sky-700"
                   : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
@@ -598,13 +598,13 @@ function CrmOrderCard({
               {isPatching ? (
                 <Spinner className="h-5 w-5" />
               ) : order.is_delivered ? (
-                <span className="flex items-center gap-2">
-                  <Check className="h-5 w-5" />
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
                   {t("delivered")}
                 </span>
               ) : (
-                <span className="flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-[var(--muted-2)]" />
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <Truck className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
                   {t("markDelivered")}
                 </span>
               )}
@@ -616,7 +616,7 @@ function CrmOrderCard({
               onClick={onTogglePaid}
               disabled={isPatching}
               className={cn(
-                "h-14 font-semibold transition-all",
+                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
                 order.is_paid
                   ? "bg-emerald-600 text-white hover:bg-emerald-700"
                   : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
@@ -625,13 +625,13 @@ function CrmOrderCard({
               {isPatching ? (
                 <Spinner className="h-5 w-5" />
               ) : order.is_paid ? (
-                <span className="flex items-center gap-2">
-                  <Check className="h-5 w-5" />
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
                   {t("paid")}
                 </span>
               ) : (
-                <span className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-[var(--muted-2)]" />
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
                   {t("markPaid")}
                 </span>
               )}
