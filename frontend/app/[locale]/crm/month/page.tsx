@@ -265,13 +265,16 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
+          <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
             <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-            <span className="truncate">
-              {formatTimeSlot(order.time_start, order.time_end)}
-            </span>
+            <span>{formatTimeSlot(order.time_start, order.time_end)}</span>
           </div>
-          <span className="ml-auto shrink-0 text-sm font-bold text-[var(--ink)]">
+          <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
+            <span className="font-semibold text-[var(--ink)]">{order.weight}</span>
+            <span className="mx-1">·</span>
+            <span>{order.filling}</span>
+          </p>
+          <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
             {formatAed(order.cake_price)}
           </span>
         </div>
