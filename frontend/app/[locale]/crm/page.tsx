@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
@@ -70,6 +70,7 @@ function CrmBoard() {
   const searchParams = useSearchParams();
   const todayStr = getTbilisiTodayIsoDate();
   const selectedDate = searchParams.get("date") ?? todayStr;
+  const focusedOrderId = searchParams.get("order");
 
   const setSelectedDate = (next: string) => {
     router.replace(`/crm?date=${next}`);
@@ -80,6 +81,17 @@ function CrmBoard() {
 
   const orders = ordersQuery.data?.orders ?? [];
   const isToday = selectedDate === todayStr;
+
+  useEffect(() => {
+    if (!focusedOrderId || ordersQuery.isLoading) {
+      return;
+    }
+    const el = document.getElementById(`crm-order-${focusedOrderId}`);
+    if (!el) {
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedOrderId, ordersQuery.isLoading, orders.length]);
 
   const deliveredCount = orders.filter((o) => o.is_delivered).length;
   const paidCount = orders.filter((o) => o.is_paid).length;
@@ -187,6 +199,7 @@ function CrmBoard() {
             <CrmOrderCard
               key={order.id}
               order={order}
+              focused={focusedOrderId === String(order.id)}
               isPatching={patchMutation.isPending && patchMutation.variables?.id === order.id}
               onToggleDelivered={() =>
                 patchMutation.mutate({
@@ -226,11 +239,13 @@ function paymentTypeLabel(type: string, t: (key: string) => string): string {
 
 function CrmOrderCard({
   order,
+  focused,
   isPatching,
   onToggleDelivered,
   onTogglePaid,
 }: {
   order: CrmOrder;
+  focused: boolean;
   isPatching: boolean;
   onToggleDelivered: () => void;
   onTogglePaid: () => void;
@@ -250,11 +265,13 @@ function CrmOrderCard({
 
   return (
     <div
+      id={`crm-order-${order.id}`}
       className={cn(
         "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
         order.is_delivered
           ? "border-sky-200 bg-sky-50/70"
           : "border-[var(--line)] bg-white",
+        focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
     >
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-8">

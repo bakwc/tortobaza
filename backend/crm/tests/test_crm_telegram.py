@@ -262,6 +262,13 @@ class CrmTelegramTests(TestCase):
         self.assertIn("Доставка", text)
         self.assertIn("Оплачен:</b> да", text)
         self.assertIn("Доставлен / выдан:</b> да", text)
+        self.assertIn(
+            f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.pk}",
+            text,
+        )
+        self.assertIn(f"https://sweet-chill.ge/ru/crm/{order.pk}/edit", text)
+        self.assertIn(">смотреть</a>", text)
+        self.assertIn(">редактировать</a>", text)
 
     def test_create_api_schedules_sync(self):
         user = User.objects.create_user(username="staff", password="password")

@@ -99,12 +99,23 @@ def _format_slot_short(order: CrmOrder) -> str:
     return f"{date_part} {start}"
 
 
+def _crm_order_view_url(order: CrmOrder) -> str:
+    return f"{settings.SITE_URL}/ru/crm?date={order.date.isoformat()}&order={order.pk}"
+
+
+def _crm_order_edit_url(order: CrmOrder) -> str:
+    return f"{settings.SITE_URL}/ru/crm/{order.pk}/edit"
+
+
 def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines = []
     if order.deleted:
         lines.append("<b>ОТМЕНЁН</b>")
         lines.append("")
     lines.append(f"<b>CRM заказ #{order.pk}</b>")
+    view_href = html.escape(_crm_order_view_url(order), quote=True)
+    edit_href = html.escape(_crm_order_edit_url(order), quote=True)
+    lines.append(f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a>')
     lines.append("")
     lines.append(f"<b>Время:</b> {_esc(_format_slot(order))}")
     lines.append(f"<b>Тип:</b> {_FULFILLMENT_LABELS[order.fulfillment_type]}")
