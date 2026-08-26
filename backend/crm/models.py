@@ -46,6 +46,12 @@ class CrmOrder(models.Model):
         default=PAYMENT_UNKNOWN,
     )
     deleted = models.BooleanField(default=False)
+    telegram_message_id = models.BigIntegerField(null=True, blank=True)
+    telegram_media_ids = models.JSONField(default=list)
+    telegram_payload_hash = models.CharField(max_length=64, blank=True, default="")
+    telegram_posted_date = models.DateField(null=True, blank=True)
+    telegram_posted_time_start = models.TimeField(null=True, blank=True)
+    telegram_posted_time_end = models.TimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

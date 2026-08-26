@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from crm.models import CrmOrder, CrmOrderImage
+from crm.telegram import schedule_crm_order_telegram_sync
 
 
 class CrmOrderImageInline(admin.TabularInline):
@@ -32,7 +33,17 @@ class CrmOrderAdmin(admin.ModelAdmin):
     search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
-    readonly_fields = ["id", "created_at", "updated_at"]
+    readonly_fields = [
+        "id",
+        "created_at",
+        "updated_at",
+        "telegram_message_id",
+        "telegram_media_ids",
+        "telegram_payload_hash",
+        "telegram_posted_date",
+        "telegram_posted_time_start",
+        "telegram_posted_time_end",
+    ]
     fieldsets = (
         (
             "Schedule",
@@ -65,6 +76,20 @@ class CrmOrderAdmin(admin.ModelAdmin):
                 "classes": ("collapse",),
             },
         ),
+        (
+            "Telegram",
+            {
+                "fields": (
+                    "telegram_message_id",
+                    "telegram_media_ids",
+                    "telegram_payload_hash",
+                    "telegram_posted_date",
+                    "telegram_posted_time_start",
+                    "telegram_posted_time_end",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     @admin.display(description="Time")
@@ -78,3 +103,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
     @admin.display(description="Contact")
     def contact_summary(self, obj: CrmOrder) -> str:
         return obj.contact[:50]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        schedule_crm_order_telegram_sync(form.instance.pk)

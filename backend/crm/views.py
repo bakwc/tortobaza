@@ -15,6 +15,7 @@ from crm.serializers import (
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
 )
+from crm.telegram import schedule_crm_order_telegram_sync
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -76,6 +77,7 @@ class CrmOrderListView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
+        schedule_crm_order_telegram_sync(order.pk)
         order = live_orders().prefetch_related("images").get(pk=order.pk)
         return Response(
             CrmOrderSerializer(order, context={"request": request}).data,
@@ -100,6 +102,7 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        schedule_crm_order_telegram_sync(order.pk)
         order = live_orders().prefetch_related("images").get(pk=order.pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
 
@@ -108,10 +111,12 @@ class CrmOrderDetailView(APIView):
         serializer = CrmOrderUpdateSerializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        schedule_crm_order_telegram_sync(order.pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
 
     def delete(self, request, pk: int):
         order = get_object_or_404(live_orders(), pk=pk)
         order.deleted = True
         order.save(update_fields=["deleted", "updated_at"])
+        schedule_crm_order_telegram_sync(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
