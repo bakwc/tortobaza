@@ -52,5 +52,79 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         fields = ["is_delivered", "is_paid"]
 
 
+class CrmOrderWriteSerializer(serializers.ModelSerializer):
+    time_end = serializers.TimeField(allow_null=True, required=False)
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
+    delete_image_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+    )
+
+    class Meta:
+        model = CrmOrder
+        fields = [
+            "date",
+            "time_start",
+            "time_end",
+            "contact",
+            "nickname",
+            "delivery_address",
+            "fulfillment_type",
+            "is_delivered",
+            "weight",
+            "filling",
+            "description",
+            "cake_price",
+            "prepayment",
+            "is_paid",
+            "payment_type",
+            "images",
+            "delete_image_ids",
+        ]
+
+    def validate_delete_image_ids(self, value: list[int]) -> list[int]:
+        if not self.instance:
+            return value
+        existing = set(self.instance.images.filter(id__in=value).values_list("id", flat=True))
+        missing = set(value) - existing
+        if missing:
+            raise serializers.ValidationError("Unknown image ids.")
+        return value
+
+    def create(self, validated_data):
+        images = validated_data.pop("images", [])
+        validated_data.pop("delete_image_ids", None)
+        order = CrmOrder.objects.create(**validated_data)
+        self._apply_images(order, images, [])
+        return order
+
+    def update(self, instance, validated_data):
+        images = validated_data.pop("images", [])
+        delete_image_ids = validated_data.pop("delete_image_ids", [])
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        self._apply_images(instance, images, delete_image_ids)
+        return instance
+
+    def _apply_images(self, order: CrmOrder, images: list, delete_image_ids: list[int]) -> None:
+        if delete_image_ids:
+            CrmOrderImage.objects.filter(order=order, id__in=delete_image_ids).delete()
+        kept = list(order.images.order_by("position", "id"))
+        position = 0
+        for img in kept:
+            img.position = position
+            img.save(update_fields=["position"])
+            position += 1
+        for image in images:
+            CrmOrderImage.objects.create(order=order, image=image, position=position)
+            position += 1
+
+
 class CrmOrderQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)

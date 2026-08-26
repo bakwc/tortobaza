@@ -105,3 +105,40 @@ export function formatCrmDate(dateStr: string, locale: string): string {
     year: "numeric",
   });
 }
+
+export function mondayFirstWeekdayLabels(locale: string): string[] {
+  const tag = intlLocaleTag(locale);
+  const monday = new Date(Date.UTC(2021, 5, 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setUTCDate(monday.getUTCDate() + i);
+    return d.toLocaleDateString(tag, { weekday: "short", timeZone: "UTC" });
+  });
+}
+
+export function formatCrmMonthYear(year: number, month: number, locale: string): string {
+  const d = new Date(Date.UTC(year, month - 1, 1));
+  return d.toLocaleDateString(intlLocaleTag(locale), {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function parseIsoDateParts(iso: string): { year: number; month: number; day: number } {
+  const [yearStr, monthStr, dayStr] = iso.split("-");
+  return { year: Number(yearStr), month: Number(monthStr), day: Number(dayStr) };
+}
+
+export function toIsoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function daysInUtcMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+export function mondayFirstOffset(year: number, month: number): number {
+  const dow = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  return (dow + 6) % 7;
+}

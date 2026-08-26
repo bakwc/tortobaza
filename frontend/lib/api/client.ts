@@ -32,7 +32,7 @@ export async function clientFetch<T>(
   if (!finalHeaders.has("Accept-Language")) {
     finalHeaders.set("Accept-Language", getClientRequestLocale());
   }
-  if (body && !finalHeaders.has("Content-Type")) {
+  if (body && !(body instanceof FormData) && !finalHeaders.has("Content-Type")) {
     finalHeaders.set("Content-Type", "application/json");
   }
 

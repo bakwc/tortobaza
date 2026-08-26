@@ -328,6 +328,26 @@ export type UpdateCrmOrderBody = {
   is_paid?: boolean;
 };
 
+export type CrmOrderPaymentType = CrmOrder["payment_type"];
+
+export type CrmOrderWriteFields = {
+  date: string;
+  time_start: string;
+  time_end: string | null;
+  contact: string;
+  nickname: string;
+  delivery_address: string;
+  fulfillment_type: "delivery" | "pickup";
+  is_delivered: boolean;
+  weight: string;
+  filling: string;
+  description: string;
+  cake_price: string;
+  prepayment: string;
+  is_paid: boolean;
+  payment_type: CrmOrderPaymentType;
+};
+
 export type LoginBody = {
   username: string;
   password: string;

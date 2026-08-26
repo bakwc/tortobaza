@@ -50,7 +50,7 @@ export type Fetcher = <T>(
   path: string,
   options?: {
     method?: string;
-    body?: string;
+    body?: string | FormData;
     searchParams?: Record<string, string | number | undefined | null>;
     headers?: HeadersInit;
     cache?: RequestCache;
@@ -229,6 +229,27 @@ export function endpoints(fetcher: Fetcher) {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`, {
         method: "PATCH",
         body: JSON.stringify(body),
+      });
+      return parse(CrmOrderSchema, raw);
+    },
+
+    async getCrmOrder(id: number): Promise<CrmOrder> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`);
+      return parse(CrmOrderSchema, raw);
+    },
+
+    async createCrmOrder(body: FormData): Promise<CrmOrder> {
+      const raw = await fetcher<unknown>("/api/crm/orders/", {
+        method: "POST",
+        body,
+      });
+      return parse(CrmOrderSchema, raw);
+    },
+
+    async updateCrmOrder(id: number, body: FormData): Promise<CrmOrder> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`, {
+        method: "PUT",
+        body,
       });
       return parse(CrmOrderSchema, raw);
     },

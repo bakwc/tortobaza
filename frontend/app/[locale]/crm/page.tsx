@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   AtSign,
-  Calendar,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -23,13 +23,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ApiError } from "@/lib/api/client";
-import { isUnauthenticatedError, useCurrentUser, useLogin } from "@/hooks/useAuth";
+import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useCrmOrders, usePatchCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
-import { formatAed, formatCrmDate, getTbilisiTodayIsoDate } from "@/lib/format";
+import { formatAed, getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function shiftDate(isoDate: string, days: number): string {
@@ -45,112 +45,34 @@ function shiftDate(isoDate: string, days: number): string {
   return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
-function extractDetail(error: ApiError, fallback: string): string {
-  const parsed = error.parsed<Record<string, unknown>>();
-  if (parsed && typeof parsed === "object") {
-    const nonField = parsed["non_field_errors"];
-    if (Array.isArray(nonField) && typeof nonField[0] === "string") {
-      return nonField[0];
-    }
-    const detail = parsed["detail"];
-    if (typeof detail === "string") {
-      return detail;
-    }
-  }
-  return fallback;
-}
-
 export default function CrmPage() {
-  const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
-
-  if (currentUser.isLoading) {
-    return (
-      <div className="mx-auto flex min-h-[60vh] max-w-md items-center justify-center px-4">
-        <Spinner className="h-6 w-6 text-[var(--brand)]" />
-      </div>
-    );
-  }
-
-  if (currentUser.isError && !isUnauthenticatedError(currentUser.error)) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--danger)]">
-        {t("serverUnreachable")}
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
-      {currentUser.data ? <CrmBoard /> : <LoginForm />}
-    </div>
-  );
-}
-
-function LoginForm() {
-  const t = useTranslations("crm");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const login = useLogin();
-
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    login.mutate({ username, password });
-  };
-
-  const errorMessage =
-    login.error instanceof ApiError
-      ? extractDetail(login.error, t("invalidCredentials"))
-      : login.error
-        ? t("genericError")
-        : null;
-
-  return (
-    <div className="mx-auto max-w-md rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-semibold text-[var(--ink)]">{t("signInTitle")}</h1>
-      <p className="mt-1 text-sm text-[var(--muted-2)]">{t("signInSubtitle")}</p>
-
-      <form className="mt-6 grid gap-4" onSubmit={onSubmit}>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-            {t("username")}
-          </span>
-          <Input
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            autoComplete="username"
-            autoFocus
-          />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-            {t("password")}
-          </span>
-          <Input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
-          />
-        </label>
-
-        {errorMessage ? (
-          <p className="text-sm text-[var(--danger)]">{errorMessage}</p>
-        ) : null}
-
-        <Button type="submit" size="lg" disabled={login.isPending || !username || !password}>
-          {login.isPending ? <Spinner className="h-4 w-4" /> : t("signIn")}
-        </Button>
-      </form>
+      <CrmAuthGate>
+        <Suspense
+          fallback={
+            <div className="flex min-h-[40vh] items-center justify-center">
+              <Spinner className="h-6 w-6 text-[var(--brand)]" />
+            </div>
+          }
+        >
+          <CrmBoard />
+        </Suspense>
+      </CrmAuthGate>
     </div>
   );
 }
 
 function CrmBoard() {
   const t = useTranslations("crm");
-  const locale = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const todayStr = getTbilisiTodayIsoDate();
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const selectedDate = searchParams.get("date") ?? todayStr;
+
+  const setSelectedDate = (next: string) => {
+    router.replace(`/crm?date=${next}`);
+  };
 
   const ordersQuery = useCrmOrders(selectedDate);
   const patchMutation = usePatchCrmOrder();
@@ -165,10 +87,10 @@ function CrmBoard() {
     <div className="grid gap-6">
       <div className="flex justify-end">
         <Button asChild>
-          <a href="/admin/crm/crmorder/add/">
+          <Link href={`/crm/new?date=${selectedDate}`}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t("createOrder")}
-          </a>
+          </Link>
         </Button>
       </div>
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
@@ -176,20 +98,15 @@ function CrmBoard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((prev) => shiftDate(prev, -1))}
+            onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
             className="flex items-center gap-1.5"
           >
             <ChevronLeft className="h-4 w-4" />
             <span>{t("previousDay")}</span>
           </Button>
 
-          <div className="flex flex-col items-center gap-1 text-center">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[var(--brand)]" />
-              <h2 className="text-lg font-bold text-[var(--ink)]">
-                {formatCrmDate(selectedDate, locale)}
-              </h2>
-            </div>
+          <div className="flex w-full max-w-md flex-col items-center gap-1 text-center">
+            <MondayDatePicker value={selectedDate} onChange={setSelectedDate} />
             <div className="flex items-center gap-2">
               {isToday ? (
                 <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
@@ -211,7 +128,7 @@ function CrmBoard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedDate((prev) => shiftDate(prev, 1))}
+            onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
             className="flex items-center gap-1.5"
           >
             <span>{t("nextDay")}</span>
@@ -487,10 +404,10 @@ function CrmOrderCard({
                   #{order.id}
                 </span>
                 <Button asChild variant="outline" size="sm">
-                  <a href={`/admin/crm/crmorder/${order.id}/change/`}>
+                  <Link href={`/crm/${order.id}/edit`}>
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
                     {t("editOrder")}
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </div>

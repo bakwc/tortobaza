@@ -27,6 +27,15 @@ class CrmOrdersApiTests(TestCase):
         patch_response = self.client.patch("/api/crm/orders/1/", {"is_delivered": True})
         self.assertEqual(patch_response.status_code, 403)
 
+        post_response = self.client.post("/api/crm/orders/", {})
+        self.assertEqual(post_response.status_code, 403)
+
+        get_detail = self.client.get("/api/crm/orders/1/")
+        self.assertEqual(get_detail.status_code, 403)
+
+        put_response = self.client.put("/api/crm/orders/1/", {})
+        self.assertEqual(put_response.status_code, 403)
+
     def test_get_orders_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()
         yesterday = date(today.year, today.month, today.day - 1) if today.day > 1 else date(today.year, today.month - 1, 28)
@@ -175,3 +184,109 @@ class CrmOrdersApiTests(TestCase):
         response = self.client.get(f"/api/img/{crm_img.image.name}?w=600")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "image/webp")
+
+    def _jpeg(self, name: str) -> SimpleUploadedFile:
+        buf = io.BytesIO()
+        im = Image.new("RGB", (40, 40), color="pink")
+        im.save(buf, format="JPEG")
+        return SimpleUploadedFile(name, buf.getvalue(), content_type="image/jpeg")
+
+    def _order_payload(self, **overrides):
+        payload = {
+            "date": "2026-08-26",
+            "time_start": "12:00:00",
+            "contact": "Customer",
+            "nickname": "@nick",
+            "delivery_address": "Rustaveli 1",
+            "fulfillment_type": CrmOrder.FULFILLMENT_DELIVERY,
+            "is_delivered": False,
+            "weight": "2kg",
+            "filling": "Vanilla",
+            "description": "Note",
+            "cake_price": "120.00",
+            "prepayment": "30.00",
+            "is_paid": False,
+            "payment_type": CrmOrder.PAYMENT_CASH,
+        }
+        payload.update(overrides)
+        return payload
+
+    def test_create_order(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post("/api/crm/orders/", self._order_payload(), format="multipart")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["contact"], "Customer")
+        self.assertEqual(data["date"], "2026-08-26")
+        self.assertEqual(data["time_start"], "12:00:00")
+        self.assertEqual(data["nickname"], "@nick")
+        self.assertEqual(len(data["images"]), 0)
+        self.assertTrue(CrmOrder.objects.filter(pk=data["id"]).exists())
+
+    def test_create_order_with_multiple_images(self):
+        self.client.force_authenticate(user=self.user)
+        payload = self._order_payload(images=[self._jpeg("one.jpg"), self._jpeg("two.jpg")])
+        response = self.client.post("/api/crm/orders/", payload, format="multipart")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(len(data["images"]), 2)
+        self.assertEqual(data["images"][0]["position"], 0)
+        self.assertEqual(data["images"][1]["position"], 1)
+        self.assertIn("src", data["images"][0]["image"])
+        self.assertIn("srcset", data["images"][0]["image"])
+
+    def test_get_order_detail(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"/api/crm/orders/{order.id}/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["id"], order.id)
+        self.assertEqual(data["contact"], "Customer")
+
+    def test_put_order_fields_and_images(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        keep = CrmOrderImage.objects.create(order=order, image=self._jpeg("keep.jpg"), position=0)
+        drop = CrmOrderImage.objects.create(order=order, image=self._jpeg("drop.jpg"), position=1)
+
+        self.client.force_authenticate(user=self.user)
+        payload = self._order_payload(
+            contact="Updated",
+            weight="3kg",
+            cake_price="150.00",
+            time_end="14:00:00",
+            delete_image_ids=str(drop.id),
+            images=[self._jpeg("new.jpg")],
+        )
+        response = self.client.put(f"/api/crm/orders/{order.id}/", payload, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["contact"], "Updated")
+        self.assertEqual(data["weight"], "3kg")
+        self.assertEqual(data["cake_price"], "150.00")
+        self.assertEqual(data["time_end"], "14:00:00")
+        self.assertEqual(len(data["images"]), 2)
+        image_ids = {img["id"] for img in data["images"]}
+        self.assertIn(keep.id, image_ids)
+        self.assertNotIn(drop.id, image_ids)
+        self.assertFalse(CrmOrderImage.objects.filter(pk=drop.id).exists())

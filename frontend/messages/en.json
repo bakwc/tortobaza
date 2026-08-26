@@ -296,6 +296,26 @@
     "paid": "Paid",
     "markPaid": "Mark Paid",
     "createOrder": "Create order",
-    "editOrder": "Edit"
+    "editOrder": "Edit",
+    "formCreateTitle": "New order",
+    "formEditTitle": "Edit order",
+    "formBack": "Back to board",
+    "scheduleSection": "Schedule",
+    "customerSection": "Customer & delivery",
+    "cakeSection": "Cake details",
+    "paymentSection": "Payment",
+    "imagesSection": "Photos",
+    "dateLabel": "Date",
+    "timeStart": "Start time",
+    "timeEnd": "End time",
+    "fulfillmentLabel": "Fulfillment",
+    "imagesDrop": "Drop images here or click to choose",
+    "imagesHint": "You can select several files at once.",
+    "imagesRemove": "Remove image",
+    "saveOrder": "Save order",
+    "saveError": "Could not save the order. Please try again.",
+    "loadOrderError": "Could not load this order.",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
   }
 }

@@ -296,6 +296,26 @@
     "paid": "Оплачен",
     "markPaid": "Отметить оплату",
     "createOrder": "Создать заказ",
-    "editOrder": "Редактировать"
+    "editOrder": "Редактировать",
+    "formCreateTitle": "Новый заказ",
+    "formEditTitle": "Редактирование заказа",
+    "formBack": "К доске",
+    "scheduleSection": "Расписание",
+    "customerSection": "Клиент и доставка",
+    "cakeSection": "Торт",
+    "paymentSection": "Оплата",
+    "imagesSection": "Фотографии",
+    "dateLabel": "Дата",
+    "timeStart": "Время начала",
+    "timeEnd": "Время окончания",
+    "fulfillmentLabel": "Тип выдачи",
+    "imagesDrop": "Перетащите картинки сюда или нажмите, чтобы выбрать",
+    "imagesHint": "Можно выбрать несколько файлов сразу.",
+    "imagesRemove": "Удалить изображение",
+    "saveOrder": "Сохранить заказ",
+    "saveError": "Не удалось сохранить заказ. Попробуйте ещё раз.",
+    "loadOrderError": "Не удалось загрузить этот заказ.",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц"
   }
 }

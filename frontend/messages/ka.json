@@ -296,6 +296,26 @@
     "paid": "Paid",
     "markPaid": "Mark Paid",
     "createOrder": "შეკვეთის შექმნა",
-    "editOrder": "რედაქტირება"
+    "editOrder": "რედაქტირება",
+    "formCreateTitle": "ახალი შეკვეთა",
+    "formEditTitle": "შეკვეთის რედაქტირება",
+    "formBack": "დაფაზე დაბრუნება",
+    "scheduleSection": "განრიგი",
+    "customerSection": "კლიენტი და მიწოდება",
+    "cakeSection": "ტორტი",
+    "paymentSection": "გადახდა",
+    "imagesSection": "ფოტოები",
+    "dateLabel": "თარიღი",
+    "timeStart": "დაწყების დრო",
+    "timeEnd": "დასრულების დრო",
+    "fulfillmentLabel": "ტიპი",
+    "imagesDrop": "ჩააგდეთ სურათები ან დააჭირეთ ასარჩევად",
+    "imagesHint": "შეგიძლიათ რამდენიმე ფაილის ერთად ატვირთვა.",
+    "imagesRemove": "სურათის წაშლა",
+    "saveOrder": "შეკვეთის შენახვა",
+    "saveError": "შეკვეთის შენახვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    "loadOrderError": "შეკვეთის ჩატვირთვა ვერ მოხერხდა.",
+    "prevMonth": "წინა თვე",
+    "nextMonth": "შემდეგი თვე"
   }
 }
