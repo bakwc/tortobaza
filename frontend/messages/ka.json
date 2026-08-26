@@ -293,6 +293,8 @@
     "delivered": "Delivered",
     "markDelivered": "Mark Delivered",
     "paid": "Paid",
-    "markPaid": "Mark Paid"
+    "markPaid": "Mark Paid",
+    "createOrder": "შეკვეთის შექმნა",
+    "editOrder": "რედაქტირება"
   }
 }

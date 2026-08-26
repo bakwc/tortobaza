@@ -13,6 +13,8 @@ import {
   FileText,
   MapPin,
   Package,
+  Pencil,
+  Plus,
   Store,
   Truck,
   User,
@@ -160,6 +162,14 @@ function CrmBoard() {
 
   return (
     <div className="grid gap-6">
+      <div className="flex justify-end">
+        <Button asChild>
+          <a href="/admin/crm/crmorder/add/">
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("createOrder")}
+          </a>
+        </Button>
+      </div>
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <Button
@@ -475,6 +485,12 @@ function CrmOrderCard({
                 >
                   #{order.id}
                 </span>
+                <Button asChild variant="outline" size="sm">
+                  <a href={`/admin/crm/crmorder/${order.id}/change/`}>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    {t("editOrder")}
+                  </a>
+                </Button>
               </div>
             </div>
 
