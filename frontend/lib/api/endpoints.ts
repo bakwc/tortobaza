@@ -5,6 +5,7 @@ import {
   CategoryDetailSchema,
   CategoryLandingSchema,
   CategorySchema,
+  CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
   FulfillmentOptionsSchema,
@@ -25,6 +26,7 @@ import {
   type Category,
   type CategoryDetail,
   type CategoryLanding,
+  type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
   type FulfillmentOptions,
@@ -223,6 +225,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: date ? { date } : undefined,
       });
       return parse(CrmOrdersResponseSchema, raw);
+    },
+
+    async getCrmOrdersByMonth(month: string): Promise<CrmMonthlyOrdersResponse> {
+      const raw = await fetcher<unknown>("/api/crm/orders/", {
+        searchParams: { month },
+      });
+      return parse(CrmMonthlyOrdersResponseSchema, raw);
     },
 
     async patchCrmOrder(id: number, body: UpdateCrmOrderBody): Promise<CrmOrder> {

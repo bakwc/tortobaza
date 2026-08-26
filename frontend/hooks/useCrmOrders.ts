@@ -2,10 +2,18 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { CrmOrder, CrmOrdersResponse, UpdateCrmOrderBody } from "@/lib/api/types";
+import type {
+  CrmMonthlyOrdersResponse,
+  CrmOrder,
+  CrmOrdersResponse,
+  UpdateCrmOrderBody,
+} from "@/lib/api/types";
 
 export const crmOrdersQueryKey = (date?: string) =>
   date ? (["crm-orders", date] as const) : (["crm-orders"] as const);
+
+export const crmMonthlyOrdersQueryKey = (month: string) =>
+  ["crm-orders", "month", month] as const;
 
 export const crmOrderQueryKey = (id: number) => ["crm-order", id] as const;
 
@@ -13,6 +21,13 @@ export function useCrmOrders(date?: string) {
   return useQuery<CrmOrdersResponse>({
     queryKey: crmOrdersQueryKey(date),
     queryFn: () => api.getCrmOrders(date),
+  });
+}
+
+export function useCrmOrdersByMonth(month: string) {
+  return useQuery<CrmMonthlyOrdersResponse>({
+    queryKey: crmMonthlyOrdersQueryKey(month),
+    queryFn: () => api.getCrmOrdersByMonth(month),
   });
 }
 

@@ -39,6 +39,20 @@ class CrmOrderListView(APIView):
     def get(self, request):
         query_serializer = CrmOrderQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
+        month = query_serializer.validated_data.get("month")
+        if month:
+            year_str, month_str = month.split("-")
+            orders = CrmOrder.objects.filter(
+                date__year=int(year_str),
+                date__month=int(month_str),
+            ).prefetch_related("images")
+            serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
+            return Response(
+                {
+                    "month": month,
+                    "orders": serializer.data,
+                }
+            )
         target_date = query_serializer.validated_data.get("date") or timezone.now().astimezone(_TB).date()
         orders = CrmOrder.objects.filter(date=target_date).prefetch_related("images")
         serializer = CrmOrderSerializer(orders, many=True, context={"request": request})

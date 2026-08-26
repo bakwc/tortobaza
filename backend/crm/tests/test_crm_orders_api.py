@@ -128,6 +128,72 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["orders"][1]["time_start"], "16:30:00")
         self.assertEqual(data["orders"][1]["time_end"], "18:00:00")
 
+    def test_get_orders_by_month_and_ordering(self):
+        in_month_late_day = CrmOrder.objects.create(
+            date=date(2026, 8, 28),
+            time_start=time(9, 0),
+            contact="August 28",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("110.00"),
+            prepayment=Decimal("10.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        in_month_early_day = CrmOrder.objects.create(
+            date=date(2026, 8, 3),
+            time_start=time(18, 0),
+            contact="August 3",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("80.00"),
+            prepayment=Decimal("80.00"),
+            is_paid=True,
+            payment_type=CrmOrder.PAYMENT_TBC,
+        )
+        CrmOrder.objects.create(
+            date=date(2026, 7, 31),
+            time_start=time(12, 0),
+            contact="July",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Honey",
+            cake_price=Decimal("50.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        CrmOrder.objects.create(
+            date=date(2026, 9, 1),
+            time_start=time(12, 0),
+            contact="September",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="1kg",
+            filling="Honey",
+            cake_price=Decimal("50.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/", {"month": "2026-08"})
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data["month"], "2026-08")
+        self.assertNotIn("date", data)
+        self.assertEqual(len(data["orders"]), 2)
+        self.assertEqual(data["orders"][0]["id"], in_month_early_day.id)
+        self.assertEqual(data["orders"][1]["id"], in_month_late_day.id)
+
+    def test_get_orders_rejects_date_and_month_together(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/", {"date": "2026-08-25", "month": "2026-08"})
+        self.assertEqual(response.status_code, 400)
+
     def test_patch_order_status(self):
         order = CrmOrder.objects.create(
             date=date(2026, 8, 25),

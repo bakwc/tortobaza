@@ -128,3 +128,9 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
 
 class CrmOrderQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+
+    def validate(self, attrs):
+        if attrs.get("date") is not None and attrs.get("month") is not None:
+            raise serializers.ValidationError("Pass either date or month, not both.")
+        return attrs

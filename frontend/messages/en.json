@@ -317,6 +317,13 @@
     "saveError": "Could not save the order. Please try again.",
     "loadOrderError": "Could not load this order.",
     "prevMonth": "Previous month",
-    "nextMonth": "Next month"
+    "nextMonth": "Next month",
+    "monthlyOrders": "Monthly orders",
+    "dailyBoard": "Daily board",
+    "thisMonth": "This month",
+    "jumpToThisMonth": "Jump to this month",
+    "monthLoadError": "Could not load orders for this month. Please try again.",
+    "monthEmptyTitle": "No orders scheduled for this month",
+    "monthEmptyHint": "Use the arrows above to browse other months."
   }
 }
