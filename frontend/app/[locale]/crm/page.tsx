@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   AtSign,
@@ -10,10 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  Copy,
   CreditCard,
   FileText,
-  Link2,
   MapPin,
   Package,
   Pencil,
@@ -253,9 +251,7 @@ function CrmOrderCard({
   onTogglePaid: () => void;
 }) {
   const t = useTranslations("crm");
-  const locale = useLocale();
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
-  const [linkCopied, setLinkCopied] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -263,8 +259,6 @@ function CrmOrderCard({
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
-  const shareHref = `/crm?date=${order.date}&order=${order.id}`;
-  const sharePath = `/${locale}${shareHref}`;
 
   const priceNum = Number.parseFloat(order.cake_price);
   const prepayNum = Number.parseFloat(order.prepayment);
@@ -427,14 +421,15 @@ function CrmOrderCard({
                     </>
                   )}
                 </span>
-                <span
+                <Link
+                  href={`/crm?date=${order.date}&order=${order.id}`}
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)]",
+                    "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)] underline-offset-2 hover:underline",
                     order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
                   )}
                 >
                   #{order.id}
-                </span>
+                </Link>
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/crm/${order.id}/edit`}>
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -454,44 +449,6 @@ function CrmOrderCard({
                   {t("deleteOrder")}
                 </Button>
               </div>
-            </div>
-
-            <div
-              className={cn(
-                "flex items-center gap-2 rounded-xl p-2.5 text-sm lg:rounded-2xl lg:p-4",
-                order.is_delivered
-                  ? "border border-sky-200/80 bg-white/80"
-                  : "bg-[var(--cream-soft)]",
-              )}
-            >
-              <Link2 className="h-4 w-4 shrink-0 text-[var(--brand)]" />
-              <Link
-                href={shareHref}
-                className="min-w-0 flex-1 break-all font-medium text-[var(--brand)] underline underline-offset-2"
-              >
-                {sharePath}
-              </Link>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 px-2 sm:px-4"
-                aria-label={linkCopied ? t("orderLinkCopied") : t("copyOrderLink")}
-                onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}${sharePath}`);
-                  setLinkCopied(true);
-                  window.setTimeout(() => setLinkCopied(false), 2000);
-                }}
-              >
-                {linkCopied ? (
-                  <Check className="h-3.5 w-3.5 sm:mr-1.5" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 sm:mr-1.5" />
-                )}
-                <span className="hidden sm:inline">
-                  {linkCopied ? t("orderLinkCopied") : t("copyOrderLink")}
-                </span>
-              </Button>
             </div>
 
             <div
