@@ -7,10 +7,17 @@ YANDEX_MAPS_PROMPT_ID = "pmpt_6a8fc1da64a8819492de6245ec4b8d5a008cb33b36bf3697"
 YANDEX_MAPS_PROMPT_VERSION = "1"
 
 
-def resolve_yandex_maps_url(address: str) -> str:
+def cached_yandex_maps_url(address: str) -> str | None:
     cached = ResolvedYandexAddress.objects.filter(address=address).first()
     if cached:
         return cached.yandex_url
+    return None
+
+
+def resolve_yandex_maps_url(address: str) -> str:
+    cached = cached_yandex_maps_url(address)
+    if cached:
+        return cached
     client = OpenAI(api_key=settings.OPENAI_API_KEY)
     response = client.responses.create(
         prompt={

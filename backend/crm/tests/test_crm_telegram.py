@@ -3,7 +3,7 @@ import json
 import re
 from datetime import datetime, time, timedelta
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -14,7 +14,7 @@ from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
 
-from crm.models import CrmOrder, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderImage, ResolvedYandexAddress, YandexAddressResolveFailure
 from crm.telegram import (
     build_crm_order_telegram_html,
     crm_order_telegram_hash,
@@ -250,13 +250,28 @@ class CrmTelegramTests(TestCase):
         posted = self._create_order(delta=timedelta(hours=2))
         posted.telegram_message_id = 1
         posted.telegram_payload_hash = crm_order_telegram_hash(posted)
-        posted.save(update_fields=["telegram_message_id", "telegram_payload_hash"])
+        posted.telegram_posted_date = posted.date
+        posted.telegram_posted_time_start = posted.time_start
+        posted.telegram_posted_time_end = posted.time_end
+        posted.save(
+            update_fields=[
+                "telegram_message_id",
+                "telegram_payload_hash",
+                "telegram_posted_date",
+                "telegram_posted_time_start",
+                "telegram_posted_time_end",
+            ]
+        )
         pending = self._create_order(delta=timedelta(hours=3))
-        call_command("sync_crm_orders_to_telegram")
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            call_command("sync_crm_orders_to_telegram")
         pending.refresh_from_db()
         self.assertIsNotNone(pending.telegram_message_id)
         methods = [c["method"] for c in self.calls]
-        self.assertEqual(methods, ["sendMessage"])
+        self.assertEqual(methods, ["editMessageText", "sendMessage"])
 
     def test_single_photo_uses_send_photo(self):
         order = self._create_order(delta=timedelta(hours=2))
@@ -302,6 +317,7 @@ class CrmTelegramTests(TestCase):
         self.assertIn(f"https://sweet-chill.ge/ru/crm/{order.pk}/edit", text)
         self.assertIn(">смотреть</a>", text)
         self.assertIn(">редактировать</a>", text)
+        self.assertIn("<b>Адрес:</b> Rustaveli 1", text)
 
     def test_create_api_schedules_sync(self):
         user = User.objects.create_user(username="admin", password="password", is_staff=True)
@@ -328,3 +344,161 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(response.status_code, 201)
         scheduled.assert_called_once_with(response.json()["id"])
         self.assertNotIn("telegram_message_id", response.json())
+
+    def test_html_uses_yandex_link_when_cached(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        ResolvedYandexAddress.objects.create(
+            address="Rustaveli 1",
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        text = build_crm_order_telegram_html(order)
+        self.assertIn(
+            '<b>Адрес:</b> <a href="https://yandex.com/maps/?text=Rustaveli">Rustaveli 1</a>',
+            text,
+        )
+
+    def test_command_resolves_uncached_delivery_address(self):
+        posted = self._create_order(delta=timedelta(hours=2))
+        posted.telegram_message_id = 1
+        posted.telegram_payload_hash = crm_order_telegram_hash(posted)
+        posted.telegram_posted_date = posted.date
+        posted.telegram_posted_time_start = posted.time_start
+        posted.telegram_posted_time_end = posted.time_end
+        posted.save(
+            update_fields=[
+                "telegram_message_id",
+                "telegram_payload_hash",
+                "telegram_posted_date",
+                "telegram_posted_time_start",
+                "telegram_posted_time_end",
+            ]
+        )
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            call_command("sync_crm_orders_to_telegram")
+        cached = ResolvedYandexAddress.objects.get(address="Rustaveli 1")
+        self.assertEqual(cached.yandex_url, "https://yandex.com/maps/?text=Rustaveli")
+        self.assertEqual([c["method"] for c in self.calls], ["editMessageText"])
+        self.assertIn(
+            '<a href="https://yandex.com/maps/?text=Rustaveli">Rustaveli 1</a>',
+            self.calls[0]["payload"]["text"],
+        )
+        self.calls.clear()
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+        self.assertEqual(self.calls, [])
+
+    def test_command_skips_cached_address(self):
+        ResolvedYandexAddress.objects.create(
+            address="Rustaveli 1",
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        self._create_order(delta=timedelta(hours=2))
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+
+    def test_command_does_not_resolve_pickup_empty_deleted_or_outside_window(self):
+        self._create_order(
+            delta=timedelta(hours=2),
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            delivery_address="Pickup Street",
+        )
+        self._create_order(delta=timedelta(hours=2), delivery_address="")
+        self._create_order(delta=timedelta(hours=2), deleted=True, delivery_address="Deleted Street")
+        self._create_order(delta=timedelta(days=-8), delivery_address="Old Street")
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+
+    def test_command_unpublished_send_includes_yandex_link(self):
+        self._create_order(delta=timedelta(hours=2))
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            call_command("sync_crm_orders_to_telegram")
+        self.assertEqual(self.calls[0]["method"], "sendMessage")
+        self.assertIn(
+            '<a href="https://yandex.com/maps/?text=Rustaveli">Rustaveli 1</a>',
+            self.calls[0]["payload"]["text"],
+        )
+
+    def test_command_resolve_failure_increments_and_stops_after_three(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.side_effect = RuntimeError("down")
+            call_command("sync_crm_orders_to_telegram")
+        failure = YandexAddressResolveFailure.objects.get(address="Rustaveli 1")
+        self.assertEqual(failure.failure_count, 1)
+        order.refresh_from_db()
+        self.assertIsNotNone(order.telegram_message_id)
+        for expected in (2, 3):
+            with patch("crm.yandex_maps.OpenAI") as openai_cls:
+                openai_cls.return_value.responses.create.side_effect = RuntimeError("down")
+                call_command("sync_crm_orders_to_telegram")
+            failure.refresh_from_db()
+            self.assertEqual(failure.failure_count, expected)
+        self.calls.clear()
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+        self.assertEqual(self.calls, [])
+
+    def test_command_one_address_fails_other_resolves(self):
+        self._create_order(delta=timedelta(hours=2), delivery_address="Bad Addr")
+        self._create_order(delta=timedelta(hours=3), delivery_address="Good Addr")
+
+        def fake_create(*, prompt, input):
+            if input == "Bad Addr":
+                raise RuntimeError("down")
+            fake_response = MagicMock()
+            fake_response.output_text = "https://yandex.com/maps/?text=Good"
+            return fake_response
+
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.side_effect = fake_create
+            call_command("sync_crm_orders_to_telegram")
+        self.assertEqual(
+            YandexAddressResolveFailure.objects.get(address="Bad Addr").failure_count,
+            1,
+        )
+        cached = ResolvedYandexAddress.objects.get(address="Good Addr")
+        self.assertEqual(cached.yandex_url, "https://yandex.com/maps/?text=Good")
+
+    def test_command_success_deletes_failure_row(self):
+        YandexAddressResolveFailure.objects.create(address="Rustaveli 1", failure_count=2)
+        self._create_order(delta=timedelta(hours=2))
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            call_command("sync_crm_orders_to_telegram")
+        self.assertFalse(YandexAddressResolveFailure.objects.filter(address="Rustaveli 1").exists())
+
+    def test_struck_out_address_can_still_resolve_via_api(self):
+        YandexAddressResolveFailure.objects.create(address="Rustaveli 1", failure_count=3)
+        self._create_order(delta=timedelta(hours=2))
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+        user = User.objects.create_user(username="worker", password="password")
+        client = APIClient()
+        client.force_authenticate(user=user)
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            response = client.post(
+                "/api/crm/resolve-yandex-address/",
+                {"address": "Rustaveli 1"},
+                format="json",
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            ResolvedYandexAddress.objects.get(address="Rustaveli 1").yandex_url,
+            "https://yandex.com/maps/?text=Rustaveli",
+        )

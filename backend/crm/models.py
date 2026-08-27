@@ -79,6 +79,11 @@ class ResolvedYandexAddress(models.Model):
         return self.address[:50]
 
 
+class YandexAddressResolveFailure(models.Model):
+    address = models.TextField(unique=True)
+    failure_count = models.PositiveSmallIntegerField()
+
+
 class CrmOrderImage(models.Model):
     order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="crm_orders/")

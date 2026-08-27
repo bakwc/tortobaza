@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from crm.models import CrmOrder, CrmOrderImage
+from crm.yandex_maps import cached_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -52,7 +53,7 @@ def crm_order_in_telegram_window(order: CrmOrder, now: datetime) -> bool:
 
 def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     images = [[img.id, img.position] for img in order.images.all()]
-    return {
+    payload = {
         "cake_price": str(order.cake_price),
         "contact": order.contact,
         "date": order.date.isoformat(),
@@ -71,6 +72,11 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "weight": order.weight,
     }
+    if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
+        yandex_url = cached_yandex_maps_url(order.delivery_address)
+        if yandex_url:
+            payload["yandex_url"] = yandex_url
+    return payload
 
 
 def crm_order_telegram_hash(order: CrmOrder) -> str:
@@ -124,7 +130,12 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Время:</b> {_esc(_format_slot(order))}")
     lines.append(f"<b>Тип:</b> {_FULFILLMENT_LABELS[order.fulfillment_type]}")
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
-        lines.append(f"<b>Адрес:</b> {_esc(order.delivery_address)}")
+        yandex_url = cached_yandex_maps_url(order.delivery_address)
+        if yandex_url:
+            href = html.escape(yandex_url, quote=True)
+            lines.append(f'<b>Адрес:</b> <a href="{href}">{_esc(order.delivery_address)}</a>')
+        else:
+            lines.append(f"<b>Адрес:</b> {_esc(order.delivery_address)}")
     lines.append(f"<b>Контакт:</b> {_esc(order.contact)}")
     if order.nickname:
         lines.append(f"<b>Ник:</b> {_esc(order.nickname)}")
