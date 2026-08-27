@@ -477,16 +477,18 @@ function CrmOrderCard({
             >
               <div className="flex items-start gap-2">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
-                <div>
+                <div className="min-w-0 flex-1">
                   <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                     {t("contact")}
                   </span>
-                  <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.contact}</p>
-                  <CrmContactLinks
-                    tel={order.contact_tel}
-                    whatsapp={order.contact_whatsapp}
-                    telegram={order.contact_telegram}
-                  />
+                  <div className="mt-0.5 flex items-start justify-between gap-3 lg:mt-1">
+                    <p className="min-w-0 whitespace-pre-wrap font-medium">{order.contact}</p>
+                    <CrmContactLinks
+                      tel={order.contact_tel}
+                      whatsapp={order.contact_whatsapp}
+                      telegram={order.contact_telegram}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
