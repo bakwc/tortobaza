@@ -173,6 +173,8 @@ export function CrmOrderForm(
     { value: "terminal", label: t("paymentTerminal") },
     { value: "tbc", label: t("paymentTbc") },
     { value: "bog", label: t("paymentBog") },
+    { value: "flowwow", label: t("paymentFlowwow") },
+    { value: "crypto", label: t("paymentCrypto") },
   ];
 
   return (
@@ -431,7 +433,7 @@ export function CrmOrderForm(
               onValueChange={(value) =>
                 setField("payment_type", value as CrmOrderPaymentType)
               }
-              className="grid grid-cols-2 gap-2 sm:grid-cols-5"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-3"
             >
               {paymentOptions.map((option) => (
                 <label

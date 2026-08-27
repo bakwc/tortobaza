@@ -275,6 +275,8 @@
     "paymentTerminal": "Terminal",
     "paymentTbc": "TBC Transfer",
     "paymentBog": "BOG Transfer",
+    "paymentFlowwow": "Flowwow",
+    "paymentCrypto": "კრიპტოვალუტა",
     "enlargeTitle": "Click to enlarge",
     "orderAlt": "Order #{id}",
     "noImage": "No image",

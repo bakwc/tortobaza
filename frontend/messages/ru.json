@@ -275,6 +275,8 @@
     "paymentTerminal": "Терминал",
     "paymentTbc": "Перевод TBC",
     "paymentBog": "Перевод BOG",
+    "paymentFlowwow": "Flowwow",
+    "paymentCrypto": "Криптовалюта",
     "enlargeTitle": "Нажмите, чтобы увеличить",
     "orderAlt": "Заказ #{id}",
     "noImage": "Нет изображения",

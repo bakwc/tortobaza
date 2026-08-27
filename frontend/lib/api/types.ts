@@ -286,7 +286,7 @@ export const CrmOrderSchema = z.object({
   cake_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
-  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog"]),
+  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "flowwow", "crypto"]),
   created_at: z.string(),
   updated_at: z.string(),
   images: z.array(CrmOrderImageSchema),

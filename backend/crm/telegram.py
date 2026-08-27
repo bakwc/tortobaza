@@ -25,6 +25,8 @@ _PAYMENT_LABELS = {
     CrmOrder.PAYMENT_TERMINAL: "Терминал",
     CrmOrder.PAYMENT_TBC: "TBC",
     CrmOrder.PAYMENT_BOG: "BOG",
+    CrmOrder.PAYMENT_FLOWWOW: "Flowwow",
+    CrmOrder.PAYMENT_CRYPTO: "Криптовалюта",
 }
 
 _FULFILLMENT_LABELS = {
