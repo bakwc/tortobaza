@@ -44,6 +44,7 @@ function buildCrmOrderFormData(
   form.append("date", fields.date);
   form.append("time_start", fields.time_start ?? "");
   form.append("time_end", fields.time_end ?? "");
+  form.append("when_ready", fields.when_ready ? "true" : "false");
   form.append("contact", fields.contact);
   form.append("nickname", fields.nickname);
   form.append("delivery_address", fields.delivery_address);
@@ -70,6 +71,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     date: order.date,
     time_start: order.time_start ? sliceTime(order.time_start) : null,
     time_end: order.time_end ? sliceTime(order.time_end) : null,
+    when_ready: order.when_ready,
     contact: order.contact,
     nickname: order.nickname,
     delivery_address: order.delivery_address,
@@ -90,6 +92,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     date: initialDate,
     time_start: "",
     time_end: null,
+    when_ready: false,
     contact: "",
     nickname: "",
     delivery_address: "",
@@ -191,8 +194,8 @@ export function CrmOrderForm(
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/50">
           {t("scheduleSection")}
         </h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="flex flex-col gap-1.5 sm:col-span-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="flex flex-col gap-1.5 sm:col-span-2 lg:col-span-4">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
               {t("dateLabel")}
             </span>
@@ -204,8 +207,8 @@ export function CrmOrderForm(
             </span>
             <Input
               type="time"
-              required={fields.time_start !== null}
-              disabled={fields.time_start === null}
+              required={fields.time_start !== null && !fields.when_ready}
+              disabled={fields.time_start === null || fields.when_ready}
               value={fields.time_start ?? ""}
               onChange={(event) => setField("time_start", event.target.value)}
               className="rounded-2xl"
@@ -217,7 +220,7 @@ export function CrmOrderForm(
             </span>
             <Input
               type="time"
-              disabled={fields.time_start === null}
+              disabled={fields.time_start === null || fields.when_ready}
               value={fields.time_end ?? ""}
               onChange={(event) =>
                 setField("time_end", event.target.value === "" ? null : event.target.value)
@@ -232,20 +235,53 @@ export function CrmOrderForm(
             <button
               type="button"
               onClick={() => {
-                if (fields.time_start === null) {
-                  setField("time_start", "");
+                if (fields.time_start === null && !fields.when_ready) {
+                  setFields((prev) => ({ ...prev, time_start: "", when_ready: false }));
                   return;
                 }
-                setFields((prev) => ({ ...prev, time_start: null, time_end: null }));
+                setFields((prev) => ({
+                  ...prev,
+                  time_start: null,
+                  time_end: null,
+                  when_ready: false,
+                }));
               }}
               className={cn(
                 "flex h-12 cursor-pointer items-center justify-center rounded-2xl border px-4 text-sm",
-                fields.time_start === null
+                fields.time_start === null && !fields.when_ready
                   ? "border-[var(--brand)] bg-[var(--cream)]"
                   : "border-[var(--line)] bg-white",
               )}
             >
               {t("timeUnknown")}
+            </button>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+              &nbsp;
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                if (fields.when_ready) {
+                  setFields((prev) => ({ ...prev, time_start: "", when_ready: false }));
+                  return;
+                }
+                setFields((prev) => ({
+                  ...prev,
+                  time_start: null,
+                  time_end: null,
+                  when_ready: true,
+                }));
+              }}
+              className={cn(
+                "flex h-12 cursor-pointer items-center justify-center rounded-2xl border px-4 text-sm",
+                fields.when_ready
+                  ? "border-[var(--brand)] bg-[var(--cream)]"
+                  : "border-[var(--line)] bg-white",
+              )}
+            >
+              {t("timeWhenReady")}
             </button>
           </div>
         </div>

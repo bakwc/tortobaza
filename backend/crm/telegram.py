@@ -71,6 +71,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "weight": order.weight,
+        "when_ready": order.when_ready,
     }
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
@@ -91,6 +92,8 @@ def _format_money(amount: Decimal) -> str:
 
 def _format_slot(order: CrmOrder) -> str:
     date_part = order.date.strftime("%d.%m.%Y")
+    if order.when_ready:
+        return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
     start = order.time_start.strftime("%H:%M")
@@ -101,6 +104,8 @@ def _format_slot(order: CrmOrder) -> str:
 
 def _format_slot_short(order: CrmOrder) -> str:
     date_part = order.date.strftime("%d.%m")
+    if order.when_ready:
+        return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
     start = order.time_start.strftime("%H:%M")
@@ -281,7 +286,7 @@ def _delete_media(chat_id: str, media: list) -> None:
 
 
 def _slot_tuple(order: CrmOrder) -> tuple:
-    return (order.date, order.time_start, order.time_end)
+    return (order.date, order.time_start, order.time_end, order.when_ready)
 
 
 def _posted_slot_tuple(order: CrmOrder) -> tuple:
@@ -289,6 +294,7 @@ def _posted_slot_tuple(order: CrmOrder) -> tuple:
         order.telegram_posted_date,
         order.telegram_posted_time_start,
         order.telegram_posted_time_end,
+        order.telegram_posted_when_ready,
     )
 
 
@@ -299,6 +305,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
     order.telegram_posted_date = order.date
     order.telegram_posted_time_start = order.time_start
     order.telegram_posted_time_end = order.time_end
+    order.telegram_posted_when_ready = order.when_ready
     order.save(
         update_fields=[
             "telegram_message_id",
@@ -307,6 +314,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
             "telegram_posted_date",
             "telegram_posted_time_start",
             "telegram_posted_time_end",
+            "telegram_posted_when_ready",
             "updated_at",
         ]
     )

@@ -319,6 +319,26 @@ class CrmTelegramTests(TestCase):
         self.assertIn(">редактировать</a>", text)
         self.assertIn("<b>Адрес:</b> Rustaveli 1", text)
 
+    def test_when_ready_html(self):
+        order = self._create_order(delta=timedelta(hours=2), time_start=None, when_ready=True)
+        text = build_crm_order_telegram_html(order)
+        self.assertIn("по готовности", text)
+        self.assertNotIn("время не указано", text)
+
+    def test_when_ready_slot_change_from_unknown_replies(self):
+        order = self._create_order(delta=timedelta(hours=2), time_start=None)
+        sync_crm_order_to_telegram(order.pk)
+        original_id = CrmOrder.objects.get(pk=order.pk).telegram_message_id
+        self.calls.clear()
+        order.when_ready = True
+        order.save(update_fields=["when_ready", "updated_at"])
+        sync_crm_order_to_telegram(order.pk)
+        methods = [c["method"] for c in self.calls]
+        self.assertEqual(methods, ["editMessageText", "sendMessage"])
+        reply = self.calls[1]["payload"]
+        self.assertEqual(reply["reply_to_message_id"], original_id)
+        self.assertIn("по готовности", reply["text"])
+
     def test_create_api_schedules_sync(self):
         user = User.objects.create_user(username="admin", password="password", is_staff=True)
         client = APIClient()

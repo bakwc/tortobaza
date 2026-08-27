@@ -372,9 +372,28 @@ class CrmOrdersApiTests(TestCase):
         data = response.json()
         self.assertIsNone(data["time_start"])
         self.assertIsNone(data["time_end"])
+        self.assertFalse(data["when_ready"])
         order = CrmOrder.objects.get(pk=data["id"])
         self.assertIsNone(order.time_start)
         self.assertIsNone(order.time_end)
+        self.assertFalse(order.when_ready)
+
+    def test_create_order_when_ready(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            "/api/crm/orders/",
+            self._order_payload(time_start="", time_end="", when_ready=True),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIsNone(data["time_start"])
+        self.assertIsNone(data["time_end"])
+        self.assertTrue(data["when_ready"])
+        order = CrmOrder.objects.get(pk=data["id"])
+        self.assertIsNone(order.time_start)
+        self.assertIsNone(order.time_end)
+        self.assertTrue(order.when_ready)
 
     def test_create_order_with_multiple_images(self):
         self.client.force_authenticate(user=self.admin)

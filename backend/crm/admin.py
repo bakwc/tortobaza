@@ -43,12 +43,13 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "telegram_posted_date",
         "telegram_posted_time_start",
         "telegram_posted_time_end",
+        "telegram_posted_when_ready",
     ]
     fieldsets = (
         (
             "Schedule",
             {
-                "fields": ("date", "time_start", "time_end"),
+                "fields": ("date", "time_start", "time_end", "when_ready"),
             },
         ),
         (
@@ -86,6 +87,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
                     "telegram_posted_date",
                     "telegram_posted_time_start",
                     "telegram_posted_time_end",
+                    "telegram_posted_when_ready",
                 ),
                 "classes": ("collapse",),
             },
@@ -94,6 +96,8 @@ class CrmOrderAdmin(admin.ModelAdmin):
 
     @admin.display(description="Time")
     def time_slot(self, obj: CrmOrder) -> str:
+        if obj.when_ready:
+            return "When ready"
         if obj.time_start is None:
             return "Unknown"
         if obj.time_end:

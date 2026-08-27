@@ -274,6 +274,7 @@ export const CrmOrderSchema = z.object({
   date: z.string(),
   time_start: z.string().nullable(),
   time_end: z.string().nullable(),
+  when_ready: z.boolean(),
   contact: z.string(),
   nickname: z.string(),
   delivery_address: z.string(),
@@ -345,6 +346,7 @@ export type CrmOrderWriteFields = {
   date: string;
   time_start: string | null;
   time_end: string | null;
+  when_ready: boolean;
   contact: string;
   nickname: string;
   delivery_address: string;

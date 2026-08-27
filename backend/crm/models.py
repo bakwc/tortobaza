@@ -25,6 +25,7 @@ class CrmOrder(models.Model):
     date = models.DateField()
     time_start = models.TimeField(null=True, blank=True)
     time_end = models.TimeField(null=True, blank=True)
+    when_ready = models.BooleanField(default=False)
     contact = models.TextField()
     nickname = models.CharField(max_length=100, blank=True)
     delivery_address = models.TextField(blank=True)
@@ -52,6 +53,7 @@ class CrmOrder(models.Model):
     telegram_posted_date = models.DateField(null=True, blank=True)
     telegram_posted_time_start = models.TimeField(null=True, blank=True)
     telegram_posted_time_end = models.TimeField(null=True, blank=True)
+    telegram_posted_when_ready = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -59,7 +61,9 @@ class CrmOrder(models.Model):
         ordering = ["date", "time_start"]
 
     def __str__(self) -> str:
-        if self.time_start is None:
+        if self.when_ready:
+            time_display = "when ready"
+        elif self.time_start is None:
             time_display = "unknown"
         elif self.time_end:
             time_display = (
