@@ -245,7 +245,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 rounded-xl border px-2 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
+        "flex min-w-0 items-center gap-1.5 rounded-xl border px-1.5 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
         order.is_delivered
           ? "border-sky-300 bg-sky-100"
           : "border-[var(--line)] bg-white",
@@ -253,7 +253,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
     >
       <div
         className={cn(
-          "h-10 w-10 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
+          "h-8 w-8 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
           order.is_delivered
             ? "border-sky-200 bg-white"
             : "border-[var(--line)] bg-[var(--cream)]",
@@ -276,10 +276,10 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
             <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-            <span>
+            <span className="truncate">
               {formatTimeSlot(
                 order.time_start,
                 order.time_end,
@@ -298,13 +298,13 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
             {formatAed(order.cake_price)}
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <p className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
             {order.contact}
           </p>
           <span
             className={cn(
-              "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+              "hidden shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:flex",
               order.fulfillment_type === "delivery"
                 ? "bg-amber-100 text-amber-900"
                 : "bg-blue-100 text-blue-900",
