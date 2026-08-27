@@ -81,3 +81,9 @@ export function useDeleteCrmOrder() {
     },
   });
 }
+
+export function useResolveYandexAddress() {
+  return useMutation({
+    mutationFn: (address: string) => api.resolveYandexAddress(address),
+  });
+}

@@ -28,7 +28,7 @@ import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder } from "@/hooks/useCrmOrders";
+import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder, useResolveYandexAddress } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { formatAed, getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -255,6 +255,7 @@ function CrmOrderCard({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const deleteMutation = useDeleteCrmOrder();
+  const resolveAddress = useResolveYandexAddress();
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
@@ -490,9 +491,19 @@ function CrmOrderCard({
             ) : null}
 
             {order.delivery_address ? (
-              <div
+              <button
+                type="button"
+                disabled={resolveAddress.isPending}
+                onClick={() => {
+                  if (resolveAddress.isPending) return;
+                  resolveAddress.mutate(order.delivery_address, {
+                    onSuccess: (data) => {
+                      window.open(data.url, "_blank", "noopener,noreferrer");
+                    },
+                  });
+                }}
                 className={cn(
-                  "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
+                  "w-full cursor-pointer rounded-xl p-2.5 text-left text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
                     : "bg-[var(--cream-soft)]",
@@ -504,12 +515,19 @@ function CrmOrderCard({
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("deliveryAddress")}
                     </span>
-                    <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">
-                      {order.delivery_address}
-                    </p>
+                    {resolveAddress.isPending ? (
+                      <p className="mt-0.5 flex items-center gap-2 font-medium lg:mt-1">
+                        <Spinner className="h-4 w-4 text-[var(--brand)]" />
+                        {t("resolvingAddress")}
+                      </p>
+                    ) : (
+                      <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">
+                        {order.delivery_address}
+                      </p>
+                    )}
                   </div>
                 </div>
-              </div>
+              </button>
             ) : null}
 
             <div className="grid grid-cols-2 gap-2 lg:gap-3">

@@ -14,8 +14,10 @@ from crm.serializers import (
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
+    ResolveYandexAddressSerializer,
 )
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.yandex_maps import resolve_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -131,3 +133,14 @@ class CrmOrderDetailView(APIView):
         order.save(update_fields=["deleted", "updated_at"])
         schedule_crm_order_telegram_sync(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ResolveYandexAddressView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ResolveYandexAddressSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        url = resolve_yandex_maps_url(serializer.validated_data["address"])
+        return Response({"url": url})

@@ -8,6 +8,7 @@ import {
   CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
+  ResolveYandexAddressResponseSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
   OrderSchema,
@@ -29,6 +30,7 @@ import {
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
+  type ResolveYandexAddressResponse,
   type FulfillmentOptions,
   type FulfillmentType,
   type LoginBody,
@@ -265,6 +267,14 @@ export function endpoints(fetcher: Fetcher) {
 
     async deleteCrmOrder(id: number): Promise<void> {
       await fetcher<void>(`/api/crm/orders/${id}/`, { method: "DELETE" });
+    },
+
+    async resolveYandexAddress(address: string): Promise<ResolveYandexAddressResponse> {
+      const raw = await fetcher<unknown>("/api/crm/resolve-yandex-address/", {
+        method: "POST",
+        body: JSON.stringify({ address }),
+      });
+      return parse(ResolveYandexAddressResponseSchema, raw);
     },
   };
 }

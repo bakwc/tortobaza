@@ -285,6 +285,7 @@
     "contact": "Contact",
     "nickname": "Nickname",
     "deliveryAddress": "Delivery address",
+    "resolvingAddress": "Resolving...",
     "weight": "Weight",
     "filling": "Filling",
     "notes": "Notes / Description",

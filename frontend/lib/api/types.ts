@@ -301,6 +301,10 @@ export const CrmMonthlyOrdersResponseSchema = z.object({
   orders: z.array(CrmOrderSchema),
 });
 
+export const ResolveYandexAddressResponseSchema = z.object({
+  url: z.string(),
+});
+
 export type Category = z.infer<typeof CategorySchema>;
 export type CategoryLanding = z.infer<typeof CategoryLandingSchema>;
 export type CategoryDetail = z.infer<typeof CategoryDetailSchema>;
@@ -328,6 +332,7 @@ export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
+export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 
 export type UpdateCrmOrderBody = {
   is_delivered?: boolean;

@@ -127,6 +127,10 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             position += 1
 
 
+class ResolveYandexAddressSerializer(serializers.Serializer):
+    address = serializers.CharField()
+
+
 class CrmOrderQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)

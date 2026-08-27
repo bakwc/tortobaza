@@ -285,6 +285,7 @@
     "contact": "Контакт",
     "nickname": "Никнейм",
     "deliveryAddress": "Адрес доставки",
+    "resolvingAddress": "Резолвим...",
     "weight": "Вес",
     "filling": "Начинка",
     "notes": "Заметки / описание",
