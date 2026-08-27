@@ -102,3 +102,10 @@ class CrmOrderImage(models.Model):
 
     def __str__(self) -> str:
         return f"Image #{self.pk} for CrmOrder #{self.order_id}"
+
+
+class WhatsAppNumberCheck(CrmOrder):
+    class Meta:
+        proxy = True
+        verbose_name = "WhatsApp number check"
+        verbose_name_plural = "WhatsApp number check"

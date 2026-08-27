@@ -2,8 +2,9 @@ import json
 from io import StringIO
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 
 from crm.whatsapp import check_number
 
@@ -70,3 +71,32 @@ class WhatsAppTests(TestCase):
         ):
             call_command("check_whatsapp_number", "995595589443", stdout=out)
         self.assertEqual(json.loads(out.getvalue()), payload)
+
+    def test_admin_page_renders_form(self):
+        User.objects.create_superuser(username="admin", password="password")
+        client = Client()
+        client.login(username="admin", password="password")
+        response = client.get("/admin/crm/whatsappnumbercheck/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="number"')
+        self.assertNotContains(response, "<th>Exists</th>")
+
+    def test_admin_check_shows_result(self):
+        User.objects.create_superuser(username="admin", password="password")
+        client = Client()
+        client.login(username="admin", password="password")
+        payload = {
+            "number": "995595589443",
+            "exists": True,
+            "whatsappId": "225219746779246@lid",
+        }
+        with patch("crm.admin.check_number", return_value=payload) as check:
+            response = client.get(
+                "/admin/crm/whatsappnumbercheck/",
+                {"number": "995595589443"},
+            )
+        check.assert_called_once_with("995595589443")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "995595589443")
+        self.assertContains(response, "225219746779246@lid")
+        self.assertContains(response, "True")

@@ -1,7 +1,14 @@
+from django import forms
 from django.contrib import admin
+from django.template.response import TemplateResponse
 
-from crm.models import CrmOrder, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderImage, WhatsAppNumberCheck
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.whatsapp import check_number
+
+
+class WhatsAppNumberCheckForm(forms.Form):
+    number = forms.CharField()
 
 
 class CrmOrderImageInline(admin.TabularInline):
@@ -111,3 +118,38 @@ class CrmOrderAdmin(admin.ModelAdmin):
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         schedule_crm_order_telegram_sync(form.instance.pk)
+
+
+@admin.register(WhatsAppNumberCheck)
+class WhatsAppNumberCheckAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        form = WhatsAppNumberCheckForm(request.GET or None)
+        result = None
+        if form.is_valid():
+            result = check_number(form.cleaned_data["number"])
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "WhatsApp number check",
+            "form": form,
+            "result": result,
+            "opts": self.model._meta,
+            "cl": {"opts": self.model._meta},
+        }
+        if extra_context:
+            context.update(extra_context)
+
+        return TemplateResponse(
+            request,
+            "admin/crm/whatsappnumbercheck/change_list.html",
+            context,
+        )
