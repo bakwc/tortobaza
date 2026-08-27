@@ -17,10 +17,15 @@ export const crmMonthlyOrdersQueryKey = (month: string) =>
 
 export const crmOrderQueryKey = (id: number) => ["crm-order", id] as const;
 
+const CRM_BOARD_REFETCH_INTERVAL_MS = 15_000;
+
 export function useCrmOrders(date?: string) {
   return useQuery<CrmOrdersResponse>({
     queryKey: crmOrdersQueryKey(date),
     queryFn: () => api.getCrmOrders(date),
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -28,6 +33,9 @@ export function useCrmOrdersByMonth(month: string) {
   return useQuery<CrmMonthlyOrdersResponse>({
     queryKey: crmMonthlyOrdersQueryKey(month),
     queryFn: () => api.getCrmOrdersByMonth(month),
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
   });
 }
 
