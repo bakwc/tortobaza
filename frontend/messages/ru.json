@@ -299,6 +299,8 @@
     "markPaid": "Отметить оплату",
     "createOrder": "Создать заказ",
     "editOrder": "Редактировать",
+    "copyOrderLink": "Скопировать ссылку",
+    "orderLinkCopied": "Скопировано",
     "formCreateTitle": "Новый заказ",
     "formEditTitle": "Редактирование заказа",
     "formBack": "К доске",

@@ -299,6 +299,8 @@
     "markPaid": "Mark Paid",
     "createOrder": "შეკვეთის შექმნა",
     "editOrder": "რედაქტირება",
+    "copyOrderLink": "ბმულის კოპირება",
+    "orderLinkCopied": "დაკოპირებულია",
     "formCreateTitle": "ახალი შეკვეთა",
     "formEditTitle": "შეკვეთის რედაქტირება",
     "formBack": "დაფაზე დაბრუნება",
