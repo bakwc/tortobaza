@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -481,6 +482,11 @@ function CrmOrderCard({
                     {t("contact")}
                   </span>
                   <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.contact}</p>
+                  <CrmContactLinks
+                    tel={order.contact_tel}
+                    whatsapp={order.contact_whatsapp}
+                    telegram={order.contact_telegram}
+                  />
                 </div>
               </div>
             </div>

@@ -17,6 +17,24 @@ export function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
+export function TelegramIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 5 3 11.5l6 2 2 6L21 5z" />
+      <path d="m9 13.5 9-7" />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg

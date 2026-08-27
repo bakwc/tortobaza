@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from crm.models import CrmOrder, CrmOrderImage
+from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -58,6 +59,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     payload = {
         "cake_price": str(order.cake_price),
         "contact": order.contact,
+        "contact_e164": None,
         "date": order.date.isoformat(),
         "deleted": order.deleted,
         "delivery_address": order.delivery_address,
@@ -75,6 +77,9 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "weight": order.weight,
         "when_ready": order.when_ready,
     }
+    links = contact_links(order.contact)
+    if links is not None:
+        payload["contact_e164"] = links["e164"]
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
         if yandex_url:
@@ -144,6 +149,11 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
         else:
             lines.append(f"<b>Адрес:</b> {_esc(order.delivery_address)}")
     lines.append(f"<b>Контакт:</b> {_esc(order.contact)}")
+    links = contact_links(order.contact)
+    if links is not None:
+        lines.append(_esc(links["e164"]))
+        wa_href = html.escape(links["whatsapp"], quote=True)
+        lines.append(f'<a href="{wa_href}">WhatsApp</a>')
     if order.nickname:
         lines.append(f"<b>Ник:</b> {_esc(order.nickname)}")
     lines.append(f"<b>Вес:</b> {_esc(order.weight)}")

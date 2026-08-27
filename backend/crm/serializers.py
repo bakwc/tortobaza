@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from catalog.responsive_urls import detail_image
 from crm.models import CrmOrder, CrmOrderImage
+from crm.phone import contact_links
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -20,6 +21,9 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
+    contact_tel = serializers.CharField(read_only=True, allow_null=True)
+    contact_whatsapp = serializers.CharField(read_only=True, allow_null=True)
+    contact_telegram = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrmOrder
@@ -30,6 +34,9 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "time_end",
             "when_ready",
             "contact",
+            "contact_tel",
+            "contact_whatsapp",
+            "contact_telegram",
             "nickname",
             "delivery_address",
             "fulfillment_type",
@@ -45,6 +52,19 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "updated_at",
             "images",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        links = contact_links(instance.contact)
+        if links is None:
+            data["contact_tel"] = None
+            data["contact_whatsapp"] = None
+            data["contact_telegram"] = None
+            return data
+        data["contact_tel"] = links["tel"]
+        data["contact_whatsapp"] = links["whatsapp"]
+        data["contact_telegram"] = links["telegram"]
+        return data
 
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):
