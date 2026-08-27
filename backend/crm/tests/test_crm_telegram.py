@@ -309,7 +309,7 @@ class CrmTelegramTests(TestCase):
         text = build_crm_order_telegram_html(order)
         self.assertIn("Доставка", text)
         self.assertIn("Оплачен:</b> да", text)
-        self.assertIn("Доставлен / выдан:</b> да", text)
+        self.assertIn("Доставлен / выдан:</b> ✅", text)
         self.assertIn(
             f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.pk}",
             text,
@@ -322,6 +322,11 @@ class CrmTelegramTests(TestCase):
         self.assertNotIn("WhatsApp", text)
         self.assertNotIn("wa.me", text)
         self.assertNotIn("t.me", text)
+
+    def test_html_undelivered_uses_red_mark(self):
+        order = self._create_order(delta=timedelta(hours=2), is_delivered=False)
+        text = build_crm_order_telegram_html(order)
+        self.assertIn("Доставлен / выдан:</b> ❌", text)
 
     def test_html_adds_e164_and_whatsapp_for_phone_contact(self):
         order = self._create_order(delta=timedelta(hours=2), contact="+7 916 123 45 67 Иван")

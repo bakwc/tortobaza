@@ -68,6 +68,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "fulfillment_type": order.fulfillment_type,
         "images": images,
         "is_delivered": order.is_delivered,
+        "is_delivered_mark": "✅" if order.is_delivered else "❌",
         "is_paid": order.is_paid,
         "nickname": order.nickname,
         "payment_type": order.payment_type,
@@ -164,7 +165,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Предоплата:</b> {_format_money(order.prepayment)}")
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
-    lines.append(f"<b>Доставлен / выдан:</b> {'да' if order.is_delivered else 'нет'}")
+    lines.append(f"<b>Доставлен / выдан:</b> {'✅' if order.is_delivered else '❌'}")
     return "\n".join(lines)
 
 
