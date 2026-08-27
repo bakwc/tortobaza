@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
-import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
@@ -303,11 +302,6 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           <p className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
             {order.contact}
           </p>
-          <CrmContactLinks
-            tel={order.contact_tel}
-            whatsapp={order.contact_whatsapp}
-            telegram={order.contact_telegram}
-          />
           <span
             className={cn(
               "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
