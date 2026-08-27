@@ -2,9 +2,9 @@ from django import forms
 from django.contrib import admin
 from django.template.response import TemplateResponse
 
-from crm.models import CrmOrder, CrmOrderImage, WhatsAppNumberCheck
+from crm.models import CrmOrder, CrmOrderImage, WhatsAppGetNewQr, WhatsAppNumberCheck
 from crm.telegram import schedule_crm_order_telegram_sync
-from crm.whatsapp import check_number
+from crm.whatsapp import check_number, get_new_qr
 
 
 class WhatsAppNumberCheckForm(forms.Form):
@@ -151,5 +151,38 @@ class WhatsAppNumberCheckAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request,
             "admin/crm/whatsappnumbercheck/change_list.html",
+            context,
+        )
+
+
+@admin.register(WhatsAppGetNewQr)
+class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        result = None
+        if request.method == "POST":
+            result = get_new_qr()
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "WhatsApp get new QR",
+            "result": result,
+            "opts": self.model._meta,
+            "cl": {"opts": self.model._meta},
+        }
+        if extra_context:
+            context.update(extra_context)
+
+        return TemplateResponse(
+            request,
+            "admin/crm/whatsappgetnewqr/change_list.html",
             context,
         )

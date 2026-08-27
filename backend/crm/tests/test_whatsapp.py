@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 
-from crm.whatsapp import check_number
+from crm.whatsapp import check_number, get_new_qr
 
 
 class FakeHttpResponse:
@@ -100,3 +100,60 @@ class WhatsAppTests(TestCase):
         self.assertContains(response, "995595589443")
         self.assertContains(response, "225219746779246@lid")
         self.assertContains(response, "True")
+
+    def test_get_new_qr_stops_starts_then_fetches_qr(self):
+        calls = []
+        qr_payload = {
+            "qrCode": "data:image/png;base64,abc",
+            "status": "qr_ready",
+        }
+
+        def urlopen(req, timeout=None):
+            calls.append((req.get_method(), req.full_url))
+            if req.full_url.endswith("/stop"):
+                return FakeHttpResponse({"status": "disconnected"})
+            if req.full_url.endswith("/start"):
+                return FakeHttpResponse({"status": "initializing"})
+            if req.full_url.endswith("/qr"):
+                return FakeHttpResponse(qr_payload)
+            raise AssertionError(req.full_url)
+
+        with (
+            patch("crm.whatsapp.urllib.request.urlopen", side_effect=urlopen),
+            patch("crm.whatsapp.time.sleep") as sleep,
+        ):
+            result = get_new_qr()
+        sleep.assert_called_once_with(5)
+        self.assertEqual(result, qr_payload)
+        self.assertEqual(
+            calls,
+            [
+                ("POST", "http://localhost:2785/api/sessions/sess-1/stop"),
+                ("POST", "http://localhost:2785/api/sessions/sess-1/start"),
+                ("GET", "http://localhost:2785/api/sessions/sess-1/qr"),
+            ],
+        )
+
+    def test_admin_qr_page_renders_button(self):
+        User.objects.create_superuser(username="admin", password="password")
+        client = Client()
+        client.login(username="admin", password="password")
+        response = client.get("/admin/crm/whatsappgetnewqr/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Get new QR")
+        self.assertNotContains(response, 'alt="WhatsApp QR"')
+
+    def test_admin_qr_post_shows_image(self):
+        User.objects.create_superuser(username="admin", password="password")
+        client = Client()
+        client.login(username="admin", password="password")
+        payload = {
+            "qrCode": "data:image/png;base64,abc",
+            "status": "qr_ready",
+        }
+        with patch("crm.admin.get_new_qr", return_value=payload) as fetch:
+            response = client.post("/admin/crm/whatsappgetnewqr/")
+        fetch.assert_called_once_with()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'src="data:image/png;base64,abc"')
+        self.assertContains(response, "qr_ready")

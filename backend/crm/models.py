@@ -109,3 +109,10 @@ class WhatsAppNumberCheck(CrmOrder):
         proxy = True
         verbose_name = "WhatsApp number check"
         verbose_name_plural = "WhatsApp number check"
+
+
+class WhatsAppGetNewQr(CrmOrder):
+    class Meta:
+        proxy = True
+        verbose_name = "WhatsApp get new QR"
+        verbose_name_plural = "WhatsApp get new QR"
