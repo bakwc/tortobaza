@@ -247,7 +247,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
       className={cn(
         "flex items-center gap-2 rounded-xl border px-2 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
         order.is_delivered
-          ? "border-sky-200 bg-sky-50/70"
+          ? "border-sky-300 bg-sky-100"
           : "border-[var(--line)] bg-white",
       )}
     >

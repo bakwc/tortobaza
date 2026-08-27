@@ -279,7 +279,7 @@ function CrmOrderCard({
       className={cn(
         "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
         order.is_delivered
-          ? "border-sky-200 bg-sky-50/70"
+          ? "border-sky-300 bg-sky-100"
           : "border-[var(--line)] bg-white",
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
