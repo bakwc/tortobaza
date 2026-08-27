@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -18,6 +18,17 @@ from crm.serializers import (
 from crm.telegram import schedule_crm_order_telegram_sync
 
 _TB = ZoneInfo("Asia/Tbilisi")
+
+
+class CrmOrderWritePermission(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        if request.user.is_staff:
+            return True
+        if request.method == "PATCH":
+            return set(request.data.keys()) <= {"is_delivered"}
+        return False
 
 
 def live_orders():
@@ -41,7 +52,7 @@ def crm_order_write_payload(request):
 
 class CrmOrderListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CrmOrderWritePermission]
 
     def get(self, request):
         query_serializer = CrmOrderQuerySerializer(data=request.query_params)
@@ -87,7 +98,7 @@ class CrmOrderListView(APIView):
 
 class CrmOrderDetailView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CrmOrderWritePermission]
 
     def get(self, request, pk: int):
         order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)

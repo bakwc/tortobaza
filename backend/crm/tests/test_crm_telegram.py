@@ -304,7 +304,7 @@ class CrmTelegramTests(TestCase):
         self.assertIn(">редактировать</a>", text)
 
     def test_create_api_schedules_sync(self):
-        user = User.objects.create_user(username="staff", password="password")
+        user = User.objects.create_user(username="admin", password="password", is_staff=True)
         client = APIClient()
         client.force_authenticate(user=user)
         d, t = self._slot(timedelta(hours=2))

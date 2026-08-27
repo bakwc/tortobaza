@@ -18,7 +18,8 @@ _TB = ZoneInfo("Asia/Tbilisi")
 class CrmOrdersApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create_user(username="staff", password="password")
+        self.user = User.objects.create_user(username="worker", password="password")
+        self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
 
     def test_unauthenticated_access_denied(self):
         response = self.client.get("/api/crm/orders/")
@@ -215,14 +216,14 @@ class CrmOrdersApiTests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
-            {"is_delivered": True, "is_paid": True, "weight": "99kg"},
+            {"is_delivered": True},
             format="json",
         )
         self.assertEqual(response.status_code, 200)
 
         order.refresh_from_db()
         self.assertTrue(order.is_delivered)
-        self.assertTrue(order.is_paid)
+        self.assertFalse(order.is_paid)
         self.assertEqual(order.weight, "2kg")
 
     def test_invalid_date_returns_400(self):
@@ -280,8 +281,76 @@ class CrmOrdersApiTests(TestCase):
         payload.update(overrides)
         return payload
 
-    def test_create_order(self):
+    def test_regular_user_cannot_create_or_edit_order(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
         self.client.force_authenticate(user=self.user)
+        detail_url = f"/api/crm/orders/{order.id}/"
+
+        post_response = self.client.post("/api/crm/orders/", self._order_payload(), format="multipart")
+        self.assertEqual(post_response.status_code, 403)
+
+        put_response = self.client.put(detail_url, self._order_payload(), format="multipart")
+        self.assertEqual(put_response.status_code, 403)
+
+        paid_response = self.client.patch(detail_url, {"is_paid": True}, format="json")
+        self.assertEqual(paid_response.status_code, 403)
+
+        mixed_response = self.client.patch(
+            detail_url,
+            {"is_delivered": True, "is_paid": True},
+            format="json",
+        )
+        self.assertEqual(mixed_response.status_code, 403)
+
+        delete_response = self.client.delete(detail_url)
+        self.assertEqual(delete_response.status_code, 403)
+
+        order.refresh_from_db()
+        self.assertFalse(order.deleted)
+        self.assertFalse(order.is_paid)
+        self.assertFalse(order.is_delivered)
+        self.assertEqual(CrmOrder.objects.filter(deleted=False).count(), 1)
+
+    def test_admin_can_patch_is_paid(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            is_delivered=False,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"is_delivered": True, "is_paid": True, "weight": "99kg"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        order.refresh_from_db()
+        self.assertTrue(order.is_delivered)
+        self.assertTrue(order.is_paid)
+        self.assertEqual(order.weight, "2kg")
+
+    def test_create_order(self):
+        self.client.force_authenticate(user=self.admin)
         response = self.client.post("/api/crm/orders/", self._order_payload(), format="multipart")
         self.assertEqual(response.status_code, 201)
         data = response.json()
@@ -293,7 +362,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertTrue(CrmOrder.objects.filter(pk=data["id"]).exists())
 
     def test_create_order_with_unknown_time(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         response = self.client.post(
             "/api/crm/orders/",
             self._order_payload(time_start="", time_end=""),
@@ -308,7 +377,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertIsNone(order.time_end)
 
     def test_create_order_with_multiple_images(self):
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         payload = self._order_payload(images=[self._jpeg("one.jpg"), self._jpeg("two.jpg")])
         response = self.client.post("/api/crm/orders/", payload, format="multipart")
         self.assertEqual(response.status_code, 201)
@@ -353,7 +422,7 @@ class CrmOrdersApiTests(TestCase):
         keep = CrmOrderImage.objects.create(order=order, image=self._jpeg("keep.jpg"), position=0)
         drop = CrmOrderImage.objects.create(order=order, image=self._jpeg("drop.jpg"), position=1)
 
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         payload = self._order_payload(
             contact="Updated",
             weight="3kg",
@@ -387,7 +456,7 @@ class CrmOrdersApiTests(TestCase):
             prepayment=Decimal("30.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
         )
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         response = self.client.delete(f"/api/crm/orders/{order.id}/")
         self.assertEqual(response.status_code, 204)
         order.refresh_from_db()
@@ -444,7 +513,7 @@ class CrmOrdersApiTests(TestCase):
             payment_type=CrmOrder.PAYMENT_CASH,
             deleted=True,
         )
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         detail_url = f"/api/crm/orders/{order.id}/"
 
         get_response = self.client.get(detail_url)
