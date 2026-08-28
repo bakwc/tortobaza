@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 import re
+import urllib.error
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -428,6 +429,39 @@ class CrmTelegramTests(TestCase):
         order.save(update_fields=["telegram_payload_hash", "updated_at"])
         sync_crm_order_to_telegram(order.pk)
         self.assertEqual(self.calls, [])
+
+    def test_edit_message_not_modified_still_persists_hash(self):
+        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        sync_crm_order_to_telegram(order.pk)
+        order.refresh_from_db()
+        order.telegram_payload_hash = "0" * 64
+        order.save(update_fields=["telegram_payload_hash", "updated_at"])
+        self.calls.clear()
+        original = self._urlopen
+
+        def boom(req, timeout=None):
+            method = req.full_url.rsplit("/", 1)[-1]
+            if method == "editMessageText":
+                payload = json.dumps(
+                    {
+                        "ok": False,
+                        "error_code": 400,
+                        "description": "Bad Request: message is not modified",
+                    }
+                ).encode("utf-8")
+                raise urllib.error.HTTPError(
+                    req.full_url,
+                    400,
+                    "Bad Request",
+                    {},
+                    io.BytesIO(payload),
+                )
+            return original(req, timeout)
+
+        with patch("crm.telegram.urllib.request.urlopen", side_effect=boom):
+            sync_crm_order_to_telegram(order.pk)
+        order.refresh_from_db()
+        self.assertEqual(order.telegram_payload_hash, crm_order_telegram_hash(order))
 
     def test_stale_hash_without_take_url_edits_message(self):
         order = self._create_order(delta=timedelta(hours=2))

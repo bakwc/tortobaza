@@ -230,8 +230,16 @@ def _telegram_json(method: str, payload: dict) -> dict:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with _urlopen_with_retry(req) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
+    try:
+        with _urlopen_with_retry(req) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if method != "editMessageText" or exc.code != 400:
+            raise
+        data = json.loads(exc.read().decode("utf-8"))
+        if "message is not modified" not in data["description"]:
+            raise
+        return data
     if not data["ok"]:
         raise RuntimeError(data)
     return data
