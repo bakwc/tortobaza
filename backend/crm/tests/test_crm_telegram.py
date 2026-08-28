@@ -352,6 +352,14 @@ class CrmTelegramTests(TestCase):
         order = self._create_order(delta=timedelta(hours=2), is_delivered=False)
         text = build_crm_order_telegram_html(order)
         self.assertIn("Доставлен / выдан:</b> ❌", text)
+        self.assertIn(f"https://sweet-chill.ge/ru/crm/{order.pk}/take", text)
+        self.assertIn(">взять в работу</a>", text)
+
+    def test_html_delivered_omits_take_in_work_link(self):
+        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        text = build_crm_order_telegram_html(order)
+        self.assertNotIn("/take", text)
+        self.assertNotIn("взять в работу", text)
 
     def test_html_adds_e164_and_whatsapp_for_phone_contact(self):
         order = self._create_order(delta=timedelta(hours=2), contact="+7 916 123 45 67 Иван")

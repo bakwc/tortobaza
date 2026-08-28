@@ -138,6 +138,10 @@ def _crm_order_edit_url(order: CrmOrder) -> str:
     return f"{settings.SITE_URL}/ru/crm/{order.pk}/edit"
 
 
+def _crm_order_take_url(order: CrmOrder) -> str:
+    return f"{settings.SITE_URL}/ru/crm/{order.pk}/take"
+
+
 def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines = []
     if order.deleted:
@@ -146,7 +150,14 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>CRM заказ #{order.pk}</b>")
     view_href = html.escape(_crm_order_view_url(order), quote=True)
     edit_href = html.escape(_crm_order_edit_url(order), quote=True)
-    lines.append(f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a>')
+    if order.is_delivered:
+        lines.append(f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a>')
+    else:
+        take_href = html.escape(_crm_order_take_url(order), quote=True)
+        lines.append(
+            f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a> · '
+            f'<a href="{take_href}">взять в работу</a>'
+        )
     lines.append("")
     lines.append(f"<b>Время:</b> {_esc(_format_slot(order))}")
     lines.append(f"<b>Тип:</b> {_FULFILLMENT_LABELS[order.fulfillment_type]}")
