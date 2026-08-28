@@ -63,6 +63,13 @@ class CrmOrder(models.Model):
         choices=PAYMENT_TYPE_CHOICES,
         default=PAYMENT_UNKNOWN,
     )
+    website_order = models.OneToOneField(
+        "orders.Order",
+        related_name="crm_order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     deleted = models.BooleanField(default=False)
     telegram_message_id = models.BigIntegerField(null=True, blank=True)
     telegram_media_ids = models.JSONField(default=list)

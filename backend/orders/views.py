@@ -10,6 +10,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from crm.website import mark_crm_order_paid_for_website_order
 from orders.liberty import (
     build_callback_check,
     build_start_fields,
@@ -253,6 +254,7 @@ class LibertyCallbackView(APIView):
             payment.transaction_code = transactioncode
             payment.save()
             Order.objects.filter(pk=payment.order_id).update(payment_status=Order.PAYMENT_PAID)
+            mark_crm_order_paid_for_website_order(payment.order)
             notify_order_paid_by_card(payment.order_id)
             xml = callback_response_xml("0", "Ok", transactioncode)
             return HttpResponse(xml, content_type="text/xml")

@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from cart.models import Cart
+from crm.website import create_crm_order_from_website_order
 from orders.schedule import resolve_schedule_selection
 from orders.telegram import send_order_notification, send_order_paid_notification
 from orders.models import (
@@ -167,6 +168,13 @@ def create_order_from_cart(cart: Cart, payload: dict, environment: str) -> Order
 
     cart.is_ordered = True
     cart.save()
+
+    order = (
+        Order.objects.select_related("pickup_location", "delivery_address", "promo_code")
+        .prefetch_related("items__options", "items__product__images")
+        .get(pk=order.pk)
+    )
+    create_crm_order_from_website_order(order)
 
     order_id = order.pk
     transaction.on_commit(
