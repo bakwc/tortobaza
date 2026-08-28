@@ -30,6 +30,7 @@ import {
   formatCrmDate,
   formatCrmMonth,
   getTbilisiTodayIsoDate,
+  sortCrmBoardOrders,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -101,7 +102,7 @@ function CrmMonthBoard() {
   };
 
   const ordersQuery = useCrmOrdersByMonth(selectedMonth);
-  const orders = ordersQuery.data?.orders ?? [];
+  const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isCurrentMonth = selectedMonth === currentMonth;
 
   const deliveredCount = orders.filter((o) => o.is_delivered).length;

@@ -159,3 +159,26 @@ export function mondayFirstOffset(year: number, month: number): number {
   const dow = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   return (dow + 6) % 7;
 }
+
+function crmOrderTimeSortValue(timeStart: string | null): number {
+  if (timeStart === null) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  const hours = Number(timeStart.slice(0, 2));
+  const minutes = Number(timeStart.slice(3, 5));
+  if (hours === 0 && minutes === 0) {
+    return 24 * 60;
+  }
+  return hours * 60 + minutes;
+}
+
+export function sortCrmBoardOrders<T extends { date: string; time_start: string | null }>(
+  orders: T[],
+): T[] {
+  return [...orders].sort((left, right) => {
+    if (left.date !== right.date) {
+      return left.date < right.date ? -1 : 1;
+    }
+    return crmOrderTimeSortValue(left.time_start) - crmOrderTimeSortValue(right.time_start);
+  });
+}

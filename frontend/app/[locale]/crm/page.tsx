@@ -32,7 +32,7 @@ import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder, useResolveYandexAddress } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
-import { formatAed, getTbilisiTodayIsoDate } from "@/lib/format";
+import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function shiftDate(isoDate: string, days: number): string {
@@ -81,7 +81,7 @@ function CrmBoard() {
   const ordersQuery = useCrmOrders(selectedDate);
   const patchMutation = usePatchCrmOrder();
 
-  const orders = ordersQuery.data?.orders ?? [];
+  const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isToday = selectedDate === todayStr;
 
   useEffect(() => {
