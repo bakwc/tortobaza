@@ -291,7 +291,9 @@ function CrmOrderCard({
         "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
         order.is_delivered
           ? "border-sky-300 bg-sky-100"
-          : "border-[var(--line)] bg-white",
+          : order.taken_by_name
+            ? "border-orange-300 bg-orange-100"
+            : "border-[var(--line)] bg-white",
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
     >
@@ -302,7 +304,9 @@ function CrmOrderCard({
               "relative mx-auto aspect-square w-full max-w-44 overflow-hidden rounded-xl border sm:max-w-56 lg:max-w-none lg:rounded-2xl",
               order.is_delivered
                 ? "border-sky-200 bg-white"
-                : "border-[var(--line)] bg-[var(--cream)]",
+                : order.taken_by_name
+                  ? "border-orange-200 bg-white"
+                  : "border-[var(--line)] bg-[var(--cream)]",
             )}
           >
             {activeImage ? (
@@ -341,7 +345,9 @@ function CrmOrderCard({
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
                     "relative h-11 w-11 overflow-hidden rounded-lg border-2 transition-all lg:h-16 lg:w-16 lg:rounded-xl",
-                    order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
+                    order.is_delivered || order.taken_by_name
+                      ? "bg-white"
+                      : "bg-[var(--cream)]",
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
                       : "border-[var(--line)] opacity-70 hover:opacity-100",
@@ -411,7 +417,11 @@ function CrmOrderCard({
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 lg:pb-4",
-                order.is_delivered ? "border-sky-200" : "border-[var(--line)]",
+                order.is_delivered
+                  ? "border-sky-200"
+                  : order.taken_by_name
+                    ? "border-orange-200"
+                    : "border-[var(--line)]",
               )}
             >
               <div className="flex items-center gap-1.5 lg:gap-2">
@@ -451,7 +461,9 @@ function CrmOrderCard({
                   href={`/crm?date=${order.date}&order=${order.id}`}
                   className={cn(
                     "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)] underline-offset-2 hover:underline",
-                    order.is_delivered ? "bg-white" : "bg-[var(--cream)]",
+                    order.is_delivered || order.taken_by_name
+                      ? "bg-white"
+                      : "bg-[var(--cream)]",
                   )}
                 >
                   #{order.id}
@@ -482,7 +494,9 @@ function CrmOrderCard({
                 "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                 order.is_delivered
                   ? "border border-sky-200/80 bg-white/80"
-                  : "bg-[var(--cream-soft)]",
+                  : order.taken_by_name
+                    ? "border border-orange-200/80 bg-white/80"
+                    : "bg-[var(--cream-soft)]",
               )}
             >
               <div className="flex items-start gap-2">
@@ -509,7 +523,9 @@ function CrmOrderCard({
                   "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
-                    : "bg-[var(--cream-soft)]",
+                    : order.taken_by_name
+                      ? "border border-orange-200/80 bg-white/80"
+                      : "bg-[var(--cream-soft)]",
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -540,7 +556,9 @@ function CrmOrderCard({
                   "w-full cursor-pointer rounded-xl p-2.5 text-left text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
-                    : "bg-[var(--cream-soft)]",
+                    : order.taken_by_name
+                      ? "border border-orange-200/80 bg-white/80"
+                      : "bg-[var(--cream-soft)]",
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -570,7 +588,9 @@ function CrmOrderCard({
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
-                    : "border-[var(--line)]",
+                    : order.taken_by_name
+                      ? "border-orange-200/80 bg-white/70"
+                      : "border-[var(--line)]",
                 )}
               >
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -583,7 +603,9 @@ function CrmOrderCard({
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
-                    : "border-[var(--line)]",
+                    : order.taken_by_name
+                      ? "border-orange-200/80 bg-white/70"
+                      : "border-[var(--line)]",
                 )}
               >
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -599,7 +621,9 @@ function CrmOrderCard({
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
                   order.is_delivered
                     ? "border-sky-200/80 bg-white/70"
-                    : "border-[var(--line)]",
+                    : order.taken_by_name
+                      ? "border-orange-200/80 bg-white/70"
+                      : "border-[var(--line)]",
                 )}
               >
                 <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -617,7 +641,9 @@ function CrmOrderCard({
                 "grid grid-cols-2 gap-2 rounded-xl p-2.5 sm:grid-cols-4 lg:gap-3 lg:rounded-2xl lg:p-4",
                 order.is_delivered
                   ? "border border-sky-200/80 bg-white/80"
-                  : "bg-[var(--cream-soft)]",
+                  : order.taken_by_name
+                    ? "border border-orange-200/80 bg-white/80"
+                    : "bg-[var(--cream-soft)]",
               )}
             >
               <div>

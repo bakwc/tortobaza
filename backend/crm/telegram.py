@@ -43,8 +43,12 @@ def _esc(value: str) -> str:
 
 
 def crm_order_slot_datetime(order: CrmOrder) -> datetime:
-    start = order.time_start if order.time_start is not None else time(0, 0)
-    return datetime.combine(order.date, start, tzinfo=_TB)
+    if order.time_start is None:
+        return datetime.combine(order.date, time(0, 0), tzinfo=_TB)
+    slot = datetime.combine(order.date, order.time_start, tzinfo=_TB)
+    if order.time_start == time(0, 0):
+        return slot + timedelta(days=1)
+    return slot
 
 
 def crm_order_in_telegram_window(order: CrmOrder, now: datetime) -> bool:

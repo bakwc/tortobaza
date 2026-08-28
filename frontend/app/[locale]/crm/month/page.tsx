@@ -248,7 +248,9 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         "flex min-w-0 items-center gap-1.5 rounded-xl border px-1.5 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
         order.is_delivered
           ? "border-sky-300 bg-sky-100"
-          : "border-[var(--line)] bg-white",
+          : order.taken_by_name
+            ? "border-orange-300 bg-orange-100"
+            : "border-[var(--line)] bg-white",
       )}
     >
       <div
@@ -256,7 +258,9 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           "h-8 w-8 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
           order.is_delivered
             ? "border-sky-200 bg-white"
-            : "border-[var(--line)] bg-[var(--cream)]",
+            : order.taken_by_name
+              ? "border-orange-200 bg-white"
+              : "border-[var(--line)] bg-[var(--cream)]",
         )}
       >
         {thumb ? (

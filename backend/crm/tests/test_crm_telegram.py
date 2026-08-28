@@ -2,7 +2,7 @@ import hashlib
 import io
 import json
 import re
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
@@ -20,6 +20,8 @@ from crm.models import CrmOrder, CrmOrderImage, ResolvedYandexAddress, YandexAdd
 from crm.telegram import (
     build_crm_order_telegram_html,
     build_crm_order_telegram_payload,
+    crm_order_in_telegram_window,
+    crm_order_slot_datetime,
     crm_order_telegram_hash,
     sync_crm_order_to_telegram,
 )
@@ -184,6 +186,58 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(self.calls, [])
         order.refresh_from_db()
         self.assertIsNone(order.telegram_message_id)
+
+    def test_explicit_midnight_slot_is_end_of_specified_day(self):
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=date(2026, 8, 28),
+            time_start=time(0, 0),
+            time_end=None,
+        )
+        self.assertEqual(
+            crm_order_slot_datetime(order),
+            datetime(2026, 8, 29, 0, 0, tzinfo=_TB),
+        )
+
+    def test_missing_time_slot_stays_start_of_specified_day(self):
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=date(2026, 8, 28),
+            time_start=None,
+            time_end=None,
+        )
+        self.assertEqual(
+            crm_order_slot_datetime(order),
+            datetime(2026, 8, 28, 0, 0, tzinfo=_TB),
+        )
+
+    def test_seven_day_window_includes_midnight_order_from_seven_days_ago(self):
+        frozen = datetime(2026, 8, 28, 16, 53, tzinfo=_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=date(2026, 8, 21),
+            time_start=time(0, 0),
+            time_end=None,
+        )
+        self.assertTrue(crm_order_in_telegram_window(order, frozen))
+        with patch("crm.telegram.timezone.now", return_value=frozen):
+            sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["method"], "sendMessage")
+
+    def test_today_midnight_posts_before_16(self):
+        now_tb = timezone.now().astimezone(_TB)
+        frozen = datetime.combine(now_tb.date(), time(15, 59), tzinfo=_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date(),
+            time_start=time(0, 0),
+            time_end=None,
+        )
+        with patch("crm.telegram.timezone.now", return_value=frozen):
+            sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["method"], "sendMessage")
 
     def test_second_sync_without_changes_skips_http(self):
         order = self._create_order(delta=timedelta(hours=2))
