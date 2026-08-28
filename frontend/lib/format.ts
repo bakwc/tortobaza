@@ -9,7 +9,11 @@ function intlLocaleTag(locale: string): string {
 export function formatAed(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(value)) return "0.00 ₾";
-  return `${value.toFixed(2)} ₾`;
+  const [intPart, fracPart] = value.toFixed(2).split(".");
+  const sign = intPart.startsWith("-") ? "-" : "";
+  const digits = sign ? intPart.slice(1) : intPart;
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return `${sign}${grouped}.${fracPart} ₾`;
 }
 
 export function sumCrmCakePrices(orders: { cake_price: string }[]): number {

@@ -268,7 +268,7 @@
     "deliveredCount": "Delivered:",
     "paidCount": "Paid:",
     "income": "შემოსავალი:",
-    "paidAmount": "გადახდილი:",
+    "incomeHint": "პირველი თანხა — შემოსავალი ყველა შეკვეთიდან. მეორე — გადახდილიდან.",
     "loadError": "Could not load orders for this date. Please try again.",
     "emptyTitle": "No orders scheduled for this day",
     "emptyHint": "Use the arrows above to browse other days.",

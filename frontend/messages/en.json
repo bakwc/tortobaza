@@ -268,7 +268,7 @@
     "deliveredCount": "Delivered:",
     "paidCount": "Paid:",
     "income": "Income:",
-    "paidAmount": "Paid amount:",
+    "incomeHint": "First amount is total income. Second is income from paid orders.",
     "loadError": "Could not load orders for this date. Please try again.",
     "emptyTitle": "No orders scheduled for this day",
     "emptyHint": "Use the arrows above to browse other days.",
