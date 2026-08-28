@@ -23,6 +23,7 @@ import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useCurrentUser } from "@/hooks/useAuth";
 import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import {
@@ -92,6 +93,7 @@ export default function CrmMonthPage() {
 
 function CrmMonthBoard() {
   const t = useTranslations("crm");
+  const currentUser = useCurrentUser();
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -115,14 +117,16 @@ function CrmMonthBoard() {
         <Button asChild variant="outline">
           <Link href="/crm">{t("dailyBoard")}</Link>
         </Button>
-        <Button asChild>
-          <Link
-            href={`/crm/new?date=${isCurrentMonth ? getTbilisiTodayIsoDate() : `${selectedMonth}-01`}`}
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("createOrder")}
-          </Link>
-        </Button>
+        {currentUser.data?.is_staff ? (
+          <Button asChild>
+            <Link
+              href={`/crm/new?date=${isCurrentMonth ? getTbilisiTodayIsoDate() : `${selectedMonth}-01`}`}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("createOrder")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
       <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
         <div className="flex items-center justify-between gap-2">
@@ -242,6 +246,7 @@ function CrmMonthBoard() {
 
 function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
+  const currentUser = useCurrentUser();
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -352,17 +357,19 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         </div>
       </div>
 
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className="h-8 w-8 shrink-0 px-0 md:w-auto md:px-3"
-      >
-        <Link href={`/crm/${order.id}/edit`}>
-          <Pencil className="h-3.5 w-3.5 md:mr-1" />
-          <span className="hidden md:inline">{t("editOrder")}</span>
-        </Link>
-      </Button>
+      {currentUser.data?.is_staff ? (
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 shrink-0 px-0 md:w-auto md:px-3"
+        >
+          <Link href={`/crm/${order.id}/edit`}>
+            <Pencil className="h-3.5 w-3.5 md:mr-1" />
+            <span className="hidden md:inline">{t("editOrder")}</span>
+          </Link>
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="outline"

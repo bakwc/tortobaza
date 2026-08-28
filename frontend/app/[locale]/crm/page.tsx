@@ -31,6 +31,7 @@ import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useCurrentUser } from "@/hooks/useAuth";
 import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder, useResolveYandexAddress } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
@@ -69,6 +70,7 @@ export default function CrmPage() {
 
 function CrmBoard() {
   const t = useTranslations("crm");
+  const currentUser = useCurrentUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const todayStr = getTbilisiTodayIsoDate();
@@ -105,12 +107,14 @@ function CrmBoard() {
         <Button asChild variant="outline">
           <Link href="/crm/month">{t("monthlyOrders")}</Link>
         </Button>
-        <Button asChild>
-          <Link href={`/crm/new?date=${selectedDate}`}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("createOrder")}
-          </Link>
-        </Button>
+        {currentUser.data?.is_staff ? (
+          <Button asChild>
+            <Link href={`/crm/new?date=${selectedDate}`}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("createOrder")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
@@ -273,6 +277,7 @@ function CrmOrderCard({
   onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
+  const currentUser = useCurrentUser();
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
@@ -470,12 +475,14 @@ function CrmOrderCard({
                 >
                   #{order.id}
                 </Link>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/crm/${order.id}/edit`}>
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                    {t("editOrder")}
-                  </Link>
-                </Button>
+                {currentUser.data?.is_staff ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/crm/${order.id}/edit`}>
+                      <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                      {t("editOrder")}
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
