@@ -136,6 +136,56 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["orders"][1]["time_start"], "16:30:00")
         self.assertEqual(data["orders"][1]["time_end"], "18:00:00")
 
+    def test_midnight_orders_sort_last(self):
+        target_date = date(2026, 8, 25)
+        midnight = CrmOrder.objects.create(
+            date=target_date,
+            time_start=time(0, 0),
+            contact="Midnight",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        evening = CrmOrder.objects.create(
+            date=target_date,
+            time_start=time(23, 0),
+            contact="Evening",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        morning = CrmOrder.objects.create(
+            date=target_date,
+            time_start=time(10, 0),
+            contact="Morning",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("80.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/", {"date": "2026-08-25"})
+        self.assertEqual(response.status_code, 200)
+        ids = [order["id"] for order in response.json()["orders"]]
+        self.assertEqual(ids, [morning.id, evening.id, midnight.id])
+
+        month_response = self.client.get("/api/crm/orders/", {"month": "2026-08"})
+        self.assertEqual(month_response.status_code, 200)
+        month_ids = [order["id"] for order in month_response.json()["orders"]]
+        self.assertEqual(month_ids, [morning.id, evening.id, midnight.id])
+
     def test_get_orders_by_month_and_ordering(self):
         in_month_late_day = CrmOrder.objects.create(
             date=date(2026, 8, 28),

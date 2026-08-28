@@ -540,7 +540,33 @@ function CrmOrderCard({
               </div>
             ) : null}
 
-            {order.delivery_address ? (
+            {order.fulfillment_type === "pickup" && order.delivery_address.length < 5 ? (
+              <div
+                className={cn(
+                  "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
+                  order.is_delivered
+                    ? "border border-sky-200/80 bg-white/80"
+                    : order.taken_by_name
+                      ? "border border-orange-200/80 bg-white/80"
+                      : "bg-[var(--cream-soft)]",
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  <div>
+                    <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
+                      {t("deliveryAddress")}
+                    </span>
+                    <div className="mt-0.5 lg:mt-1">
+                      <span className="flex w-fit items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-900">
+                        <Store className="h-3.5 w-3.5" />
+                        <span>{t("pickup")}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : order.delivery_address ? (
               <button
                 type="button"
                 disabled={resolveAddress.isPending}

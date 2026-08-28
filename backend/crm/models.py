@@ -1,5 +1,8 @@
+from datetime import time
+
 from django.conf import settings
 from django.db import models
+from django.db.models import Case, IntegerField, Value, When
 
 
 class CrmOrder(models.Model):
@@ -72,7 +75,15 @@ class CrmOrder(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["date", "time_start"]
+        ordering = [
+            "date",
+            Case(
+                When(time_start=time(0, 0), then=Value(1)),
+                default=Value(0),
+                output_field=IntegerField(),
+            ),
+            "time_start",
+        ]
 
     def __str__(self) -> str:
         if self.when_ready:
