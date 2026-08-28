@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 import re
@@ -18,6 +19,7 @@ from accounts.models import UserProfile
 from crm.models import CrmOrder, CrmOrderImage, ResolvedYandexAddress, YandexAddressResolveFailure
 from crm.telegram import (
     build_crm_order_telegram_html,
+    build_crm_order_telegram_payload,
     crm_order_telegram_hash,
     sync_crm_order_to_telegram,
 )
@@ -360,6 +362,19 @@ class CrmTelegramTests(TestCase):
         text = build_crm_order_telegram_html(order)
         self.assertNotIn("/take", text)
         self.assertNotIn("взять в работу", text)
+
+    def test_stale_hash_without_take_url_edits_message(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        sync_crm_order_to_telegram(order.pk)
+        self.calls.clear()
+        payload = build_crm_order_telegram_payload(order)
+        payload.pop("take_in_work_url")
+        encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        order.telegram_payload_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        order.save(update_fields=["telegram_payload_hash", "updated_at"])
+        sync_crm_order_to_telegram(order.pk)
+        self.assertEqual([c["method"] for c in self.calls], ["editMessageText"])
+        self.assertIn("взять в работу", self.calls[0]["payload"]["text"])
 
     def test_html_adds_e164_and_whatsapp_for_phone_contact(self):
         order = self._create_order(delta=timedelta(hours=2), contact="+7 916 123 45 67 Иван")

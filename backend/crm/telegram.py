@@ -77,6 +77,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "prepayment": str(order.prepayment),
         "taken_by_name": None,
         "taken_by_telegram_url": None,
+        "take_in_work_url": None if order.is_delivered else _crm_order_take_url(order),
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "weight": order.weight,
