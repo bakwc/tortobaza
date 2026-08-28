@@ -28,6 +28,7 @@ _PAYMENT_LABELS = {
     CrmOrder.PAYMENT_BOG: "BOG",
     CrmOrder.PAYMENT_FLOWWOW: "Flowwow",
     CrmOrder.PAYMENT_CRYPTO: "Криптовалюта",
+    CrmOrder.PAYMENT_ONLINE: "Онлайн на сайте",
 }
 
 _FULFILLMENT_LABELS = {

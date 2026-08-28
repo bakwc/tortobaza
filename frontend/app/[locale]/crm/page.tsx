@@ -244,6 +244,7 @@ function paymentTypeLabel(type: string, t: (key: string) => string): string {
   if (type === "bog") return t("paymentBog");
   if (type === "flowwow") return t("paymentFlowwow");
   if (type === "crypto") return t("paymentCrypto");
+  if (type === "online") return t("paymentOnline");
   return type;
 }
 

@@ -16,6 +16,7 @@ class CrmOrder(models.Model):
     PAYMENT_BOG = "bog"
     PAYMENT_FLOWWOW = "flowwow"
     PAYMENT_CRYPTO = "crypto"
+    PAYMENT_ONLINE = "online"
     PAYMENT_TYPE_CHOICES = [
         (PAYMENT_UNKNOWN, "Unknown"),
         (PAYMENT_CASH, "Cash"),
@@ -24,6 +25,7 @@ class CrmOrder(models.Model):
         (PAYMENT_BOG, "BOG Transfer"),
         (PAYMENT_FLOWWOW, "Flowwow"),
         (PAYMENT_CRYPTO, "Cryptocurrency"),
+        (PAYMENT_ONLINE, "Online on website"),
     ]
 
     date = models.DateField()

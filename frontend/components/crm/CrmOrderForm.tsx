@@ -175,6 +175,7 @@ export function CrmOrderForm(
     { value: "bog", label: t("paymentBog") },
     { value: "flowwow", label: t("paymentFlowwow") },
     { value: "crypto", label: t("paymentCrypto") },
+    { value: "online", label: t("paymentOnline") },
   ];
 
   return (
