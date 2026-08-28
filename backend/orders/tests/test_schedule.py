@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -173,3 +173,31 @@ class ScheduleRulesTests(TestCase):
         self._add_item(overridden)
         opts = build_fulfillment_options(self.cart)
         self.assertEqual(opts["dates"][0]["date"], "2026-05-24")
+
+    @patch("django.utils.timezone.now")
+    def test_future_day_slots_from_eleven_to_midnight(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 0)
+        self._add_item(self.prod_p2)
+        opts = build_fulfillment_options(self.cart)
+        slots = opts["dates"][0]["slots"]
+        self.assertEqual(slots[0], {"start_time": "11:00", "end_time": "12:00"})
+        self.assertEqual(slots[-1], {"start_time": "23:00", "end_time": "00:00"})
+
+    @patch("django.utils.timezone.now")
+    def test_midnight_slot_end_is_next_calendar_day(self, mock_now):
+        mock_now.return_value = self._frozen_now(2026, 5, 21, 10, 0)
+        self._add_item(self.prod_p2)
+        d = date.fromisoformat(build_fulfillment_options(self.cart)["dates"][0]["date"])
+        start, end = resolve_schedule_selection(
+            self.cart,
+            "slot",
+            d,
+            time(23, 0),
+            time(0, 0),
+        )
+        start_tb = start.astimezone(_TB)
+        end_tb = end.astimezone(_TB)
+        self.assertEqual(start_tb.date(), d)
+        self.assertEqual(start_tb.hour, 23)
+        self.assertEqual(end_tb.date(), d + timedelta(days=1))
+        self.assertEqual(end_tb.hour, 0)

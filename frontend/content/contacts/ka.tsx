@@ -46,10 +46,10 @@ export default function ContactsContentKa() {
         <div className="grid gap-12 text-center sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 xl:grid-cols-6">
           <InfoColumn icon={<Clock strokeWidth={1.4} className="h-12 w-12" />} title="დღე–დღეში">
             <p>
-              <span className="font-semibold">მაღაზიის საათები:</span> 11:00–21:00
+              <span className="font-semibold">მაღაზიის საათები:</span> 10:00–00:00
             </p>
             <p>
-              <span className="font-semibold">მენეჯერი:</span> 11:00–21:00
+              <span className="font-semibold">მენეჯერი:</span> 10:00–00:00
             </p>
           </InfoColumn>
 

@@ -15,7 +15,7 @@ from catalog.models import Product
 
 CUTOFF_HOUR = 15
 SLOT_START_HOUR = 11
-SCHEDULE_LAST_HOUR = 20
+SCHEDULE_LAST_HOUR = 23
 SLOT_LEAD_HOURS = 3
 ALL_DAY_SLOT_LEAD_HOURS = 1
 SCHEDULE_MAX_DAYS_AHEAD = 60
@@ -124,7 +124,7 @@ def hourly_slots_for_date(day: date, local_now: datetime, tier: str) -> list[Tim
         first_h = SLOT_START_HOUR
 
     for h in range(first_h, SCHEDULE_LAST_HOUR + 1):
-        slots.append(TimeSlotRepr(start_time=time(h, 0), end_time=time(h + 1, 0)))
+        slots.append(TimeSlotRepr(start_time=time(h, 0), end_time=_hour_end(h)))
 
     return slots
 
@@ -182,9 +182,17 @@ def resolve_schedule_selection(
             ):
                 dt_start_local = datetime.combine(slot_date, slot_start_time, tzinfo=_TB)
                 dt_end_local = datetime.combine(slot_date, slot_end_time, tzinfo=_TB)
+                if dt_end_local <= dt_start_local:
+                    dt_end_local = dt_end_local + timedelta(days=1)
                 return dt_start_local.astimezone(UTC), dt_end_local.astimezone(UTC)
 
     raise serializers.ValidationError({"schedule": _("Selected time slot is not available.")})
+
+
+def _hour_end(h: int) -> time:
+    if h == 23:
+        return time(0, 0)
+    return time(h + 1, 0)
 
 
 def _fmt_time(t: time) -> str:
