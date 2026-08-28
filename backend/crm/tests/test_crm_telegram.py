@@ -125,9 +125,9 @@ class CrmTelegramTests(TestCase):
         order.refresh_from_db()
         self.assertIsNone(order.telegram_message_id)
 
-    def test_next_calendar_day_before_noon_does_not_post(self):
+    def test_next_calendar_day_before_16_does_not_post(self):
         now_tb = timezone.now().astimezone(_TB)
-        frozen = datetime.combine(now_tb.date(), time(11, 59), tzinfo=_TB)
+        frozen = datetime.combine(now_tb.date(), time(15, 59), tzinfo=_TB)
         order = self._create_order(
             delta=timedelta(hours=2),
             date=now_tb.date() + timedelta(days=1),
@@ -140,9 +140,9 @@ class CrmTelegramTests(TestCase):
         order.refresh_from_db()
         self.assertIsNone(order.telegram_message_id)
 
-    def test_next_calendar_day_from_noon_posts(self):
+    def test_next_calendar_day_from_16_posts(self):
         now_tb = timezone.now().astimezone(_TB)
-        frozen = datetime.combine(now_tb.date(), time(12, 0), tzinfo=_TB)
+        frozen = datetime.combine(now_tb.date(), time(16, 0), tzinfo=_TB)
         order = self._create_order(
             delta=timedelta(hours=2),
             date=now_tb.date() + timedelta(days=1),

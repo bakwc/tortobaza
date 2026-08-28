@@ -18,7 +18,7 @@ class Command(BaseCommand):
         now = timezone.now().astimezone(_TB)
         start = (now - timedelta(days=7)).date()
         end = now.date()
-        if now.time() >= time(12, 0):
+        if now.time() >= time(16, 0):
             end = now.date() + timedelta(days=1)
         blocked_addresses = YandexAddressResolveFailure.objects.filter(
             failure_count__gte=YANDEX_ADDRESS_RESOLVE_MAX_FAILURES,
