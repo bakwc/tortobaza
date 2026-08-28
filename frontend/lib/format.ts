@@ -12,6 +12,10 @@ export function formatAed(amount: string | number): string {
   return `${value.toFixed(2)} ₾`;
 }
 
+export function sumCrmCakePrices(orders: { cake_price: string }[]): number {
+  return orders.reduce((sum, order) => sum + Number.parseFloat(order.cake_price), 0);
+}
+
 export function formatPriceDelta(delta: string | number): string {
   const value = typeof delta === "string" ? Number.parseFloat(delta) : delta;
   if (Number.isNaN(value) || value === 0) return "";

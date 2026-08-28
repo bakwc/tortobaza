@@ -239,6 +239,7 @@ export const SessionUserSchema = z.object({
   username: z.string(),
   first_name: z.string(),
   last_name: z.string(),
+  is_staff: z.boolean(),
 });
 
 export const AttendanceEventSchema = z.object({

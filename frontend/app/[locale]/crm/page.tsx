@@ -28,6 +28,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
+import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder, useResolveYandexAddress } from "@/hooks/useCrmOrders";
@@ -175,6 +176,7 @@ function CrmBoard() {
             </span>
           </div>
         </div>
+        <CrmIncomeStats orders={orders} compact={false} />
       </div>
 
       {ordersQuery.isLoading ? (

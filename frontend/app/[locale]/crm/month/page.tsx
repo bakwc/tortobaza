@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
+import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
@@ -190,6 +191,7 @@ function CrmMonthBoard() {
             </span>
           </div>
         </div>
+        <CrmIncomeStats orders={orders} compact={false} />
       </div>
 
       {ordersQuery.isLoading ? (
@@ -222,8 +224,9 @@ function CrmMonthBoard() {
                   <span className="md:hidden">{formatCrmCompactDate(group.date, locale)}</span>
                   <span className="hidden md:inline">{formatCrmDate(group.date, locale)}</span>
                 </span>
-                <span className="shrink-0 text-xs font-medium text-[var(--muted-2)]">
-                  {group.orders.length}
+                <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
+                  <span>{group.orders.length}</span>
+                  <CrmIncomeStats orders={group.orders} compact={true} />
                 </span>
               </Link>
               {group.orders.map((order) => (
