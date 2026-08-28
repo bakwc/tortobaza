@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -41,6 +42,13 @@ class CrmOrder(models.Model):
         default=FULFILLMENT_DELIVERY,
     )
     is_delivered = models.BooleanField(default=False)
+    taken_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="crm_orders_taken",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     weight = models.CharField(max_length=50)
     filling = models.CharField(max_length=255)
     description = models.TextField(blank=True)

@@ -300,6 +300,8 @@
     "markDelivered": "Mark Delivered",
     "paid": "Paid",
     "markPaid": "Mark Paid",
+    "takeInWork": "Take into work",
+    "cookingChef": "Cooking chef",
     "createOrder": "Create order",
     "editOrder": "Edit",
     "formCreateTitle": "New order",

@@ -300,6 +300,8 @@
     "markDelivered": "Отметить доставку",
     "paid": "Оплачен",
     "markPaid": "Отметить оплату",
+    "takeInWork": "Взять в работу",
+    "cookingChef": "Готовит шеф",
     "createOrder": "Создать заказ",
     "editOrder": "Редактировать",
     "formCreateTitle": "Новый заказ",

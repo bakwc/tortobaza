@@ -14,6 +14,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.models import chef_identity
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
@@ -74,6 +75,8 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "nickname": order.nickname,
         "payment_type": order.payment_type,
         "prepayment": str(order.prepayment),
+        "taken_by_name": None,
+        "taken_by_telegram_url": None,
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "weight": order.weight,
@@ -82,6 +85,10 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     links = contact_links(order.contact)
     if links is not None:
         payload["contact_e164"] = links["e164"]
+    if order.taken_by_id:
+        name, url = chef_identity(order.taken_by)
+        payload["taken_by_name"] = name
+        payload["taken_by_telegram_url"] = url
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
         if yandex_url:
@@ -167,6 +174,13 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
     lines.append(f"<b>Доставлен / выдан:</b> {'✅' if order.is_delivered else '❌'}")
+    if order.taken_by_id:
+        name, url = chef_identity(order.taken_by)
+        if url:
+            href = html.escape(url, quote=True)
+            lines.append(f'<b>Готовит шеф</b> <a href="{href}">@{_esc(name)}</a>')
+        else:
+            lines.append(f"<b>Готовит шеф</b> {_esc(name)}")
     return "\n".join(lines)
 
 
@@ -340,7 +354,7 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
     if not token or not chat_id:
         return
     with transaction.atomic():
-        order = CrmOrder.objects.select_for_update().get(pk=order_id)
+        order = CrmOrder.objects.select_for_update().select_related("taken_by").get(pk=order_id)
         list(order.images.all())
         new_hash = crm_order_telegram_hash(order)
         posted_before = order.telegram_message_id is not None

@@ -19,6 +19,7 @@ import {
   Store,
   Truck,
   User,
+  Utensils,
   ZoomIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -214,6 +215,12 @@ function CrmBoard() {
                   body: { is_paid: !order.is_paid },
                 })
               }
+              onTakeInWork={() =>
+                patchMutation.mutate({
+                  id: order.id,
+                  body: { take_in_work: true },
+                })
+              }
             />
           ))}
         </div>
@@ -254,12 +261,14 @@ function CrmOrderCard({
   isPatching,
   onToggleDelivered,
   onTogglePaid,
+  onTakeInWork,
 }: {
   order: CrmOrder;
   focused: boolean;
   isPatching: boolean;
   onToggleDelivered: () => void;
   onTogglePaid: () => void;
+  onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
@@ -643,60 +652,124 @@ function CrmOrderCard({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1 sm:gap-3 lg:pt-2">
-            <Button
-              type="button"
-              size="lg"
-              onClick={onToggleDelivered}
-              disabled={isPatching}
-              className={cn(
-                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
-                order.is_delivered
-                  ? "bg-sky-600 text-white hover:bg-sky-700"
-                  : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
-              )}
-            >
-              {isPatching ? (
-                <Spinner className="h-5 w-5" />
-              ) : order.is_delivered ? (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
-                  {t("delivered")}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <Truck className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                  {t("markDelivered")}
-                </span>
-              )}
-            </Button>
+          <div className="grid gap-2 pt-1 sm:gap-3 lg:pt-2">
+            {order.taken_by_name ? (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if (isPatching) return;
+                  onTakeInWork();
+                }}
+                onKeyDown={(event) => {
+                  if (isPatching) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onTakeInWork();
+                  }
+                }}
+                className={cn(
+                  "flex h-11 cursor-pointer items-center justify-center gap-1 rounded-md bg-amber-500 px-2 text-center font-semibold text-white hover:bg-amber-600 lg:h-14 lg:gap-2 lg:px-8",
+                  isPatching && "pointer-events-none opacity-70",
+                )}
+              >
+                {isPatching ? (
+                  <Spinner className="h-5 w-5" />
+                ) : (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <Utensils className="h-4 w-4 lg:h-5 lg:w-5" />
+                    <span>
+                      {t("cookingChef")}{" "}
+                      {order.taken_by_telegram_url ? (
+                        <a
+                          href={order.taken_by_telegram_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="underline underline-offset-2"
+                        >
+                          @{order.taken_by_name}
+                        </a>
+                      ) : (
+                        order.taken_by_name
+                      )}
+                    </span>
+                  </span>
+                )}
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="lg"
+                onClick={onTakeInWork}
+                disabled={isPatching}
+                className="h-11 px-2 font-semibold whitespace-normal leading-tight border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)] lg:h-14 lg:px-8 lg:whitespace-nowrap"
+              >
+                {isPatching ? (
+                  <Spinner className="h-5 w-5" />
+                ) : (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <Utensils className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
+                    {t("takeInWork")}
+                  </span>
+                )}
+              </Button>
+            )}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              <Button
+                type="button"
+                size="lg"
+                onClick={onToggleDelivered}
+                disabled={isPatching}
+                className={cn(
+                  "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
+                  order.is_delivered
+                    ? "bg-sky-600 text-white hover:bg-sky-700"
+                    : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+                )}
+              >
+                {isPatching ? (
+                  <Spinner className="h-5 w-5" />
+                ) : order.is_delivered ? (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <Check className="h-4 w-4 lg:h-5 lg:w-5" />
+                    {t("delivered")}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <Truck className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
+                    {t("markDelivered")}
+                  </span>
+                )}
+              </Button>
 
-            <Button
-              type="button"
-              size="lg"
-              onClick={onTogglePaid}
-              disabled={isPatching}
-              className={cn(
-                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
-                order.is_paid
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
-              )}
-            >
-              {isPatching ? (
-                <Spinner className="h-5 w-5" />
-              ) : order.is_paid ? (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
-                  {t("paid")}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                  {t("markPaid")}
-                </span>
-              )}
-            </Button>
+              <Button
+                type="button"
+                size="lg"
+                onClick={onTogglePaid}
+                disabled={isPatching}
+                className={cn(
+                  "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
+                  order.is_paid
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+                )}
+              >
+                {isPatching ? (
+                  <Spinner className="h-5 w-5" />
+                ) : order.is_paid ? (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <Check className="h-4 w-4 lg:h-5 lg:w-5" />
+                    {t("paid")}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                    <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
+                    {t("markPaid")}
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

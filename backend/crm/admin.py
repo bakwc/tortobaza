@@ -27,6 +27,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "nickname",
         "fulfillment_type",
         "is_delivered",
+        "taken_by",
         "weight",
         "filling",
         "cake_price",
@@ -62,7 +63,14 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Customer & Delivery",
             {
-                "fields": ("contact", "nickname", "delivery_address", "fulfillment_type", "is_delivered"),
+                "fields": (
+                    "contact",
+                    "nickname",
+                    "delivery_address",
+                    "fulfillment_type",
+                    "is_delivered",
+                    "taken_by",
+                ),
             },
         ),
         (

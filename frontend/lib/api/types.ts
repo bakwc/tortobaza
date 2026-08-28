@@ -283,6 +283,8 @@ export const CrmOrderSchema = z.object({
   delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
   is_delivered: z.boolean(),
+  taken_by_name: z.string().nullable(),
+  taken_by_telegram_url: z.string().nullable(),
   weight: z.string(),
   filling: z.string(),
   description: z.string(),
@@ -341,6 +343,7 @@ export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressRe
 export type UpdateCrmOrderBody = {
   is_delivered?: boolean;
   is_paid?: boolean;
+  take_in_work?: boolean;
 };
 
 export type CrmOrderPaymentType = CrmOrder["payment_type"];

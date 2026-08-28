@@ -14,6 +14,7 @@ from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from crm.models import CrmOrder, CrmOrderImage, ResolvedYandexAddress, YandexAddressResolveFailure
 from crm.telegram import (
     build_crm_order_telegram_html,
@@ -199,6 +200,30 @@ class CrmTelegramTests(TestCase):
         methods = [c["method"] for c in self.calls]
         self.assertEqual(methods, ["editMessageText"])
         self.assertIn("Оплачен:</b> да", self.calls[0]["payload"]["text"])
+
+    def test_taken_by_telegram_nick_in_html_and_edits(self):
+        chef = User.objects.create_user(username="chef", password="password")
+        UserProfile.objects.create(user=chef, telegram_username="chef_anna")
+        order = self._create_order(delta=timedelta(hours=2))
+        sync_crm_order_to_telegram(order.pk)
+        html = build_crm_order_telegram_html(order)
+        self.assertNotIn("Готовит шеф", html)
+        self.calls.clear()
+        order.taken_by = chef
+        order.save(update_fields=["taken_by", "updated_at"])
+        html = build_crm_order_telegram_html(order)
+        self.assertIn('Готовит шеф</b> <a href="https://t.me/chef_anna">@chef_anna</a>', html)
+        sync_crm_order_to_telegram(order.pk)
+        methods = [c["method"] for c in self.calls]
+        self.assertEqual(methods, ["editMessageText"])
+        self.assertIn("@chef_anna", self.calls[0]["payload"]["text"])
+
+    def test_taken_by_falls_back_to_username_without_link(self):
+        chef = User.objects.create_user(username="site_chef", password="password")
+        order = self._create_order(delta=timedelta(hours=2), taken_by=chef)
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("Готовит шеф</b> site_chef", html)
+        self.assertNotIn("t.me", html)
 
     def test_slot_change_edits_and_replies(self):
         order = self._create_order(delta=timedelta(hours=2))

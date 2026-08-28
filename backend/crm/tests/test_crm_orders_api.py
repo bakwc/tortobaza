@@ -10,6 +10,7 @@ from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from crm.models import CrmOrder, CrmOrderImage
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -228,6 +229,88 @@ class CrmOrdersApiTests(TestCase):
         self.assertTrue(order.is_delivered)
         self.assertFalse(order.is_paid)
         self.assertEqual(order.weight, "2kg")
+
+    def test_regular_user_can_take_in_work_with_telegram_nick(self):
+        UserProfile.objects.create(user=self.user, telegram_username="chef_anna")
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            is_delivered=False,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["taken_by_name"], "chef_anna")
+        self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_anna")
+        order.refresh_from_db()
+        self.assertEqual(order.taken_by_id, self.user.id)
+
+    def test_take_in_work_reassigns_to_other_user(self):
+        UserProfile.objects.create(user=self.user, telegram_username="chef_one")
+        other = User.objects.create_user(username="other", password="password")
+        UserProfile.objects.create(user=other, telegram_username="chef_two")
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            taken_by=self.user,
+        )
+        self.client.force_authenticate(user=other)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["taken_by_name"], "chef_two")
+        self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_two")
+        order.refresh_from_db()
+        self.assertEqual(order.taken_by_id, other.id)
+
+    def test_take_in_work_falls_back_to_site_username(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["taken_by_name"], "worker")
+        self.assertIsNone(data["taken_by_telegram_url"])
+        order.refresh_from_db()
+        self.assertEqual(order.taken_by_id, self.user.id)
 
     def test_invalid_date_returns_400(self):
         self.client.force_authenticate(user=self.user)

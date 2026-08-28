@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
@@ -24,6 +25,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     contact_tel = serializers.CharField(read_only=True, allow_null=True)
     contact_whatsapp = serializers.CharField(read_only=True, allow_null=True)
     contact_telegram = serializers.CharField(read_only=True, allow_null=True)
+    taken_by_name = serializers.CharField(read_only=True, allow_null=True)
+    taken_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrmOrder
@@ -41,6 +44,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "delivery_address",
             "fulfillment_type",
             "is_delivered",
+            "taken_by_name",
+            "taken_by_telegram_url",
             "weight",
             "filling",
             "description",
@@ -55,6 +60,13 @@ class CrmOrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        if instance.taken_by_id:
+            name, url = chef_identity(instance.taken_by)
+            data["taken_by_name"] = name
+            data["taken_by_telegram_url"] = url
+        else:
+            data["taken_by_name"] = None
+            data["taken_by_telegram_url"] = None
         links = contact_links(instance.contact)
         if links is None:
             data["contact_tel"] = None
@@ -68,9 +80,20 @@ class CrmOrderSerializer(serializers.ModelSerializer):
 
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):
+    take_in_work = serializers.BooleanField(write_only=True, required=False)
+
     class Meta:
         model = CrmOrder
-        fields = ["is_delivered", "is_paid"]
+        fields = ["is_delivered", "is_paid", "take_in_work"]
+
+    def update(self, instance, validated_data):
+        take_in_work = validated_data.pop("take_in_work", None)
+        if take_in_work:
+            instance.taken_by = self.context["request"].user
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 
 class CrmOrderWriteSerializer(serializers.ModelSerializer):

@@ -15,6 +15,15 @@ class UserProfile(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
     )
+    telegram_username = models.CharField(max_length=32, blank=True)
 
     def __str__(self) -> str:
         return f"{self.user} profile"
+
+
+def chef_identity(user) -> tuple[str, str | None]:
+    profile = UserProfile.objects.filter(user=user).first()
+    if profile is not None and profile.telegram_username:
+        nick = profile.telegram_username.lstrip("@")
+        return nick, f"https://t.me/{nick}"
+    return user.username, None

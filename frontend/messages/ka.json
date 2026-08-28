@@ -300,6 +300,8 @@
     "markDelivered": "Mark Delivered",
     "paid": "Paid",
     "markPaid": "Mark Paid",
+    "takeInWork": "სამუშაოდ აღება",
+    "cookingChef": "ამზადებს შეფი",
     "createOrder": "შეკვეთის შექმნა",
     "editOrder": "რედაქტირება",
     "formCreateTitle": "ახალი შეკვეთა",

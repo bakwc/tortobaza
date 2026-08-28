@@ -29,12 +29,12 @@ class CrmOrderWritePermission(BasePermission):
         if request.user.is_staff:
             return True
         if request.method == "PATCH":
-            return set(request.data.keys()) <= {"is_delivered"}
+            return set(request.data.keys()) <= {"is_delivered", "take_in_work"}
         return False
 
 
 def live_orders():
-    return CrmOrder.objects.filter(deleted=False)
+    return CrmOrder.objects.filter(deleted=False).select_related("taken_by")
 
 
 def crm_order_write_payload(request):
@@ -121,7 +121,12 @@ class CrmOrderDetailView(APIView):
 
     def patch(self, request, pk: int):
         order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
-        serializer = CrmOrderUpdateSerializer(order, data=request.data, partial=True)
+        serializer = CrmOrderUpdateSerializer(
+            order,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         schedule_crm_order_telegram_sync(order.pk)
