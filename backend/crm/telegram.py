@@ -81,7 +81,6 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "prepayment": str(order.prepayment),
         "taken_by_name": None,
         "taken_by_telegram_url": None,
-        "take_in_work_url": None if order.is_delivered else _crm_order_take_url(order),
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "weight": order.weight,
@@ -94,6 +93,8 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         name, url = chef_identity(order.taken_by)
         payload["taken_by_name"] = name
         payload["taken_by_telegram_url"] = url
+    if not order.is_delivered:
+        payload["take_in_work_url"] = _crm_order_take_url(order)
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
         if yandex_url:

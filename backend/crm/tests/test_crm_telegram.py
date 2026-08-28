@@ -416,6 +416,18 @@ class CrmTelegramTests(TestCase):
         text = build_crm_order_telegram_html(order)
         self.assertNotIn("/take", text)
         self.assertNotIn("взять в работу", text)
+        self.assertNotIn("take_in_work_url", build_crm_order_telegram_payload(order))
+
+    def test_delivered_stale_hash_without_take_url_skips_edit(self):
+        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        sync_crm_order_to_telegram(order.pk)
+        self.calls.clear()
+        payload = build_crm_order_telegram_payload(order)
+        encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        order.telegram_payload_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        order.save(update_fields=["telegram_payload_hash", "updated_at"])
+        sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(self.calls, [])
 
     def test_stale_hash_without_take_url_edits_message(self):
         order = self._create_order(delta=timedelta(hours=2))
