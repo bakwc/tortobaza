@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ChevronLeft } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ItemDetail } from "@/components/item/ItemDetail";
 import { Breadcrumbs } from "@/components/seo/Breadcrumbs";
@@ -20,10 +20,17 @@ import { getPublicSiteOrigin } from "@/lib/site-origin";
 
 export const revalidate = 300;
 
-async function loadProduct(slug: string) {
+async function loadProduct(slug: string, locale: string) {
   try {
     return await publicApi.getProduct(slug);
   } catch (error) {
+    if (error instanceof ApiError && error.status === 410) {
+      const body = error.parsed<{ category_page_slug: string | null }>();
+      const target = body?.category_page_slug
+        ? `/${locale}/categories/${body.category_page_slug}`
+        : `/${locale}`;
+      permanentRedirect(target);
+    }
     if (error instanceof ApiError && error.status === 404) {
       return null;
     }
@@ -38,7 +45,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const product = await loadProduct(slug);
+  const product = await loadProduct(slug, locale);
   if (!product) {
     const tStatic = await getTranslations({ locale, namespace: "metadata" });
     return { title: tStatic("orderTitle") };
@@ -76,7 +83,7 @@ export default async function ItemPage({
   const { locale, slug } = await params;
   setRequestLocale(locale);
 
-  const product = await loadProduct(slug);
+  const product = await loadProduct(slug, locale);
   if (!product) {
     notFound();
   }

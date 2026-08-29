@@ -4,11 +4,11 @@
   },
   "metadata": {
     "rootDefaultTitle": "Sweet & Chill — торты",
-    "rootTitleTemplate": "Sweet & Chill | {title}",
+    "rootTitleTemplate": "{title} | Sweet & Chill",
     "pageTitleTemplate": "{title} | Sweet & Chill",
     "rootDescription": "Авторские торты, десерты и индивидуальные заказы.",
     "rootKeywords": "торты, десерты, торты на заказ, Батуми, Sweet & Chill, кондитерская",
-    "homeTitle": "Торты и десерты в Батуми с доставкой",
+    "homeTitle": "Торты на заказ в Батуми — доставка в день заказа",
     "homeDescription": "Закажите авторские торты и десерты онлайн в Sweet & Chill в Батуми. Доставка по городу, в том числе день в день. Онлайн-оплата.",
     "orderTitle": "Заказ",
     "orderDescription": "Каталог тортов и десертов Sweet & Chill.",

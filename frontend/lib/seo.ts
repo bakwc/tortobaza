@@ -106,15 +106,36 @@ export function localBusinessJsonLd(origin: string) {
     "@type": "Bakery",
     name: SITE_INFO.brand,
     url: origin.replace(/\/$/, ""),
+    image: absoluteUrl(origin, SITE_INFO.ogImagePath),
     telephone: SITE_INFO.phone,
     email: SITE_INFO.email,
+    priceRange: SITE_INFO.priceRange,
     address: {
       "@type": "PostalAddress",
       streetAddress: SITE_INFO.address.line1,
       addressLocality: SITE_INFO.address.city,
       addressCountry: "GE",
     },
-    sameAs: [SITE_INFO.instagramHref],
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: SITE_INFO.geo.latitude,
+      longitude: SITE_INFO.geo.longitude,
+    },
+    openingHoursSpecification: {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      opens: SITE_INFO.openingHours.opens,
+      closes: SITE_INFO.openingHours.closes,
+    },
+    sameAs: [SITE_INFO.instagramHref, SITE_INFO.googleMapsHref],
   };
 }
 

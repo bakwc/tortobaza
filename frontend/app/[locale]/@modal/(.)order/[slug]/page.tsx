@@ -18,7 +18,7 @@ export default async function ItemModalPage({
   try {
     product = await publicApi.getProduct(slug);
   } catch (e) {
-    if (e instanceof ApiError && e.status === 404) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 410)) {
       notFound();
     }
     throw e;

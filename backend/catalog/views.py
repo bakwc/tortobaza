@@ -1,7 +1,9 @@
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.translation import get_language
-from rest_framework import generics
+from rest_framework import generics, status
+from rest_framework.response import Response
 
 from catalog.models import Category, CategoryLanding, Product
 from catalog.serializers import (
@@ -124,4 +126,24 @@ class ProductDetailView(generics.RetrieveAPIView):
             Product.objects.filter(is_active=True, category__is_active=True)
             .select_related("category")
             .prefetch_related("images", "product_option_groups__option_group__options")
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        slug = self.kwargs[self.lookup_field]
+        product = self.get_queryset().filter(slug=slug).first()
+        if product is not None:
+            return Response(self.get_serializer(product).data)
+
+        gone = Product.objects.filter(slug=slug).select_related("category").first()
+        if gone is None:
+            raise Http404
+
+        category_page_slug = None
+        if gone.category.is_active:
+            language = get_language() or "en"
+            field = _PAGE_SLUG_FIELDS.get(language, "page_slug_en")
+            category_page_slug = getattr(gone.category, field) or None
+        return Response(
+            {"detail": "gone", "category_page_slug": category_page_slug},
+            status=status.HTTP_410_GONE,
         )

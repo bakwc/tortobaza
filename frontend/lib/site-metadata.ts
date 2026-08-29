@@ -8,9 +8,9 @@ import {
 } from "@/lib/site-host";
 import { SITE_INFO } from "@/lib/site-info";
 
-const OG_IMAGE_PATH = "/sweet_chill_logo_1.jpg";
-const OG_IMAGE_WIDTH = 1955;
-const OG_IMAGE_HEIGHT = 544;
+const OG_IMAGE_PATH = SITE_INFO.ogImagePath;
+const OG_IMAGE_WIDTH = 1200;
+const OG_IMAGE_HEIGHT = 630;
 
 export async function buildRootMetadata(): Promise<Metadata> {
   const [t, locale, headerStore] = await Promise.all([
@@ -28,7 +28,7 @@ export async function buildRootMetadata(): Promise<Metadata> {
     metadataBase,
     title: {
       default: title,
-      template: `${SITE_INFO.brand} | %s`,
+      template: `%s | ${SITE_INFO.brand}`,
     },
     description,
     applicationName: SITE_INFO.brand,
