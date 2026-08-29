@@ -52,3 +52,27 @@ export function WhatsAppIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export function YandexMapsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#FC3F1D"
+        d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+      />
+      <circle cx="12" cy="9" r="2.5" fill="#fff" />
+    </svg>
+  );
+}
+
+export function GoogleMapsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#34A853" d="M12 22s7-7.75 7-13c0-1.07-.24-2.08-.67-3L12 12v10z" />
+      <path fill="#FBBC04" d="M12 12 5.33 6A7.96 7.96 0 0 0 5 9c0 5.25 7 13 7 13V12z" />
+      <path fill="#4285F4" d="M19 9c0-3.87-3.13-7-7-7v10l7-6.33C18.76 6.92 19 7.93 19 9z" />
+      <path fill="#EA4335" d="M12 2C8.13 2 5 5.13 5 9c0 .35.03.69.08 1.02L12 12V2z" />
+      <circle cx="12" cy="9" r="2.25" fill="#fff" />
+    </svg>
+  );
+}

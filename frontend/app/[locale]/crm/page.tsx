@@ -32,7 +32,14 @@ import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { useCrmOrders, useDeleteCrmOrder, usePatchCrmOrder, useResolveYandexAddress } from "@/hooks/useCrmOrders";
+import {
+  useCrmOrders,
+  useDeleteCrmOrder,
+  usePatchCrmOrder,
+  useResolveGoogleAddress,
+  useResolveYandexAddress,
+} from "@/hooks/useCrmOrders";
+import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
 import type { CrmOrder } from "@/lib/api/types";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -282,7 +289,11 @@ function CrmOrderCard({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const deleteMutation = useDeleteCrmOrder();
-  const resolveAddress = useResolveYandexAddress();
+  const resolveYandex = useResolveYandexAddress();
+  const resolveGoogle = useResolveGoogleAddress();
+  const [resolvingTarget, setResolvingTarget] = useState<"address" | "yandex" | "google" | null>(
+    null,
+  );
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
@@ -576,19 +587,9 @@ function CrmOrderCard({
                 </div>
               </div>
             ) : order.delivery_address ? (
-              <button
-                type="button"
-                disabled={resolveAddress.isPending}
-                onClick={() => {
-                  if (resolveAddress.isPending) return;
-                  resolveAddress.mutate(order.delivery_address, {
-                    onSuccess: (data) => {
-                      window.open(data.url, "_blank", "noopener,noreferrer");
-                    },
-                  });
-                }}
+              <div
                 className={cn(
-                  "w-full cursor-pointer rounded-xl p-2.5 text-left text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
+                  "w-full rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
                   order.is_delivered
                     ? "border border-sky-200/80 bg-white/80"
                     : order.taken_by_name
@@ -598,23 +599,85 @@ function CrmOrderCard({
               >
                 <div className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("deliveryAddress")}
                     </span>
-                    {resolveAddress.isPending ? (
-                      <p className="mt-0.5 flex items-center gap-2 font-medium lg:mt-1">
-                        <Spinner className="h-4 w-4 text-[var(--brand)]" />
-                        {t("resolvingAddress")}
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">
-                        {order.delivery_address}
-                      </p>
-                    )}
+                    <div className="mt-0.5 flex items-start gap-2 lg:mt-1">
+                      {resolvingTarget === "address" && resolveYandex.isPending ? (
+                        <p className="flex min-w-0 flex-1 items-center gap-2 font-medium">
+                          <Spinner className="h-4 w-4 text-[var(--brand)]" />
+                          {t("resolvingAddress")}
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                          onClick={() => {
+                            if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                            setResolvingTarget("address");
+                            resolveYandex.mutate(order.delivery_address, {
+                              onSuccess: (data) => {
+                                window.open(data.url, "_blank", "noopener,noreferrer");
+                              },
+                              onSettled: () => setResolvingTarget(null),
+                            });
+                          }}
+                          className="min-w-0 flex-1 cursor-pointer whitespace-pre-wrap text-left font-medium"
+                        >
+                          {order.delivery_address}
+                        </button>
+                      )}
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                          aria-label={t("openYandexMaps")}
+                          onClick={() => {
+                            if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                            setResolvingTarget("yandex");
+                            resolveYandex.mutate(order.delivery_address, {
+                              onSuccess: (data) => {
+                                window.open(data.url, "_blank", "noopener,noreferrer");
+                              },
+                              onSettled: () => setResolvingTarget(null),
+                            });
+                          }}
+                          className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
+                        >
+                          {resolvingTarget === "yandex" && resolveYandex.isPending ? (
+                            <Spinner className="h-6 w-6 text-[var(--brand)]" />
+                          ) : (
+                            <YandexMapsIcon className="h-6 w-6" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                          aria-label={t("openGoogleMaps")}
+                          onClick={() => {
+                            if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                            setResolvingTarget("google");
+                            resolveGoogle.mutate(order.delivery_address, {
+                              onSuccess: (data) => {
+                                window.open(data.url, "_blank", "noopener,noreferrer");
+                              },
+                              onSettled: () => setResolvingTarget(null),
+                            });
+                          }}
+                          className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
+                        >
+                          {resolvingTarget === "google" && resolveGoogle.isPending ? (
+                            <Spinner className="h-6 w-6 text-[var(--brand)]" />
+                          ) : (
+                            <GoogleMapsIcon className="h-6 w-6" />
+                          )}
+                        </button>
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ) : null}
 
             <div className="grid grid-cols-2 gap-2 lg:gap-3">

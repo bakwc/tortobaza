@@ -120,6 +120,20 @@ class YandexAddressResolveFailure(models.Model):
     failure_count = models.PositiveSmallIntegerField()
 
 
+class ResolvedGoogleAddress(models.Model):
+    address = models.TextField(unique=True)
+    google_url = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.address[:50]
+
+
+class GoogleAddressResolveFailure(models.Model):
+    address = models.TextField(unique=True)
+    failure_count = models.PositiveSmallIntegerField()
+
+
 class CrmOrderImage(models.Model):
     order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="crm_orders/")

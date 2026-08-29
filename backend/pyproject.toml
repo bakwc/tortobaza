@@ -13,6 +13,7 @@ django-cors-headers = "^4.9.0"
 pillow = "^12.2.0"
 django-modeltranslation = "^0.20.3"
 openai = "^3.5.0"
+requests = "^2.34.2"
 
 [build-system]
 requires = ["poetry-core"]

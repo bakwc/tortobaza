@@ -291,6 +291,8 @@
     "nickname": "Никнейм",
     "deliveryAddress": "Адрес доставки",
     "resolvingAddress": "Резолвим...",
+    "openYandexMaps": "Яндекс Карты",
+    "openGoogleMaps": "Google Карты",
     "weight": "Вес",
     "filling": "Начинка",
     "notes": "Заметки / описание",

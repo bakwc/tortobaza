@@ -95,3 +95,9 @@ export function useResolveYandexAddress() {
     mutationFn: (address: string) => api.resolveYandexAddress(address),
   });
 }
+
+export function useResolveGoogleAddress() {
+  return useMutation({
+    mutationFn: (address: string) => api.resolveGoogleAddress(address),
+  });
+}

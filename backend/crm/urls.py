@@ -1,6 +1,11 @@
 from django.urls import path
 
-from crm.views import CrmOrderDetailView, CrmOrderListView, ResolveYandexAddressView
+from crm.views import (
+    CrmOrderDetailView,
+    CrmOrderListView,
+    ResolveGoogleAddressView,
+    ResolveYandexAddressView,
+)
 
 urlpatterns = [
     path("crm/orders/", CrmOrderListView.as_view(), name="crm-order-list"),
@@ -9,5 +14,10 @@ urlpatterns = [
         "crm/resolve-yandex-address/",
         ResolveYandexAddressView.as_view(),
         name="crm-resolve-yandex-address",
+    ),
+    path(
+        "crm/resolve-google-address/",
+        ResolveGoogleAddressView.as_view(),
+        name="crm-resolve-google-address",
     ),
 ]

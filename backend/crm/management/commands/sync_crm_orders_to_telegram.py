@@ -4,13 +4,21 @@ from zoneinfo import ZoneInfo
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from crm.models import CrmOrder, ResolvedYandexAddress, YandexAddressResolveFailure
+from crm.google_maps import resolve_google_maps_url
+from crm.models import (
+    CrmOrder,
+    GoogleAddressResolveFailure,
+    ResolvedGoogleAddress,
+    ResolvedYandexAddress,
+    YandexAddressResolveFailure,
+)
 from crm.telegram import sync_crm_order_to_telegram
 from crm.yandex_maps import resolve_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
 YANDEX_ADDRESS_RESOLVE_MAX_FAILURES = 3
+GOOGLE_ADDRESS_RESOLVE_MAX_FAILURES = 3
 
 
 class Command(BaseCommand):
@@ -44,6 +52,35 @@ class Command(BaseCommand):
             except Exception:
                 failure, created = YandexAddressResolveFailure.objects.get_or_create(
                     address=address,
+                    defaults={"failure_count": 1},
+                )
+                if not created:
+                    failure.failure_count += 1
+                    failure.save(update_fields=["failure_count"])
+        blocked_google_addresses = GoogleAddressResolveFailure.objects.filter(
+            failure_count__gte=GOOGLE_ADDRESS_RESOLVE_MAX_FAILURES,
+        ).values("address")
+        cached_google_addresses = ResolvedGoogleAddress.objects.values("address")
+        window_addresses = CrmOrder.objects.filter(
+            deleted=False,
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            date__gte=start,
+            date__lte=end,
+        ).exclude(delivery_address="")
+        google_rows = (
+            ResolvedYandexAddress.objects.filter(
+                address__in=window_addresses.values("delivery_address"),
+            )
+            .exclude(address__in=cached_google_addresses)
+            .exclude(address__in=blocked_google_addresses)
+        )
+        for row in google_rows:
+            try:
+                resolve_google_maps_url(row.address, row.yandex_url)
+                GoogleAddressResolveFailure.objects.filter(address=row.address).delete()
+            except Exception:
+                failure, created = GoogleAddressResolveFailure.objects.get_or_create(
+                    address=row.address,
                     defaults={"failure_count": 1},
                 )
                 if not created:

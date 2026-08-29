@@ -8,12 +8,14 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthentic
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from crm.google_maps import resolve_google_maps_url
 from crm.models import CrmOrder
 from crm.serializers import (
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
+    ResolveGoogleAddressSerializer,
     ResolveYandexAddressSerializer,
 )
 from crm.telegram import schedule_crm_order_telegram_sync
@@ -148,4 +150,17 @@ class ResolveYandexAddressView(APIView):
         serializer = ResolveYandexAddressSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         url = resolve_yandex_maps_url(serializer.validated_data["address"])
+        return Response({"url": url})
+
+
+class ResolveGoogleAddressView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ResolveGoogleAddressSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        address = serializer.validated_data["address"]
+        yandex_url = resolve_yandex_maps_url(address)
+        url = resolve_google_maps_url(address, yandex_url)
         return Response({"url": url})

@@ -8,6 +8,7 @@ import {
   CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
+  ResolveGoogleAddressResponseSchema,
   ResolveYandexAddressResponseSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
@@ -30,6 +31,7 @@ import {
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
+  type ResolveGoogleAddressResponse,
   type ResolveYandexAddressResponse,
   type FulfillmentOptions,
   type FulfillmentType,
@@ -275,6 +277,14 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ address }),
       });
       return parse(ResolveYandexAddressResponseSchema, raw);
+    },
+
+    async resolveGoogleAddress(address: string): Promise<ResolveGoogleAddressResponse> {
+      const raw = await fetcher<unknown>("/api/crm/resolve-google-address/", {
+        method: "POST",
+        body: JSON.stringify({ address }),
+      });
+      return parse(ResolveGoogleAddressResponseSchema, raw);
     },
   };
 }

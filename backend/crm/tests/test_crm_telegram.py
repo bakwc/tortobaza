@@ -17,7 +17,14 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from crm.models import CrmOrder, CrmOrderImage, ResolvedYandexAddress, YandexAddressResolveFailure
+from crm.models import (
+    CrmOrder,
+    CrmOrderImage,
+    GoogleAddressResolveFailure,
+    ResolvedGoogleAddress,
+    ResolvedYandexAddress,
+    YandexAddressResolveFailure,
+)
 from crm.telegram import (
     build_crm_order_telegram_html,
     build_crm_order_telegram_payload,
@@ -66,6 +73,13 @@ class CrmTelegramTests(TestCase):
         )
         self.urlopen_patcher.start()
         self.addCleanup(self.urlopen_patcher.stop)
+        self.google_get_patcher = patch("crm.google_maps.requests.get")
+        self.google_get = self.google_get_patcher.start()
+        self.addCleanup(self.google_get_patcher.stop)
+        google_response = MagicMock()
+        google_response.text = '"coordinates":[41.645449,41.623987]'
+        google_response.raise_for_status = MagicMock()
+        self.google_get.return_value = google_response
 
     def _next_message_id(self) -> int:
         self._next_id += 1
@@ -688,3 +702,55 @@ class CrmTelegramTests(TestCase):
             ResolvedYandexAddress.objects.get(address="Rustaveli 1").yandex_url,
             "https://yandex.com/maps/?text=Rustaveli",
         )
+
+    def test_command_resolves_google_after_yandex(self):
+        self._create_order(delta=timedelta(hours=2))
+        fake_response = MagicMock()
+        fake_response.output_text = "https://yandex.com/maps/?text=Rustaveli"
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            openai_cls.return_value.responses.create.return_value = fake_response
+            call_command("sync_crm_orders_to_telegram")
+        cached = ResolvedGoogleAddress.objects.get(address="Rustaveli 1")
+        self.assertEqual(
+            cached.google_url,
+            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
+        )
+        self.google_get.assert_called()
+        self.assertIn(
+            '<a href="https://yandex.com/maps/?text=Rustaveli">Rustaveli 1</a>',
+            self.calls[0]["payload"]["text"],
+        )
+        self.assertNotIn("google.com/maps", self.calls[0]["payload"]["text"])
+
+    def test_command_skips_cached_google_address(self):
+        ResolvedYandexAddress.objects.create(
+            address="Rustaveli 1",
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        ResolvedGoogleAddress.objects.create(
+            address="Rustaveli 1",
+            google_url="https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
+        )
+        self._create_order(delta=timedelta(hours=2))
+        with patch("crm.yandex_maps.OpenAI") as openai_cls:
+            call_command("sync_crm_orders_to_telegram")
+            openai_cls.assert_not_called()
+        self.google_get.assert_not_called()
+
+    def test_command_google_resolve_failure_increments_and_stops_after_three(self):
+        ResolvedYandexAddress.objects.create(
+            address="Rustaveli 1",
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        self._create_order(delta=timedelta(hours=2))
+        self.google_get.side_effect = RuntimeError("down")
+        call_command("sync_crm_orders_to_telegram")
+        failure = GoogleAddressResolveFailure.objects.get(address="Rustaveli 1")
+        self.assertEqual(failure.failure_count, 1)
+        for expected in (2, 3):
+            call_command("sync_crm_orders_to_telegram")
+            failure.refresh_from_db()
+            self.assertEqual(failure.failure_count, expected)
+        self.google_get.reset_mock()
+        call_command("sync_crm_orders_to_telegram")
+        self.google_get.assert_not_called()

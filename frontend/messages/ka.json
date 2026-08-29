@@ -291,6 +291,8 @@
     "nickname": "Nickname",
     "deliveryAddress": "Delivery address",
     "resolvingAddress": "Resolving...",
+    "openYandexMaps": "Yandex Maps",
+    "openGoogleMaps": "Google Maps",
     "weight": "Weight",
     "filling": "Filling",
     "notes": "Notes / Description",
