@@ -4,7 +4,6 @@ import Script from "next/script";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
-import { Cormorant_Garamond, Jost, Montserrat } from "next/font/google";
 import { DevBanner } from "@/components/layout/DevBanner";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -16,25 +15,6 @@ import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { buildRootMetadata } from "@/lib/site-metadata";
 import { getPublicSiteOrigin } from "@/lib/site-origin";
 import { Providers } from "./providers";
-
-const jost = Jost({
-  variable: "--font-jost",
-  subsets: ["latin", "latin-ext", "cyrillic"],
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin", "latin-ext", "cyrillic"],
-  weight: ["300", "400", "500", "600", "700"],
-});
-
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin", "latin-ext", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
-  style: ["italic", "normal"],
-});
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -70,7 +50,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`${jost.variable} ${montserrat.variable} ${cormorant.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
         <script

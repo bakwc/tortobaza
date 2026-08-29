@@ -106,7 +106,7 @@
   --color-danger: var(--danger);
   --color-pill-active: var(--pill-active);
   --color-pill-hover: var(--pill-hover);
-  --font-sans: var(--font-montserrat);
+  --font-sans: var(--font-base);
   --font-display: var(--font-cormorant);
 }
 
