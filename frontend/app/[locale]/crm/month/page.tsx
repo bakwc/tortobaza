@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
+import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
@@ -127,6 +128,7 @@ function CrmMonthBoard() {
             </Link>
           </Button>
         ) : null}
+        <CrmOverflowMenu />
       </div>
       <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
         <div className="flex items-center justify-between gap-2">

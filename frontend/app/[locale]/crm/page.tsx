@@ -29,6 +29,7 @@ import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
+import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -122,6 +123,7 @@ function CrmBoard() {
             </Link>
           </Button>
         ) : null}
+        <CrmOverflowMenu />
       </div>
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
