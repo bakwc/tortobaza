@@ -496,18 +496,20 @@ function CrmOrderCard({
                     </Link>
                   </Button>
                 ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-[var(--danger)] hover:bg-red-50"
-                  onClick={() => {
-                    deleteMutation.reset();
-                    setIsDeleteOpen(true);
-                  }}
-                >
-                  {t("deleteOrder")}
-                </Button>
+                {currentUser.data?.is_staff ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-[var(--danger)] hover:bg-red-50"
+                    onClick={() => {
+                      deleteMutation.reset();
+                      setIsDeleteOpen(true);
+                    }}
+                  >
+                    {t("deleteOrder")}
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -901,17 +903,19 @@ function CrmOrderCard({
           </div>
         </div>
       </div>
-      <CrmDeleteOrderDialog
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-        isPending={deleteMutation.isPending}
-        isError={deleteMutation.isError}
-        onConfirm={() =>
-          deleteMutation.mutate(order.id, {
-            onSuccess: () => setIsDeleteOpen(false),
-          })
-        }
-      />
+      {currentUser.data?.is_staff ? (
+        <CrmDeleteOrderDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          isPending={deleteMutation.isPending}
+          isError={deleteMutation.isError}
+          onConfirm={() =>
+            deleteMutation.mutate(order.id, {
+              onSuccess: () => setIsDeleteOpen(false),
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }

@@ -30,7 +30,11 @@ export function CrmOverflowMenu() {
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
             onClick={() => {
               setOpen(false);
-              logout.mutate();
+              logout.mutate(undefined, {
+                onSuccess: () => {
+                  window.location.reload();
+                },
+              });
             }}
             disabled={logout.isPending}
           >

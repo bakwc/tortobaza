@@ -372,30 +372,34 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           </Link>
         </Button>
       ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="h-8 w-8 shrink-0 px-0 text-[var(--danger)] hover:bg-red-50"
-        aria-label={t("deleteOrder")}
-        onClick={() => {
-          deleteMutation.reset();
-          setIsDeleteOpen(true);
-        }}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
-      <CrmDeleteOrderDialog
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-        isPending={deleteMutation.isPending}
-        isError={deleteMutation.isError}
-        onConfirm={() =>
-          deleteMutation.mutate(order.id, {
-            onSuccess: () => setIsDeleteOpen(false),
-          })
-        }
-      />
+      {currentUser.data?.is_staff ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 shrink-0 px-0 text-[var(--danger)] hover:bg-red-50"
+            aria-label={t("deleteOrder")}
+            onClick={() => {
+              deleteMutation.reset();
+              setIsDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+          <CrmDeleteOrderDialog
+            open={isDeleteOpen}
+            onOpenChange={setIsDeleteOpen}
+            isPending={deleteMutation.isPending}
+            isError={deleteMutation.isError}
+            onConfirm={() =>
+              deleteMutation.mutate(order.id, {
+                onSuccess: () => setIsDeleteOpen(false),
+              })
+            }
+          />
+        </>
+      ) : null}
     </div>
   );
 }
