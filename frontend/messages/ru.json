@@ -343,6 +343,23 @@
     "deleteConfirmBody": "Заказ будет скрыт с доски.",
     "cancel": "Отмена",
     "confirmDelete": "Удалить",
-    "deleteError": "Не удалось удалить заказ. Попробуйте ещё раз."
+    "deleteError": "Не удалось удалить заказ. Попробуйте ещё раз.",
+    "invoice": "Счёт",
+    "invoiceMenu": "Действия с заказом",
+    "invoiceTitle": "Счёт",
+    "invoicePrint": "Печать",
+    "invoiceFrom": "От",
+    "invoiceBillTo": "Плательщик",
+    "invoiceDate": "Дата",
+    "invoiceNumber": "Счёт #{id}",
+    "invoiceItem": "Позиция",
+    "invoiceAmount": "Сумма",
+    "invoicePaymentDetails": "Реквизиты для оплаты",
+    "invoiceTradingName": "Торговое наименование",
+    "invoiceCompanyName": "Юридическое название",
+    "invoiceCompanyId": "Идентификатор компании",
+    "invoiceEmail": "Email",
+    "invoicePhone": "Телефон",
+    "invoiceCompanyAddress": "Адрес"
   }
 }

@@ -24,4 +24,10 @@ export const SITE_INFO = {
   priceRange: "₾₾",
   ogImagePath: "/og-image.jpg",
   currency: "GEL",
+  bank: {
+    address: "Fridon Khalvashi 2nd Deadlock, 5, 6010, Batumi, Georgia",
+    iban: "GE94BG0000000612361573",
+    swift: "BAGAGE22XXX",
+    receiverName: "SWEET CHILL",
+  },
 } as const;

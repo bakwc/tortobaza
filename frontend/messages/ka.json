@@ -343,6 +343,23 @@
     "deleteConfirmBody": "შეკვეთა დაიმალება დაფიდან.",
     "cancel": "გაუქმება",
     "confirmDelete": "წაშლა",
-    "deleteError": "შეკვეთის წაშლა ვერ მოხერხდა. სცადეთ ხელახლა."
+    "deleteError": "შეკვეთის წაშლა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    "invoice": "ინვოისი",
+    "invoiceMenu": "შეკვეთის მოქმედებები",
+    "invoiceTitle": "ინვოისი",
+    "invoicePrint": "ბეჭდვა",
+    "invoiceFrom": "გამომგზავნი",
+    "invoiceBillTo": "გადამხდელი",
+    "invoiceDate": "თარიღი",
+    "invoiceNumber": "ინვოისი #{id}",
+    "invoiceItem": "პოზიცია",
+    "invoiceAmount": "თანხა",
+    "invoicePaymentDetails": "გადახდის რეკვიზიტები",
+    "invoiceTradingName": "სავაჭრო სახელი",
+    "invoiceCompanyName": "კომპანიის სახელი",
+    "invoiceCompanyId": "კომპანიის ID",
+    "invoiceEmail": "ელფოსტა",
+    "invoicePhone": "ტელეფონი",
+    "invoiceCompanyAddress": "მისამართი"
   }
 }

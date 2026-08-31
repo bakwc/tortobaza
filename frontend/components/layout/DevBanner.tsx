@@ -6,7 +6,7 @@ export async function DevBanner() {
   return (
     <div
       role="banner"
-      className="relative z-50 border-b border-red-950/25 bg-red-600 px-4 py-2 text-center text-xs leading-snug text-white sm:text-sm"
+      className="relative z-50 border-b border-red-950/25 bg-red-600 px-4 py-2 text-center text-xs leading-snug text-white print:hidden sm:text-sm"
     >
       <span className="inline-block sm:mr-2">{t("message")}</span>
       <a

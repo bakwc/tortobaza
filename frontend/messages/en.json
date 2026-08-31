@@ -343,6 +343,23 @@
     "deleteConfirmBody": "The order will be hidden from the board.",
     "cancel": "Cancel",
     "confirmDelete": "Delete",
-    "deleteError": "Could not delete the order. Please try again."
+    "deleteError": "Could not delete the order. Please try again.",
+    "invoice": "Invoice",
+    "invoiceMenu": "Order actions",
+    "invoiceTitle": "Invoice",
+    "invoicePrint": "Print",
+    "invoiceFrom": "From",
+    "invoiceBillTo": "Bill to",
+    "invoiceDate": "Date",
+    "invoiceNumber": "Invoice #{id}",
+    "invoiceItem": "Item",
+    "invoiceAmount": "Amount",
+    "invoicePaymentDetails": "Payment details",
+    "invoiceTradingName": "Trading name",
+    "invoiceCompanyName": "Company name",
+    "invoiceCompanyId": "Company ID",
+    "invoiceEmail": "Email",
+    "invoicePhone": "Phone",
+    "invoiceCompanyAddress": "Address"
   }
 }

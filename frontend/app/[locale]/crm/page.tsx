@@ -29,6 +29,7 @@ import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
+import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -510,6 +511,7 @@ function CrmOrderCard({
                     {t("deleteOrder")}
                   </Button>
                 ) : null}
+                <CrmOrderActionsMenu orderId={order.id} />
               </div>
             </div>
 

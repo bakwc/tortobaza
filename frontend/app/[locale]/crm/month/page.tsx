@@ -22,6 +22,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
+import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -400,6 +401,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           />
         </>
       ) : null}
+      <CrmOrderActionsMenu orderId={order.id} />
     </div>
   );
 }
