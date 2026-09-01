@@ -2,6 +2,7 @@ import hashlib
 import html
 import json
 import threading
+import time as time_module
 import urllib.error
 import urllib.request
 import uuid
@@ -11,7 +12,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.db import transaction
+from django.db import OperationalError, transaction
 from django.utils import timezone
 
 from accounts.models import chef_identity
@@ -373,6 +374,20 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
     )
 
 
+def _persist_telegram_state_with_retry(
+    order: CrmOrder, message_id: int, media: list, payload_hash: str
+) -> None:
+    for attempt in range(10):
+        try:
+            with transaction.atomic():
+                _persist_telegram_state(order, message_id, media, payload_hash)
+            return
+        except OperationalError as exc:
+            if "database is locked" not in str(exc) or attempt == 9:
+                raise
+            time_module.sleep(0.3)
+
+
 def sync_crm_order_to_telegram(order_id: int) -> None:
     token = settings.TELEGRAM_BOT_TOKEN
     chat_id = settings.TELEGRAM_CRM_CHAT_ID
@@ -391,57 +406,58 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
             now = timezone.now()
             if not crm_order_in_telegram_window(order, now):
                 return
-            media = _post_photos(order, chat_id)
-            text_result = _telegram_json(
-                "sendMessage",
-                {
-                    "chat_id": chat_id,
-                    "text": build_crm_order_telegram_html(order),
-                    "parse_mode": "HTML",
-                    "disable_web_page_preview": True,
-                },
-            )
-            _persist_telegram_state(
-                order,
-                text_result["result"]["message_id"],
-                media,
-                new_hash,
-            )
-            return
-        current_image_ids = [img.id for img in order.images.all()]
-        stored_image_ids = _media_image_ids(order.telegram_media_ids)
-        if current_image_ids != stored_image_ids:
-            _delete_media(chat_id, order.telegram_media_ids)
-            media = _post_photos(order, chat_id)
-        else:
-            media = order.telegram_media_ids
-        _telegram_json(
-            "editMessageText",
+    if not posted_before:
+        media = _post_photos(order, chat_id)
+        text_result = _telegram_json(
+            "sendMessage",
             {
                 "chat_id": chat_id,
-                "message_id": order.telegram_message_id,
                 "text": build_crm_order_telegram_html(order),
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
             },
         )
-        slot_changed = _slot_tuple(order) != _posted_slot_tuple(order)
-        if slot_changed:
-            link = _channel_message_link(chat_id, order.telegram_message_id)
-            _telegram_json(
-                "sendMessage",
-                {
-                    "chat_id": chat_id,
-                    "text": (
-                        f"время доставки / выдачи поменялось на {_esc(_format_slot_short(order))}\n"
-                        f'<a href="{link}">исходное сообщение</a>'
-                    ),
-                    "parse_mode": "HTML",
-                    "reply_to_message_id": order.telegram_message_id,
-                    "disable_web_page_preview": True,
-                },
-            )
-        _persist_telegram_state(order, order.telegram_message_id, media, new_hash)
+        _persist_telegram_state_with_retry(
+            order,
+            text_result["result"]["message_id"],
+            media,
+            new_hash,
+        )
+        return
+    current_image_ids = [img.id for img in order.images.all()]
+    stored_image_ids = _media_image_ids(order.telegram_media_ids)
+    if current_image_ids != stored_image_ids:
+        _delete_media(chat_id, order.telegram_media_ids)
+        media = _post_photos(order, chat_id)
+    else:
+        media = order.telegram_media_ids
+    _telegram_json(
+        "editMessageText",
+        {
+            "chat_id": chat_id,
+            "message_id": order.telegram_message_id,
+            "text": build_crm_order_telegram_html(order),
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        },
+    )
+    slot_changed = _slot_tuple(order) != _posted_slot_tuple(order)
+    if slot_changed:
+        link = _channel_message_link(chat_id, order.telegram_message_id)
+        _telegram_json(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": (
+                    f"время доставки / выдачи поменялось на {_esc(_format_slot_short(order))}\n"
+                    f'<a href="{link}">исходное сообщение</a>'
+                ),
+                "parse_mode": "HTML",
+                "reply_to_message_id": order.telegram_message_id,
+                "disable_web_page_preview": True,
+            },
+        )
+    _persist_telegram_state_with_retry(order, order.telegram_message_id, media, new_hash)
 
 
 def schedule_crm_order_telegram_sync(order_id: int) -> None:

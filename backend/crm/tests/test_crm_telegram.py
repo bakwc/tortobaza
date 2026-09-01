@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.db import OperationalError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
@@ -26,6 +27,7 @@ from crm.models import (
     YandexAddressResolveFailure,
 )
 from crm.telegram import (
+    _persist_telegram_state,
     build_crm_order_telegram_html,
     build_crm_order_telegram_payload,
     crm_order_in_telegram_window,
@@ -260,6 +262,25 @@ class CrmTelegramTests(TestCase):
         self.calls.clear()
         sync_crm_order_to_telegram(order.pk)
         self.assertEqual(self.calls, [])
+
+    def test_persist_retries_on_database_locked(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        attempts = {"n": 0}
+
+        def flaky(persist_order, message_id, media, payload_hash):
+            attempts["n"] += 1
+            if attempts["n"] == 1:
+                raise OperationalError("database is locked")
+            _persist_telegram_state(persist_order, message_id, media, payload_hash)
+
+        with patch("crm.telegram._persist_telegram_state", side_effect=flaky):
+            with patch("crm.telegram.time_module.sleep") as slept:
+                sync_crm_order_to_telegram(order.pk)
+        order.refresh_from_db()
+        self.assertIsNotNone(order.telegram_message_id)
+        self.assertEqual(attempts["n"], 2)
+        slept.assert_called_once_with(0.3)
+        self.assertEqual([c["method"] for c in self.calls], ["sendMessage"])
 
     def test_is_paid_change_edits_message(self):
         order = self._create_order(delta=timedelta(hours=2))
