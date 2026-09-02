@@ -38,6 +38,14 @@ _FULFILLMENT_LABELS = {
     CrmOrder.FULFILLMENT_PICKUP: "Самовывоз",
 }
 
+_STATUS_LABELS = {
+    CrmOrder.STATUS_NEW: "Новый",
+    CrmOrder.STATUS_IN_WORK: "В работе",
+    CrmOrder.STATUS_CLIENT_APPROVED: "Одобрен клиентом",
+    CrmOrder.STATUS_IN_DELIVERY: "В доставке",
+    CrmOrder.STATUS_DELIVERED: "Доставлен",
+}
+
 
 def _esc(value: str) -> str:
     return html.escape(value, quote=False)
@@ -74,9 +82,8 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "filling": order.filling,
         "fulfillment_type": order.fulfillment_type,
         "images": images,
-        "is_delivered": order.is_delivered,
-        "is_delivered_mark": "✅" if order.is_delivered else "❌",
         "is_paid": order.is_paid,
+        "status": order.status,
         "nickname": order.nickname,
         "payment_type": order.payment_type,
         "prepayment": str(order.prepayment),
@@ -94,7 +101,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         name, url = chef_identity(order.taken_by)
         payload["taken_by_name"] = name
         payload["taken_by_telegram_url"] = url
-    if not order.is_delivered:
+    if order.status != CrmOrder.STATUS_DELIVERED:
         payload["take_in_work_url"] = _crm_order_take_url(order)
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
@@ -157,7 +164,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>CRM заказ #{order.pk}</b>")
     view_href = html.escape(_crm_order_view_url(order), quote=True)
     edit_href = html.escape(_crm_order_edit_url(order), quote=True)
-    if order.is_delivered:
+    if order.status == CrmOrder.STATUS_DELIVERED:
         lines.append(f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a>')
     else:
         take_href = html.escape(_crm_order_take_url(order), quote=True)
@@ -191,7 +198,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Предоплата:</b> {_format_money(order.prepayment)}")
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
-    lines.append(f"<b>Доставлен / выдан:</b> {'✅' if order.is_delivered else '❌'}")
+    lines.append(f"<b>Статус:</b> {_esc(_STATUS_LABELS[order.status])}")
     if order.taken_by_id:
         name, url = chef_identity(order.taken_by)
         if url:

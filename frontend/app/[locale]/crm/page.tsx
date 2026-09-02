@@ -42,7 +42,12 @@ import {
   useResolveYandexAddress,
 } from "@/hooks/useCrmOrders";
 import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
-import type { CrmOrder } from "@/lib/api/types";
+import type { CrmOrder, CrmOrderStatus } from "@/lib/api/types";
+import {
+  CRM_ORDER_STATUS_MESSAGE_KEYS,
+  CRM_ORDER_STATUSES,
+  crmOrderStatusTone,
+} from "@/lib/crmStatus";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +112,7 @@ function CrmBoard() {
     el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusedOrderId, ordersQuery.isLoading, orders.length]);
 
-  const deliveredCount = orders.filter((o) => o.is_delivered).length;
+  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
   const paidCount = orders.filter((o) => o.is_paid).length;
 
   return (
@@ -219,10 +224,10 @@ function CrmBoard() {
               order={order}
               focused={focusedOrderId === String(order.id)}
               isPatching={patchMutation.isPending && patchMutation.variables?.id === order.id}
-              onToggleDelivered={() =>
+              onSetStatus={(status) =>
                 patchMutation.mutate({
                   id: order.id,
-                  body: { is_delivered: !order.is_delivered },
+                  body: { status },
                 })
               }
               onTogglePaid={() =>
@@ -275,19 +280,21 @@ function CrmOrderCard({
   order,
   focused,
   isPatching,
-  onToggleDelivered,
+  onSetStatus,
   onTogglePaid,
   onTakeInWork,
 }: {
   order: CrmOrder;
   focused: boolean;
   isPatching: boolean;
-  onToggleDelivered: () => void;
+  onSetStatus: (status: CrmOrderStatus) => void;
   onTogglePaid: () => void;
   onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
   const currentUser = useCurrentUser();
+  const tone = crmOrderStatusTone(order.status);
+  const [draftStatus, setDraftStatus] = useState<CrmOrderStatus>(order.status);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
@@ -305,16 +312,16 @@ function CrmOrderCard({
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
 
+  useEffect(() => {
+    setDraftStatus(order.status);
+  }, [order.status]);
+
   return (
     <div
       id={`crm-order-${order.id}`}
       className={cn(
         "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
-        order.is_delivered
-          ? "border-sky-300 bg-sky-100"
-          : order.taken_by_name
-            ? "border-orange-300 bg-orange-100"
-            : "border-[var(--line)] bg-white",
+        tone.card,
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
     >
@@ -323,11 +330,7 @@ function CrmOrderCard({
           <div
             className={cn(
               "relative mx-auto aspect-square w-full max-w-44 overflow-hidden rounded-xl border sm:max-w-56 lg:max-w-none lg:rounded-2xl",
-              order.is_delivered
-                ? "border-sky-200 bg-white"
-                : order.taken_by_name
-                  ? "border-orange-200 bg-white"
-                  : "border-[var(--line)] bg-[var(--cream)]",
+              tone.media,
             )}
           >
             {activeImage ? (
@@ -366,9 +369,7 @@ function CrmOrderCard({
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
                     "relative h-11 w-11 overflow-hidden rounded-lg border-2 transition-all lg:h-16 lg:w-16 lg:rounded-xl",
-                    order.is_delivered || order.taken_by_name
-                      ? "bg-white"
-                      : "bg-[var(--cream)]",
+                    order.status === "new" ? "bg-[var(--cream)]" : "bg-white",
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
                       : "border-[var(--line)] opacity-70 hover:opacity-100",
@@ -438,11 +439,7 @@ function CrmOrderCard({
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 lg:pb-4",
-                order.is_delivered
-                  ? "border-sky-200"
-                  : order.taken_by_name
-                    ? "border-orange-200"
-                    : "border-[var(--line)]",
+                tone.divider,
               )}
             >
               <div className="flex items-center gap-1.5 lg:gap-2">
@@ -482,9 +479,7 @@ function CrmOrderCard({
                   href={`/crm?date=${order.date}&order=${order.id}`}
                   className={cn(
                     "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)] underline-offset-2 hover:underline",
-                    order.is_delivered || order.taken_by_name
-                      ? "bg-white"
-                      : "bg-[var(--cream)]",
+                    order.status === "new" ? "bg-[var(--cream)]" : "bg-white",
                   )}
                 >
                   #{order.id}
@@ -518,11 +513,7 @@ function CrmOrderCard({
             <div
               className={cn(
                 "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
-                order.is_delivered
-                  ? "border border-sky-200/80 bg-white/80"
-                  : order.taken_by_name
-                    ? "border border-orange-200/80 bg-white/80"
-                    : "bg-[var(--cream-soft)]",
+                tone.panelSoft,
               )}
             >
               <div className="flex items-start gap-2">
@@ -547,11 +538,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
-                  order.is_delivered
-                    ? "border border-sky-200/80 bg-white/80"
-                    : order.taken_by_name
-                      ? "border border-orange-200/80 bg-white/80"
-                      : "bg-[var(--cream-soft)]",
+                  tone.panelSoft,
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -570,11 +557,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
-                  order.is_delivered
-                    ? "border border-sky-200/80 bg-white/80"
-                    : order.taken_by_name
-                      ? "border border-orange-200/80 bg-white/80"
-                      : "bg-[var(--cream-soft)]",
+                  tone.panelSoft,
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -596,11 +579,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "w-full rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
-                  order.is_delivered
-                    ? "border border-sky-200/80 bg-white/80"
-                    : order.taken_by_name
-                      ? "border border-orange-200/80 bg-white/80"
-                      : "bg-[var(--cream-soft)]",
+                  tone.panelSoft,
                 )}
               >
                 <div className="flex items-start gap-2">
@@ -690,11 +669,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
-                  order.is_delivered
-                    ? "border-sky-200/80 bg-white/70"
-                    : order.taken_by_name
-                      ? "border-orange-200/80 bg-white/70"
-                      : "border-[var(--line)]",
+                  tone.panel,
                 )}
               >
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -705,11 +680,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
-                  order.is_delivered
-                    ? "border-sky-200/80 bg-white/70"
-                    : order.taken_by_name
-                      ? "border-orange-200/80 bg-white/70"
-                      : "border-[var(--line)]",
+                  tone.panel,
                 )}
               >
                 <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -723,11 +694,7 @@ function CrmOrderCard({
               <div
                 className={cn(
                   "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
-                  order.is_delivered
-                    ? "border-sky-200/80 bg-white/70"
-                    : order.taken_by_name
-                      ? "border-orange-200/80 bg-white/70"
-                      : "border-[var(--line)]",
+                  tone.panel,
                 )}
               >
                 <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
@@ -743,11 +710,7 @@ function CrmOrderCard({
             <div
               className={cn(
                 "grid grid-cols-2 gap-2 rounded-xl p-2.5 sm:grid-cols-4 lg:gap-3 lg:rounded-2xl lg:p-4",
-                order.is_delivered
-                  ? "border border-sky-200/80 bg-white/80"
-                  : order.taken_by_name
-                    ? "border border-orange-200/80 bg-white/80"
-                    : "bg-[var(--cream-soft)]",
+                tone.panelSoft,
               )}
             >
               <div>
@@ -783,7 +746,7 @@ function CrmOrderCard({
           </div>
 
           <div className="grid gap-2 pt-1 sm:gap-3 lg:pt-2">
-            {!order.is_delivered ? (
+            {order.status !== "delivered" ? (
               order.taken_by_name ? (
                 <div
                   role="button"
@@ -847,61 +810,55 @@ function CrmOrderCard({
                 </Button>
               )
             ) : null}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="grid grid-cols-[1fr_auto] gap-2 sm:gap-3">
+              <select
+                value={draftStatus}
+                onChange={(event) => setDraftStatus(event.target.value as CrmOrderStatus)}
+                disabled={isPatching}
+                className="h-11 w-full rounded-md border-2 border-[var(--line)] bg-white px-3 text-xs font-semibold text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30 disabled:opacity-70 lg:h-14 lg:text-sm"
+              >
+                {CRM_ORDER_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
+                  </option>
+                ))}
+              </select>
               <Button
                 type="button"
                 size="lg"
-                onClick={onToggleDelivered}
-                disabled={isPatching}
-                className={cn(
-                  "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
-                  order.is_delivered
-                    ? "bg-sky-600 text-white hover:bg-sky-700"
-                    : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
-                )}
+                onClick={() => onSetStatus(draftStatus)}
+                disabled={isPatching || draftStatus === order.status}
+                className="h-11 px-3 font-semibold lg:h-14 lg:px-8"
               >
-                {isPatching ? (
-                  <Spinner className="h-5 w-5" />
-                ) : order.is_delivered ? (
-                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                    <Check className="h-4 w-4 lg:h-5 lg:w-5" />
-                    {t("delivered")}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                    <Truck className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                    {t("markDelivered")}
-                  </span>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                size="lg"
-                onClick={onTogglePaid}
-                disabled={isPatching}
-                className={cn(
-                  "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
-                  order.is_paid
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
-                )}
-              >
-                {isPatching ? (
-                  <Spinner className="h-5 w-5" />
-                ) : order.is_paid ? (
-                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                    <Check className="h-4 w-4 lg:h-5 lg:w-5" />
-                    {t("paid")}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                    <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                    {t("markPaid")}
-                  </span>
-                )}
+                {t("setStatus")}
               </Button>
             </div>
+            <Button
+              type="button"
+              size="lg"
+              onClick={onTogglePaid}
+              disabled={isPatching}
+              className={cn(
+                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
+                order.is_paid
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                  : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {isPatching ? (
+                <Spinner className="h-5 w-5" />
+              ) : order.is_paid ? (
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
+                  {t("paid")}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
+                  <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
+                  {t("markPaid")}
+                </span>
+              )}
+            </Button>
           </div>
         </div>
       </div>

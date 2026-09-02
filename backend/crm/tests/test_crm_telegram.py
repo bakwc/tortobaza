@@ -422,11 +422,15 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(self.calls, [])
 
     def test_html_contains_useful_fields(self):
-        order = self._create_order(delta=timedelta(hours=2), is_delivered=True, is_paid=True)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            status=CrmOrder.STATUS_DELIVERED,
+            is_paid=True,
+        )
         text = build_crm_order_telegram_html(order)
         self.assertIn("Доставка", text)
         self.assertIn("Оплачен:</b> да", text)
-        self.assertIn("Доставлен / выдан:</b> ✅", text)
+        self.assertIn("Статус:</b> Доставлен", text)
         self.assertIn(
             f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.pk}",
             text,
@@ -440,22 +444,22 @@ class CrmTelegramTests(TestCase):
         self.assertNotIn("wa.me", text)
         self.assertNotIn("t.me", text)
 
-    def test_html_undelivered_uses_red_mark(self):
-        order = self._create_order(delta=timedelta(hours=2), is_delivered=False)
+    def test_html_new_status_includes_take_in_work(self):
+        order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_NEW)
         text = build_crm_order_telegram_html(order)
-        self.assertIn("Доставлен / выдан:</b> ❌", text)
+        self.assertIn("Статус:</b> Новый", text)
         self.assertIn(f"https://sweet-chill.ge/ru/crm/{order.pk}/take", text)
         self.assertIn(">взять в работу</a>", text)
 
     def test_html_delivered_omits_take_in_work_link(self):
-        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         text = build_crm_order_telegram_html(order)
         self.assertNotIn("/take", text)
         self.assertNotIn("взять в работу", text)
         self.assertNotIn("take_in_work_url", build_crm_order_telegram_payload(order))
 
     def test_delivered_stale_hash_without_take_url_skips_edit(self):
-        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         sync_crm_order_to_telegram(order.pk)
         self.calls.clear()
         payload = build_crm_order_telegram_payload(order)
@@ -466,7 +470,7 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(self.calls, [])
 
     def test_edit_message_not_modified_still_persists_hash(self):
-        order = self._create_order(delta=timedelta(hours=2), is_delivered=True)
+        order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         sync_crm_order_to_telegram(order.pk)
         order.refresh_from_db()
         order.telegram_payload_hash = "0" * 64

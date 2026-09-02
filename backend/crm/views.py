@@ -31,7 +31,7 @@ class CrmOrderWritePermission(BasePermission):
         if request.user.is_staff:
             return True
         if request.method == "PATCH":
-            return set(request.data.keys()) <= {"is_delivered", "take_in_work"}
+            return set(request.data.keys()) <= {"status", "take_in_work"}
         return False
 
 

@@ -26,7 +26,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "contact_summary",
         "nickname",
         "fulfillment_type",
-        "is_delivered",
+        "status",
         "taken_by",
         "weight",
         "filling",
@@ -37,7 +37,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "deleted",
     ]
     list_display_links = ["id", "date"]
-    list_filter = ["date", "fulfillment_type", "is_delivered", "is_paid", "payment_type", "deleted"]
+    list_filter = ["date", "fulfillment_type", "status", "is_paid", "payment_type", "deleted"]
     search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
@@ -68,7 +68,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
                     "nickname",
                     "delivery_address",
                     "fulfillment_type",
-                    "is_delivered",
+                    "status",
                     "taken_by",
                 ),
             },

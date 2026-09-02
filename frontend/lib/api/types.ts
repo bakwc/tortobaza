@@ -283,7 +283,7 @@ export const CrmOrderSchema = z.object({
   nickname: z.string(),
   delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
-  is_delivered: z.boolean(),
+  status: z.enum(["new", "in_work", "client_approved", "in_delivery", "delivered"]),
   taken_by_name: z.string().nullable(),
   taken_by_telegram_url: z.string().nullable(),
   weight: z.string(),
@@ -347,12 +347,13 @@ export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressRe
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;
 
 export type UpdateCrmOrderBody = {
-  is_delivered?: boolean;
+  status?: CrmOrder["status"];
   is_paid?: boolean;
   take_in_work?: boolean;
 };
 
 export type CrmOrderPaymentType = CrmOrder["payment_type"];
+export type CrmOrderStatus = CrmOrder["status"];
 
 export type CrmOrderWriteFields = {
   date: string;
@@ -363,7 +364,7 @@ export type CrmOrderWriteFields = {
   nickname: string;
   delivery_address: string;
   fulfillment_type: "delivery" | "pickup";
-  is_delivered: boolean;
+  status: CrmOrderStatus;
   weight: string;
   filling: string;
   description: string;

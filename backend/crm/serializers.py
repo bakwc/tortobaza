@@ -43,7 +43,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "nickname",
             "delivery_address",
             "fulfillment_type",
-            "is_delivered",
+            "status",
             "taken_by_name",
             "taken_by_telegram_url",
             "weight",
@@ -84,12 +84,21 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CrmOrder
-        fields = ["is_delivered", "is_paid", "take_in_work"]
+        fields = ["status", "is_paid", "take_in_work"]
 
     def update(self, instance, validated_data):
         take_in_work = validated_data.pop("take_in_work", None)
+        status = validated_data.pop("status", None)
         if take_in_work:
             instance.taken_by = self.context["request"].user
+            if instance.status == CrmOrder.STATUS_NEW:
+                instance.status = CrmOrder.STATUS_IN_WORK
+        if status is not None:
+            instance.status = status
+            if status == CrmOrder.STATUS_NEW:
+                instance.taken_by = None
+            elif status == CrmOrder.STATUS_IN_WORK and instance.taken_by_id is None:
+                instance.taken_by = self.context["request"].user
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -121,7 +130,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             "nickname",
             "delivery_address",
             "fulfillment_type",
-            "is_delivered",
+            "status",
             "weight",
             "filling",
             "description",

@@ -26,7 +26,7 @@ class CrmOrdersApiTests(TestCase):
         response = self.client.get("/api/crm/orders/")
         self.assertEqual(response.status_code, 403)
 
-        patch_response = self.client.patch("/api/crm/orders/1/", {"is_delivered": True})
+        patch_response = self.client.patch("/api/crm/orders/1/", {"status": CrmOrder.STATUS_DELIVERED})
         self.assertEqual(patch_response.status_code, 403)
 
         post_response = self.client.post("/api/crm/orders/", {})
@@ -262,7 +262,7 @@ class CrmOrdersApiTests(TestCase):
             filling="Mango",
             cake_price=Decimal("100.00"),
             prepayment=Decimal("0.00"),
-            is_delivered=False,
+            status=CrmOrder.STATUS_NEW,
             is_paid=False,
             payment_type=CrmOrder.PAYMENT_CASH,
         )
@@ -270,13 +270,13 @@ class CrmOrdersApiTests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
-            {"is_delivered": True},
+            {"status": CrmOrder.STATUS_DELIVERED},
             format="json",
         )
         self.assertEqual(response.status_code, 200)
 
         order.refresh_from_db()
-        self.assertTrue(order.is_delivered)
+        self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
         self.assertFalse(order.is_paid)
         self.assertEqual(order.weight, "2kg")
 
@@ -291,7 +291,7 @@ class CrmOrdersApiTests(TestCase):
             filling="Mango",
             cake_price=Decimal("100.00"),
             prepayment=Decimal("0.00"),
-            is_delivered=False,
+            status=CrmOrder.STATUS_NEW,
             is_paid=False,
             payment_type=CrmOrder.PAYMENT_CASH,
         )
@@ -305,8 +305,10 @@ class CrmOrdersApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["taken_by_name"], "chef_anna")
         self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_anna")
+        self.assertEqual(data["status"], CrmOrder.STATUS_IN_WORK)
         order.refresh_from_db()
         self.assertEqual(order.taken_by_id, self.user.id)
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
 
     def test_take_in_work_reassigns_to_other_user(self):
         UserProfile.objects.create(user=self.user, telegram_username="chef_one")
@@ -322,6 +324,7 @@ class CrmOrdersApiTests(TestCase):
             cake_price=Decimal("100.00"),
             prepayment=Decimal("0.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_IN_WORK,
             taken_by=self.user,
         )
         self.client.force_authenticate(user=other)
@@ -336,6 +339,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_two")
         order.refresh_from_db()
         self.assertEqual(order.taken_by_id, other.id)
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
 
     def test_take_in_work_falls_back_to_site_username(self):
         order = CrmOrder.objects.create(
@@ -360,6 +364,81 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["taken_by_name"], "worker")
         self.assertIsNone(data["taken_by_telegram_url"])
         order.refresh_from_db()
+        self.assertEqual(order.taken_by_id, self.user.id)
+
+    def test_take_in_work_does_not_rollback_later_status(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_CLIENT_APPROVED,
+            taken_by=self.user,
+        )
+        other = User.objects.create_user(username="other", password="password")
+        self.client.force_authenticate(user=other)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_CLIENT_APPROVED)
+        self.assertEqual(order.taken_by_id, other.id)
+
+    def test_patch_status_new_clears_taken_by(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_IN_WORK,
+            taken_by=self.user,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertIsNone(order.taken_by_id)
+
+    def test_patch_status_in_work_assigns_current_user_when_empty(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_NEW,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_IN_WORK},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
         self.assertEqual(order.taken_by_id, self.user.id)
 
     def test_invalid_date_returns_400(self):
@@ -405,7 +484,7 @@ class CrmOrdersApiTests(TestCase):
             "nickname": "@nick",
             "delivery_address": "Rustaveli 1",
             "fulfillment_type": CrmOrder.FULFILLMENT_DELIVERY,
-            "is_delivered": False,
+            "status": CrmOrder.STATUS_NEW,
             "weight": "2kg",
             "filling": "Vanilla",
             "description": "Note",
@@ -444,7 +523,7 @@ class CrmOrdersApiTests(TestCase):
 
         mixed_response = self.client.patch(
             detail_url,
-            {"is_delivered": True, "is_paid": True},
+            {"status": CrmOrder.STATUS_DELIVERED, "is_paid": True},
             format="json",
         )
         self.assertEqual(mixed_response.status_code, 403)
@@ -455,7 +534,7 @@ class CrmOrdersApiTests(TestCase):
         order.refresh_from_db()
         self.assertFalse(order.deleted)
         self.assertFalse(order.is_paid)
-        self.assertFalse(order.is_delivered)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
         self.assertEqual(CrmOrder.objects.filter(deleted=False).count(), 1)
 
     def test_admin_can_patch_is_paid(self):
@@ -468,20 +547,20 @@ class CrmOrdersApiTests(TestCase):
             filling="Mango",
             cake_price=Decimal("100.00"),
             prepayment=Decimal("0.00"),
-            is_delivered=False,
+            status=CrmOrder.STATUS_NEW,
             is_paid=False,
             payment_type=CrmOrder.PAYMENT_CASH,
         )
         self.client.force_authenticate(user=self.admin)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
-            {"is_delivered": True, "is_paid": True, "weight": "99kg"},
+            {"status": CrmOrder.STATUS_DELIVERED, "is_paid": True, "weight": "99kg"},
             format="json",
         )
         self.assertEqual(response.status_code, 200)
 
         order.refresh_from_db()
-        self.assertTrue(order.is_delivered)
+        self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
         self.assertTrue(order.is_paid)
         self.assertEqual(order.weight, "2kg")
 

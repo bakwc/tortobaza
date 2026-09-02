@@ -13,7 +13,8 @@ import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCreateCrmOrder, useUpdateCrmOrder } from "@/hooks/useCrmOrders";
 import { ApiError } from "@/lib/api/client";
-import type { CrmOrder, CrmOrderPaymentType, CrmOrderWriteFields } from "@/lib/api/types";
+import type { CrmOrder, CrmOrderPaymentType, CrmOrderStatus, CrmOrderWriteFields } from "@/lib/api/types";
+import { CRM_ORDER_STATUS_MESSAGE_KEYS, CRM_ORDER_STATUSES } from "@/lib/crmStatus";
 import { cn } from "@/lib/utils";
 
 function extractDetail(error: ApiError, fallback: string): string {
@@ -49,7 +50,7 @@ function buildCrmOrderFormData(
   form.append("nickname", fields.nickname);
   form.append("delivery_address", fields.delivery_address);
   form.append("fulfillment_type", fields.fulfillment_type);
-  form.append("is_delivered", fields.is_delivered ? "true" : "false");
+  form.append("status", fields.status);
   form.append("weight", fields.weight);
   form.append("filling", fields.filling);
   form.append("description", fields.description);
@@ -76,7 +77,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     nickname: order.nickname,
     delivery_address: order.delivery_address,
     fulfillment_type: order.fulfillment_type,
-    is_delivered: order.is_delivered,
+    status: order.status,
     weight: order.weight,
     filling: order.filling,
     description: order.description,
@@ -97,7 +98,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     nickname: "",
     delivery_address: "",
     fulfillment_type: "delivery",
-    is_delivered: false,
+    status: "new",
     weight: "",
     filling: "",
     description: "",
@@ -452,14 +453,18 @@ export function CrmOrderForm(
               ))}
             </RadioGroup>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:col-span-2">
-            <Button
-              type="button"
-              variant={fields.is_delivered ? "primary" : "outline"}
-              onClick={() => setField("is_delivered", !fields.is_delivered)}
+          <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+            <select
+              value={fields.status}
+              onChange={(event) => setField("status", event.target.value as CrmOrderStatus)}
+              className="h-12 w-full rounded-full border border-[var(--line)] bg-white px-5 text-sm text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30"
             >
-              {t("delivered")}
-            </Button>
+              {CRM_ORDER_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
+                </option>
+              ))}
+            </select>
             <Button
               type="button"
               variant={fields.is_paid ? "primary" : "outline"}

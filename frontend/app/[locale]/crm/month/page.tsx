@@ -28,6 +28,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
+import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import {
   formatAed,
   formatCrmCompactDate,
@@ -110,7 +111,7 @@ function CrmMonthBoard() {
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isCurrentMonth = selectedMonth === currentMonth;
 
-  const deliveredCount = orders.filter((o) => o.is_delivered).length;
+  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
   const paidCount = orders.filter((o) => o.is_paid).length;
 
   return (
@@ -253,26 +254,19 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
+  const tone = crmOrderStatusTone(order.status);
 
   return (
     <div
       className={cn(
         "flex min-w-0 items-center gap-1.5 rounded-xl border px-1.5 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
-        order.is_delivered
-          ? "border-sky-300 bg-sky-100"
-          : order.taken_by_name
-            ? "border-orange-300 bg-orange-100"
-            : "border-[var(--line)] bg-white",
+        tone.card,
       )}
     >
       <div
         className={cn(
           "h-8 w-8 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
-          order.is_delivered
-            ? "border-sky-200 bg-white"
-            : order.taken_by_name
-              ? "border-orange-200 bg-white"
-              : "border-[var(--line)] bg-[var(--cream)]",
+          tone.media,
         )}
       >
         {thumb ? (
@@ -338,13 +332,10 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           <span
             className={cn(
               "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-              order.is_delivered
-                ? "bg-sky-600 text-white"
-                : "hidden bg-[var(--cream)] text-[var(--muted-2)] md:flex",
+              tone.chip,
             )}
           >
-            <Check className="h-3 w-3 md:hidden" />
-            <span className="hidden md:inline">{t("delivered")}</span>
+            {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
           </span>
           <span
             className={cn(

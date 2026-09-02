@@ -44,7 +44,23 @@ class CrmOrder(models.Model):
         choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_DELIVERY,
     )
-    is_delivered = models.BooleanField(default=False)
+    STATUS_NEW = "new"
+    STATUS_IN_WORK = "in_work"
+    STATUS_CLIENT_APPROVED = "client_approved"
+    STATUS_IN_DELIVERY = "in_delivery"
+    STATUS_DELIVERED = "delivered"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
+        (STATUS_IN_WORK, "In work"),
+        (STATUS_CLIENT_APPROVED, "Client approved"),
+        (STATUS_IN_DELIVERY, "In delivery"),
+        (STATUS_DELIVERED, "Delivered"),
+    ]
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default=STATUS_NEW,
+    )
     taken_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="crm_orders_taken",
