@@ -430,7 +430,8 @@ class CrmTelegramTests(TestCase):
         text = build_crm_order_telegram_html(order)
         self.assertIn("Доставка", text)
         self.assertIn("Оплачен:</b> да", text)
-        self.assertIn("Статус:</b> Доставлен", text)
+        self.assertIn("🔵 <b>CRM заказ #", text)
+        self.assertIn("Статус:</b> 🔵 Доставлен", text)
         self.assertIn(
             f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.pk}",
             text,
@@ -447,9 +448,24 @@ class CrmTelegramTests(TestCase):
     def test_html_new_status_includes_take_in_work(self):
         order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_NEW)
         text = build_crm_order_telegram_html(order)
-        self.assertIn("Статус:</b> Новый", text)
+        self.assertIn("⚪ <b>CRM заказ #", text)
+        self.assertIn("Статус:</b> ⚪ Новый", text)
         self.assertIn(f"https://sweet-chill.ge/ru/crm/{order.pk}/take", text)
         self.assertIn(">взять в работу</a>", text)
+
+    def test_html_status_marks(self):
+        cases = [
+            (CrmOrder.STATUS_NEW, "⚪", "Новый"),
+            (CrmOrder.STATUS_IN_WORK, "🟠", "В работе"),
+            (CrmOrder.STATUS_CLIENT_APPROVED, "🟢", "Одобрен клиентом"),
+            (CrmOrder.STATUS_IN_DELIVERY, "🟣", "В доставке"),
+            (CrmOrder.STATUS_DELIVERED, "🔵", "Доставлен"),
+        ]
+        for status, mark, label in cases:
+            order = self._create_order(delta=timedelta(hours=2), status=status)
+            text = build_crm_order_telegram_html(order)
+            self.assertIn(f"{mark} <b>CRM заказ #{order.pk}</b>", text)
+            self.assertIn(f"Статус:</b> {mark} {label}", text)
 
     def test_html_delivered_omits_take_in_work_link(self):
         order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)

@@ -46,6 +46,14 @@ _STATUS_LABELS = {
     CrmOrder.STATUS_DELIVERED: "Доставлен",
 }
 
+_STATUS_MARKS = {
+    CrmOrder.STATUS_NEW: "⚪",
+    CrmOrder.STATUS_IN_WORK: "🟠",
+    CrmOrder.STATUS_CLIENT_APPROVED: "🟢",
+    CrmOrder.STATUS_IN_DELIVERY: "🟣",
+    CrmOrder.STATUS_DELIVERED: "🔵",
+}
+
 
 def _esc(value: str) -> str:
     return html.escape(value, quote=False)
@@ -161,7 +169,8 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     if order.deleted:
         lines.append("<b>ОТМЕНЁН</b>")
         lines.append("")
-    lines.append(f"<b>CRM заказ #{order.pk}</b>")
+    mark = _STATUS_MARKS[order.status]
+    lines.append(f"{mark} <b>CRM заказ #{order.pk}</b>")
     view_href = html.escape(_crm_order_view_url(order), quote=True)
     edit_href = html.escape(_crm_order_edit_url(order), quote=True)
     if order.status == CrmOrder.STATUS_DELIVERED:
@@ -198,7 +207,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Предоплата:</b> {_format_money(order.prepayment)}")
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
-    lines.append(f"<b>Статус:</b> {_esc(_STATUS_LABELS[order.status])}")
+    lines.append(f"<b>Статус:</b> {mark} {_esc(_STATUS_LABELS[order.status])}")
     if order.taken_by_id:
         name, url = chef_identity(order.taken_by)
         if url:
