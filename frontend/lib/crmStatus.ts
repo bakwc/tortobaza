@@ -16,6 +16,21 @@ export const CRM_ORDER_STATUS_MESSAGE_KEYS = {
   delivered: "statusDelivered",
 } as const;
 
+export const CRM_ORDER_NEXT_STATUS = {
+  new: "in_work",
+  in_work: "client_approved",
+  client_approved: "in_delivery",
+  in_delivery: "delivered",
+  delivered: null,
+} as const satisfies Record<CrmOrderStatus, CrmOrderStatus | null>;
+
+export const CRM_ORDER_NEXT_STEP_MESSAGE_KEYS = {
+  in_work: "takeInWork",
+  client_approved: "nextStepClientApproved",
+  in_delivery: "nextStepInDelivery",
+  delivered: "nextStepDelivered",
+} as const;
+
 type CrmOrderStatusTone = {
   card: string;
   media: string;

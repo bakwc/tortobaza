@@ -7,6 +7,7 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   AtSign,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -14,9 +15,11 @@ import {
   FileText,
   MapPin,
   Package,
+  PackageCheck,
   Pencil,
   Plus,
   Store,
+  ThumbsUp,
   Truck,
   User,
   Utensils,
@@ -44,6 +47,8 @@ import {
 import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
 import type { CrmOrder, CrmOrderStatus } from "@/lib/api/types";
 import {
+  CRM_ORDER_NEXT_STATUS,
+  CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
   crmOrderStatusTone,
@@ -276,6 +281,90 @@ function paymentTypeLabel(type: string, t: (key: string) => string): string {
   return type;
 }
 
+const NEXT_STEP_ICONS = {
+  in_work: Utensils,
+  client_approved: ThumbsUp,
+  in_delivery: Truck,
+  delivered: PackageCheck,
+} as const;
+
+function CrmOrderStatusMenu({
+  order,
+  isPatching,
+  onSetStatus,
+  onTakeInWork,
+}: {
+  order: CrmOrder;
+  isPatching: boolean;
+  onSetStatus: (status: CrmOrderStatus) => void;
+  onTakeInWork: () => void;
+}) {
+  const t = useTranslations("crm");
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        onClick={() => setOpen((prev) => !prev)}
+        disabled={isPatching}
+        aria-label={t("statusMenu")}
+        aria-expanded={open}
+        className="h-11 w-11 shrink-0 px-0 lg:h-14 lg:w-14"
+      >
+        <ChevronDown className="h-4 w-4 lg:h-5 lg:w-5" />
+      </Button>
+      {open ? (
+        <div className="absolute bottom-full right-0 z-20 mb-2 min-w-[220px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+          {CRM_ORDER_STATUSES.map((status) => (
+            <button
+              key={status}
+              type="button"
+              disabled={status === order.status}
+              onClick={() => {
+                setOpen(false);
+                onSetStatus(status);
+              }}
+              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:pointer-events-none"
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "h-2.5 w-2.5 rounded-full border border-[var(--line)]",
+                    crmOrderStatusTone(status).chip,
+                  )}
+                />
+                {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
+              </span>
+              {status === order.status ? (
+                <Check className="h-4 w-4 text-[var(--brand)]" />
+              ) : null}
+            </button>
+          ))}
+          {order.status !== "delivered" ? (
+            <>
+              <div className="my-1 border-t border-[var(--line)]" />
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onTakeInWork();
+                }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
+              >
+                <Utensils className="h-4 w-4" />
+                {t("takeOver")}
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function CrmOrderCard({
   order,
   focused,
@@ -294,7 +383,6 @@ function CrmOrderCard({
   const t = useTranslations("crm");
   const currentUser = useCurrentUser();
   const tone = crmOrderStatusTone(order.status);
-  const [draftStatus, setDraftStatus] = useState<CrmOrderStatus>(order.status);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
@@ -312,9 +400,8 @@ function CrmOrderCard({
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
 
-  useEffect(() => {
-    setDraftStatus(order.status);
-  }, [order.status]);
+  const nextStatus = CRM_ORDER_NEXT_STATUS[order.status];
+  const NextStepIcon = nextStatus ? NEXT_STEP_ICONS[nextStatus] : null;
 
   return (
     <div
@@ -745,120 +832,85 @@ function CrmOrderCard({
             </div>
           </div>
 
-          <div className="grid gap-2 pt-1 sm:gap-3 lg:pt-2">
-            {order.status !== "delivered" ? (
-              order.taken_by_name ? (
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (isPatching) return;
-                    onTakeInWork();
-                  }}
-                  onKeyDown={(event) => {
-                    if (isPatching) return;
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onTakeInWork();
-                    }
-                  }}
-                  className={cn(
-                    "flex h-11 cursor-pointer items-center justify-center gap-1 rounded-md bg-amber-500 px-2 text-center font-semibold text-white hover:bg-amber-600 lg:h-14 lg:gap-2 lg:px-8",
-                    isPatching && "pointer-events-none opacity-70",
-                  )}
-                >
-                  {isPatching ? (
-                    <Spinner className="h-5 w-5" />
+          <div className="flex flex-col gap-2 pt-1 sm:gap-3 lg:pt-2">
+            <div className="flex flex-wrap items-center gap-1.5 lg:gap-2">
+              <span
+                className={cn(
+                  "flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                  tone.chip,
+                )}
+              >
+                {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
+              </span>
+              {order.taken_by_name ? (
+                <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                  <Utensils className="h-3.5 w-3.5" />
+                  {order.taken_by_telegram_url ? (
+                    <a
+                      href={order.taken_by_telegram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      @{order.taken_by_name}
+                    </a>
                   ) : (
-                    <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                      <Utensils className="h-4 w-4 lg:h-5 lg:w-5" />
-                      <span>
-                        {t("cookingChef")}{" "}
-                        {order.taken_by_telegram_url ? (
-                          <a
-                            href={order.taken_by_telegram_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(event) => event.stopPropagation()}
-                            className="underline underline-offset-2"
-                          >
-                            @{order.taken_by_name}
-                          </a>
-                        ) : (
-                          order.taken_by_name
-                        )}
-                      </span>
-                    </span>
+                    <span>{order.taken_by_name}</span>
                   )}
-                </div>
-              ) : (
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={onTogglePaid}
+                disabled={isPatching}
+                className={cn(
+                  "flex cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:pointer-events-none disabled:opacity-60",
+                  order.is_paid
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "border border-[var(--line)] bg-white text-[var(--muted-2)] hover:bg-[var(--cream-soft)]",
+                )}
+              >
+                {order.is_paid ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : (
+                  <CreditCard className="h-3.5 w-3.5" />
+                )}
+                {order.is_paid ? t("paid") : t("notPaid")}
+              </button>
+              {isPatching ? <Spinner className="h-4 w-4 text-[var(--brand)]" /> : null}
+            </div>
+            <div className="flex items-stretch gap-2 sm:gap-3">
+              {nextStatus && NextStepIcon ? (
                 <Button
                   type="button"
                   size="lg"
-                  onClick={onTakeInWork}
+                  onClick={() => {
+                    if (nextStatus === "in_work") {
+                      onTakeInWork();
+                    } else {
+                      onSetStatus(nextStatus);
+                    }
+                  }}
                   disabled={isPatching}
-                  className="h-11 px-2 font-semibold whitespace-normal leading-tight border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)] lg:h-14 lg:px-8 lg:whitespace-nowrap"
+                  className="h-11 flex-1 px-2 font-semibold whitespace-normal leading-tight lg:h-14 lg:px-8 lg:whitespace-nowrap"
                 >
                   {isPatching ? (
                     <Spinner className="h-5 w-5" />
                   ) : (
                     <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                      <Utensils className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                      {t("takeInWork")}
+                      <NextStepIcon className="h-4 w-4 lg:h-5 lg:w-5" />
+                      {t(CRM_ORDER_NEXT_STEP_MESSAGE_KEYS[nextStatus])}
                     </span>
                   )}
                 </Button>
-              )
-            ) : null}
-            <div className="grid grid-cols-[1fr_auto] gap-2 sm:gap-3">
-              <select
-                value={draftStatus}
-                onChange={(event) => setDraftStatus(event.target.value as CrmOrderStatus)}
-                disabled={isPatching}
-                className="h-11 w-full rounded-md border-2 border-[var(--line)] bg-white px-3 text-xs font-semibold text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30 disabled:opacity-70 lg:h-14 lg:text-sm"
-              >
-                {CRM_ORDER_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                size="lg"
-                onClick={() => onSetStatus(draftStatus)}
-                disabled={isPatching || draftStatus === order.status}
-                className="h-11 px-3 font-semibold lg:h-14 lg:px-8"
-              >
-                {t("setStatus")}
-              </Button>
+              ) : null}
+              <CrmOrderStatusMenu
+                order={order}
+                isPatching={isPatching}
+                onSetStatus={onSetStatus}
+                onTakeInWork={onTakeInWork}
+              />
             </div>
-            <Button
-              type="button"
-              size="lg"
-              onClick={onTogglePaid}
-              disabled={isPatching}
-              className={cn(
-                "h-11 px-2 font-semibold whitespace-normal leading-tight transition-all lg:h-14 lg:px-8 lg:whitespace-nowrap",
-                order.is_paid
-                  ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                  : "border-2 border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
-              )}
-            >
-              {isPatching ? (
-                <Spinner className="h-5 w-5" />
-              ) : order.is_paid ? (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <Check className="h-4 w-4 lg:h-5 lg:w-5" />
-                  {t("paid")}
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-xs lg:gap-2 lg:text-sm">
-                  <CreditCard className="h-4 w-4 text-[var(--muted-2)] lg:h-5 lg:w-5" />
-                  {t("markPaid")}
-                </span>
-              )}
-            </Button>
           </div>
         </div>
       </div>
