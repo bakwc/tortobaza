@@ -1,8 +1,13 @@
+import secrets
 from datetime import time
 
 from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, Value, When
+
+
+def generate_crm_client_token() -> str:
+    return secrets.token_hex(32)
 
 
 class CrmOrder(models.Model):
@@ -87,6 +92,13 @@ class CrmOrder(models.Model):
         blank=True,
     )
     deleted = models.BooleanField(default=False)
+    client_token = models.CharField(
+        max_length=64,
+        unique=True,
+        db_index=True,
+        editable=False,
+        default=generate_crm_client_token,
+    )
     telegram_message_id = models.BigIntegerField(null=True, blank=True)
     telegram_media_ids = models.JSONField(default=list)
     telegram_payload_hash = models.CharField(max_length=64, blank=True, default="")

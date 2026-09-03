@@ -4,13 +4,14 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
+from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crm.google_maps import resolve_google_maps_url
 from crm.models import CrmOrder
 from crm.serializers import (
+    CrmOrderClientSerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
@@ -140,6 +141,24 @@ class CrmOrderDetailView(APIView):
         order.save(update_fields=["deleted", "updated_at"])
         schedule_crm_order_telegram_sync(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CrmOrderClientView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, token: str):
+        order = get_object_or_404(
+            live_orders().prefetch_related("images"),
+            client_token=token,
+        )
+        response = Response(
+            CrmOrderClientSerializer(order, context={"request": request}).data
+        )
+        response["Cache-Control"] = "private, no-store, no-cache, must-revalidate"
+        response["Pragma"] = "no-cache"
+        response["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
+        return response
 
 
 class ResolveYandexAddressView(APIView):

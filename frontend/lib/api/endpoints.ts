@@ -5,6 +5,7 @@ import {
   CategoryDetailSchema,
   CategoryLandingSchema,
   CategorySchema,
+  CrmClientOrderSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -28,6 +29,7 @@ import {
   type Category,
   type CategoryDetail,
   type CategoryLanding,
+  type CrmClientOrder,
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
@@ -249,6 +251,11 @@ export function endpoints(fetcher: Fetcher) {
     async getCrmOrder(id: number): Promise<CrmOrder> {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`);
       return parse(CrmOrderSchema, raw);
+    },
+
+    async getCrmClientOrder(token: string): Promise<CrmClientOrder> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/client/${token}/`);
+      return parse(CrmClientOrderSchema, raw);
     },
 
     async createCrmOrder(body: FormData): Promise<CrmOrder> {

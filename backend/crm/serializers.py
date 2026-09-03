@@ -2,8 +2,10 @@ from rest_framework import serializers
 
 from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
+from crm.google_maps import resolve_google_maps_url
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
+from crm.yandex_maps import resolve_yandex_maps_url
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -32,6 +34,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         model = CrmOrder
         fields = [
             "id",
+            "client_token",
             "date",
             "time_start",
             "time_end",
@@ -67,6 +70,62 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         else:
             data["taken_by_name"] = None
             data["taken_by_telegram_url"] = None
+        links = contact_links(instance.contact)
+        if links is None:
+            data["contact_tel"] = None
+            data["contact_whatsapp"] = None
+            data["contact_telegram"] = None
+            return data
+        data["contact_tel"] = links["tel"]
+        data["contact_whatsapp"] = links["whatsapp"]
+        data["contact_telegram"] = links["telegram"]
+        return data
+
+
+class CrmOrderClientSerializer(serializers.ModelSerializer):
+    images = CrmOrderImageSerializer(many=True, read_only=True)
+    cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
+    contact_tel = serializers.CharField(read_only=True, allow_null=True)
+    contact_whatsapp = serializers.CharField(read_only=True, allow_null=True)
+    contact_telegram = serializers.CharField(read_only=True, allow_null=True)
+    google_maps_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CrmOrder
+        fields = [
+            "id",
+            "date",
+            "time_start",
+            "time_end",
+            "when_ready",
+            "contact",
+            "contact_tel",
+            "contact_whatsapp",
+            "contact_telegram",
+            "nickname",
+            "delivery_address",
+            "fulfillment_type",
+            "weight",
+            "filling",
+            "description",
+            "cake_price",
+            "prepayment",
+            "is_paid",
+            "payment_type",
+            "images",
+            "google_maps_url",
+        ]
+
+    def get_google_maps_url(self, instance: CrmOrder) -> str | None:
+        address = instance.delivery_address
+        if not address:
+            return None
+        yandex_url = resolve_yandex_maps_url(address)
+        return resolve_google_maps_url(address, yandex_url)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
         links = contact_links(instance.contact)
         if links is None:
             data["contact_tel"] = None

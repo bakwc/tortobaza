@@ -392,7 +392,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           />
         </>
       ) : null}
-      <CrmOrderActionsMenu orderId={order.id} />
+      <CrmOrderActionsMenu orderId={order.id} clientToken={null} onDelete={null} />
     </div>
   );
 }

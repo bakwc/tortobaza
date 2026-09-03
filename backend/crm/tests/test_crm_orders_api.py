@@ -1,6 +1,7 @@
 import io
 from datetime import date, time
 from decimal import Decimal
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -766,3 +767,112 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(delete_response.status_code, 404)
         order.refresh_from_db()
         self.assertTrue(order.deleted)
+
+    def test_create_assigns_client_token(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.assertRegex(order.client_token, r"^[0-9a-f]{64}$")
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"/api/crm/orders/{order.id}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["client_token"], order.client_token)
+
+    def test_client_order_unauthenticated_ok(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="+995555111222",
+            nickname="@cake",
+            delivery_address="",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="2kg",
+            filling="Vanilla",
+            description="No nuts",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["id"], order.id)
+        self.assertEqual(data["contact"], "+995555111222")
+        self.assertEqual(data["nickname"], "@cake")
+        self.assertEqual(data["weight"], "2kg")
+        self.assertEqual(data["filling"], "Vanilla")
+        self.assertEqual(data["description"], "No nuts")
+        self.assertEqual(data["cake_price"], "120.00")
+        self.assertEqual(data["prepayment"], "30.00")
+        self.assertFalse(data["is_paid"])
+        self.assertEqual(data["payment_type"], "cash")
+        self.assertIsNone(data["google_maps_url"])
+        self.assertNotIn("taken_by_name", data)
+        self.assertNotIn("client_token", data)
+        self.assertEqual(response["Cache-Control"], "private, no-store, no-cache, must-revalidate")
+        self.assertEqual(response["Pragma"], "no-cache")
+        self.assertEqual(
+            response["X-Robots-Tag"],
+            "noindex, nofollow, noarchive, nosnippet, noimageindex",
+        )
+
+    def test_client_order_unknown_token_404(self):
+        response = self.client.get(
+            "/api/crm/orders/client/" + ("a" * 64) + "/"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_client_order_deleted_404(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Deleted",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            deleted=True,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
+        self.assertEqual(response.status_code, 404)
+
+    @patch("crm.serializers.resolve_google_maps_url")
+    @patch("crm.serializers.resolve_yandex_maps_url")
+    def test_client_order_google_maps_url(self, resolve_yandex, resolve_google):
+        resolve_yandex.return_value = "https://yandex.com/maps/?text=Rustaveli"
+        resolve_google.return_value = (
+            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"
+        )
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            delivery_address="Rustaveli 12, Batumi",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["google_maps_url"],
+            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
+        )
+        resolve_yandex.assert_called_once_with("Rustaveli 12, Batumi")
+        resolve_google.assert_called_once_with(
+            "Rustaveli 12, Batumi",
+            "https://yandex.com/maps/?text=Rustaveli",
+        )

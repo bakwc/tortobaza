@@ -597,21 +597,18 @@ function CrmOrderCard({
                     </Link>
                   </Button>
                 ) : null}
-                {currentUser.data?.is_staff ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-[var(--danger)] hover:bg-red-50"
-                    onClick={() => {
-                      deleteMutation.reset();
-                      setIsDeleteOpen(true);
-                    }}
-                  >
-                    {t("deleteOrder")}
-                  </Button>
-                ) : null}
-                <CrmOrderActionsMenu orderId={order.id} />
+                <CrmOrderActionsMenu
+                  orderId={order.id}
+                  clientToken={order.client_token}
+                  onDelete={
+                    currentUser.data?.is_staff
+                      ? () => {
+                          deleteMutation.reset();
+                          setIsDeleteOpen(true);
+                        }
+                      : null
+                  }
+                />
               </div>
             </div>
 

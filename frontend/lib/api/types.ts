@@ -272,6 +272,7 @@ export const CrmOrderImageSchema = z.object({
 
 export const CrmOrderSchema = z.object({
   id: z.number(),
+  client_token: z.string(),
   date: z.string(),
   time_start: z.string().nullable(),
   time_end: z.string().nullable(),
@@ -316,6 +317,30 @@ export const ResolveGoogleAddressResponseSchema = z.object({
   url: z.string(),
 });
 
+export const CrmClientOrderSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  time_start: z.string().nullable(),
+  time_end: z.string().nullable(),
+  when_ready: z.boolean(),
+  contact: z.string(),
+  contact_tel: z.string().nullable(),
+  contact_whatsapp: z.string().nullable(),
+  contact_telegram: z.string().nullable(),
+  nickname: z.string(),
+  delivery_address: z.string(),
+  fulfillment_type: z.enum(["delivery", "pickup"]),
+  weight: z.string(),
+  filling: z.string(),
+  description: z.string(),
+  cake_price: z.string(),
+  prepayment: z.string(),
+  is_paid: z.boolean(),
+  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "flowwow", "crypto", "online"]),
+  images: z.array(CrmOrderImageSchema),
+  google_maps_url: z.string().nullable(),
+});
+
 export type Category = z.infer<typeof CategorySchema>;
 export type CategoryLanding = z.infer<typeof CategoryLandingSchema>;
 export type CategoryDetail = z.infer<typeof CategoryDetailSchema>;
@@ -341,6 +366,7 @@ export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
+export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
