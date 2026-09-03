@@ -12,7 +12,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from crm.models import CrmOrder, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -846,12 +846,31 @@ class CrmOrdersApiTests(TestCase):
         response = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
         self.assertEqual(response.status_code, 404)
 
-    @patch("crm.serializers.resolve_google_maps_url")
-    @patch("crm.serializers.resolve_yandex_maps_url")
-    def test_client_order_google_maps_url(self, resolve_yandex, resolve_google):
-        resolve_yandex.return_value = "https://yandex.com/maps/?text=Rustaveli"
-        resolve_google.return_value = (
-            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"
+    @patch("crm.google_maps.resolve_google_maps_url")
+    @patch("crm.yandex_maps.resolve_yandex_maps_url")
+    def test_client_order_does_not_resolve_maps_on_get(self, resolve_yandex, resolve_google):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            delivery_address="Rustaveli 12, Batumi",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["google_maps_url"])
+        resolve_yandex.assert_not_called()
+        resolve_google.assert_not_called()
+
+    def test_client_order_google_maps_url_from_cache(self):
+        ResolvedGoogleAddress.objects.create(
+            address="Rustaveli 12, Batumi",
+            google_url="https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
         )
         order = CrmOrder.objects.create(
             date=date(2026, 8, 26),
@@ -871,8 +890,55 @@ class CrmOrdersApiTests(TestCase):
             response.json()["google_maps_url"],
             "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
         )
+
+    @patch("crm.views.resolve_google_maps_url")
+    @patch("crm.views.resolve_yandex_maps_url")
+    def test_client_order_map(self, resolve_yandex, resolve_google):
+        resolve_yandex.return_value = "https://yandex.com/maps/?text=Rustaveli"
+        resolve_google.return_value = (
+            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"
+        )
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            delivery_address="Rustaveli 12, Batumi",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/map/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["url"],
+            "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
+        )
+        self.assertEqual(response["Cache-Control"], "private, no-store, no-cache, must-revalidate")
         resolve_yandex.assert_called_once_with("Rustaveli 12, Batumi")
         resolve_google.assert_called_once_with(
             "Rustaveli 12, Batumi",
             "https://yandex.com/maps/?text=Rustaveli",
         )
+
+    def test_client_order_map_unknown_token_404(self):
+        response = self.client.get("/api/crm/orders/client/" + ("a" * 64) + "/map/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_client_order_map_no_address_404(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            delivery_address="",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        response = self.client.get(f"/api/crm/orders/client/{order.client_token}/map/")
+        self.assertEqual(response.status_code, 404)

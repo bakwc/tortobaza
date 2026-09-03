@@ -43,7 +43,7 @@ export default async function CrmClientOrderPage({
     const order = await serverApi.getCrmClientOrder(token);
     return (
       <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
-        <CrmClientOrderView order={order} />
+        <CrmClientOrderView order={order} token={token} />
       </div>
     );
   } catch (e) {

@@ -6,6 +6,7 @@ import type {
   CrmMonthlyOrdersResponse,
   CrmOrder,
   CrmOrdersResponse,
+  ResolveGoogleAddressResponse,
   UpdateCrmOrderBody,
 } from "@/lib/api/types";
 
@@ -99,5 +100,13 @@ export function useResolveYandexAddress() {
 export function useResolveGoogleAddress() {
   return useMutation({
     mutationFn: (address: string) => api.resolveGoogleAddress(address),
+  });
+}
+
+export function useCrmClientOrderMap(token: string, enabled: boolean) {
+  return useQuery<ResolveGoogleAddressResponse>({
+    queryKey: ["crm-client-order-map", token],
+    queryFn: () => api.getCrmClientOrderMap(token),
+    enabled,
   });
 }

@@ -143,6 +143,13 @@ class CrmOrderDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def _client_no_store_headers(response: Response) -> Response:
+    response["Cache-Control"] = "private, no-store, no-cache, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
+    return response
+
+
 class CrmOrderClientView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -152,13 +159,23 @@ class CrmOrderClientView(APIView):
             live_orders().prefetch_related("images"),
             client_token=token,
         )
-        response = Response(
-            CrmOrderClientSerializer(order, context={"request": request}).data
+        return _client_no_store_headers(
+            Response(CrmOrderClientSerializer(order, context={"request": request}).data)
         )
-        response["Cache-Control"] = "private, no-store, no-cache, must-revalidate"
-        response["Pragma"] = "no-cache"
-        response["X-Robots-Tag"] = "noindex, nofollow, noarchive, nosnippet, noimageindex"
-        return response
+
+
+class CrmOrderClientMapView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, token: str):
+        order = get_object_or_404(live_orders(), client_token=token)
+        address = order.delivery_address
+        if not address:
+            return _client_no_store_headers(Response(status=status.HTTP_404_NOT_FOUND))
+        yandex_url = resolve_yandex_maps_url(address)
+        url = resolve_google_maps_url(address, yandex_url)
+        return _client_no_store_headers(Response({"url": url}))
 
 
 class ResolveYandexAddressView(APIView):

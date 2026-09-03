@@ -17,7 +17,9 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
+import { useCrmClientOrderMap } from "@/hooks/useCrmOrders";
 import { SITE_INFO } from "@/lib/site-info";
 import type { CrmClientOrder } from "@/lib/api/types";
 import { formatAed } from "@/lib/format";
@@ -69,7 +71,13 @@ function googleMapsUrlToEmbed(url: string): string {
   return `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=16&output=embed`;
 }
 
-export function CrmClientOrderView({ order }: { order: CrmClientOrder }) {
+export function CrmClientOrderView({
+  order,
+  token,
+}: {
+  order: CrmClientOrder;
+  token: string;
+}) {
   const t = useTranslations("crm");
   const locale = useLocale();
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
@@ -80,10 +88,12 @@ export function CrmClientOrderView({ order }: { order: CrmClientOrder }) {
   const priceNum = Number.parseFloat(order.cake_price);
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
-  const mapEmbed =
-    order.google_maps_url !== null ? googleMapsUrlToEmbed(order.google_maps_url) : null;
   const showPickupBadge =
     order.fulfillment_type === "pickup" && order.delivery_address.length < 5;
+  const needsMap = Boolean(order.delivery_address) && !showPickupBadge;
+  const mapQuery = useCrmClientOrderMap(token, needsMap && order.google_maps_url === null);
+  const googleMapsUrl = order.google_maps_url ?? mapQuery.data?.url ?? null;
+  const mapEmbed = googleMapsUrl !== null ? googleMapsUrlToEmbed(googleMapsUrl) : null;
 
   return (
     <div className="grid gap-6">
@@ -307,7 +317,11 @@ export function CrmClientOrderView({ order }: { order: CrmClientOrder }) {
                           style={{ border: 0 }}
                         />
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="mt-3 flex h-[280px] w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-white md:h-[360px]">
+                        <Spinner className="h-8 w-8 text-[var(--brand)]" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

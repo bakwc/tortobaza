@@ -2,10 +2,9 @@ from rest_framework import serializers
 
 from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
-from crm.google_maps import resolve_google_maps_url
+from crm.google_maps import cached_google_maps_url
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
-from crm.yandex_maps import resolve_yandex_maps_url
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -121,8 +120,7 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
         address = instance.delivery_address
         if not address:
             return None
-        yandex_url = resolve_yandex_maps_url(address)
-        return resolve_google_maps_url(address, yandex_url)
+        return cached_google_maps_url(address)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

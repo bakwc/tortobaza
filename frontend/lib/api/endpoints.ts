@@ -258,6 +258,11 @@ export function endpoints(fetcher: Fetcher) {
       return parse(CrmClientOrderSchema, raw);
     },
 
+    async getCrmClientOrderMap(token: string): Promise<ResolveGoogleAddressResponse> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/client/${token}/map/`);
+      return parse(ResolveGoogleAddressResponseSchema, raw);
+    },
+
     async createCrmOrder(body: FormData): Promise<CrmOrder> {
       const raw = await fetcher<unknown>("/api/crm/orders/", {
         method: "POST",
