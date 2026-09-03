@@ -350,6 +350,7 @@ export type UpdateCrmOrderBody = {
   status?: CrmOrder["status"];
   is_paid?: boolean;
   take_in_work?: boolean;
+  payment_type?: CrmOrder["payment_type"];
 };
 
 export type CrmOrderPaymentType = CrmOrder["payment_type"];

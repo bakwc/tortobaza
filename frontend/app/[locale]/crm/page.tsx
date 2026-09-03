@@ -34,6 +34,7 @@ import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
+import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -45,7 +46,7 @@ import {
   useResolveYandexAddress,
 } from "@/hooks/useCrmOrders";
 import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
-import type { CrmOrder, CrmOrderStatus } from "@/lib/api/types";
+import type { CrmOrder, CrmOrderPaymentType, CrmOrderStatus } from "@/lib/api/types";
 import {
   CRM_ORDER_NEXT_STATUS,
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
@@ -235,10 +236,10 @@ function CrmBoard() {
                   body: { status },
                 })
               }
-              onTogglePaid={() =>
+              onSetPaid={(isPaid, paymentType) =>
                 patchMutation.mutate({
                   id: order.id,
-                  body: { is_paid: !order.is_paid },
+                  body: { is_paid: isPaid, payment_type: paymentType },
                 })
               }
               onTakeInWork={() =>
@@ -378,14 +379,14 @@ function CrmOrderCard({
   focused,
   isPatching,
   onSetStatus,
-  onTogglePaid,
+  onSetPaid,
   onTakeInWork,
 }: {
   order: CrmOrder;
   focused: boolean;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
-  onTogglePaid: () => void;
+  onSetPaid: (isPaid: boolean, paymentType: CrmOrderPaymentType) => void;
   onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
@@ -394,6 +395,7 @@ function CrmOrderCard({
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+  const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const deleteMutation = useDeleteCrmOrder();
   const resolveYandex = useResolveYandexAddress();
   const resolveGoogle = useResolveGoogleAddress();
@@ -410,6 +412,14 @@ function CrmOrderCard({
 
   const nextStatus = CRM_ORDER_NEXT_STATUS[order.status];
   const NextStepIcon = nextStatus ? NEXT_STEP_ICONS[nextStatus] : null;
+
+  const handlePaidClick = () => {
+    if (order.is_paid) {
+      onSetPaid(false, order.payment_type);
+      return;
+    }
+    setIsPaymentOpen(true);
+  };
 
   return (
     <div
@@ -869,7 +879,7 @@ function CrmOrderCard({
               ) : null}
               <button
                 type="button"
-                onClick={onTogglePaid}
+                onClick={handlePaidClick}
                 disabled={isPatching}
                 className={cn(
                   "flex cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:pointer-events-none disabled:opacity-60",
@@ -916,12 +926,24 @@ function CrmOrderCard({
                 order={order}
                 isPatching={isPatching}
                 onSetStatus={onSetStatus}
-                onTogglePaid={onTogglePaid}
+                onTogglePaid={handlePaidClick}
               />
             </div>
           </div>
         </div>
       </div>
+      {isPaymentOpen ? (
+        <CrmPaymentTypeDialog
+          open={isPaymentOpen}
+          onOpenChange={setIsPaymentOpen}
+          paymentType={order.payment_type}
+          isPending={isPatching}
+          onConfirm={(paymentType) => {
+            onSetPaid(true, paymentType);
+            setIsPaymentOpen(false);
+          }}
+        />
+      ) : null}
       {currentUser.data?.is_staff ? (
         <CrmDeleteOrderDialog
           open={isDeleteOpen}

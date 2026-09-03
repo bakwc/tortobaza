@@ -84,7 +84,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CrmOrder
-        fields = ["status", "is_paid", "take_in_work"]
+        fields = ["status", "is_paid", "take_in_work", "payment_type"]
 
     def update(self, instance, validated_data):
         take_in_work = validated_data.pop("take_in_work", None)
