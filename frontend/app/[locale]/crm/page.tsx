@@ -292,12 +292,10 @@ function CrmOrderStatusMenu({
   order,
   isPatching,
   onSetStatus,
-  onTakeInWork,
 }: {
   order: CrmOrder;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
-  onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
   const [open, setOpen] = useState(false);
@@ -343,22 +341,6 @@ function CrmOrderStatusMenu({
               ) : null}
             </button>
           ))}
-          {order.status !== "delivered" ? (
-            <>
-              <div className="my-1 border-t border-[var(--line)]" />
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  onTakeInWork();
-                }}
-                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
-              >
-                <Utensils className="h-4 w-4" />
-                {t("takeOver")}
-              </button>
-            </>
-          ) : null}
         </div>
       ) : null}
     </div>
@@ -908,7 +890,6 @@ function CrmOrderCard({
                 order={order}
                 isPatching={isPatching}
                 onSetStatus={onSetStatus}
-                onTakeInWork={onTakeInWork}
               />
             </div>
           </div>
