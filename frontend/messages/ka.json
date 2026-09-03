@@ -310,6 +310,7 @@
     "statusDelivered": "მიწოდებული",
     "paid": "Paid",
     "notPaid": "გადაუხდელი",
+    "markPaid": "გადახდის მონიშვნა",
     "takeInWork": "სამუშაოდ აღება",
     "statusMenu": "სტატუსის შეცვლა",
     "nextStepClientApproved": "კლიენტმა დაამტკიცა",

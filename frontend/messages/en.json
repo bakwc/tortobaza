@@ -310,6 +310,7 @@
     "statusDelivered": "Delivered",
     "paid": "Paid",
     "notPaid": "Not paid",
+    "markPaid": "Mark as paid",
     "takeInWork": "Take into work",
     "statusMenu": "Change status",
     "nextStepClientApproved": "Client approved",

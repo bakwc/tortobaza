@@ -292,10 +292,12 @@ function CrmOrderStatusMenu({
   order,
   isPatching,
   onSetStatus,
+  onTogglePaid,
 }: {
   order: CrmOrder;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
+  onTogglePaid: () => void;
 }) {
   const t = useTranslations("crm");
   const [open, setOpen] = useState(false);
@@ -341,6 +343,25 @@ function CrmOrderStatusMenu({
               ) : null}
             </button>
           ))}
+          <div className="my-1 border-t border-[var(--line)]" />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onTogglePaid();
+            }}
+            className={cn(
+              "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--cream)]",
+              order.is_paid ? "bg-emerald-600 text-white hover:bg-emerald-700" : "text-[var(--ink)]",
+            )}
+          >
+            {order.is_paid ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <CreditCard className="h-4 w-4" />
+            )}
+            {t("markPaid")}
+          </button>
         </div>
       ) : null}
     </div>
@@ -890,6 +911,7 @@ function CrmOrderCard({
                 order={order}
                 isPatching={isPatching}
                 onSetStatus={onSetStatus}
+                onTogglePaid={onTogglePaid}
               />
             </div>
           </div>
