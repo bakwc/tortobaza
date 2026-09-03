@@ -327,7 +327,12 @@ function CrmOrderStatusMenu({
                 setOpen(false);
                 onSetStatus(status);
               }}
-              className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:pointer-events-none"
+              className={cn(
+                "flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm font-medium hover:bg-[var(--cream)] disabled:pointer-events-none",
+                status === order.status
+                  ? crmOrderStatusTone(status).chip
+                  : "text-[var(--ink)]",
+              )}
             >
               <span className="flex items-center gap-2">
                 <span
@@ -339,7 +344,7 @@ function CrmOrderStatusMenu({
                 {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
               </span>
               {status === order.status ? (
-                <Check className="h-4 w-4 text-[var(--brand)]" />
+                <Check className="h-4 w-4" />
               ) : null}
             </button>
           ))}
