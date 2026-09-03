@@ -882,7 +882,7 @@ function CrmOrderCard({
               </button>
               {isPatching ? <Spinner className="h-4 w-4 text-[var(--brand)]" /> : null}
             </div>
-            <div className="flex items-stretch gap-2 sm:gap-3">
+            <div className="flex items-stretch justify-end gap-2 sm:gap-3">
               {nextStatus && NextStepIcon ? (
                 <Button
                   type="button"
