@@ -10,15 +10,33 @@ from crm.yandex_maps import YANDEX_MAPS_PROMPT_ID, YANDEX_MAPS_PROMPT_VERSION
 
 YANDEX_URL = "https://yandex.com/maps/?text=Rustaveli"
 GOOGLE_URL = "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"
+PIN_YANDEX_URL = (
+    "https://yandex.com.ge/maps/?ll=41.612730%2C41.627274&z=18"
+    "&pt=41.612730,41.627274,pm2rdm"
+)
+PIN_GOOGLE_URL = "https://www.google.com/maps/search/?api=1&query=41.627274,41.61273"
 COORDINATES_HTML = '"coordinates":[41.645449,41.623987]'
 COORDS_HTML = '"coords":[41.645449,41.623987]'
 BRACKET_HTML = "[41.645449, 41.623987]"
 OUTSIDE_GEORGIA_HTML = '"coordinates":[10.0,20.0]'
+CITY_THEN_PIN_HTML = (
+    '"coordinates":[41.636267,41.651108]'
+    '<script type="application/json" class="state-view">'
+    '{"placemarks":{"points":[{"coordinates":[41.61273,41.627274],"color":"pm2rdm"}]}}'
+    "</script>"
+)
+CITY_AND_PT_HTML = (
+    '"coordinates":[41.636267,41.651108]'
+    '<meta property="og:url" content="'
+    "https://yandex.com.ge/maps/?ll=41.612730%2C41.627274"
+    '&amp;z=18&amp;pt=41.612730,41.627274,pm2rdm">'
+)
 
 
-def _fake_get(text: str) -> MagicMock:
+def _fake_get(text: str, url: str) -> MagicMock:
     response = MagicMock()
     response.text = text
+    response.url = url
     response.raise_for_status = MagicMock()
     return response
 
@@ -26,31 +44,53 @@ def _fake_get(text: str) -> MagicMock:
 class YandexUrlToGoogleUrlTests(TestCase):
     @patch("crm.google_maps.requests.get")
     def test_coordinates_pattern(self, get):
-        get.return_value = _fake_get(COORDINATES_HTML)
+        get.return_value = _fake_get(COORDINATES_HTML, YANDEX_URL)
         self.assertEqual(yandex_url_to_google_url(YANDEX_URL), GOOGLE_URL)
         get.assert_called_once()
+        self.assertTrue(get.call_args.kwargs["allow_redirects"])
 
     @patch("crm.google_maps.requests.get")
     def test_coords_pattern(self, get):
-        get.return_value = _fake_get(COORDS_HTML)
+        get.return_value = _fake_get(COORDS_HTML, YANDEX_URL)
         self.assertEqual(yandex_url_to_google_url(YANDEX_URL), GOOGLE_URL)
 
     @patch("crm.google_maps.requests.get")
     def test_bracket_pattern(self, get):
-        get.return_value = _fake_get(BRACKET_HTML)
+        get.return_value = _fake_get(BRACKET_HTML, YANDEX_URL)
         self.assertEqual(yandex_url_to_google_url(YANDEX_URL), GOOGLE_URL)
 
     @patch("crm.google_maps.requests.get")
     def test_rejects_coordinates_outside_georgia(self, get):
-        get.return_value = _fake_get(OUTSIDE_GEORGIA_HTML)
+        get.return_value = _fake_get(OUTSIDE_GEORGIA_HTML, YANDEX_URL)
         with self.assertRaises(ValueError):
             yandex_url_to_google_url(YANDEX_URL)
 
     @patch("crm.google_maps.requests.get")
     def test_raises_when_no_coordinates(self, get):
-        get.return_value = _fake_get("no maps data here")
+        get.return_value = _fake_get("no maps data here", YANDEX_URL)
         with self.assertRaises(ValueError):
             yandex_url_to_google_url(YANDEX_URL)
+
+    @patch("crm.google_maps.requests.get")
+    def test_final_url_pt_preferred_over_city_html(self, get):
+        get.return_value = _fake_get(
+            '"coordinates":[41.636267,41.651108]',
+            PIN_YANDEX_URL,
+        )
+        self.assertEqual(yandex_url_to_google_url(YANDEX_URL), PIN_GOOGLE_URL)
+
+    @patch("crm.google_maps.requests.get")
+    def test_placemarks_preferred_over_city_coordinates(self, get):
+        get.return_value = _fake_get(CITY_THEN_PIN_HTML, YANDEX_URL)
+        self.assertEqual(
+            yandex_url_to_google_url(YANDEX_URL),
+            "https://www.google.com/maps/search/?api=1&query=41.627274,41.61273",
+        )
+
+    @patch("crm.google_maps.requests.get")
+    def test_html_pt_preferred_over_city_coordinates(self, get):
+        get.return_value = _fake_get(CITY_AND_PT_HTML, YANDEX_URL)
+        self.assertEqual(yandex_url_to_google_url(YANDEX_URL), PIN_GOOGLE_URL)
 
 
 class ResolveGoogleAddressApiTests(TestCase):
@@ -95,7 +135,7 @@ class ResolveGoogleAddressApiTests(TestCase):
             address="Rustaveli 12, Batumi",
             yandex_url=YANDEX_URL,
         )
-        get.return_value = _fake_get(COORDINATES_HTML)
+        get.return_value = _fake_get(COORDINATES_HTML, YANDEX_URL)
         self.client.force_authenticate(user=self.user)
         response = self.client.post(
             "/api/crm/resolve-google-address/",
@@ -115,7 +155,7 @@ class ResolveGoogleAddressApiTests(TestCase):
         fake_response = MagicMock()
         fake_response.output_text = YANDEX_URL
         openai_cls.return_value.responses.create.return_value = fake_response
-        get.return_value = _fake_get(COORDINATES_HTML)
+        get.return_value = _fake_get(COORDINATES_HTML, YANDEX_URL)
         self.client.force_authenticate(user=self.user)
         response = self.client.post(
             "/api/crm/resolve-google-address/",

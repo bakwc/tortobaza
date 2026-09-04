@@ -80,6 +80,7 @@ class CrmTelegramTests(TestCase):
         self.addCleanup(self.google_get_patcher.stop)
         google_response = MagicMock()
         google_response.text = '"coordinates":[41.645449,41.623987]'
+        google_response.url = "https://yandex.com/maps/?text=Rustaveli"
         google_response.raise_for_status = MagicMock()
         self.google_get.return_value = google_response
 

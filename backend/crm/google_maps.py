@@ -1,4 +1,6 @@
+import json
 import re
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
@@ -33,25 +35,100 @@ def cached_google_maps_url(address: str) -> str | None:
     return None
 
 
+def _google_url(lat: float, lon: float) -> str:
+    return f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+
+
+def _google_url_from_lon_lat(lon: float, lat: float) -> str | None:
+    if 40 < lat < 44 and 39 < lon < 47:
+        return _google_url(lat, lon)
+    return None
+
+
+def _parse_lon_lat_csv(value: str) -> tuple[float, float] | None:
+    parts = unquote(value).split(",")
+    if len(parts) < 2:
+        return None
+    return float(parts[0]), float(parts[1])
+
+
+def _coords_from_url(url: str) -> str | None:
+    query = parse_qs(urlparse(url).query)
+    for key in ("pt", "ll"):
+        values = query.get(key)
+        if not values:
+            continue
+        pair = _parse_lon_lat_csv(values[0])
+        if pair is None:
+            continue
+        google_url = _google_url_from_lon_lat(pair[0], pair[1])
+        if google_url:
+            return google_url
+    return None
+
+
+def _coords_from_state_view(html: str) -> str | None:
+    match = re.search(
+        r'<script type="application/json" class="state-view">(.*?)</script>',
+        html,
+        re.S,
+    )
+    if not match:
+        return None
+    data = json.loads(match.group(1))
+    placemarks = data.get("placemarks")
+    if not placemarks:
+        return None
+    points = placemarks.get("points")
+    if not points:
+        return None
+    coordinates = points[0]["coordinates"]
+    return _google_url_from_lon_lat(float(coordinates[0]), float(coordinates[1]))
+
+
+def _coords_from_html_pt(html: str) -> str | None:
+    match = re.search(r"pt=([0-9.]+(?:,|%2C)[0-9.]+)", html)
+    if not match:
+        return None
+    pair = _parse_lon_lat_csv(match.group(1))
+    if pair is None:
+        return None
+    return _google_url_from_lon_lat(pair[0], pair[1])
+
+
+def _coords_from_html_patterns(html: str) -> str | None:
+    for pattern in _COORDINATE_PATTERNS:
+        match = re.search(pattern, html)
+        if match:
+            google_url = _google_url_from_lon_lat(
+                float(match.group(1)),
+                float(match.group(2)),
+            )
+            if google_url:
+                return google_url
+    return None
+
+
 def yandex_url_to_google_url(yandex_url: str) -> str:
     r = requests.get(
         yandex_url,
         headers=_YANDEX_FETCH_HEADERS,
         timeout=20,
+        allow_redirects=True,
     )
     r.raise_for_status()
-    html = r.text
-    for pattern in _COORDINATE_PATTERNS:
-        match = re.search(pattern, html)
-        if match:
-            a = float(match.group(1))
-            b = float(match.group(2))
-            lon, lat = a, b
-            if 40 < lat < 44 and 39 < lon < 47:
-                return (
-                    "https://www.google.com/maps/search/"
-                    f"?api=1&query={lat},{lon}"
-                )
+    from_url = _coords_from_url(r.url)
+    if from_url:
+        return from_url
+    from_state = _coords_from_state_view(r.text)
+    if from_state:
+        return from_state
+    from_pt = _coords_from_html_pt(r.text)
+    if from_pt:
+        return from_pt
+    from_html = _coords_from_html_patterns(r.text)
+    if from_html:
+        return from_html
     raise ValueError("Could not find coordinates in Yandex Maps response")
 
 
