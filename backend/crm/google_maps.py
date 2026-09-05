@@ -53,6 +53,20 @@ def _unwrap_google_consent_url(url: str) -> str:
     return parse_qs(parsed_url.query)["continue"][0]
 
 
+def unwrap_maps_url(url: str) -> str:
+    maps_url = _unwrap_instagram_url(url)
+    if maps_url == url:
+        return url
+    r = requests.get(
+        maps_url,
+        headers=_YANDEX_FETCH_HEADERS,
+        timeout=20,
+        allow_redirects=True,
+    )
+    r.raise_for_status()
+    return _unwrap_google_consent_url(r.url)
+
+
 def _is_google_maps_url(url: str) -> bool:
     parsed_url = urlparse(url)
     return parsed_url.hostname in {

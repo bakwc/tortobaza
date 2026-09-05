@@ -1,6 +1,7 @@
 from django.conf import settings
 from openai import OpenAI
 
+from crm.google_maps import unwrap_maps_url
 from crm.models import ResolvedYandexAddress
 
 YANDEX_MAPS_PROMPT_ID = "pmpt_6a8fc1da64a8819492de6245ec4b8d5a008cb33b36bf3697"
@@ -24,7 +25,7 @@ def resolve_yandex_maps_url(address: str) -> str:
             "id": YANDEX_MAPS_PROMPT_ID,
             "version": YANDEX_MAPS_PROMPT_VERSION,
         },
-        input=address,
+        input=unwrap_maps_url(address),
     )
     yandex_url = response.output_text.strip()
     ResolvedYandexAddress.objects.create(address=address, yandex_url=yandex_url)
