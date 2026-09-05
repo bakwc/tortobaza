@@ -37,3 +37,9 @@ class PhoneNormalizeTests(SimpleTestCase):
     def test_no_phone(self):
         self.assertIsNone(normalize_phone_digits("Customer"))
         self.assertIsNone(contact_links("Customer"))
+
+    def test_two_phones_on_separate_lines(self):
+        self.assertEqual(
+            normalize_phone_digits("Мессенджеры на +380935440435\n597009966"),
+            "380935440435",
+        )

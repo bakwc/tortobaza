@@ -1,6 +1,6 @@
 import re
 
-_PHONE_RE = re.compile(r"\+?\d[\d\s\-().]{5,}\d")
+_PHONE_RE = re.compile(r"\+?\d[\d \t\-().]{5,}\d")
 
 
 def normalize_phone_digits(contact: str) -> str | None:
