@@ -1,13 +1,9 @@
 from django.db import migrations
 
 
-def clear_instagram_resolved_google_addresses(apps, schema_editor):
-    ResolvedYandexAddress = apps.get_model("crm", "ResolvedYandexAddress")
+def clear_resolved_google_addresses(apps, schema_editor):
     ResolvedGoogleAddress = apps.get_model("crm", "ResolvedGoogleAddress")
-    instagram_addresses = ResolvedYandexAddress.objects.filter(
-        yandex_url__contains="l.instagram.com/"
-    ).values_list("address", flat=True)
-    ResolvedGoogleAddress.objects.filter(address__in=instagram_addresses).delete()
+    ResolvedGoogleAddress.objects.all().delete()
 
 
 class Migration(migrations.Migration):
@@ -17,8 +13,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(
-            clear_instagram_resolved_google_addresses,
-            migrations.RunPython.noop,
-        ),
+        migrations.RunPython(clear_resolved_google_addresses, migrations.RunPython.noop),
     ]
