@@ -330,6 +330,7 @@ export const CrmClientOrderSchema = z.object({
   nickname: z.string(),
   delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
+  status: z.enum(["new", "in_work", "client_approved", "in_delivery", "delivered"]),
   weight: z.string(),
   filling: z.string(),
   description: z.string(),

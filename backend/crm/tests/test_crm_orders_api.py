@@ -805,6 +805,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["id"], order.id)
+        self.assertEqual(data["status"], CrmOrder.STATUS_NEW)
         self.assertEqual(data["contact"], "+995555111222")
         self.assertEqual(data["nickname"], "@cake")
         self.assertEqual(data["weight"], "2kg")

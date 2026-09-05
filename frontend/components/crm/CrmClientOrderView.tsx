@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { useCrmClientOrderMap } from "@/hooks/useCrmOrders";
+import { CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import { SITE_INFO } from "@/lib/site-info";
 import type { CrmClientOrder } from "@/lib/api/types";
 import { formatAed } from "@/lib/format";
@@ -94,6 +95,7 @@ export function CrmClientOrderView({
   const mapQuery = useCrmClientOrderMap(token, needsMap && order.google_maps_url === null);
   const googleMapsUrl = order.google_maps_url ?? mapQuery.data?.url ?? null;
   const mapEmbed = googleMapsUrl !== null ? googleMapsUrlToEmbed(googleMapsUrl) : null;
+  const statusTone = crmOrderStatusTone(order.status);
 
   return (
     <div className="grid gap-6">
@@ -102,6 +104,17 @@ export function CrmClientOrderView({
           {SITE_INFO.brand}
         </p>
         <h1 className="mt-1 text-2xl font-bold text-[var(--ink)]">{t("clientPageTitle")}</h1>
+        <p className="mt-1 text-lg font-semibold tabular-nums text-[var(--ink)]">
+          {t("clientOrderNumber", { id: order.id })}
+        </p>
+        <span
+          className={cn(
+            "mt-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+            statusTone.chip,
+          )}
+        >
+          {t(CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS[order.status])}
+        </span>
       </div>
       <div className="rounded-2xl border border-[var(--line)] bg-white p-3 shadow-sm sm:p-4 md:rounded-3xl md:p-8">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-8">

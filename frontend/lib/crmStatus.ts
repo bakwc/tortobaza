@@ -16,6 +16,14 @@ export const CRM_ORDER_STATUS_MESSAGE_KEYS = {
   delivered: "statusDelivered",
 } as const;
 
+export const CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS = {
+  new: "clientStatusNew",
+  in_work: "clientStatusInWork",
+  client_approved: "clientStatusClientApproved",
+  in_delivery: "clientStatusInDelivery",
+  delivered: "clientStatusDelivered",
+} as const;
+
 export const CRM_ORDER_NEXT_STATUS = {
   new: "in_work",
   in_work: "client_approved",

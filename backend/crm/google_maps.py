@@ -39,6 +39,22 @@ def _google_url(lat: float, lon: float) -> str:
     return f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
 
 
+def _unwrap_instagram_url(url: str) -> str:
+    parsed_url = urlparse(url)
+    if parsed_url.hostname != "l.instagram.com":
+        return url
+    return parse_qs(parsed_url.query)["u"][0]
+
+
+def _is_google_maps_url(url: str) -> bool:
+    parsed_url = urlparse(url)
+    return parsed_url.hostname in {
+        "google.com",
+        "www.google.com",
+        "maps.google.com",
+    } and parsed_url.path.startswith("/maps")
+
+
 def _google_url_from_lon_lat(lon: float, lat: float) -> str | None:
     if 40 < lat < 44 and 39 < lon < 47:
         return _google_url(lat, lon)
@@ -110,13 +126,16 @@ def _coords_from_html_patterns(html: str) -> str | None:
 
 
 def yandex_url_to_google_url(yandex_url: str) -> str:
+    maps_url = _unwrap_instagram_url(yandex_url)
     r = requests.get(
-        yandex_url,
+        maps_url,
         headers=_YANDEX_FETCH_HEADERS,
         timeout=20,
         allow_redirects=True,
     )
     r.raise_for_status()
+    if _is_google_maps_url(r.url):
+        return r.url
     from_url = _coords_from_url(r.url)
     if from_url:
         return from_url

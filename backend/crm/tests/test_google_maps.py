@@ -19,6 +19,12 @@ COORDINATES_HTML = '"coordinates":[41.645449,41.623987]'
 COORDS_HTML = '"coords":[41.645449,41.623987]'
 BRACKET_HTML = "[41.645449, 41.623987]"
 OUTSIDE_GEORGIA_HTML = '"coordinates":[10.0,20.0]'
+INSTAGRAM_URL = (
+    "https://l.instagram.com/?u=https%3A%2F%2Fmaps.app.goo.gl%2F"
+    "NUxbTdCBazTb1jvV8%3Fg_st%3Dii&e=signature"
+)
+GOOGLE_SHORT_URL = "https://maps.app.goo.gl/NUxbTdCBazTb1jvV8?g_st=ii"
+GOOGLE_PLACE_URL = "https://www.google.com/maps/place/Sweet+Chill/@41.6,41.6,17z"
 CITY_THEN_PIN_HTML = (
     '"coordinates":[41.636267,41.651108]'
     '<script type="application/json" class="state-view">'
@@ -91,6 +97,28 @@ class YandexUrlToGoogleUrlTests(TestCase):
     def test_html_pt_preferred_over_city_coordinates(self, get):
         get.return_value = _fake_get(CITY_AND_PT_HTML, YANDEX_URL)
         self.assertEqual(yandex_url_to_google_url(YANDEX_URL), PIN_GOOGLE_URL)
+
+    @patch("crm.google_maps.requests.get")
+    def test_instagram_google_maps_url_is_unwrapped_and_resolved(self, get):
+        get.return_value = _fake_get("", GOOGLE_PLACE_URL)
+
+        self.assertEqual(
+            yandex_url_to_google_url(INSTAGRAM_URL),
+            GOOGLE_PLACE_URL,
+        )
+        get.assert_called_once_with(
+            GOOGLE_SHORT_URL,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/139.0.0.0 Safari/537.36"
+                ),
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            timeout=20,
+            allow_redirects=True,
+        )
 
 
 class ResolveGoogleAddressApiTests(TestCase):

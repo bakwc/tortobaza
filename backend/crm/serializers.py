@@ -105,6 +105,7 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
             "nickname",
             "delivery_address",
             "fulfillment_type",
+            "status",
             "weight",
             "filling",
             "description",
