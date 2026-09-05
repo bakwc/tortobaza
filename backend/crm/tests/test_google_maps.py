@@ -25,6 +25,15 @@ INSTAGRAM_URL = (
 )
 GOOGLE_SHORT_URL = "https://maps.app.goo.gl/NUxbTdCBazTb1jvV8?g_st=ii"
 GOOGLE_PLACE_URL = "https://www.google.com/maps/place/Sweet+Chill/@41.6,41.6,17z"
+GOOGLE_CONTINUE_URL = (
+    "https://maps.google.com/maps?q=MM8M%2B5HP%2BTamar%2BMepe%2B1"
+    "&ftid=place-id"
+)
+GOOGLE_CONSENT_URL = (
+    "https://consent.google.com/ml?continue=https%3A%2F%2Fmaps.google.com%2Fmaps"
+    "%3Fq%3DMM8M%252B5HP%252BTamar%252BMepe%252B1%26ftid%3Dplace-id"
+    "&gl=DE&hl=de"
+)
 CITY_THEN_PIN_HTML = (
     '"coordinates":[41.636267,41.651108]'
     '<script type="application/json" class="state-view">'
@@ -118,6 +127,15 @@ class YandexUrlToGoogleUrlTests(TestCase):
             },
             timeout=20,
             allow_redirects=True,
+        )
+
+    @patch("crm.google_maps.requests.get")
+    def test_google_consent_url_is_unwrapped(self, get):
+        get.return_value = _fake_get("", GOOGLE_CONSENT_URL)
+
+        self.assertEqual(
+            yandex_url_to_google_url(INSTAGRAM_URL),
+            GOOGLE_CONTINUE_URL,
         )
 
 
