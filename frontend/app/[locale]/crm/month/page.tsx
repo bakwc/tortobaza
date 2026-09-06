@@ -14,7 +14,6 @@ import {
   Pencil,
   Plus,
   Store,
-  Trash2,
   Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -365,34 +364,30 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         </Button>
       ) : null}
       {currentUser.data?.is_staff ? (
-        <>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 w-8 shrink-0 px-0 text-[var(--danger)] hover:bg-red-50"
-            aria-label={t("deleteOrder")}
-            onClick={() => {
-              deleteMutation.reset();
-              setIsDeleteOpen(true);
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-          <CrmDeleteOrderDialog
-            open={isDeleteOpen}
-            onOpenChange={setIsDeleteOpen}
-            isPending={deleteMutation.isPending}
-            isError={deleteMutation.isError}
-            onConfirm={() =>
-              deleteMutation.mutate(order.id, {
-                onSuccess: () => setIsDeleteOpen(false),
-              })
-            }
-          />
-        </>
+        <CrmDeleteOrderDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          isPending={deleteMutation.isPending}
+          isError={deleteMutation.isError}
+          onConfirm={() =>
+            deleteMutation.mutate(order.id, {
+              onSuccess: () => setIsDeleteOpen(false),
+            })
+          }
+        />
       ) : null}
-      <CrmOrderActionsMenu orderId={order.id} clientToken={null} onDelete={null} />
+      <CrmOrderActionsMenu
+        orderId={order.id}
+        clientToken={order.client_token}
+        onDelete={
+          currentUser.data?.is_staff
+            ? () => {
+                deleteMutation.reset();
+                setIsDeleteOpen(true);
+              }
+            : null
+        }
+      />
     </div>
   );
 }
