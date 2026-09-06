@@ -57,6 +57,12 @@ import {
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+function extractAddressUrl(address: string): string | null {
+  const match = address.match(/https?:\/\/[^\s]+/i);
+  if (!match) return null;
+  return match[0].replace(/[.,;:!?)]+$/, "");
+}
+
 function shiftDate(isoDate: string, days: number): string {
   const [yearStr, monthStr, dayStr] = isoDate.split("-");
   const year = Number(yearStr);
@@ -405,6 +411,7 @@ function CrmOrderCard({
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
+  const addressUrl = extractAddressUrl(order.delivery_address);
 
   const priceNum = Number.parseFloat(order.cake_price);
   const prepayNum = Number.parseFloat(order.prepayment);
@@ -696,6 +703,15 @@ function CrmOrderCard({
                           <Spinner className="h-4 w-4 text-[var(--brand)]" />
                           {t("resolvingAddress")}
                         </p>
+                      ) : addressUrl !== null ? (
+                        <a
+                          href={addressUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="min-w-0 flex-1 cursor-pointer break-all whitespace-pre-wrap text-left font-medium"
+                        >
+                          {order.delivery_address}
+                        </a>
                       ) : (
                         <button
                           type="button"
