@@ -710,7 +710,7 @@ function CrmOrderCard({
                               onSettled: () => setResolvingTarget(null),
                             });
                           }}
-                          className="min-w-0 flex-1 cursor-pointer whitespace-pre-wrap text-left font-medium"
+                          className="min-w-0 flex-1 cursor-pointer break-all whitespace-pre-wrap text-left font-medium"
                         >
                           {order.delivery_address}
                         </button>

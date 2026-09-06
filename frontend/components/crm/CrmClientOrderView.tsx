@@ -316,7 +316,7 @@ export function CrmClientOrderView({
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("deliveryAddress")}
                     </span>
-                    <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">
+                    <p className="mt-0.5 break-all whitespace-pre-wrap font-medium lg:mt-1">
                       {order.delivery_address}
                     </p>
                     {mapEmbed ? (
