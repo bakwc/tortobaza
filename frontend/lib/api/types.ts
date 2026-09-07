@@ -290,6 +290,7 @@ export const CrmOrderSchema = z.object({
   weight: z.string(),
   filling: z.string(),
   description: z.string(),
+  internal_description: z.string(),
   cake_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
@@ -396,6 +397,7 @@ export type CrmOrderWriteFields = {
   weight: string;
   filling: string;
   description: string;
+  internal_description: string;
   cake_price: string;
   prepayment: string;
   is_paid: boolean;

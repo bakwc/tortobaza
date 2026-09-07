@@ -13,6 +13,7 @@ import {
   Clock,
   CreditCard,
   FileText,
+  Lock,
   MapPin,
   Package,
   PackageCheck,
@@ -821,6 +822,23 @@ function CrmOrderCard({
                 </div>
                 <p className="mt-0.5 whitespace-pre-wrap text-sm text-[var(--ink)] lg:mt-1">
                   {order.description}
+                </p>
+              </div>
+            ) : null}
+
+            {order.internal_description ? (
+              <div
+                className={cn(
+                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
+                  tone.panel,
+                )}
+              >
+                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>{t("internalNotes")}</span>
+                </div>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-[var(--ink)] lg:mt-1">
+                  {order.internal_description}
                 </p>
               </div>
             ) : null}

@@ -54,6 +54,7 @@ function buildCrmOrderFormData(
   form.append("weight", fields.weight);
   form.append("filling", fields.filling);
   form.append("description", fields.description);
+  form.append("internal_description", fields.internal_description);
   form.append("cake_price", fields.cake_price);
   form.append("prepayment", fields.prepayment);
   form.append("is_paid", fields.is_paid ? "true" : "false");
@@ -81,6 +82,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     weight: order.weight,
     filling: order.filling,
     description: order.description,
+    internal_description: order.internal_description,
     cake_price: order.cake_price,
     prepayment: order.prepayment,
     is_paid: order.is_paid,
@@ -102,6 +104,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     weight: "",
     filling: "",
     description: "",
+    internal_description: "",
     cake_price: "",
     prepayment: "0",
     is_paid: false,
@@ -394,6 +397,15 @@ export function CrmOrderForm(
             <Textarea
               value={fields.description}
               onChange={(event) => setField("description", event.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+              {t("internalNotes")}
+            </span>
+            <Textarea
+              value={fields.internal_description}
+              onChange={(event) => setField("internal_description", event.target.value)}
             />
           </label>
         </div>

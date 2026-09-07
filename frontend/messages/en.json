@@ -297,6 +297,7 @@
     "weight": "Weight",
     "filling": "Filling",
     "notes": "Notes / Description",
+    "internalNotes": "Internal description",
     "price": "Price",
     "prepaid": "Prepaid",
     "remaining": "Remaining",

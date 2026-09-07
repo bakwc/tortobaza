@@ -38,7 +38,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
     ]
     list_display_links = ["id", "date"]
     list_filter = ["date", "fulfillment_type", "status", "is_paid", "payment_type", "deleted"]
-    search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "weight"]
+    search_fields = ["id", "contact", "nickname", "delivery_address", "filling", "description", "internal_description", "weight"]
     date_hierarchy = "date"
     inlines = [CrmOrderImageInline]
     readonly_fields = [
@@ -76,7 +76,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Cake Details",
             {
-                "fields": ("weight", "filling", "description"),
+                "fields": ("weight", "filling", "description", "internal_description"),
             },
         ),
         (

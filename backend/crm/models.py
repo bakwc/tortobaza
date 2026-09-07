@@ -76,6 +76,7 @@ class CrmOrder(models.Model):
     weight = models.CharField(max_length=50)
     filling = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    internal_description = models.TextField(blank=True)
     cake_price = models.DecimalField(max_digits=10, decimal_places=2)
     prepayment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     is_paid = models.BooleanField(default=False)

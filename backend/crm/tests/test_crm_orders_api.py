@@ -489,6 +489,7 @@ class CrmOrdersApiTests(TestCase):
             "weight": "2kg",
             "filling": "Vanilla",
             "description": "Note",
+            "internal_description": "Kitchen only",
             "cake_price": "120.00",
             "prepayment": "30.00",
             "is_paid": False,
@@ -577,6 +578,8 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["date"], "2026-08-26")
         self.assertEqual(data["time_start"], "12:00:00")
         self.assertEqual(data["nickname"], "@nick")
+        self.assertEqual(data["description"], "Note")
+        self.assertEqual(data["internal_description"], "Kitchen only")
         self.assertEqual(len(data["images"]), 0)
         self.assertTrue(CrmOrder.objects.filter(pk=data["id"]).exists())
 
@@ -797,6 +800,7 @@ class CrmOrdersApiTests(TestCase):
             weight="2kg",
             filling="Vanilla",
             description="No nuts",
+            internal_description="Allergen: kitchen note",
             cake_price=Decimal("120.00"),
             prepayment=Decimal("30.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
@@ -811,6 +815,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["weight"], "2kg")
         self.assertEqual(data["filling"], "Vanilla")
         self.assertEqual(data["description"], "No nuts")
+        self.assertNotIn("internal_description", data)
         self.assertEqual(data["cake_price"], "120.00")
         self.assertEqual(data["prepayment"], "30.00")
         self.assertFalse(data["is_paid"])
