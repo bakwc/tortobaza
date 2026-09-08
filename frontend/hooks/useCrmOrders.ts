@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
+  CrmExpensesDay,
+  CrmExpensesMonth,
   CrmMonthlyOrdersResponse,
   CrmOrder,
   CrmOrdersResponse,
@@ -15,6 +17,12 @@ export const crmOrdersQueryKey = (date?: string) =>
 
 export const crmMonthlyOrdersQueryKey = (month: string) =>
   ["crm-orders", "month", month] as const;
+
+export const crmExpensesQueryKey = (date?: string) =>
+  date ? (["crm-expenses", date] as const) : (["crm-expenses"] as const);
+
+export const crmMonthlyExpensesQueryKey = (month: string) =>
+  ["crm-expenses", "month", month] as const;
 
 export const crmOrderQueryKey = (id: number) => ["crm-order", id] as const;
 
@@ -34,6 +42,28 @@ export function useCrmOrdersByMonth(month: string) {
   return useQuery<CrmMonthlyOrdersResponse>({
     queryKey: crmMonthlyOrdersQueryKey(month),
     queryFn: () => api.getCrmOrdersByMonth(month),
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmExpenses(date: string | undefined, enabled: boolean) {
+  return useQuery<CrmExpensesDay>({
+    queryKey: crmExpensesQueryKey(date),
+    queryFn: () => api.getCrmExpenses(date),
+    enabled,
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmExpensesByMonth(month: string, enabled: boolean) {
+  return useQuery<CrmExpensesMonth>({
+    queryKey: crmMonthlyExpensesQueryKey(month),
+    queryFn: () => api.getCrmExpensesByMonth(month),
+    enabled,
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,

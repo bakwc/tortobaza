@@ -90,9 +90,5 @@ function CrmIncomeBadge({
     </span>
   );
 
-  if (compact) {
-    return badge;
-  }
-
-  return <div className="mt-3 flex justify-center">{badge}</div>;
+  return badge;
 }

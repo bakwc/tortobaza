@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
-from attendance.salary import compute_day_worked_seconds, compute_salary
+from attendance.salary import compute_all_salaries, compute_day_worked_seconds, compute_salary
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -235,3 +235,30 @@ class ComputeSalaryTests(TestCase):
         result = compute_salary(self.user, self.day1, self.day1)
         self.assertEqual(result["rows"][0]["money"], Decimal("0.25"))
         self.assertEqual(result["total_money"], Decimal("0.25"))
+
+
+class ComputeAllSalariesTests(TestCase):
+    def setUp(self):
+        self.day1 = date(2026, 6, 15)
+        self.day2 = date(2026, 6, 16)
+        self.worker = User.objects.create_user(username="worker", password="pass")
+        self.other = User.objects.create_user(username="other", password="pass")
+        UserProfile.objects.create(user=self.worker, hourly_rate=Decimal("10.00"))
+        UserProfile.objects.create(user=self.other, hourly_rate=Decimal("20.00"))
+
+    def test_empty_period(self):
+        result = compute_all_salaries(self.day1, self.day2)
+        self.assertEqual(result["total_money"], Decimal("0.00"))
+        self.assertEqual(result["by_date"], {})
+
+    def test_sums_two_employees(self):
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, self.day1, 17, 0)
+        _event(self.other, AttendanceEvent.ARRIVAL, self.day1, 10, 0)
+        _event(self.other, AttendanceEvent.DEPARTURE, self.day1, 14, 0)
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day2, 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, self.day2, 13, 0)
+        result = compute_all_salaries(self.day1, self.day2)
+        self.assertEqual(result["total_money"], Decimal("200.00"))
+        self.assertEqual(result["by_date"][self.day1], Decimal("160.00"))
+        self.assertEqual(result["by_date"][self.day2], Decimal("40.00"))

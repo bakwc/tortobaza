@@ -312,6 +312,17 @@ export const CrmMonthlyOrdersResponseSchema = z.object({
   orders: z.array(CrmOrderSchema),
 });
 
+export const CrmExpensesDaySchema = z.object({
+  date: z.string(),
+  salary: z.string(),
+});
+
+export const CrmExpensesMonthSchema = z.object({
+  month: z.string(),
+  salary: z.string(),
+  by_date: z.record(z.string(), z.string()),
+});
+
 export const ResolveYandexAddressResponseSchema = z.object({
   url: z.string(),
 });
@@ -373,6 +384,8 @@ export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
+export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
+export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;
 

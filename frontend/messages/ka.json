@@ -270,6 +270,8 @@
     "paidCount": "Paid:",
     "income": "შემოსავალი:",
     "incomeHint": "პირველი თანხა — შემოსავალი ყველა შეკვეთიდან. მეორე — გადახდილიდან.",
+    "expenses": "ხარჯები:",
+    "expensesSalary": "ხელფასი",
     "loadError": "Could not load orders for this date. Please try again.",
     "emptyTitle": "No orders scheduled for this day",
     "emptyHint": "Use the arrows above to browse other days.",

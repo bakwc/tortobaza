@@ -1,16 +1,27 @@
+from calendar import monthrange
+from datetime import date
 from zoneinfo import ZoneInfo
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import SAFE_METHODS, AllowAny, BasePermission, IsAuthenticated
+from rest_framework.permissions import (
+    SAFE_METHODS,
+    AllowAny,
+    BasePermission,
+    IsAdminUser,
+    IsAuthenticated,
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from attendance.salary import compute_all_salaries
 from crm.google_maps import resolve_google_maps_url
 from crm.models import CrmOrder
 from crm.serializers import (
+    CrmExpensesDaySerializer,
+    CrmExpensesMonthSerializer,
     CrmOrderClientSerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
@@ -200,3 +211,41 @@ class ResolveGoogleAddressView(APIView):
         yandex_url = resolve_yandex_maps_url(address)
         url = resolve_google_maps_url(address, yandex_url)
         return Response({"url": url})
+
+
+class CrmExpensesView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        query_serializer = CrmOrderQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        month = query_serializer.validated_data.get("month")
+        if month:
+            year_str, month_str = month.split("-")
+            year = int(year_str)
+            month_num = int(month_str)
+            start_date = date(year, month_num, 1)
+            end_date = date(year, month_num, monthrange(year, month_num)[1])
+            result = compute_all_salaries(start_date, end_date)
+            serializer = CrmExpensesMonthSerializer(
+                {
+                    "month": month,
+                    "salary": result["total_money"],
+                    "by_date": {
+                        day.isoformat(): money for day, money in result["by_date"].items()
+                    },
+                }
+            )
+            return Response(serializer.data)
+        target_date = query_serializer.validated_data.get("date") or timezone.now().astimezone(
+            _TB
+        ).date()
+        result = compute_all_salaries(target_date, target_date)
+        serializer = CrmExpensesDaySerializer(
+            {
+                "date": target_date,
+                "salary": result["total_money"],
+            }
+        )
+        return Response(serializer.data)

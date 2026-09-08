@@ -2,10 +2,13 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
+
+User = get_user_model()
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -102,4 +105,33 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
         "rows": rows,
         "total_hours": total_hours,
         "total_money": total_money,
+    }
+
+
+def compute_all_salaries(start_date: date, end_date: date) -> dict:
+    start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
+    end_dt = timezone.make_aware(
+        datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
+        _TB,
+    )
+    user_ids = (
+        AttendanceEvent.objects.filter(
+            timestamp__gte=start_dt,
+            timestamp__lt=end_dt,
+        )
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    users = User.objects.filter(id__in=user_ids)
+    total_money = Decimal("0.00")
+    by_date: dict[date, Decimal] = {}
+    for user in users:
+        result = compute_salary(user, start_date, end_date)
+        total_money += result["total_money"]
+        for row in result["rows"]:
+            day = row["date"]
+            by_date[day] = by_date.get(day, Decimal("0.00")) + row["money"]
+    return {
+        "total_money": total_money,
+        "by_date": by_date,
     }

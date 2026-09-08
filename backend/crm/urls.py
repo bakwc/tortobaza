@@ -1,6 +1,7 @@
 from django.urls import path
 
 from crm.views import (
+    CrmExpensesView,
     CrmOrderClientMapView,
     CrmOrderClientView,
     CrmOrderDetailView,
@@ -10,6 +11,7 @@ from crm.views import (
 )
 
 urlpatterns = [
+    path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
     path("crm/orders/", CrmOrderListView.as_view(), name="crm-order-list"),
     path(
         "crm/orders/client/<str:token>/map/",

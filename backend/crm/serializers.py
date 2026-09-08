@@ -269,3 +269,14 @@ class CrmOrderQuerySerializer(serializers.Serializer):
         if attrs.get("date") is not None and attrs.get("month") is not None:
             raise serializers.ValidationError("Pass either date or month, not both.")
         return attrs
+
+
+class CrmExpensesDaySerializer(serializers.Serializer):
+    date = serializers.DateField()
+    salary = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class CrmExpensesMonthSerializer(serializers.Serializer):
+    month = serializers.CharField()
+    salary = serializers.DecimalField(max_digits=10, decimal_places=2)
+    by_date = serializers.DictField(child=serializers.DecimalField(max_digits=10, decimal_places=2))

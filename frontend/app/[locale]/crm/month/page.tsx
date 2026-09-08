@@ -20,12 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
+import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
+import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import {
@@ -107,6 +108,10 @@ function CrmMonthBoard() {
   };
 
   const ordersQuery = useCrmOrdersByMonth(selectedMonth);
+  const expensesQuery = useCrmExpensesByMonth(
+    selectedMonth,
+    Boolean(currentUser.data?.is_staff),
+  );
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isCurrentMonth = selectedMonth === currentMonth;
 
@@ -198,7 +203,10 @@ function CrmMonthBoard() {
             </span>
           </div>
         </div>
-        <CrmIncomeStats orders={orders} compact={false} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <CrmIncomeStats orders={orders} compact={false} />
+          <CrmExpenseStats salary={expensesQuery.data?.salary} compact={false} />
+        </div>
       </div>
 
       {ordersQuery.isLoading ? (
@@ -234,6 +242,14 @@ function CrmMonthBoard() {
                 <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
                   <span>{group.orders.length}</span>
                   <CrmIncomeStats orders={group.orders} compact={true} />
+                  <CrmExpenseStats
+                    salary={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date] ?? "0.00")
+                        : undefined
+                    }
+                    compact={true}
+                  />
                 </span>
               </Link>
               {group.orders.map((order) => (

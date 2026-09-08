@@ -6,6 +6,8 @@ import {
   CategoryLandingSchema,
   CategorySchema,
   CrmClientOrderSchema,
+  CrmExpensesDaySchema,
+  CrmExpensesMonthSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -30,6 +32,8 @@ import {
   type CategoryDetail,
   type CategoryLanding,
   type CrmClientOrder,
+  type CrmExpensesDay,
+  type CrmExpensesMonth,
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
@@ -224,6 +228,20 @@ export function endpoints(fetcher: Fetcher) {
     async getAttendanceSummary(): Promise<AttendanceSummary> {
       const raw = await fetcher<unknown>("/api/attendance/summary/");
       return parse(AttendanceSummarySchema, raw);
+    },
+
+    async getCrmExpenses(date?: string): Promise<CrmExpensesDay> {
+      const raw = await fetcher<unknown>("/api/crm/expenses/", {
+        searchParams: date ? { date } : undefined,
+      });
+      return parse(CrmExpensesDaySchema, raw);
+    },
+
+    async getCrmExpensesByMonth(month: string): Promise<CrmExpensesMonth> {
+      const raw = await fetcher<unknown>("/api/crm/expenses/", {
+        searchParams: { month },
+      });
+      return parse(CrmExpensesMonthSchema, raw);
     },
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {

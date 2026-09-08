@@ -32,6 +32,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
+import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
@@ -40,6 +41,7 @@ import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
 import {
+  useCrmExpenses,
   useCrmOrders,
   useDeleteCrmOrder,
   usePatchCrmOrder,
@@ -109,6 +111,7 @@ function CrmBoard() {
   };
 
   const ordersQuery = useCrmOrders(selectedDate);
+  const expensesQuery = useCrmExpenses(selectedDate, Boolean(currentUser.data?.is_staff));
   const patchMutation = usePatchCrmOrder();
 
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
@@ -208,7 +211,10 @@ function CrmBoard() {
             </span>
           </div>
         </div>
-        <CrmIncomeStats orders={orders} compact={false} />
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <CrmIncomeStats orders={orders} compact={false} />
+          <CrmExpenseStats salary={expensesQuery.data?.salary} compact={false} />
+        </div>
       </div>
 
       {ordersQuery.isLoading ? (
