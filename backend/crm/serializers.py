@@ -28,6 +28,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     contact_telegram = serializers.CharField(read_only=True, allow_null=True)
     taken_by_name = serializers.CharField(read_only=True, allow_null=True)
     taken_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
+    created_by_name = serializers.CharField(read_only=True, allow_null=True)
+    created_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrmOrder
@@ -48,6 +50,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "status",
             "taken_by_name",
             "taken_by_telegram_url",
+            "created_by_name",
+            "created_by_telegram_url",
             "weight",
             "filling",
             "description",
@@ -70,6 +74,13 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         else:
             data["taken_by_name"] = None
             data["taken_by_telegram_url"] = None
+        if instance.created_by_id:
+            name, url = chef_identity(instance.created_by)
+            data["created_by_name"] = name
+            data["created_by_telegram_url"] = url
+        else:
+            data["created_by_name"] = None
+            data["created_by_telegram_url"] = None
         links = contact_links(instance.contact)
         if links is None:
             data["contact_tel"] = None
@@ -214,6 +225,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         images = validated_data.pop("images", [])
         validated_data.pop("delete_image_ids", None)
+        validated_data["created_by"] = self.context["request"].user
         order = CrmOrder.objects.create(**validated_data)
         self._apply_images(order, images, [])
         return order

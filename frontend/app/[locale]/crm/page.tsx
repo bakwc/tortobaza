@@ -891,6 +891,24 @@ function CrmOrderCard({
               >
                 {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
               </span>
+              {order.created_by_name ? (
+                <span className="flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
+                  <User className="h-3.5 w-3.5" />
+                  <span>{t("placedBy")}</span>
+                  {order.created_by_telegram_url ? (
+                    <a
+                      href={order.created_by_telegram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      @{order.created_by_name}
+                    </a>
+                  ) : (
+                    <span>{order.created_by_name}</span>
+                  )}
+                </span>
+              ) : null}
               {order.taken_by_name ? (
                 <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
                   <Utensils className="h-3.5 w-3.5" />

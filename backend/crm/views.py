@@ -37,7 +37,7 @@ class CrmOrderWritePermission(BasePermission):
 
 
 def live_orders():
-    return CrmOrder.objects.filter(deleted=False).select_related("taken_by")
+    return CrmOrder.objects.filter(deleted=False).select_related("taken_by", "created_by")
 
 
 def crm_order_write_payload(request):

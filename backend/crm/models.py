@@ -73,6 +73,13 @@ class CrmOrder(models.Model):
         null=True,
         blank=True,
     )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="crm_orders_created",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     weight = models.CharField(max_length=50)
     filling = models.CharField(max_length=255)
     description = models.TextField(blank=True)

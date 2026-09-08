@@ -109,6 +109,10 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         name, url = chef_identity(order.taken_by)
         payload["taken_by_name"] = name
         payload["taken_by_telegram_url"] = url
+    if order.created_by_id:
+        name, url = chef_identity(order.created_by)
+        payload["created_by_name"] = name
+        payload["created_by_telegram_url"] = url
     if order.status != CrmOrder.STATUS_DELIVERED:
         payload["take_in_work_url"] = _crm_order_take_url(order)
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
@@ -208,6 +212,13 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
     lines.append(f"<b>Статус:</b> {mark} {_esc(_STATUS_LABELS[order.status])}")
+    if order.created_by_id:
+        name, url = chef_identity(order.created_by)
+        if url:
+            href = html.escape(url, quote=True)
+            lines.append(f'<b>Оформлен</b> <a href="{href}">@{_esc(name)}</a>')
+        else:
+            lines.append(f"<b>Оформлен</b> {_esc(name)}")
     if order.taken_by_id:
         name, url = chef_identity(order.taken_by)
         if url:
@@ -410,7 +421,7 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
     if not token or not chat_id:
         return
     with transaction.atomic():
-        order = CrmOrder.objects.select_for_update().select_related("taken_by").get(pk=order_id)
+        order = CrmOrder.objects.select_for_update().select_related("taken_by", "created_by").get(pk=order_id)
         list(order.images.all())
         new_hash = crm_order_telegram_hash(order)
         posted_before = order.telegram_message_id is not None

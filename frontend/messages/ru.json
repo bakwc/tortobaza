@@ -313,6 +313,7 @@
     "notPaid": "Не оплачен",
     "markPaid": "Отметить оплату",
     "takeInWork": "Взять в работу",
+    "placedBy": "оформлен",
     "statusMenu": "Изменить статус",
     "nextStepClientApproved": "Клиент одобрил",
     "nextStepInDelivery": "В доставку",

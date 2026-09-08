@@ -287,6 +287,8 @@ export const CrmOrderSchema = z.object({
   status: z.enum(["new", "in_work", "client_approved", "in_delivery", "delivered"]),
   taken_by_name: z.string().nullable(),
   taken_by_telegram_url: z.string().nullable(),
+  created_by_name: z.string().nullable(),
+  created_by_telegram_url: z.string().nullable(),
   weight: z.string(),
   filling: z.string(),
   description: z.string(),

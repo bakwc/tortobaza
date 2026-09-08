@@ -313,6 +313,7 @@
     "notPaid": "Not paid",
     "markPaid": "Mark as paid",
     "takeInWork": "Take into work",
+    "placedBy": "placed by",
     "statusMenu": "Change status",
     "nextStepClientApproved": "Client approved",
     "nextStepInDelivery": "To delivery",

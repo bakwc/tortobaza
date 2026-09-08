@@ -318,6 +318,23 @@ class CrmTelegramTests(TestCase):
         self.assertIn("Готовит шеф</b> site_chef", html)
         self.assertNotIn("t.me", html)
 
+    def test_created_by_telegram_nick_in_html(self):
+        staff = User.objects.create_user(username="staff", password="password")
+        UserProfile.objects.create(user=staff, telegram_username="staff_anna")
+        order = self._create_order(delta=timedelta(hours=2), created_by=staff)
+        html = build_crm_order_telegram_html(order)
+        self.assertIn('Оформлен</b> <a href="https://t.me/staff_anna">@staff_anna</a>', html)
+        payload = build_crm_order_telegram_payload(order)
+        self.assertEqual(payload["created_by_name"], "staff_anna")
+        self.assertEqual(payload["created_by_telegram_url"], "https://t.me/staff_anna")
+
+    def test_created_by_falls_back_to_username_without_link(self):
+        staff = User.objects.create_user(username="site_staff", password="password")
+        order = self._create_order(delta=timedelta(hours=2), created_by=staff)
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("Оформлен</b> site_staff", html)
+        self.assertNotIn("t.me", html)
+
     def test_slot_change_edits_and_replies(self):
         order = self._create_order(delta=timedelta(hours=2))
         sync_crm_order_to_telegram(order.pk)

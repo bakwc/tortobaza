@@ -583,6 +583,41 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(len(data["images"]), 0)
         self.assertTrue(CrmOrder.objects.filter(pk=data["id"]).exists())
 
+    def test_create_sets_created_by_from_request_user(self):
+        UserProfile.objects.create(user=self.admin, telegram_username="staff_anna")
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post("/api/crm/orders/", self._order_payload(), format="multipart")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["created_by_name"], "staff_anna")
+        self.assertEqual(data["created_by_telegram_url"], "https://t.me/staff_anna")
+        order = CrmOrder.objects.get(pk=data["id"])
+        self.assertEqual(order.created_by_id, self.admin.id)
+
+    def test_put_does_not_change_created_by(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            created_by=self.user,
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.put(
+            f"/api/crm/orders/{order.id}/",
+            self._order_payload(contact="Updated"),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["contact"], "Updated")
+        order.refresh_from_db()
+        self.assertEqual(order.created_by_id, self.user.id)
+
     def test_create_order_with_unknown_time(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(
@@ -822,6 +857,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["payment_type"], "cash")
         self.assertIsNone(data["google_maps_url"])
         self.assertNotIn("taken_by_name", data)
+        self.assertNotIn("created_by_name", data)
         self.assertNotIn("client_token", data)
         self.assertEqual(response["Cache-Control"], "private, no-store, no-cache, must-revalidate")
         self.assertEqual(response["Pragma"], "no-cache")
