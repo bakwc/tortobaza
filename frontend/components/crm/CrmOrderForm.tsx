@@ -36,6 +36,11 @@ function sliceTime(value: string): string {
   return value.slice(0, 5);
 }
 
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 function buildCrmOrderFormData(
   fields: CrmOrderWriteFields,
   images: File[],
@@ -133,6 +138,9 @@ export function CrmOrderForm(
   );
   const [deleteImageIds, setDeleteImageIds] = useState<number[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin30" | null>(
+    null,
+  );
 
   const pending = createMutation.isPending || updateMutation.isPending;
   const mutationError = createMutation.error ?? updateMutation.error;
@@ -147,11 +155,24 @@ export function CrmOrderForm(
     key: K,
     value: CrmOrderWriteFields[K],
   ) => {
+    if (key === "time_start" || key === "time_end") {
+      setTimeRangeError(null);
+    }
     setFields((prev) => ({ ...prev, [key]: value }));
   };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!fields.when_ready && fields.time_start !== null) {
+      if (!fields.time_end) {
+        setTimeRangeError("timeEndRequired");
+        return;
+      }
+      if (timeToMinutes(fields.time_end) - timeToMinutes(fields.time_start) < 30) {
+        setTimeRangeError("timeRangeMin30");
+        return;
+      }
+    }
     const body = buildCrmOrderFormData(fields, newFiles, deleteImageIds);
     if (props.mode === "create") {
       createMutation.mutate(body, {
@@ -234,6 +255,9 @@ export function CrmOrderForm(
               }
               className="rounded-2xl"
             />
+            {timeRangeError ? (
+              <span className="text-sm text-[var(--danger)]">{t(timeRangeError)}</span>
+            ) : null}
           </label>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
@@ -242,6 +266,7 @@ export function CrmOrderForm(
             <button
               type="button"
               onClick={() => {
+                setTimeRangeError(null);
                 if (fields.time_start === null && !fields.when_ready) {
                   setFields((prev) => ({ ...prev, time_start: "", when_ready: false }));
                   return;
@@ -270,6 +295,7 @@ export function CrmOrderForm(
             <button
               type="button"
               onClick={() => {
+                setTimeRangeError(null);
                 if (fields.when_ready) {
                   setFields((prev) => ({ ...prev, time_start: "", when_ready: false }));
                   return;
