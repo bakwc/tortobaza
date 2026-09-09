@@ -352,6 +352,23 @@ class CrmTelegramTests(TestCase):
         self.assertIn("время доставки / выдачи поменялось на", reply["text"])
         self.assertIn("исходное сообщение", reply["text"])
 
+    def test_address_change_edits_and_replies(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        sync_crm_order_to_telegram(order.pk)
+        original_id = CrmOrder.objects.get(pk=order.pk).telegram_message_id
+        self.calls.clear()
+        order.delivery_address = "Gorgiladze 15"
+        order.save(update_fields=["delivery_address", "updated_at"])
+        sync_crm_order_to_telegram(order.pk)
+        methods = [c["method"] for c in self.calls]
+        self.assertEqual(methods, ["editMessageText", "sendMessage"])
+        reply = self.calls[1]["payload"]
+        self.assertEqual(reply["reply_to_message_id"], original_id)
+        self.assertIn("адрес поменялся на Gorgiladze 15", reply["text"])
+        self.assertIn("исходное сообщение", reply["text"])
+        order.refresh_from_db()
+        self.assertEqual(order.telegram_posted_delivery_address, "Gorgiladze 15")
+
     def test_posted_order_moved_beyond_horizon_still_edits(self):
         order = self._create_order(delta=timedelta(hours=2))
         sync_crm_order_to_telegram(order.pk)
@@ -388,6 +405,7 @@ class CrmTelegramTests(TestCase):
         posted.telegram_posted_date = posted.date
         posted.telegram_posted_time_start = posted.time_start
         posted.telegram_posted_time_end = posted.time_end
+        posted.telegram_posted_delivery_address = posted.delivery_address
         posted.save(
             update_fields=[
                 "telegram_message_id",
@@ -395,6 +413,7 @@ class CrmTelegramTests(TestCase):
                 "telegram_posted_date",
                 "telegram_posted_time_start",
                 "telegram_posted_time_end",
+                "telegram_posted_delivery_address",
             ]
         )
         pending = self._create_order(delta=timedelta(hours=3))
@@ -656,6 +675,7 @@ class CrmTelegramTests(TestCase):
         posted.telegram_posted_date = posted.date
         posted.telegram_posted_time_start = posted.time_start
         posted.telegram_posted_time_end = posted.time_end
+        posted.telegram_posted_delivery_address = posted.delivery_address
         posted.save(
             update_fields=[
                 "telegram_message_id",
@@ -663,6 +683,7 @@ class CrmTelegramTests(TestCase):
                 "telegram_posted_date",
                 "telegram_posted_time_start",
                 "telegram_posted_time_end",
+                "telegram_posted_delivery_address",
             ]
         )
         fake_response = MagicMock()

@@ -114,6 +114,7 @@ class CrmOrder(models.Model):
     telegram_posted_time_start = models.TimeField(null=True, blank=True)
     telegram_posted_time_end = models.TimeField(null=True, blank=True)
     telegram_posted_when_ready = models.BooleanField(default=False)
+    telegram_posted_delivery_address = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

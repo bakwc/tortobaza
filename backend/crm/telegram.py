@@ -399,6 +399,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
     order.telegram_posted_time_start = order.time_start
     order.telegram_posted_time_end = order.time_end
     order.telegram_posted_when_ready = order.when_ready
+    order.telegram_posted_delivery_address = order.delivery_address
     order.save(
         update_fields=[
             "telegram_message_id",
@@ -408,6 +409,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
             "telegram_posted_time_start",
             "telegram_posted_time_end",
             "telegram_posted_when_ready",
+            "telegram_posted_delivery_address",
             "updated_at",
         ]
     )
@@ -489,6 +491,22 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
                 "chat_id": chat_id,
                 "text": (
                     f"время доставки / выдачи поменялось на {_esc(_format_slot_short(order))}\n"
+                    f'<a href="{link}">исходное сообщение</a>'
+                ),
+                "parse_mode": "HTML",
+                "reply_to_message_id": order.telegram_message_id,
+                "disable_web_page_preview": True,
+            },
+        )
+    address_changed = order.delivery_address != order.telegram_posted_delivery_address
+    if address_changed:
+        link = _channel_message_link(chat_id, order.telegram_message_id)
+        _telegram_json(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": (
+                    f"адрес поменялся на {_esc(order.delivery_address)}\n"
                     f'<a href="{link}">исходное сообщение</a>'
                 ),
                 "parse_mode": "HTML",
