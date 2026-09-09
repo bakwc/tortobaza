@@ -496,9 +496,7 @@ class CrmTelegramTests(TestCase):
         order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         sync_crm_order_to_telegram(order.pk)
         self.calls.clear()
-        payload = build_crm_order_telegram_payload(order)
-        encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-        order.telegram_payload_hash = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        order.telegram_payload_hash = crm_order_telegram_hash(order)
         order.save(update_fields=["telegram_payload_hash", "updated_at"])
         sync_crm_order_to_telegram(order.pk)
         self.assertEqual(self.calls, [])
@@ -574,7 +572,7 @@ class CrmTelegramTests(TestCase):
     def test_layout_key_changes_hash(self):
         order = self._create_order(delta=timedelta(hours=2))
         payload = build_crm_order_telegram_payload(order)
-        self.assertEqual(payload["time_lines"], "delivery_and_prep")
+        self.assertEqual(payload["time_lines"], "delivery_prep_two_lines")
         encoded_old = json.dumps(
             {k: v for k, v in payload.items() if k != "time_lines"},
             sort_keys=True,
@@ -583,6 +581,14 @@ class CrmTelegramTests(TestCase):
         )
         old_hash = hashlib.sha256(encoded_old.encode("utf-8")).hexdigest()
         self.assertNotEqual(old_hash, crm_order_telegram_hash(order))
+        payload_only = json.dumps(
+            payload,
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        payload_only_hash = hashlib.sha256(payload_only.encode("utf-8")).hexdigest()
+        self.assertNotEqual(payload_only_hash, crm_order_telegram_hash(order))
 
     def test_when_ready_html(self):
         order = self._create_order(delta=timedelta(hours=2), time_start=None, when_ready=True)

@@ -99,7 +99,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "taken_by_telegram_url": None,
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
-        "time_lines": "delivery_and_prep",
+        "time_lines": "delivery_prep_two_lines",
         "weight": order.weight,
         "when_ready": order.when_ready,
     }
@@ -125,6 +125,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
 
 def crm_order_telegram_hash(order: CrmOrder) -> str:
     payload = build_crm_order_telegram_payload(order)
+    payload["html"] = build_crm_order_telegram_html(order)
     encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
