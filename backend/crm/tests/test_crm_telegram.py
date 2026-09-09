@@ -558,11 +558,26 @@ class CrmTelegramTests(TestCase):
         self.assertNotIn("t.me", text)
         self.assertNotIn("tel:", text)
 
+    def test_html_includes_prep_and_delivery_times(self):
+        now_tb = timezone.now().astimezone(_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date(),
+            time_start=time(13, 0),
+            time_end=time(14, 0),
+        )
+        text = build_crm_order_telegram_html(order)
+        self.assertIn("🍴 12:30", text)
+        self.assertIn("🚚 13:00 – 14:00", text)
+        self.assertNotIn("<b>Время:</b>", text)
+
     def test_when_ready_html(self):
         order = self._create_order(delta=timedelta(hours=2), time_start=None, when_ready=True)
         text = build_crm_order_telegram_html(order)
         self.assertIn("по готовности", text)
         self.assertNotIn("время не указано", text)
+        self.assertNotIn("🍴", text)
+        self.assertNotIn("🚚", text)
 
     def test_when_ready_slot_change_from_unknown_replies(self):
         order = self._create_order(delta=timedelta(hours=2), time_start=None)

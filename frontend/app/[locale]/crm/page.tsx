@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clock,
   CreditCard,
   FileText,
   Lock,
@@ -35,6 +34,7 @@ import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
+import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
@@ -267,20 +267,6 @@ function CrmBoard() {
       )}
     </div>
   );
-}
-
-function formatTimeSlot(
-  start: string | null,
-  end: string | null,
-  whenReady: boolean,
-  unknownLabel: string,
-  whenReadyLabel: string,
-): string {
-  if (whenReady) return whenReadyLabel;
-  if (!start) return unknownLabel;
-  const s = start.slice(0, 5);
-  if (!end) return s;
-  return `${s} – ${end.slice(0, 5)}`;
 }
 
 function paymentTypeLabel(type: string, t: (key: string) => string): string {
@@ -562,16 +548,12 @@ function CrmOrderCard({
               )}
             >
               <div className="flex items-center gap-1.5 lg:gap-2">
-                <Clock className="h-4 w-4 text-[var(--brand)] lg:h-5 lg:w-5" />
-                <span className="text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl">
-                  {formatTimeSlot(
-                    order.time_start,
-                    order.time_end,
-                    order.when_ready,
-                    t("timeUnknown"),
-                    t("timeWhenReady"),
-                  )}
-                </span>
+                <CrmOrderTimeSlot
+                  timeStart={order.time_start}
+                  timeEnd={order.time_end}
+                  whenReady={order.when_ready}
+                  compact={false}
+                />
               </div>
               <div className="flex items-center gap-2">
                 <span

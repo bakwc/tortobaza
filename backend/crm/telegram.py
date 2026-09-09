@@ -6,7 +6,7 @@ import time as time_module
 import urllib.error
 import urllib.request
 import uuid
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -132,16 +132,22 @@ def _format_money(amount: Decimal) -> str:
     return f"{amount:.2f} ₾"
 
 
+def _format_prep_time(time_start: time) -> str:
+    dt = datetime.combine(date(2000, 1, 2), time_start) - timedelta(minutes=30)
+    return dt.strftime("%H:%M")
+
+
 def _format_slot(order: CrmOrder) -> str:
     date_part = order.date.strftime("%d.%m.%Y")
     if order.when_ready:
         return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
+    prep = _format_prep_time(order.time_start)
     start = order.time_start.strftime("%H:%M")
     if order.time_end is not None:
-        return f"{date_part}, {start} – {order.time_end.strftime('%H:%M')}"
-    return f"{date_part}, {start}"
+        return f"{date_part}, 🍴 {prep}  🚚 {start} – {order.time_end.strftime('%H:%M')}"
+    return f"{date_part}, 🍴 {prep}  🚚 {start}"
 
 
 def _format_slot_short(order: CrmOrder) -> str:
@@ -150,10 +156,11 @@ def _format_slot_short(order: CrmOrder) -> str:
         return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
+    prep = _format_prep_time(order.time_start)
     start = order.time_start.strftime("%H:%M")
     if order.time_end is not None:
-        return f"{date_part} {start}–{order.time_end.strftime('%H:%M')}"
-    return f"{date_part} {start}"
+        return f"{date_part} 🍴 {prep} 🚚 {start}–{order.time_end.strftime('%H:%M')}"
+    return f"{date_part} 🍴 {prep} 🚚 {start}"
 
 
 def _crm_order_view_url(order: CrmOrder) -> str:
@@ -186,7 +193,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
             f'<a href="{take_href}">взять в работу</a>'
         )
     lines.append("")
-    lines.append(f"<b>Время:</b> {_esc(_format_slot(order))}")
+    lines.append(_esc(_format_slot(order)))
     lines.append(f"<b>Тип:</b> {_FULFILLMENT_LABELS[order.fulfillment_type]}")
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)

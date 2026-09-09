@@ -270,6 +270,7 @@
     "paidCount": "Paid:",
     "income": "შემოსავალი:",
     "incomeHint": "პირველი თანხა — შემოსავალი ყველა შეკვეთიდან. მეორე — გადახდილიდან.",
+    "timeSlotHint": "ჩანგალი და დანა — დრო, როცა ტორტი მზად უნდა იყოს. სატვირთო — მიწოდების ან გატანის ინტერვალი.",
     "expenses": "ხარჯები:",
     "expensesSalary": "ხელფასი",
     "loadError": "Could not load orders for this date. Please try again.",

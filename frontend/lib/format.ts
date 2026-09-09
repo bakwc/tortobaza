@@ -33,6 +33,31 @@ export function formatTimeslot(start: string, end: string): string {
   return `${sh}:${sm} – ${eh}:${em}`;
 }
 
+export function formatPrepTime(start: string): string {
+  const [h, m] = start.slice(0, 5).split(":").map(Number);
+  let total = h * 60 + m - 30;
+  if (total < 0) {
+    total += 24 * 60;
+  }
+  const hh = String(Math.floor(total / 60)).padStart(2, "0");
+  const mm = String(total % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+export function formatTimeSlot(
+  start: string | null,
+  end: string | null,
+  whenReady: boolean,
+  unknownLabel: string,
+  whenReadyLabel: string,
+): string {
+  if (whenReady) return whenReadyLabel;
+  if (!start) return unknownLabel;
+  const s = start.slice(0, 5);
+  if (!end) return s;
+  return `${s} – ${end.slice(0, 5)}`;
+}
+
 export function formatTimeslotDateLabel(date: string, locale: string): string {
   const d = new Date(`${date}T00:00:00`);
   return d.toLocaleDateString(intlLocaleTag(locale), {

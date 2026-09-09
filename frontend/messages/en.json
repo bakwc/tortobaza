@@ -270,6 +270,7 @@
     "paidCount": "Paid:",
     "income": "Income:",
     "incomeHint": "First amount is total income. Second is income from paid orders.",
+    "timeSlotHint": "Fork and knife is when the cake should be ready. Truck is the delivery or pickup window.",
     "expenses": "Expenses:",
     "expensesSalary": "Salary",
     "loadError": "Could not load orders for this date. Please try again.",

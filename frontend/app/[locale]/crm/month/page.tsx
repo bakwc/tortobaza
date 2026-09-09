@@ -8,7 +8,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
   CreditCard,
   Package,
   Pencil,
@@ -23,6 +22,7 @@ import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
+import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -47,20 +47,6 @@ function shiftMonth(yyyyMm: string, delta: number): string {
   const nextYear = date.getUTCFullYear();
   const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${nextYear}-${nextMonth}`;
-}
-
-function formatTimeSlot(
-  start: string | null,
-  end: string | null,
-  whenReady: boolean,
-  unknownLabel: string,
-  whenReadyLabel: string,
-): string {
-  if (whenReady) return whenReadyLabel;
-  if (!start) return unknownLabel;
-  const s = start.slice(0, 5);
-  if (!end) return s;
-  return `${s} – ${end.slice(0, 5)}`;
 }
 
 function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder[] }[] {
@@ -303,16 +289,12 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
-            <Clock className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-            <span className="truncate">
-              {formatTimeSlot(
-                order.time_start,
-                order.time_end,
-                order.when_ready,
-                t("timeUnknown"),
-                t("timeWhenReady"),
-              )}
-            </span>
+            <CrmOrderTimeSlot
+              timeStart={order.time_start}
+              timeEnd={order.time_end}
+              whenReady={order.when_ready}
+              compact={true}
+            />
           </div>
           <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
             <span className="font-semibold text-[var(--ink)]">{order.weight}</span>

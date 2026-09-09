@@ -2,6 +2,7 @@ import html
 import json
 import urllib.error
 import urllib.request
+from datetime import timedelta
 
 from django.conf import settings
 from django.utils import timezone
@@ -24,7 +25,10 @@ def _format_timeslot(order: Order) -> str:
     start = timezone.localtime(order.timeslot_start)
     end = timezone.localtime(order.timeslot_end)
     date_part = start.strftime("%d.%m.%Y")
-    time_part = f"{start.strftime('%H:%M')} – {end.strftime('%H:%M')}"
+    prep = (start - timedelta(minutes=30)).strftime("%H:%M")
+    time_part = (
+        f"🍴 {prep}  🚚 {start.strftime('%H:%M')} – {end.strftime('%H:%M')}"
+    )
     return f"{date_part}, {time_part}"
 
 
@@ -97,7 +101,7 @@ def build_order_notification_text(order: Order) -> str:
         [
             f"<b>{_('Type:')}</b> {fulfillment}",
             f"<b>{location_label}:</b> {_esc(_format_address(order))}",
-            f"<b>{_('Time:')}</b> {_esc(_format_timeslot(order))}",
+            _esc(_format_timeslot(order)),
             f"<b>{_('Payment:')}</b> {payment}",
             f"<b>{_('Total:')}</b> {_format_money(order.total)}",
         ]

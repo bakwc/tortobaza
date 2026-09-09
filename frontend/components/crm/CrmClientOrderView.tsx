@@ -6,7 +6,6 @@ import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   AtSign,
   Check,
-  Clock,
   CreditCard,
   FileText,
   MapPin,
@@ -19,26 +18,13 @@ import {
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmContactLinks } from "@/components/crm/CrmContactLinks";
+import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { useCrmClientOrderMap } from "@/hooks/useCrmOrders";
 import { CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import { SITE_INFO } from "@/lib/site-info";
 import type { CrmClientOrder } from "@/lib/api/types";
 import { formatAed } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-function formatTimeSlot(
-  start: string | null,
-  end: string | null,
-  whenReady: boolean,
-  unknownLabel: string,
-  whenReadyLabel: string,
-): string {
-  if (whenReady) return whenReadyLabel;
-  if (!start) return unknownLabel;
-  const s = start.slice(0, 5);
-  if (!end) return s;
-  return `${s} – ${end.slice(0, 5)}`;
-}
 
 function paymentTypeLabel(type: string, t: (key: string) => string): string {
   if (type === "unknown") return t("paymentUnknown");
@@ -224,16 +210,12 @@ export function CrmClientOrderView({
                   {formatClientDate(order.date, locale)}
                 </span>
                 <div className="flex items-center gap-1.5 lg:gap-2">
-                  <Clock className="h-4 w-4 text-[var(--brand)] lg:h-5 lg:w-5" />
-                  <span className="text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl">
-                    {formatTimeSlot(
-                      order.time_start,
-                      order.time_end,
-                      order.when_ready,
-                      t("timeUnknown"),
-                      t("timeWhenReady"),
-                    )}
-                  </span>
+                  <CrmOrderTimeSlot
+                    timeStart={order.time_start}
+                    timeEnd={order.time_end}
+                    whenReady={order.when_ready}
+                    compact={false}
+                  />
                 </div>
               </div>
               <span
