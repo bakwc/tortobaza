@@ -105,8 +105,11 @@ msgstr "Telegram:"
 msgid "Type:"
 msgstr "ტიპი:"
 
-msgid "Time:"
-msgstr "დრო:"
+msgid "Delivery time:"
+msgstr "მიწოდების დრო:"
+
+msgid "Prepare by:"
+msgstr "მოამზადეთ:"
 
 msgid "Payment:"
 msgstr "გადახდა:"

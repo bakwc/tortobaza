@@ -25,11 +25,16 @@ def _format_timeslot(order: Order) -> str:
     start = timezone.localtime(order.timeslot_start)
     end = timezone.localtime(order.timeslot_end)
     date_part = start.strftime("%d.%m.%Y")
-    prep = (start - timedelta(minutes=30)).strftime("%H:%M")
-    time_part = (
-        f"🍴 {prep}  🚚 {start.strftime('%H:%M')} – {end.strftime('%H:%M')}"
-    )
+    time_part = f"{start.strftime('%H:%M')} – {end.strftime('%H:%M')}"
     return f"{date_part}, {time_part}"
+
+
+def _format_prep_timeslot(order: Order) -> str | None:
+    if order.timeslot_start is None:
+        return None
+    start = timezone.localtime(order.timeslot_start)
+    prep = start - timedelta(minutes=30)
+    return prep.strftime("%d.%m.%Y, %H:%M")
 
 
 def _format_address(order: Order) -> str:
@@ -101,7 +106,14 @@ def build_order_notification_text(order: Order) -> str:
         [
             f"<b>{_('Type:')}</b> {fulfillment}",
             f"<b>{location_label}:</b> {_esc(_format_address(order))}",
-            _esc(_format_timeslot(order)),
+            f"<b>{_('Delivery time:')}</b> {_esc(_format_timeslot(order))}",
+        ]
+    )
+    prep_slot = _format_prep_timeslot(order)
+    if prep_slot is not None:
+        lines.append(f"<b>{_('Prepare by:')}</b> {_esc(prep_slot)}")
+    lines.extend(
+        [
             f"<b>{_('Payment:')}</b> {payment}",
             f"<b>{_('Total:')}</b> {_format_money(order.total)}",
         ]

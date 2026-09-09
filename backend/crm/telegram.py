@@ -6,7 +6,7 @@ import time as time_module
 import urllib.error
 import urllib.request
 import uuid
-from datetime import date, datetime, time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -99,6 +99,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "taken_by_telegram_url": None,
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
+        "time_lines": "delivery_and_prep",
         "weight": order.weight,
         "when_ready": order.when_ready,
     }
@@ -132,22 +133,23 @@ def _format_money(amount: Decimal) -> str:
     return f"{amount:.2f} ₾"
 
 
-def _format_prep_time(time_start: time) -> str:
-    dt = datetime.combine(date(2000, 1, 2), time_start) - timedelta(minutes=30)
-    return dt.strftime("%H:%M")
-
-
 def _format_slot(order: CrmOrder) -> str:
     date_part = order.date.strftime("%d.%m.%Y")
     if order.when_ready:
         return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
-    prep = _format_prep_time(order.time_start)
     start = order.time_start.strftime("%H:%M")
     if order.time_end is not None:
-        return f"{date_part}, 🍴 {prep}  🚚 {start} – {order.time_end.strftime('%H:%M')}"
-    return f"{date_part}, 🍴 {prep}  🚚 {start}"
+        return f"{date_part}, {start} – {order.time_end.strftime('%H:%M')}"
+    return f"{date_part}, {start}"
+
+
+def _format_prep_slot(order: CrmOrder) -> str | None:
+    if order.when_ready or order.time_start is None:
+        return None
+    dt = datetime.combine(order.date, order.time_start) - timedelta(minutes=30)
+    return dt.strftime("%d.%m.%Y, %H:%M")
 
 
 def _format_slot_short(order: CrmOrder) -> str:
@@ -156,11 +158,10 @@ def _format_slot_short(order: CrmOrder) -> str:
         return f"{date_part}, по готовности"
     if order.time_start is None:
         return f"{date_part}, время не указано"
-    prep = _format_prep_time(order.time_start)
     start = order.time_start.strftime("%H:%M")
     if order.time_end is not None:
-        return f"{date_part} 🍴 {prep} 🚚 {start}–{order.time_end.strftime('%H:%M')}"
-    return f"{date_part} 🍴 {prep} 🚚 {start}"
+        return f"{date_part} {start}–{order.time_end.strftime('%H:%M')}"
+    return f"{date_part} {start}"
 
 
 def _crm_order_view_url(order: CrmOrder) -> str:
@@ -193,7 +194,10 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
             f'<a href="{take_href}">взять в работу</a>'
         )
     lines.append("")
-    lines.append(_esc(_format_slot(order)))
+    lines.append(f"<b>Время доставки:</b> {_esc(_format_slot(order))}")
+    prep_slot = _format_prep_slot(order)
+    if prep_slot is not None:
+        lines.append(f"<b>Приготовить к:</b> {_esc(prep_slot)}")
     lines.append(f"<b>Тип:</b> {_FULFILLMENT_LABELS[order.fulfillment_type]}")
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)

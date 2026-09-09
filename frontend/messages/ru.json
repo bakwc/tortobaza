@@ -335,7 +335,7 @@
     "timeEnd": "Время окончания",
     "timeUnknown": "Неизвестно",
     "timeWhenReady": "По готовности",
-    "prepareBy": "Приготовить к {time}",
+    "prepareBy": "Приготовить к <time></time>",
     "timeEndRequired": "Конец интервала обязателен",
     "timeRangeMin30": "Интервал должен быть не меньше 30 минут",
     "fulfillmentLabel": "Тип выдачи",

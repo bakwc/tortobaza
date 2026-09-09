@@ -335,7 +335,7 @@
     "timeEnd": "End time",
     "timeUnknown": "Unknown",
     "timeWhenReady": "When ready",
-    "prepareBy": "Prepare by {time}",
+    "prepareBy": "Prepare by <time></time>",
     "timeEndRequired": "End of the time range is required",
     "timeRangeMin30": "The time range must be at least 30 minutes",
     "fulfillmentLabel": "Fulfillment",

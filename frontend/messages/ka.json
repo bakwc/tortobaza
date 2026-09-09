@@ -335,7 +335,7 @@
     "timeEnd": "დასრულების დრო",
     "timeUnknown": "უცნობი",
     "timeWhenReady": "მზადყოფნისთანავე",
-    "prepareBy": "მოამზადეთ {time}-მდე",
+    "prepareBy": "მოამზადეთ <time></time>-მდე",
     "timeEndRequired": "დროის ინტერვალის დასასრული სავალდებულოა",
     "timeRangeMin30": "დროის ინტერვალი უნდა იყოს მინიმუმ 30 წუთი",
     "fulfillmentLabel": "ტიპი",

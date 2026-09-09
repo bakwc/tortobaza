@@ -567,17 +567,29 @@ class CrmTelegramTests(TestCase):
             time_end=time(14, 0),
         )
         text = build_crm_order_telegram_html(order)
-        self.assertIn("🍴 12:30", text)
-        self.assertIn("🚚 13:00 – 14:00", text)
-        self.assertNotIn("<b>Время:</b>", text)
+        date_part = order.date.strftime("%d.%m.%Y")
+        self.assertIn(f"<b>Время доставки:</b> {date_part}, 13:00 – 14:00", text)
+        self.assertIn(f"<b>Приготовить к:</b> {date_part}, 12:30", text)
+
+    def test_layout_key_changes_hash(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        payload = build_crm_order_telegram_payload(order)
+        self.assertEqual(payload["time_lines"], "delivery_and_prep")
+        encoded_old = json.dumps(
+            {k: v for k, v in payload.items() if k != "time_lines"},
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        old_hash = hashlib.sha256(encoded_old.encode("utf-8")).hexdigest()
+        self.assertNotEqual(old_hash, crm_order_telegram_hash(order))
 
     def test_when_ready_html(self):
         order = self._create_order(delta=timedelta(hours=2), time_start=None, when_ready=True)
         text = build_crm_order_telegram_html(order)
         self.assertIn("по готовности", text)
         self.assertNotIn("время не указано", text)
-        self.assertNotIn("🍴", text)
-        self.assertNotIn("🚚", text)
+        self.assertNotIn("Приготовить к", text)
 
     def test_when_ready_slot_change_from_unknown_replies(self):
         order = self._create_order(delta=timedelta(hours=2), time_start=None)

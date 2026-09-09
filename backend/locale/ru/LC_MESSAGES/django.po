@@ -106,8 +106,11 @@ msgstr "Telegram:"
 msgid "Type:"
 msgstr "Тип:"
 
-msgid "Time:"
-msgstr "Время:"
+msgid "Delivery time:"
+msgstr "Время доставки:"
+
+msgid "Prepare by:"
+msgstr "Приготовить к:"
 
 msgid "Payment:"
 msgstr "Оплата:"
