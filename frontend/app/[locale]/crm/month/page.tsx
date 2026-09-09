@@ -293,7 +293,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
               timeStart={order.time_start}
               timeEnd={order.time_end}
               whenReady={order.when_ready}
-              compact={true}
+              layout="month"
             />
           </div>
           <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">

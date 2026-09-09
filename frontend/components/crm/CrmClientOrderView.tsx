@@ -214,7 +214,7 @@ export function CrmClientOrderView({
                     timeStart={order.time_start}
                     timeEnd={order.time_end}
                     whenReady={order.when_ready}
-                    compact={false}
+                    layout="day"
                   />
                 </div>
               </div>
