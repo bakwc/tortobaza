@@ -4,6 +4,12 @@ import { useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
@@ -255,9 +261,6 @@ export function CrmOrderForm(
               }
               className="rounded-2xl"
             />
-            {timeRangeError ? (
-              <span className="text-sm text-[var(--danger)]">{t(timeRangeError)}</span>
-            ) : null}
           </label>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
@@ -541,6 +544,24 @@ export function CrmOrderForm(
           {pending ? <Spinner className="h-4 w-4" /> : t("saveOrder")}
         </Button>
       </div>
+
+      <Dialog
+        open={timeRangeError !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTimeRangeError(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] p-6">
+          <DialogTitle className="pr-10 text-lg font-semibold text-[var(--danger)]">
+            {timeRangeError ? t(timeRangeError) : ""}
+          </DialogTitle>
+          <DialogDescription className="hidden">
+            {timeRangeError ? t(timeRangeError) : ""}
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
