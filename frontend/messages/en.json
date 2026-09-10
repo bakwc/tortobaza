@@ -337,7 +337,7 @@
     "timeWhenReady": "When ready",
     "prepareBy": "Prepare by <time></time>",
     "timeEndRequired": "End of the time range is required",
-    "timeRangeMin30": "The time range must be at least 30 minutes",
+    "timeRangeMin20": "The time range must be at least 20 minutes",
     "fulfillmentLabel": "Fulfillment",
     "imagesDrop": "Drop images here or click to choose",
     "imagesHint": "You can select several files at once.",

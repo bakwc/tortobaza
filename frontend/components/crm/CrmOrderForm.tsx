@@ -144,7 +144,7 @@ export function CrmOrderForm(
   );
   const [deleteImageIds, setDeleteImageIds] = useState<number[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
-  const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin30" | null>(
+  const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
     null,
   );
 
@@ -174,8 +174,8 @@ export function CrmOrderForm(
         setTimeRangeError("timeEndRequired");
         return;
       }
-      if (timeToMinutes(fields.time_end) - timeToMinutes(fields.time_start) < 30) {
-        setTimeRangeError("timeRangeMin30");
+      if (timeToMinutes(fields.time_end) - timeToMinutes(fields.time_start) < 20) {
+        setTimeRangeError("timeRangeMin20");
         return;
       }
     }
