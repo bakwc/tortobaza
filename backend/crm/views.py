@@ -31,6 +31,7 @@ from crm.serializers import (
     ResolveYandexAddressSerializer,
 )
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -129,6 +130,7 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        sync_website_order_status_from_crm(order)
         schedule_crm_order_telegram_sync(order.pk)
         order = live_orders().prefetch_related("images").get(pk=order.pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
@@ -143,6 +145,7 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        sync_website_order_status_from_crm(order)
         schedule_crm_order_telegram_sync(order.pk)
         return Response(CrmOrderSerializer(order, context={"request": request}).data)
 

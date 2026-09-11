@@ -4,6 +4,7 @@ from django.template.response import TemplateResponse
 
 from crm.models import CrmOrder, CrmOrderImage, WhatsAppGetNewQr, WhatsAppNumberCheck
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.website import sync_website_order_status_from_crm
 from crm.whatsapp import check_number, get_new_qr
 
 
@@ -127,6 +128,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
+        sync_website_order_status_from_crm(form.instance)
         schedule_crm_order_telegram_sync(form.instance.pk)
 
 

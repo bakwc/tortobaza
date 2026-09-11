@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from PIL import Image
@@ -12,6 +13,7 @@ from rest_framework.test import APIClient
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product, ProductImage
 from crm.models import CrmOrder, CrmOrderImage
+from crm.website import sync_website_order_status_from_crm
 from orders.liberty import build_callback_check, customdata, order_amount_tetri
 from orders.models import LibertyPayment, Order
 from orders.services import create_order_from_cart
@@ -223,3 +225,109 @@ class WebsiteOrderCrmSyncTests(TestCase):
         self.assertEqual(CrmOrder.objects.filter(website_order=order).count(), 1)
         self.assertEqual(CrmOrderImage.objects.filter(order__website_order=order).count(), 2)
         self.assertIn(b"Duplicate", second.content)
+
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_crm_status_maps_to_website_order_status(self, mock_now, mock_sync):
+        mock_now.return_value = self._frozen_now()
+        order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+        crm = CrmOrder.objects.get(website_order=order)
+        cases = [
+            (CrmOrder.STATUS_NEW, Order.STATUS_PENDING),
+            (CrmOrder.STATUS_IN_WORK, Order.STATUS_PREPARING),
+            (CrmOrder.STATUS_CLIENT_APPROVED, Order.STATUS_READY),
+            (CrmOrder.STATUS_IN_DELIVERY, Order.STATUS_READY),
+            (CrmOrder.STATUS_DELIVERED, Order.STATUS_DELIVERED),
+        ]
+        for crm_status, website_status in cases:
+            crm.status = crm_status
+            crm.save(update_fields=["status"])
+            sync_website_order_status_from_crm(crm)
+            order.refresh_from_db()
+            self.assertEqual(order.status, website_status)
+
+    @patch("crm.views.schedule_crm_order_telegram_sync")
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_take_in_work_sets_website_order_preparing(self, mock_now, mock_website_sync, mock_view_sync):
+        mock_now.return_value = self._frozen_now()
+        order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+        crm = CrmOrder.objects.get(website_order=order)
+        user = User.objects.create_user(username="worker", password="password")
+        self.client.force_authenticate(user=user)
+        response = self.client.patch(
+            f"/api/crm/orders/{crm.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_PREPARING)
+
+    @patch("crm.views.schedule_crm_order_telegram_sync")
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_patch_delivered_sets_website_order_delivered(self, mock_now, mock_website_sync, mock_view_sync):
+        mock_now.return_value = self._frozen_now()
+        order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+        crm = CrmOrder.objects.get(website_order=order)
+        user = User.objects.create_user(username="worker", password="password")
+        self.client.force_authenticate(user=user)
+        response = self.client.patch(
+            f"/api/crm/orders/{crm.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_DELIVERED)
+
+    @patch("crm.views.schedule_crm_order_telegram_sync")
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_status_rollback_to_new_sets_website_order_pending(self, mock_now, mock_website_sync, mock_view_sync):
+        mock_now.return_value = self._frozen_now()
+        order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+        crm = CrmOrder.objects.get(website_order=order)
+        user = User.objects.create_user(username="worker", password="password")
+        self.client.force_authenticate(user=user)
+        take = self.client.patch(
+            f"/api/crm/orders/{crm.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(take.status_code, 200)
+        rollback = self.client.patch(
+            f"/api/crm/orders/{crm.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(rollback.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.STATUS_PENDING)
+
+    @patch("crm.views.schedule_crm_order_telegram_sync")
+    def test_patch_status_without_website_order_succeeds(self, mock_view_sync):
+        crm = CrmOrder.objects.create(
+            date=self._frozen_now().date(),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_NEW,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        user = User.objects.create_user(username="worker", password="password")
+        self.client.force_authenticate(user=user)
+        response = self.client.patch(
+            f"/api/crm/orders/{crm.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        crm.refresh_from_db()
+        self.assertEqual(crm.status, CrmOrder.STATUS_DELIVERED)

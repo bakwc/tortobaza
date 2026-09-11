@@ -20,6 +20,14 @@ _PAYMENT_MAP = {
     Order.PAYMENT_BANK_TRANSFER: CrmOrder.PAYMENT_UNKNOWN,
 }
 
+_STATUS_MAP = {
+    CrmOrder.STATUS_NEW: Order.STATUS_PENDING,
+    CrmOrder.STATUS_IN_WORK: Order.STATUS_PREPARING,
+    CrmOrder.STATUS_CLIENT_APPROVED: Order.STATUS_READY,
+    CrmOrder.STATUS_IN_DELIVERY: Order.STATUS_READY,
+    CrmOrder.STATUS_DELIVERED: Order.STATUS_DELIVERED,
+}
+
 
 def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
     if order.environment == Order.ENV_DEV:
@@ -61,6 +69,17 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
     crm_order.prepayment = crm_order.cake_price
     crm_order.save(update_fields=["is_paid", "prepayment", "updated_at"])
     schedule_crm_order_telegram_sync(crm_order.pk)
+
+
+def sync_website_order_status_from_crm(crm_order: CrmOrder) -> None:
+    website_order = crm_order.website_order
+    if website_order is None:
+        return
+    mapped = _STATUS_MAP[crm_order.status]
+    if website_order.status == mapped:
+        return
+    website_order.status = mapped
+    website_order.save(update_fields=["status"])
 
 
 def _option_names(order: Order, groups: frozenset[str]) -> list[str]:
