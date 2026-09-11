@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { formatAed, sumCrmCakePrices } from "@/lib/format";
+import { formatAedWhole, sumCrmCakePrices } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CrmIncomeStats({
@@ -58,7 +58,7 @@ function CrmIncomeBadge({
       >
         <span>{t("income")}</span>
         <span>
-          {formatAed(income)} / {formatAed(paid)}
+          {formatAedWhole(income)} / {formatAedWhole(paid)}
         </span>
         <button
           type="button"

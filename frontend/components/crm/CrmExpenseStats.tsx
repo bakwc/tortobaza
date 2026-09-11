@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { House, Users } from "lucide-react";
+import { House, Info, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { formatAedWhole } from "@/lib/format";
@@ -63,22 +63,7 @@ function CrmExpenseBadge({
           compact ? "px-1.5 py-0.5 text-xs" : "px-2.5 py-1 text-sm",
         )}
       >
-        <button
-          type="button"
-          aria-label={t("expensesHint")}
-          aria-expanded={hintOpen}
-          className="inline-flex shrink-0"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHintOpen((open) => !open);
-          }}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          {t("expenses")}
-        </button>
+        <span>{t("expenses")}</span>
         <span>{formatAedWhole(total)}</span>
         <span className="inline-flex items-center gap-0.5">
           <Users className={iconClass} />
@@ -88,6 +73,22 @@ function CrmExpenseBadge({
           <House className={iconClass} />
           {formatAedWhole(rent)}
         </span>
+        <button
+          type="button"
+          aria-label={t("expensesHint")}
+          aria-expanded={hintOpen}
+          className="inline-flex shrink-0 text-[var(--muted-2)]"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setHintOpen((open) => !open);
+          }}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          <Info className={iconClass} />
+        </button>
       </span>
       {hintOpen ? (
         <span
