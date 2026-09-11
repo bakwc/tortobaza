@@ -16,6 +16,16 @@ export function formatAed(amount: string | number): string {
   return `${sign}${grouped}.${fracPart} ₾`;
 }
 
+export function formatAedWhole(amount: string | number): string {
+  const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (Number.isNaN(value)) return "0 ₾";
+  const rounded = Math.round(value);
+  const sign = rounded < 0 ? "-" : "";
+  const digits = String(Math.abs(rounded));
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return `${sign}${grouped} ₾`;
+}
+
 export function sumCrmCakePrices(orders: { cake_price: string }[]): number {
   return orders.reduce((sum, order) => sum + Number.parseFloat(order.cake_price), 0);
 }

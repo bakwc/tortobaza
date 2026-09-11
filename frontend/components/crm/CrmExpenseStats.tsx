@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { House, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { formatAed } from "@/lib/format";
+import { formatAedWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function CrmExpenseStats({
@@ -79,14 +79,14 @@ function CrmExpenseBadge({
         >
           {t("expenses")}
         </button>
-        <span>{formatAed(total)}</span>
+        <span>{formatAedWhole(total)}</span>
         <span className="inline-flex items-center gap-0.5">
           <Users className={iconClass} />
-          {formatAed(salary)}
+          {formatAedWhole(salary)}
         </span>
         <span className="inline-flex items-center gap-0.5">
           <House className={iconClass} />
-          {formatAed(rent)}
+          {formatAedWhole(rent)}
         </span>
       </span>
       {hintOpen ? (
