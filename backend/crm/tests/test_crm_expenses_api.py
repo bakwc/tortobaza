@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
+from crm.models import CrmSettings
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -47,7 +48,10 @@ class CrmExpensesApiTests(TestCase):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/crm/expenses/", {"date": "2026-06-15"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"date": "2026-06-15", "salary": "80.00"})
+        self.assertEqual(
+            response.json(),
+            {"date": "2026-06-15", "salary": "80.00", "rent": "0.00"},
+        )
 
     def test_month_salary(self):
         other = User.objects.create_user(username="other", password="password")
@@ -63,8 +67,9 @@ class CrmExpensesApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["month"], "2026-06")
         self.assertEqual(data["salary"], "160.00")
-        self.assertEqual(data["by_date"]["2026-06-15"], "80.00")
-        self.assertEqual(data["by_date"]["2026-06-16"], "80.00")
+        self.assertEqual(data["rent"], "0.00")
+        self.assertEqual(data["by_date"]["2026-06-15"], {"salary": "80.00", "rent": "0.00"})
+        self.assertEqual(data["by_date"]["2026-06-16"], {"salary": "80.00", "rent": "0.00"})
 
     def test_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()
@@ -76,3 +81,33 @@ class CrmExpensesApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["date"], today.isoformat())
         self.assertEqual(data["salary"], "80.00")
+        self.assertEqual(data["rent"], "0.00")
+
+    def test_day_rent(self):
+        settings = CrmSettings.load()
+        settings.monthly_rent = Decimal("3000.00")
+        settings.save()
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day, 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, self.day, 17, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/expenses/", {"date": "2026-06-15"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"date": "2026-06-15", "salary": "80.00", "rent": "100.00"},
+        )
+
+    def test_month_rent(self):
+        settings = CrmSettings.load()
+        settings.monthly_rent = Decimal("3000.00")
+        settings.save()
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day, 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, self.day, 17, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/expenses/", {"month": "2026-06"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["month"], "2026-06")
+        self.assertEqual(data["salary"], "80.00")
+        self.assertEqual(data["rent"], "3000.00")
+        self.assertEqual(data["by_date"]["2026-06-15"], {"salary": "80.00", "rent": "100.00"})

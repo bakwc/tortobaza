@@ -315,12 +315,20 @@ export const CrmMonthlyOrdersResponseSchema = z.object({
 export const CrmExpensesDaySchema = z.object({
   date: z.string(),
   salary: z.string(),
+  rent: z.string(),
 });
 
 export const CrmExpensesMonthSchema = z.object({
   month: z.string(),
   salary: z.string(),
-  by_date: z.record(z.string(), z.string()),
+  rent: z.string(),
+  by_date: z.record(
+    z.string(),
+    z.object({
+      salary: z.string(),
+      rent: z.string(),
+    }),
+  ),
 });
 
 export const ResolveYandexAddressResponseSchema = z.object({

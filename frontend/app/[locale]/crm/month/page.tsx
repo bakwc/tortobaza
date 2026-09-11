@@ -39,6 +39,15 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+function daysInMonth(yyyyMm: string): number {
+  const [yearStr, monthStr] = yyyyMm.split("-");
+  return new Date(Number(yearStr), Number(monthStr), 0).getDate();
+}
+
+function dailyRentFromMonth(monthlyRent: string, yyyyMm: string): string {
+  return (Number.parseFloat(monthlyRent) / daysInMonth(yyyyMm)).toFixed(2);
+}
+
 function shiftMonth(yyyyMm: string, delta: number): string {
   const [yearStr, monthStr] = yyyyMm.split("-");
   const year = Number(yearStr);
@@ -191,7 +200,11 @@ function CrmMonthBoard() {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <CrmIncomeStats orders={orders} compact={false} />
-          <CrmExpenseStats salary={expensesQuery.data?.salary} compact={false} />
+          <CrmExpenseStats
+            salary={expensesQuery.data?.salary}
+            rent={expensesQuery.data?.rent}
+            compact={false}
+          />
         </div>
       </div>
 
@@ -231,7 +244,13 @@ function CrmMonthBoard() {
                   <CrmExpenseStats
                     salary={
                       expensesQuery.data
-                        ? (expensesQuery.data.by_date[group.date] ?? "0.00")
+                        ? (expensesQuery.data.by_date[group.date]?.salary ?? "0.00")
+                        : undefined
+                    }
+                    rent={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date]?.rent ??
+                          dailyRentFromMonth(expensesQuery.data.rent, selectedMonth))
                         : undefined
                     }
                     compact={true}

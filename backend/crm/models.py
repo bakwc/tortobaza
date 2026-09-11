@@ -1,5 +1,6 @@
 import secrets
 from datetime import time
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -8,6 +9,33 @@ from django.db.models import Case, IntegerField, Value, When
 
 def generate_crm_client_token() -> str:
     return secrets.token_hex(32)
+
+
+class CrmSettings(models.Model):
+    monthly_rent = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    class Meta:
+        verbose_name = "CRM settings"
+        verbose_name_plural = "CRM settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        return
+
+    @classmethod
+    def load(cls):
+        obj, _created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self) -> str:
+        return "CRM settings"
 
 
 class CrmOrder(models.Model):

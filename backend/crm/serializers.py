@@ -271,12 +271,19 @@ class CrmOrderQuerySerializer(serializers.Serializer):
         return attrs
 
 
+class CrmExpensesBreakdownSerializer(serializers.Serializer):
+    salary = serializers.DecimalField(max_digits=10, decimal_places=2)
+    rent = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class CrmExpensesDaySerializer(serializers.Serializer):
     date = serializers.DateField()
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
+    rent = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class CrmExpensesMonthSerializer(serializers.Serializer):
     month = serializers.CharField()
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
-    by_date = serializers.DictField(child=serializers.DecimalField(max_digits=10, decimal_places=2))
+    rent = serializers.DecimalField(max_digits=10, decimal_places=2)
+    by_date = serializers.DictField(child=CrmExpensesBreakdownSerializer())

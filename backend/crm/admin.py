@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.template.response import TemplateResponse
+from django.urls import reverse
 
-from crm.models import CrmOrder, CrmOrderImage, WhatsAppGetNewQr, WhatsAppNumberCheck
+from crm.models import CrmOrder, CrmOrderImage, CrmSettings, WhatsAppGetNewQr, WhatsAppNumberCheck
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.whatsapp import check_number, get_new_qr
@@ -10,6 +12,21 @@ from crm.whatsapp import check_number, get_new_qr
 
 class WhatsAppNumberCheckForm(forms.Form):
     number = forms.CharField()
+
+
+@admin.register(CrmSettings)
+class CrmSettingsAdmin(admin.ModelAdmin):
+    fields = ["monthly_rent"]
+
+    def has_add_permission(self, request):
+        return not CrmSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        obj = CrmSettings.load()
+        return redirect(reverse("admin:crm_crmsettings_change", args=[obj.pk]))
 
 
 class CrmOrderImageInline(admin.TabularInline):

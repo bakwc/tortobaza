@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 from attendance.salary import compute_all_salaries
 from crm.google_maps import resolve_google_maps_url
 from crm.models import CrmOrder
+from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     CrmExpensesDaySerializer,
     CrmExpensesMonthSerializer,
@@ -231,12 +232,15 @@ class CrmExpensesView(APIView):
             start_date = date(year, month_num, 1)
             end_date = date(year, month_num, monthrange(year, month_num)[1])
             result = compute_all_salaries(start_date, end_date)
+            rent_day = daily_rent(start_date)
             serializer = CrmExpensesMonthSerializer(
                 {
                     "month": month,
                     "salary": result["total_money"],
+                    "rent": monthly_rent(),
                     "by_date": {
-                        day.isoformat(): money for day, money in result["by_date"].items()
+                        day.isoformat(): {"salary": money, "rent": rent_day}
+                        for day, money in result["by_date"].items()
                     },
                 }
             )
@@ -249,6 +253,7 @@ class CrmExpensesView(APIView):
             {
                 "date": target_date,
                 "salary": result["total_money"],
+                "rent": daily_rent(target_date),
             }
         )
         return Response(serializer.data)
