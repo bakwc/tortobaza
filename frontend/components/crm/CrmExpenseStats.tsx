@@ -66,12 +66,12 @@ function CrmExpenseBadge({
         <span>{t("expenses")}</span>
         <span>{formatAedWhole(total)}</span>
         <span className="inline-flex items-center gap-0.5">
+          (
           <Users className={iconClass} />
           {formatAedWhole(salary)}
-        </span>
-        <span className="inline-flex items-center gap-0.5">
+          <span>+</span>
           <House className={iconClass} />
-          {formatAedWhole(rent)}
+          {formatAedWhole(rent)})
         </span>
         <button
           type="button"
