@@ -19,7 +19,7 @@ from orders.models import (
     PromoCode,
 )
 
-DELIVERY_FEE = Decimal("5")
+DELIVERY_FEE = Decimal("10")
 
 
 def compute_promo_discount(promo: PromoCode | None, subtotal: Decimal) -> Decimal:

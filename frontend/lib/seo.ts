@@ -173,7 +173,7 @@ export function productJsonLd(input: {
         "@type": "OfferShippingDetails",
         shippingRate: {
           "@type": "MonetaryAmount",
-          value: "5.00",
+          value: "10.00",
           currency: SITE_INFO.currency,
         },
         shippingDestination: {
