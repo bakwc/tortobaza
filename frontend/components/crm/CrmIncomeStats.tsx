@@ -10,24 +10,28 @@ import { cn } from "@/lib/utils";
 export function CrmIncomeStats({
   orders,
   compact,
+  detailed,
 }: {
   orders: { cake_price: string; is_paid: boolean }[];
   compact: boolean;
+  detailed: boolean;
 }) {
   const currentUser = useCurrentUser();
   if (!currentUser.data?.is_staff) {
     return null;
   }
 
-  return <CrmIncomeBadge orders={orders} compact={compact} />;
+  return <CrmIncomeBadge orders={orders} compact={compact} detailed={detailed} />;
 }
 
 function CrmIncomeBadge({
   orders,
   compact,
+  detailed,
 }: {
   orders: { cake_price: string; is_paid: boolean }[];
   compact: boolean;
+  detailed: boolean;
 }) {
   const t = useTranslations("crm");
   const [hintOpen, setHintOpen] = useState(false);
@@ -58,26 +62,28 @@ function CrmIncomeBadge({
       >
         <span>{t("income")}</span>
         <span>
-          {formatAedWhole(income)} / {formatAedWhole(paid)}
+          {detailed ? `${formatAedWhole(income)} / ${formatAedWhole(paid)}` : formatAedWhole(income)}
         </span>
-        <button
-          type="button"
-          aria-label={t("incomeHint")}
-          aria-expanded={hintOpen}
-          className="inline-flex shrink-0 text-[var(--muted-2)]"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHintOpen((open) => !open);
-          }}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-          }}
-        >
-          <Info className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
-        </button>
+        {detailed ? (
+          <button
+            type="button"
+            aria-label={t("incomeHint")}
+            aria-expanded={hintOpen}
+            className="inline-flex shrink-0 text-[var(--muted-2)]"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setHintOpen((open) => !open);
+            }}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <Info className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+          </button>
+        ) : null}
       </span>
-      {hintOpen ? (
+      {detailed && hintOpen ? (
         <span
           className={cn(
             "absolute z-20 mt-1 w-56 rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-left text-xs font-normal leading-snug text-[var(--ink)] shadow-md",

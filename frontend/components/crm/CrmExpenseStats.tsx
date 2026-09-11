@@ -11,10 +11,12 @@ export function CrmExpenseStats({
   salary,
   rent,
   compact,
+  detailed,
 }: {
   salary: string | undefined;
   rent: string | undefined;
   compact: boolean;
+  detailed: boolean;
 }) {
   const currentUser = useCurrentUser();
   if (!currentUser.data?.is_staff) {
@@ -24,17 +26,19 @@ export function CrmExpenseStats({
     return null;
   }
 
-  return <CrmExpenseBadge salary={salary} rent={rent} compact={compact} />;
+  return <CrmExpenseBadge salary={salary} rent={rent} compact={compact} detailed={detailed} />;
 }
 
 function CrmExpenseBadge({
   salary,
   rent,
   compact,
+  detailed,
 }: {
   salary: string;
   rent: string;
   compact: boolean;
+  detailed: boolean;
 }) {
   const t = useTranslations("crm");
   const [hintOpen, setHintOpen] = useState(false);
@@ -65,14 +69,16 @@ function CrmExpenseBadge({
       >
         <span>{t("expenses")}</span>
         <span>{formatAedWhole(total)}</span>
-        <span className="inline-flex items-center gap-0.5">
-          (
-          <Users className={iconClass} />
-          {formatAedWhole(salary)}
-          <span>+</span>
-          <House className={iconClass} />
-          {formatAedWhole(rent)})
-        </span>
+        {detailed ? (
+          <span className="inline-flex items-center gap-0.5">
+            (
+            <Users className={iconClass} />
+            {formatAedWhole(salary)}
+            <span>+</span>
+            <House className={iconClass} />
+            {formatAedWhole(rent)})
+          </span>
+        ) : null}
         <button
           type="button"
           aria-label={t("expensesHint")}
@@ -97,7 +103,12 @@ function CrmExpenseBadge({
             compact ? "right-0 top-full" : "left-1/2 top-full -translate-x-1/2",
           )}
         >
-          {t("expensesHint")}
+          {detailed
+            ? t("expensesHint")
+            : t("expensesDayHint", {
+                salary: formatAedWhole(salary),
+                rent: formatAedWhole(rent),
+              })}
         </span>
       ) : null}
     </span>

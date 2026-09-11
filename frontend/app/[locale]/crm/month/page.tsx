@@ -199,11 +199,12 @@ function CrmMonthBoard() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <CrmIncomeStats orders={orders} compact={false} />
+          <CrmIncomeStats orders={orders} compact={false} detailed={true} />
           <CrmExpenseStats
             salary={expensesQuery.data?.salary}
             rent={expensesQuery.data?.rent}
             compact={false}
+            detailed={true}
           />
         </div>
       </div>
@@ -240,7 +241,7 @@ function CrmMonthBoard() {
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
                   <span>{group.orders.length}</span>
-                  <CrmIncomeStats orders={group.orders} compact={true} />
+                  <CrmIncomeStats orders={group.orders} compact={true} detailed={false} />
                   <CrmExpenseStats
                     salary={
                       expensesQuery.data
@@ -254,6 +255,7 @@ function CrmMonthBoard() {
                         : undefined
                     }
                     compact={true}
+                    detailed={false}
                   />
                 </span>
               </Link>

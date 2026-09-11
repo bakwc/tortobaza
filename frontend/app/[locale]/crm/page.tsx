@@ -212,11 +212,12 @@ function CrmBoard() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <CrmIncomeStats orders={orders} compact={false} />
+          <CrmIncomeStats orders={orders} compact={false} detailed={true} />
           <CrmExpenseStats
             salary={expensesQuery.data?.salary}
             rent={expensesQuery.data?.rent}
             compact={false}
+            detailed={true}
           />
         </div>
       </div>
