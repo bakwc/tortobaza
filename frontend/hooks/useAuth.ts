@@ -19,6 +19,7 @@ export function useCurrentUser() {
       return api.getCurrentUser();
     },
     staleTime: 60_000,
+    refetchOnWindowFocus: true,
     retry: false,
   });
 }

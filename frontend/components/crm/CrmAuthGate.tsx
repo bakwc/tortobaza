@@ -94,7 +94,11 @@ export function CrmAuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (currentUser.isError && !isUnauthenticatedError(currentUser.error)) {
+  if (isUnauthenticatedError(currentUser.error)) {
+    return <LoginForm />;
+  }
+
+  if (currentUser.isError) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--danger)]">
         {t("serverUnreachable")}
