@@ -1,6 +1,10 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  currentUserQueryKey,
+  isUnauthenticatedError,
+} from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type {
   CrmExpensesDay,
@@ -93,6 +97,11 @@ export function useCreateCrmOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: FormData) => api.createCrmOrder(body),
+    onError: (error) => {
+      if (isUnauthenticatedError(error)) {
+        qc.setQueryData(currentUserQueryKey, null);
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-orders"] });
     },
