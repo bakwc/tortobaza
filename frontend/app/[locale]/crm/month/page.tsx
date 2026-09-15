@@ -285,89 +285,97 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         tone.card,
       )}
     >
-      <div
-        className={cn(
-          "h-8 w-8 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
-          tone.media,
-        )}
+      <Link
+        href={`/crm?date=${order.date}&order=${order.id}`}
+        className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-3"
       >
-        {thumb ? (
-          <img
-            src={thumb.image.src}
-            srcSet={thumb.image.srcset}
-            sizes="48px"
-            alt={t("orderAlt", { id: order.id })}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[var(--muted)]">
-            <Package className="h-4 w-4" />
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
-            <CrmOrderTimeSlot
-              timeStart={order.time_start}
-              timeEnd={order.time_end}
-              whenReady={order.when_ready}
-              layout="month"
+        <div
+          className={cn(
+            "h-8 w-8 shrink-0 overflow-hidden rounded-md border md:h-12 md:w-12 md:rounded-lg",
+            tone.media,
+          )}
+        >
+          {thumb ? (
+            <img
+              src={thumb.image.src}
+              srcSet={thumb.image.srcset}
+              sizes="48px"
+              alt={t("orderAlt", { id: order.id })}
+              className="h-full w-full object-cover"
+              loading="lazy"
             />
-          </div>
-          <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
-            <span className="font-semibold text-[var(--ink)]">{order.weight}</span>
-            <span className="mx-1">·</span>
-            <span>{order.filling}</span>
-          </p>
-          <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
-            {formatAed(order.cake_price)}
-          </span>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[var(--muted)]">
+              <Package className="h-4 w-4" />
+            </div>
+          )}
         </div>
-        <div className="flex min-w-0 items-center gap-1.5">
-          <p className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
-            {order.contact}
-          </p>
-          <span
-            className={cn(
-              "hidden shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:flex",
-              order.fulfillment_type === "delivery"
-                ? "bg-amber-100 text-amber-900"
-                : "bg-blue-100 text-blue-900",
-            )}
-          >
-            {order.fulfillment_type === "delivery" ? (
-              <Truck className="h-3 w-3" />
-            ) : (
-              <Store className="h-3 w-3" />
-            )}
-            <span className="hidden md:inline">
-              {order.fulfillment_type === "delivery" ? t("delivery") : t("pickup")}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 items-center gap-1 text-sm font-semibold text-[var(--ink)]">
+              <CrmOrderTimeSlot
+                timeStart={order.time_start}
+                timeEnd={order.time_end}
+                whenReady={order.when_ready}
+                layout="month"
+              />
+            </div>
+            <span className="shrink-0 text-[10px] font-medium text-[var(--muted-2)]">
+              #{order.id}
             </span>
-          </span>
-          <span
-            className={cn(
-              "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-              tone.chip,
-            )}
-          >
-            {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
-          </span>
-          <span
-            className={cn(
-              "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-              order.is_paid
-                ? "bg-emerald-600 text-white"
-                : "hidden bg-[var(--cream)] text-[var(--muted-2)] md:flex",
-            )}
-          >
-            <CreditCard className="h-3 w-3 md:hidden" />
-            <span className="hidden md:inline">{t("paid")}</span>
-          </span>
+            <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
+              <span className="font-semibold text-[var(--ink)]">{order.weight}</span>
+              <span className="mx-1">·</span>
+              <span>{order.filling}</span>
+            </p>
+            <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
+              {formatAed(order.cake_price)}
+            </span>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
+              {order.contact}
+            </p>
+            <span
+              className={cn(
+                "hidden shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:flex",
+                order.fulfillment_type === "delivery"
+                  ? "bg-amber-100 text-amber-900"
+                  : "bg-blue-100 text-blue-900",
+              )}
+            >
+              {order.fulfillment_type === "delivery" ? (
+                <Truck className="h-3 w-3" />
+              ) : (
+                <Store className="h-3 w-3" />
+              )}
+              <span className="hidden md:inline">
+                {order.fulfillment_type === "delivery" ? t("delivery") : t("pickup")}
+              </span>
+            </span>
+            <span
+              className={cn(
+                "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                tone.chip,
+              )}
+            >
+              {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
+            </span>
+            <span
+              className={cn(
+                "flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                order.is_paid
+                  ? "bg-emerald-600 text-white"
+                  : "hidden bg-[var(--cream)] text-[var(--muted-2)] md:flex",
+              )}
+            >
+              <CreditCard className="h-3 w-3 md:hidden" />
+              <span className="hidden md:inline">{t("paid")}</span>
+            </span>
+          </div>
         </div>
-      </div>
+      </Link>
 
       {currentUser.data?.is_staff ? (
         <Button
