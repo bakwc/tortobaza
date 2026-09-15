@@ -583,6 +583,67 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(len(data["images"]), 0)
         self.assertTrue(CrmOrder.objects.filter(pk=data["id"]).exists())
 
+    def test_create_order_without_status_defaults_to_new(self):
+        self.client.force_authenticate(user=self.admin)
+        payload = self._order_payload()
+        del payload["status"]
+        response = self.client.post("/api/crm/orders/", payload, format="multipart")
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["status"], CrmOrder.STATUS_NEW)
+        order = CrmOrder.objects.get(pk=data["id"])
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+
+    def test_patch_is_paid_promotes_unconfirmed_to_new(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"is_paid": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertTrue(order.is_paid)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+
+    def test_patch_is_paid_false_does_not_change_status(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_NEW,
+            is_paid=True,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"is_paid": False},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertFalse(order.is_paid)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+
     def test_create_sets_created_by_from_request_user(self):
         UserProfile.objects.create(user=self.admin, telegram_username="staff_anna")
         self.client.force_authenticate(user=self.admin)

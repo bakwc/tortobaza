@@ -287,6 +287,7 @@ function paymentTypeLabel(type: string, t: (key: string) => string): string {
 }
 
 const NEXT_STEP_ICONS = {
+  new: Check,
   in_work: Utensils,
   client_approved: ThumbsUp,
   in_delivery: Truck,
@@ -479,7 +480,7 @@ function CrmOrderCard({
                   onClick={() => setActiveImageIndex(idx)}
                   className={cn(
                     "relative h-11 w-11 overflow-hidden rounded-lg border-2 transition-all lg:h-16 lg:w-16 lg:rounded-xl",
-                    order.status === "new" ? "bg-[var(--cream)]" : "bg-white",
+                    tone.media,
                     activeImageIndex === idx
                       ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
                       : "border-[var(--line)] opacity-70 hover:opacity-100",
@@ -585,7 +586,7 @@ function CrmOrderCard({
                   href={`/crm?date=${order.date}&order=${order.id}`}
                   className={cn(
                     "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)] underline-offset-2 hover:underline",
-                    order.status === "new" ? "bg-[var(--cream)]" : "bg-white",
+                    tone.media,
                   )}
                 >
                   #{order.id}

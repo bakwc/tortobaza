@@ -77,12 +77,14 @@ class CrmOrder(models.Model):
         choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_DELIVERY,
     )
+    STATUS_UNCONFIRMED = "unconfirmed"
     STATUS_NEW = "new"
     STATUS_IN_WORK = "in_work"
     STATUS_CLIENT_APPROVED = "client_approved"
     STATUS_IN_DELIVERY = "in_delivery"
     STATUS_DELIVERED = "delivered"
     STATUS_CHOICES = [
+        (STATUS_UNCONFIRMED, "Unconfirmed"),
         (STATUS_NEW, "New"),
         (STATUS_IN_WORK, "In work"),
         (STATUS_CLIENT_APPROVED, "Client approved"),
@@ -169,6 +171,10 @@ class CrmOrder(models.Model):
         else:
             time_display = self.time_start.strftime("%H:%M")
         return f"{self.date} {time_display} - {self.contact[:30]}"
+
+    def promote_if_paid(self) -> None:
+        if self.is_paid and self.status == self.STATUS_UNCONFIRMED:
+            self.status = self.STATUS_NEW
 
 
 class ResolvedYandexAddress(models.Model):

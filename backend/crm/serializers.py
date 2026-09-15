@@ -171,6 +171,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.taken_by = self.context["request"].user
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        instance.promote_if_paid()
         instance.save()
         return instance
 
@@ -235,6 +236,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        instance.promote_if_paid()
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
         return instance

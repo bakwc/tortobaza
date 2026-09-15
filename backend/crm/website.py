@@ -21,6 +21,7 @@ _PAYMENT_MAP = {
 }
 
 _STATUS_MAP = {
+    CrmOrder.STATUS_UNCONFIRMED: Order.STATUS_PENDING,
     CrmOrder.STATUS_NEW: Order.STATUS_PENDING,
     CrmOrder.STATUS_IN_WORK: Order.STATUS_PREPARING,
     CrmOrder.STATUS_CLIENT_APPROVED: Order.STATUS_READY,
@@ -53,6 +54,7 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
         cake_price=order.total,
         prepayment=Decimal("0"),
         is_paid=False,
+        status=CrmOrder.STATUS_UNCONFIRMED,
         payment_type=_PAYMENT_MAP[order.payment_method],
         website_order=order,
     )
@@ -67,7 +69,8 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
     crm_order = CrmOrder.objects.get(website_order=order)
     crm_order.is_paid = True
     crm_order.prepayment = crm_order.cake_price
-    crm_order.save(update_fields=["is_paid", "prepayment", "updated_at"])
+    crm_order.promote_if_paid()
+    crm_order.save(update_fields=["is_paid", "prepayment", "status", "updated_at"])
     schedule_crm_order_telegram_sync(crm_order.pk)
 
 

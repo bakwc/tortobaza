@@ -39,6 +39,7 @@ _FULFILLMENT_LABELS = {
 }
 
 _STATUS_LABELS = {
+    CrmOrder.STATUS_UNCONFIRMED: "Не подтвержденный",
     CrmOrder.STATUS_NEW: "Новый",
     CrmOrder.STATUS_IN_WORK: "В работе",
     CrmOrder.STATUS_CLIENT_APPROVED: "Одобрен клиентом",
@@ -47,6 +48,7 @@ _STATUS_LABELS = {
 }
 
 _STATUS_MARKS = {
+    CrmOrder.STATUS_UNCONFIRMED: "⚫",
     CrmOrder.STATUS_NEW: "⚪",
     CrmOrder.STATUS_IN_WORK: "🟠",
     CrmOrder.STATUS_CLIENT_APPROVED: "🟢",

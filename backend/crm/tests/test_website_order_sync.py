@@ -114,6 +114,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         self.assertEqual(crm.cake_price, Decimal("105.00"))
         self.assertEqual(crm.prepayment, Decimal("0"))
         self.assertFalse(crm.is_paid)
+        self.assertEqual(crm.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertEqual(crm.payment_type, CrmOrder.PAYMENT_ONLINE)
         images = list(crm.images.order_by("position"))
         self.assertEqual(len(images), 2)
@@ -173,11 +174,62 @@ class WebsiteOrderCrmSyncTests(TestCase):
         crm = CrmOrder.objects.get(website_order=order)
         crm.refresh_from_db()
         self.assertTrue(crm.is_paid)
+        self.assertEqual(crm.status, CrmOrder.STATUS_NEW)
         self.assertEqual(crm.prepayment, crm.cake_price)
         order.refresh_from_db()
         self.assertEqual(order.payment_status, Order.PAYMENT_PAID)
         mock_notify.assert_called_once_with(order.pk)
         self.assertEqual(mock_sync.call_count, 2)
+
+    @override_settings(LIBERTY_PAY_SECRET="testsecret")
+    @patch("orders.views.notify_order_paid_by_card")
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_liberty_completed_does_not_rollback_in_work_status(
+        self, mock_now, mock_sync, mock_notify
+    ):
+        mock_now.return_value = self._frozen_now()
+        order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+        crm = CrmOrder.objects.get(website_order=order)
+        crm.status = CrmOrder.STATUS_IN_WORK
+        crm.save(update_fields=["status"])
+        payment = LibertyPayment.objects.create(
+            order=order,
+            ordercode=f"{order.number}-abc123def456",
+            amount_tetri=order_amount_tetri(order),
+            testmode=False,
+        )
+        amount = str(payment.amount_tetri)
+        customdata_value = customdata(order)
+        check = build_callback_check(
+            "COMPLETED",
+            "tx1",
+            amount,
+            "GEL",
+            payment.ordercode,
+            "card",
+            customdata_value,
+            "0",
+            "testsecret",
+        )
+        response = self.client.get(
+            "/api/payments/liberty/callback/",
+            {
+                "status": "COMPLETED",
+                "transactioncode": "tx1",
+                "amount": amount,
+                "currency": "GEL",
+                "ordercode": payment.ordercode,
+                "paymethod": "card",
+                "customdata": customdata_value,
+                "testmode": "0",
+                "check": check,
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        crm.refresh_from_db()
+        self.assertTrue(crm.is_paid)
+        self.assertEqual(crm.status, CrmOrder.STATUS_IN_WORK)
 
     @override_settings(LIBERTY_PAY_SECRET="testsecret")
     @patch("orders.views.notify_order_paid_by_card")
@@ -233,6 +285,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
         cases = [
+            (CrmOrder.STATUS_UNCONFIRMED, Order.STATUS_PENDING),
             (CrmOrder.STATUS_NEW, Order.STATUS_PENDING),
             (CrmOrder.STATUS_IN_WORK, Order.STATUS_PREPARING),
             (CrmOrder.STATUS_CLIENT_APPROVED, Order.STATUS_READY),
@@ -253,6 +306,8 @@ class WebsiteOrderCrmSyncTests(TestCase):
         mock_now.return_value = self._frozen_now()
         order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
+        crm.status = CrmOrder.STATUS_NEW
+        crm.save(update_fields=["status"])
         user = User.objects.create_user(username="worker", password="password")
         self.client.force_authenticate(user=user)
         response = self.client.patch(
@@ -289,6 +344,8 @@ class WebsiteOrderCrmSyncTests(TestCase):
         mock_now.return_value = self._frozen_now()
         order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
+        crm.status = CrmOrder.STATUS_NEW
+        crm.save(update_fields=["status"])
         user = User.objects.create_user(username="worker", password="password")
         self.client.force_authenticate(user=user)
         take = self.client.patch(

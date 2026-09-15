@@ -492,6 +492,7 @@ class CrmTelegramTests(TestCase):
 
     def test_html_status_marks(self):
         cases = [
+            (CrmOrder.STATUS_UNCONFIRMED, "⚫", "Не подтвержденный"),
             (CrmOrder.STATUS_NEW, "⚪", "Новый"),
             (CrmOrder.STATUS_IN_WORK, "🟠", "В работе"),
             (CrmOrder.STATUS_CLIENT_APPROVED, "🟢", "Одобрен клиентом"),

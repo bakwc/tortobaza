@@ -1,6 +1,7 @@
 import type { CrmOrderStatus } from "@/lib/api/types";
 
 export const CRM_ORDER_STATUSES = [
+  "unconfirmed",
   "new",
   "in_work",
   "client_approved",
@@ -9,6 +10,7 @@ export const CRM_ORDER_STATUSES = [
 ] as const;
 
 export const CRM_ORDER_STATUS_MESSAGE_KEYS = {
+  unconfirmed: "statusUnconfirmed",
   new: "statusNew",
   in_work: "statusInWork",
   client_approved: "statusClientApproved",
@@ -17,6 +19,7 @@ export const CRM_ORDER_STATUS_MESSAGE_KEYS = {
 } as const;
 
 export const CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS = {
+  unconfirmed: "clientStatusUnconfirmed",
   new: "clientStatusNew",
   in_work: "clientStatusInWork",
   client_approved: "clientStatusClientApproved",
@@ -25,6 +28,7 @@ export const CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS = {
 } as const;
 
 export const CRM_ORDER_NEXT_STATUS = {
+  unconfirmed: "new",
   new: "in_work",
   in_work: "client_approved",
   client_approved: "in_delivery",
@@ -33,6 +37,7 @@ export const CRM_ORDER_NEXT_STATUS = {
 } as const satisfies Record<CrmOrderStatus, CrmOrderStatus | null>;
 
 export const CRM_ORDER_NEXT_STEP_MESSAGE_KEYS = {
+  new: "nextStepNew",
   in_work: "takeInWork",
   client_approved: "nextStepClientApproved",
   in_delivery: "nextStepInDelivery",
@@ -49,6 +54,14 @@ type CrmOrderStatusTone = {
 };
 
 const TONES: Record<CrmOrderStatus, CrmOrderStatusTone> = {
+  unconfirmed: {
+    card: "border-zinc-300 bg-zinc-200",
+    media: "border-zinc-200 bg-zinc-100",
+    panel: "border-zinc-200/80 bg-white/70",
+    panelSoft: "border border-zinc-200/80 bg-white/80",
+    divider: "border-zinc-200",
+    chip: "bg-zinc-500 text-white",
+  },
   new: {
     card: "border-[var(--line)] bg-white",
     media: "border-[var(--line)] bg-[var(--cream)]",
