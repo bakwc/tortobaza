@@ -63,7 +63,7 @@ export function MondayDatePicker({
       </button>
 
       {open ? (
-        <div className="absolute z-20 mt-2 w-full min-w-[280px] rounded-2xl border border-[var(--line)] bg-white p-3 shadow-lg">
+        <div className="absolute left-1/2 z-20 mt-2 w-[min(280px,calc(100vw-24px))] -translate-x-1/2 rounded-2xl border border-[var(--line)] bg-white p-3 shadow-lg">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Button
               type="button"

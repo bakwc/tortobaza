@@ -354,6 +354,8 @@
     "dailyBoard": "დღიური დაფა",
     "ordersMap": "შეკვეთების რუკა",
     "mapNext3Hours": "უახლოესი 3 საათი",
+    "mapNext3HoursShort": "3 საათი",
+    "mapHideDelivered": "მიწოდებულების დამალვა",
     "mapLoadError": "რუკის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "mapEmptyTitle": "ამ დიაპაზონში რუკაზე შეკვეთები არ არის",
     "mapEmptyHint": "შეკვეთები Google-კოორდინატების გარეშე არ ჩანს.",

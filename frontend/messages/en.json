@@ -354,6 +354,8 @@
     "dailyBoard": "Daily board",
     "ordersMap": "Order map",
     "mapNext3Hours": "Next 3 hours",
+    "mapNext3HoursShort": "3 hours",
+    "mapHideDelivered": "Hide delivered",
     "mapLoadError": "Could not load the order map. Please try again.",
     "mapEmptyTitle": "No mapped orders in this range",
     "mapEmptyHint": "Orders without Google coordinates are hidden.",

@@ -354,6 +354,8 @@
     "dailyBoard": "Дневная доска",
     "ordersMap": "Карта заказов",
     "mapNext3Hours": "Ближайшие 3 часа",
+    "mapNext3HoursShort": "3 часа",
+    "mapHideDelivered": "Без доставленных",
     "mapLoadError": "Не удалось загрузить карту заказов. Попробуйте ещё раз.",
     "mapEmptyTitle": "В этом диапазоне нет заказов на карте",
     "mapEmptyHint": "Заказы без координат из Google-ссылок не показываются.",

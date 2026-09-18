@@ -1,9 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight, Package } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Columns3,
+  Package,
+  PackageCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
@@ -68,8 +76,12 @@ function CrmMapBoard() {
   const selectedDate = query.date ?? todayStr;
   const isNext3Hours = query.range === "next_3_hours";
   const isToday = selectedDate === todayStr;
+  const [hideDelivered, setHideDelivered] = useState(false);
   const ordersQuery = useCrmMapOrders(query.range, query.date);
   const orders = ordersQuery.data?.orders ?? [];
+  const visibleOrders = hideDelivered
+    ? orders.filter((order) => order.status !== "delivered")
+    : orders;
 
   const setSelectedDate = (next: string) => {
     router.replace(`/crm/map?date=${next}`);
@@ -80,63 +92,68 @@ function CrmMapBoard() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="relative z-20 flex flex-wrap items-center justify-between gap-2">
-        <Button
-          size="sm"
-          variant={isNext3Hours ? "primary" : "outline"}
-          onClick={setNext3Hours}
-        >
-          {t("mapNext3Hours")}
-        </Button>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button asChild variant="outline">
-            <Link href="/crm">{t("dailyBoard")}</Link>
+    <div className="flex min-h-0 flex-1 flex-col gap-2 md:gap-3">
+      <div className="relative z-20 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center rounded-full bg-[var(--cream)] p-1">
+          <Button
+            size="sm"
+            variant={isNext3Hours ? "primary" : "ghost"}
+            onClick={setNext3Hours}
+            className="h-8 gap-1.5 px-3"
+          >
+            <Clock3 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{t("mapNext3Hours")}</span>
+            <span className="sm:hidden">{t("mapNext3HoursShort")}</span>
           </Button>
-          <Button asChild variant="outline">
-            <Link href="/crm/month">{t("monthlyOrders")}</Link>
+          <Button
+            size="sm"
+            variant={!isNext3Hours && isToday ? "primary" : "ghost"}
+            onClick={() => setSelectedDate(todayStr)}
+            className="h-8 px-3"
+          >
+            {t("today")}
+          </Button>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button asChild variant="outline" size="icon" className="h-9 w-9 md:w-auto md:px-4">
+            <Link href="/crm" aria-label={t("dailyBoard")} title={t("dailyBoard")}>
+              <Columns3 className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">{t("dailyBoard")}</span>
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="icon" className="h-9 w-9 md:w-auto md:px-4">
+            <Link href="/crm/month" aria-label={t("monthlyOrders")} title={t("monthlyOrders")}>
+              <CalendarDays className="h-4 w-4 md:mr-1.5" />
+              <span className="hidden md:inline">{t("monthlyOrders")}</span>
+            </Link>
           </Button>
           <CrmOverflowMenu />
         </div>
       </div>
-      <div className="relative z-20 flex flex-col items-center justify-between gap-3 sm:flex-row">
+      <div className="relative z-20 grid grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 md:mx-auto md:w-full md:max-w-xl">
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-          className="flex items-center gap-1.5"
+          aria-label={t("previousDay")}
+          title={t("previousDay")}
+          className="h-11 w-11"
         >
           <ChevronLeft className="h-4 w-4" />
-          <span>{t("previousDay")}</span>
         </Button>
 
-        <div className="flex w-full max-w-md flex-col items-center gap-1 text-center">
+        <div className="min-w-0 [&>div]:w-full">
           <MondayDatePicker value={selectedDate} onChange={setSelectedDate} />
-          <div className="flex items-center gap-2">
-            {isToday && !isNext3Hours ? (
-              <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
-                {t("today")}
-              </span>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedDate(todayStr)}
-                className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
-              >
-                {isToday ? t("today") : t("jumpToToday")}
-              </Button>
-            )}
-          </div>
         </div>
 
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
-          className="flex items-center gap-1.5"
+          aria-label={t("nextDay")}
+          title={t("nextDay")}
+          className="h-11 w-11"
         >
-          <span>{t("nextDay")}</span>
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -151,9 +168,20 @@ function CrmMapBoard() {
           </div>
         ) : (
           <>
-            <CrmOrdersMap orders={orders} />
-            {orders.length === 0 ? (
-              <div className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center px-4">
+            <CrmOrdersMap orders={visibleOrders} />
+            <Button
+              type="button"
+              size="sm"
+              variant={hideDelivered ? "primary" : "soft"}
+              onClick={() => setHideDelivered((value) => !value)}
+              aria-pressed={hideDelivered}
+              className="absolute right-3 top-3 z-10 gap-1.5 shadow-md"
+            >
+              <PackageCheck className="h-4 w-4" />
+              {t("mapHideDelivered")}
+            </Button>
+            {visibleOrders.length === 0 ? (
+              <div className="pointer-events-none absolute inset-x-0 top-16 z-10 flex justify-center px-4">
                 <div className="pointer-events-auto flex max-w-md items-start gap-3 rounded-2xl border border-[var(--line)] bg-white/95 px-4 py-3 shadow-md">
                   <Package className="mt-0.5 h-5 w-5 shrink-0 text-[var(--muted)]" />
                   <div>
