@@ -43,10 +43,10 @@ function mapQuery(
   if (dateParam !== null) {
     return { range: null, date: dateParam };
   }
-  if (rangeParam === "today") {
-    return { range: "today", date: null };
+  if (rangeParam === "next_3_hours") {
+    return { range: "next_3_hours", date: null };
   }
-  return { range: "next_3_hours", date: null };
+  return { range: "today", date: null };
 }
 
 export default function CrmMapPage() {

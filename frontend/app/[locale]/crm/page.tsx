@@ -135,7 +135,7 @@ function CrmBoard() {
     <div className="grid gap-6">
       <div className="flex flex-wrap justify-end gap-2">
         <Button asChild variant="outline">
-          <Link href="/crm/map">{t("ordersMap")}</Link>
+          <Link href={`/crm/map?date=${selectedDate}`}>{t("ordersMap")}</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/crm/month">{t("monthlyOrders")}</Link>
