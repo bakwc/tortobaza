@@ -495,6 +495,7 @@ class CrmTelegramTests(TestCase):
             (CrmOrder.STATUS_UNCONFIRMED, "⚫", "Не подтвержденный"),
             (CrmOrder.STATUS_NEW, "⚪", "Новый"),
             (CrmOrder.STATUS_IN_WORK, "🟠", "В работе"),
+            (CrmOrder.STATUS_READY, "🟡", "Готов"),
             (CrmOrder.STATUS_CLIENT_APPROVED, "🟢", "Одобрен клиентом"),
             (CrmOrder.STATUS_IN_DELIVERY, "🟣", "В доставке"),
             (CrmOrder.STATUS_DELIVERED, "🔵", "Доставлен"),

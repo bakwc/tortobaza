@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import {
   AtSign,
+  Cake,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -292,6 +293,7 @@ function paymentTypeLabel(type: string, t: (key: string) => string): string {
 const NEXT_STEP_ICONS = {
   new: Check,
   in_work: Utensils,
+  ready: Cake,
   client_approved: ThumbsUp,
   in_delivery: Truck,
   delivered: PackageCheck,

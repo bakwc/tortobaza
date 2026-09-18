@@ -80,6 +80,7 @@ class CrmOrder(models.Model):
     STATUS_UNCONFIRMED = "unconfirmed"
     STATUS_NEW = "new"
     STATUS_IN_WORK = "in_work"
+    STATUS_READY = "ready"
     STATUS_CLIENT_APPROVED = "client_approved"
     STATUS_IN_DELIVERY = "in_delivery"
     STATUS_DELIVERED = "delivered"
@@ -87,6 +88,7 @@ class CrmOrder(models.Model):
         (STATUS_UNCONFIRMED, "Unconfirmed"),
         (STATUS_NEW, "New"),
         (STATUS_IN_WORK, "In work"),
+        (STATUS_READY, "Ready"),
         (STATUS_CLIENT_APPROVED, "Client approved"),
         (STATUS_IN_DELIVERY, "In delivery"),
         (STATUS_DELIVERED, "Delivered"),
