@@ -1088,6 +1088,14 @@ class CrmOrderMapApiTests(TestCase):
         response = self.client.get("/api/crm/orders/map/", {"range": "week"})
         self.assertEqual(response.status_code, 400)
 
+    def test_range_and_date_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            "/api/crm/orders/map/",
+            {"range": "today", "date": "2026-09-18"},
+        )
+        self.assertEqual(response.status_code, 400)
+
     @patch("crm.views._tbilisi_now")
     def test_today_includes_when_ready_midnight_and_skips_missing_coords(self, tbilisi_now):
         tbilisi_now.return_value = self.now
@@ -1194,3 +1202,19 @@ class CrmOrderMapApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         ids = [order["id"] for order in response.json()["orders"]]
         self.assertEqual(set(ids), {evening.id, early.id})
+
+    @patch("crm.views._tbilisi_now")
+    def test_date_returns_that_days_orders(self, tbilisi_now):
+        tbilisi_now.return_value = self.now
+        today_order = self._order(filling="Today")
+        tomorrow_order = self._order(date=date(2026, 9, 18), filling="Tomorrow")
+        self._order(date=date(2026, 9, 19), filling="Later")
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"date": "2026-09-18"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["range"], "today")
+        ids = [order["id"] for order in data["orders"]]
+        self.assertEqual(set(ids), {tomorrow_order.id})
+        self.assertNotIn(today_order.id, ids)

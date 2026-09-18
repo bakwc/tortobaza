@@ -67,19 +67,20 @@ def _slot_overlaps_window(order: CrmOrder, window_start: datetime, window_end: d
     return start <= window_end and end >= window_start
 
 
-def _map_orders_queryset(range_key: str, now: datetime):
+def _map_orders_queryset(range_key: str | None, now: datetime, target_date: date | None):
     today = now.date()
     orders = live_orders().prefetch_related("images")
-    if range_key == "today":
-        return orders.filter(date=today)
-    until = now + timedelta(hours=3)
-    return orders.filter(date__in={today, until.date()}).filter(
-        when_ready=False,
-        time_start__isnull=False,
-    ).exclude(time_start=time(0, 0))
+    if range_key == "next_3_hours":
+        until = now + timedelta(hours=3)
+        return orders.filter(date__in={today, until.date()}).filter(
+            when_ready=False,
+            time_start__isnull=False,
+        ).exclude(time_start=time(0, 0))
+    day = target_date if target_date is not None else today
+    return orders.filter(date=day)
 
 
-def _map_order_payloads(orders, range_key: str, now: datetime, public_base_url: str) -> list[dict]:
+def _map_order_payloads(orders, range_key: str | None, now: datetime, public_base_url: str) -> list[dict]:
     until = now + timedelta(hours=3)
     candidates = []
     for order in orders:
@@ -191,13 +192,15 @@ class CrmOrderMapView(APIView):
     def get(self, request):
         query_serializer = CrmOrderMapQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
-        range_key = query_serializer.validated_data["range"]
+        range_key = query_serializer.validated_data.get("range")
+        target_date = query_serializer.validated_data.get("date")
         now = _tbilisi_now()
-        orders = _map_orders_queryset(range_key, now)
+        orders = _map_orders_queryset(range_key, now, target_date)
         public_base_url = request.build_absolute_uri("/").rstrip("/")
         payloads = _map_order_payloads(orders, range_key, now, public_base_url)
         serializer = CrmMapOrderSerializer(payloads, many=True)
-        return Response({"range": range_key, "orders": serializer.data})
+        response_range = range_key if range_key is not None else "today"
+        return Response({"range": response_range, "orders": serializer.data})
 
 
 class CrmOrderDetailView(APIView):

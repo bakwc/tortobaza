@@ -274,7 +274,17 @@ class CrmOrderQuerySerializer(serializers.Serializer):
 
 
 class CrmOrderMapQuerySerializer(serializers.Serializer):
-    range = serializers.ChoiceField(choices=["next_3_hours", "today"])
+    range = serializers.ChoiceField(choices=["next_3_hours", "today"], required=False)
+    date = serializers.DateField(required=False)
+
+    def validate(self, attrs):
+        has_range = attrs.get("range") is not None
+        has_date = attrs.get("date") is not None
+        if has_range and has_date:
+            raise serializers.ValidationError("Pass either range or date, not both.")
+        if not has_range and not has_date:
+            raise serializers.ValidationError("Pass either range or date.")
+        return attrs
 
 
 class CrmMapOrderSerializer(serializers.Serializer):

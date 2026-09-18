@@ -261,9 +261,12 @@ export function endpoints(fetcher: Fetcher) {
       return parse(CrmMonthlyOrdersResponseSchema, raw);
     },
 
-    async getCrmMapOrders(range: CrmMapOrderRange): Promise<CrmMapOrdersResponse> {
+    async getCrmMapOrders(
+      range: CrmMapOrderRange | null,
+      date: string | null,
+    ): Promise<CrmMapOrdersResponse> {
       const raw = await fetcher<unknown>("/api/crm/orders/map/", {
-        searchParams: { range },
+        searchParams: date !== null ? { date } : { range },
       });
       return parse(CrmMapOrdersResponseSchema, raw);
     },

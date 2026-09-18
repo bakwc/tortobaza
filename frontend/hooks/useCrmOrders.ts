@@ -24,8 +24,10 @@ export const crmOrdersQueryKey = (date?: string) =>
 export const crmMonthlyOrdersQueryKey = (month: string) =>
   ["crm-orders", "month", month] as const;
 
-export const crmMapOrdersQueryKey = (range: CrmMapOrderRange) =>
-  ["crm-orders", "map", range] as const;
+export const crmMapOrdersQueryKey = (
+  range: CrmMapOrderRange | null,
+  date: string | null,
+) => ["crm-orders", "map", range, date] as const;
 
 export const crmExpensesQueryKey = (date?: string) =>
   date ? (["crm-expenses", date] as const) : (["crm-expenses"] as const);
@@ -57,10 +59,10 @@ export function useCrmOrdersByMonth(month: string) {
   });
 }
 
-export function useCrmMapOrders(range: CrmMapOrderRange) {
+export function useCrmMapOrders(range: CrmMapOrderRange | null, date: string | null) {
   return useQuery<CrmMapOrdersResponse>({
-    queryKey: crmMapOrdersQueryKey(range),
-    queryFn: () => api.getCrmMapOrders(range),
+    queryKey: crmMapOrdersQueryKey(range, date),
+    queryFn: () => api.getCrmMapOrders(range, date),
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
