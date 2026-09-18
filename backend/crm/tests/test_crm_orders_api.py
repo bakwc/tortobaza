@@ -306,10 +306,43 @@ class CrmOrdersApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["taken_by_name"], "chef_anna")
         self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_anna")
+        self.assertEqual(data["taken_by_gender"], "female")
         self.assertEqual(data["status"], CrmOrder.STATUS_IN_WORK)
         order.refresh_from_db()
         self.assertEqual(order.taken_by_id, self.user.id)
         self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
+
+    def test_take_in_work_uses_internal_name_and_gender(self):
+        UserProfile.objects.create(
+            user=self.user,
+            telegram_username="chef_anna",
+            internal_name="Енот Даша",
+            gender=UserProfile.GENDER_MALE,
+        )
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_NEW,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["taken_by_name"], "Енот Даша")
+        self.assertEqual(data["taken_by_telegram_url"], "https://t.me/chef_anna")
+        self.assertEqual(data["taken_by_gender"], "male")
 
     def test_take_in_work_reassigns_to_other_user(self):
         UserProfile.objects.create(user=self.user, telegram_username="chef_one")
@@ -364,6 +397,7 @@ class CrmOrdersApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["taken_by_name"], "worker")
         self.assertIsNone(data["taken_by_telegram_url"])
+        self.assertEqual(data["taken_by_gender"], "female")
         order.refresh_from_db()
         self.assertEqual(order.taken_by_id, self.user.id)
 
@@ -652,6 +686,7 @@ class CrmOrdersApiTests(TestCase):
         data = response.json()
         self.assertEqual(data["created_by_name"], "staff_anna")
         self.assertEqual(data["created_by_telegram_url"], "https://t.me/staff_anna")
+        self.assertEqual(data["created_by_gender"], "female")
         order = CrmOrder.objects.get(pk=data["id"])
         self.assertEqual(order.created_by_id, self.admin.id)
 
@@ -919,6 +954,8 @@ class CrmOrdersApiTests(TestCase):
         self.assertIsNone(data["google_maps_url"])
         self.assertNotIn("taken_by_name", data)
         self.assertNotIn("created_by_name", data)
+        self.assertNotIn("taken_by_gender", data)
+        self.assertNotIn("created_by_gender", data)
         self.assertNotIn("client_token", data)
         self.assertEqual(response["Cache-Control"], "private, no-store, no-cache, must-revalidate")
         self.assertEqual(response["Pragma"], "no-cache")

@@ -15,7 +15,7 @@ from django.conf import settings
 from django.db import OperationalError, transaction
 from django.utils import timezone
 
-from accounts.models import chef_identity
+from accounts.models import UserProfile, chef_identity
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
@@ -48,6 +48,13 @@ _STATUS_LABELS = {
     CrmOrder.STATUS_DELIVERED: "Доставлен",
 }
 
+_COOKING_PAST_STATUSES = {
+    CrmOrder.STATUS_READY,
+    CrmOrder.STATUS_CLIENT_APPROVED,
+    CrmOrder.STATUS_IN_DELIVERY,
+    CrmOrder.STATUS_DELIVERED,
+}
+
 _STATUS_MARKS = {
     CrmOrder.STATUS_UNCONFIRMED: "⚫",
     CrmOrder.STATUS_NEW: "⚪",
@@ -61,6 +68,33 @@ _STATUS_MARKS = {
 
 def _esc(value: str) -> str:
     return html.escape(value, quote=False)
+
+
+def _staff_name_html(name: str, url: str | None) -> str:
+    if url:
+        href = html.escape(url, quote=True)
+        return f'<a href="{href}">{_esc(name)}</a>'
+    return _esc(name)
+
+
+def _staff_telegram_suffix(telegram_nick: str | None) -> str:
+    if telegram_nick:
+        return f" (@{_esc(telegram_nick)})"
+    return ""
+
+
+def _placed_verb(gender: str) -> str:
+    if gender == UserProfile.GENDER_MALE:
+        return "оформил"
+    return "оформила"
+
+
+def _cooking_phrase(status: str, gender: str) -> str:
+    if status in _COOKING_PAST_STATUSES:
+        if gender == UserProfile.GENDER_MALE:
+            return "приготовил лапками"
+        return "приготовила лапками"
+    return "готовит лапками"
 
 
 def crm_order_slot_datetime(order: CrmOrder) -> datetime:
@@ -111,11 +145,11 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     if links is not None:
         payload["contact_e164"] = links["e164"]
     if order.taken_by_id:
-        name, url = chef_identity(order.taken_by)
+        name, url, _nick, _gender = chef_identity(order.taken_by)
         payload["taken_by_name"] = name
         payload["taken_by_telegram_url"] = url
     if order.created_by_id:
-        name, url = chef_identity(order.created_by)
+        name, url, _nick, _gender = chef_identity(order.created_by)
         payload["created_by_name"] = name
         payload["created_by_telegram_url"] = url
     if order.status != CrmOrder.STATUS_DELIVERED:
@@ -229,19 +263,16 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")
     lines.append(f"<b>Статус:</b> {mark} {_esc(_STATUS_LABELS[order.status])}")
     if order.created_by_id:
-        name, url = chef_identity(order.created_by)
-        if url:
-            href = html.escape(url, quote=True)
-            lines.append(f'<b>Оформлен</b> <a href="{href}">@{_esc(name)}</a>')
-        else:
-            lines.append(f"<b>Оформлен</b> {_esc(name)}")
+        name, url, nick, gender = chef_identity(order.created_by)
+        lines.append(
+            f"{_placed_verb(gender)} {_staff_name_html(name, url)}{_staff_telegram_suffix(nick)}"
+        )
     if order.taken_by_id:
-        name, url = chef_identity(order.taken_by)
-        if url:
-            href = html.escape(url, quote=True)
-            lines.append(f'<b>Готовит шеф</b> <a href="{href}">@{_esc(name)}</a>')
-        else:
-            lines.append(f"<b>Готовит шеф</b> {_esc(name)}")
+        name, url, nick, gender = chef_identity(order.taken_by)
+        lines.append(
+            f"{_staff_name_html(name, url)} {_cooking_phrase(order.status, gender)}"
+            f"{_staff_telegram_suffix(nick)}"
+        )
     return "\n".join(lines)
 
 

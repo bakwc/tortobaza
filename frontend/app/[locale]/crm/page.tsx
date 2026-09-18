@@ -56,6 +56,7 @@ import {
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
+  crmOrderCookingIsPast,
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
@@ -893,7 +894,9 @@ function CrmOrderCard({
               {order.created_by_name ? (
                 <span className="flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900">
                   <User className="h-3.5 w-3.5" />
-                  <span>{t("placedBy")}</span>
+                  <span>
+                    {order.created_by_gender === "male" ? t("placedBy") : t("placedByFemale")}
+                  </span>
                   {order.created_by_telegram_url ? (
                     <a
                       href={order.created_by_telegram_url}
@@ -901,7 +904,7 @@ function CrmOrderCard({
                       rel="noopener noreferrer"
                       className="underline underline-offset-2"
                     >
-                      @{order.created_by_name}
+                      {order.created_by_name}
                     </a>
                   ) : (
                     <span>{order.created_by_name}</span>
@@ -918,11 +921,18 @@ function CrmOrderCard({
                       rel="noopener noreferrer"
                       className="underline underline-offset-2"
                     >
-                      @{order.taken_by_name}
+                      {order.taken_by_name}
                     </a>
                   ) : (
                     <span>{order.taken_by_name}</span>
                   )}
+                  <span>
+                    {crmOrderCookingIsPast(order.status)
+                      ? order.taken_by_gender === "male"
+                        ? t("cookedPaws")
+                        : t("cookedPawsFemale")
+                      : t("cookingPaws")}
+                  </span>
                 </span>
               ) : null}
               <button

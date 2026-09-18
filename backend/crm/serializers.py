@@ -28,8 +28,10 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     contact_telegram = serializers.CharField(read_only=True, allow_null=True)
     taken_by_name = serializers.CharField(read_only=True, allow_null=True)
     taken_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
+    taken_by_gender = serializers.CharField(read_only=True, allow_null=True)
     created_by_name = serializers.CharField(read_only=True, allow_null=True)
     created_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
+    created_by_gender = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrmOrder
@@ -50,8 +52,10 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "status",
             "taken_by_name",
             "taken_by_telegram_url",
+            "taken_by_gender",
             "created_by_name",
             "created_by_telegram_url",
+            "created_by_gender",
             "weight",
             "filling",
             "description",
@@ -68,19 +72,23 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.taken_by_id:
-            name, url = chef_identity(instance.taken_by)
+            name, url, _nick, gender = chef_identity(instance.taken_by)
             data["taken_by_name"] = name
             data["taken_by_telegram_url"] = url
+            data["taken_by_gender"] = gender
         else:
             data["taken_by_name"] = None
             data["taken_by_telegram_url"] = None
+            data["taken_by_gender"] = None
         if instance.created_by_id:
-            name, url = chef_identity(instance.created_by)
+            name, url, _nick, gender = chef_identity(instance.created_by)
             data["created_by_name"] = name
             data["created_by_telegram_url"] = url
+            data["created_by_gender"] = gender
         else:
             data["created_by_name"] = None
             data["created_by_telegram_url"] = None
+            data["created_by_gender"] = None
         links = contact_links(instance.contact)
         if links is None:
             data["contact_tel"] = None

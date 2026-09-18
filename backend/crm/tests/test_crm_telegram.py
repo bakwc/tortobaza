@@ -301,11 +301,15 @@ class CrmTelegramTests(TestCase):
         sync_crm_order_to_telegram(order.pk)
         html = build_crm_order_telegram_html(order)
         self.assertNotIn("Готовит шеф", html)
+        self.assertNotIn("готовит лапками", html)
         self.calls.clear()
         order.taken_by = chef
         order.save(update_fields=["taken_by", "updated_at"])
         html = build_crm_order_telegram_html(order)
-        self.assertIn('Готовит шеф</b> <a href="https://t.me/chef_anna">@chef_anna</a>', html)
+        self.assertIn(
+            '<a href="https://t.me/chef_anna">chef_anna</a> готовит лапками (@chef_anna)',
+            html,
+        )
         sync_crm_order_to_telegram(order.pk)
         methods = [c["method"] for c in self.calls]
         self.assertEqual(methods, ["editMessageText"])
@@ -315,15 +319,61 @@ class CrmTelegramTests(TestCase):
         chef = User.objects.create_user(username="site_chef", password="password")
         order = self._create_order(delta=timedelta(hours=2), taken_by=chef)
         html = build_crm_order_telegram_html(order)
-        self.assertIn("Готовит шеф</b> site_chef", html)
+        self.assertIn("site_chef готовит лапками", html)
         self.assertNotIn("t.me", html)
+        self.assertNotIn("(@", html)
+
+    def test_taken_by_internal_name_in_html(self):
+        chef = User.objects.create_user(username="chef", password="password")
+        UserProfile.objects.create(
+            user=chef,
+            telegram_username="chef_anna",
+            internal_name="Енот Даша",
+        )
+        order = self._create_order(delta=timedelta(hours=2), taken_by=chef)
+        html = build_crm_order_telegram_html(order)
+        self.assertIn(
+            '<a href="https://t.me/chef_anna">Енот Даша</a> готовит лапками (@chef_anna)',
+            html,
+        )
+
+    def test_taken_by_cooked_female_when_ready(self):
+        chef = User.objects.create_user(username="chef", password="password")
+        UserProfile.objects.create(user=chef, telegram_username="chef_anna")
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            taken_by=chef,
+            status=CrmOrder.STATUS_READY,
+        )
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("приготовила лапками", html)
+        self.assertNotIn("готовит лапками", html)
+
+    def test_taken_by_cooked_male_when_ready(self):
+        chef = User.objects.create_user(username="chef", password="password")
+        UserProfile.objects.create(
+            user=chef,
+            telegram_username="chef_anna",
+            gender=UserProfile.GENDER_MALE,
+        )
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            taken_by=chef,
+            status=CrmOrder.STATUS_READY,
+        )
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("приготовил лапками", html)
+        self.assertNotIn("приготовила лапками", html)
 
     def test_created_by_telegram_nick_in_html(self):
         staff = User.objects.create_user(username="staff", password="password")
         UserProfile.objects.create(user=staff, telegram_username="staff_anna")
         order = self._create_order(delta=timedelta(hours=2), created_by=staff)
         html = build_crm_order_telegram_html(order)
-        self.assertIn('Оформлен</b> <a href="https://t.me/staff_anna">@staff_anna</a>', html)
+        self.assertIn(
+            'оформила <a href="https://t.me/staff_anna">staff_anna</a> (@staff_anna)',
+            html,
+        )
         payload = build_crm_order_telegram_payload(order)
         self.assertEqual(payload["created_by_name"], "staff_anna")
         self.assertEqual(payload["created_by_telegram_url"], "https://t.me/staff_anna")
@@ -332,8 +382,20 @@ class CrmTelegramTests(TestCase):
         staff = User.objects.create_user(username="site_staff", password="password")
         order = self._create_order(delta=timedelta(hours=2), created_by=staff)
         html = build_crm_order_telegram_html(order)
-        self.assertIn("Оформлен</b> site_staff", html)
+        self.assertIn("оформила site_staff", html)
         self.assertNotIn("t.me", html)
+
+    def test_created_by_male_uses_masculine_verb(self):
+        staff = User.objects.create_user(username="staff", password="password")
+        UserProfile.objects.create(
+            user=staff,
+            telegram_username="staff_bob",
+            gender=UserProfile.GENDER_MALE,
+        )
+        order = self._create_order(delta=timedelta(hours=2), created_by=staff)
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("оформил ", html)
+        self.assertNotIn("оформила", html)
 
     def test_slot_change_edits_and_replies(self):
         order = self._create_order(delta=timedelta(hours=2))

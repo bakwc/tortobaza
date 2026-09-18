@@ -117,6 +117,15 @@ const TONES: Record<CrmOrderStatus, CrmOrderStatusTone> = {
   },
 };
 
+export function crmOrderCookingIsPast(status: CrmOrderStatus): boolean {
+  return (
+    status === "ready" ||
+    status === "client_approved" ||
+    status === "in_delivery" ||
+    status === "delivered"
+  );
+}
+
 export function crmOrderStatusTone(status: CrmOrderStatus): CrmOrderStatusTone {
   return TONES[status];
 }
