@@ -27,6 +27,11 @@ _COORDINATE_PATTERNS = [
     r"(4[0-9](?:\.\d+)?)\s*\]",
 ]
 
+_FLOAT_RE = re.compile(r"^-?\d+(?:\.\d+)?$")
+_ADDRESS_URL_RE = re.compile(r"https?://[^\s]+", re.I)
+_AT_COORDS_RE = re.compile(r"/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)")
+_BANG_COORDS_RE = re.compile(r"!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)")
+
 
 def cached_google_maps_url(address: str) -> str | None:
     cached = ResolvedGoogleAddress.objects.filter(address=address).first()
@@ -79,6 +84,62 @@ def _is_google_maps_url(url: str) -> bool:
 def _google_url_from_lon_lat(lon: float, lat: float) -> str | None:
     if 40 < lat < 44 and 39 < lon < 47:
         return _google_url(lat, lon)
+    return None
+
+
+def _georgian_lat_lng(lat: float, lng: float) -> tuple[float, float] | None:
+    if 40 < lat < 44 and 39 < lng < 47:
+        return lat, lng
+    return None
+
+
+def _parse_lat_lng_csv(value: str) -> tuple[float, float] | None:
+    parts = unquote(value).split(",")
+    if len(parts) < 2:
+        return None
+    lat_raw = parts[0].strip()
+    lng_raw = parts[1].strip()
+    if not _FLOAT_RE.fullmatch(lat_raw) or not _FLOAT_RE.fullmatch(lng_raw):
+        return None
+    return _georgian_lat_lng(float(lat_raw), float(lng_raw))
+
+
+def extract_address_url(address: str) -> str | None:
+    match = _ADDRESS_URL_RE.search(address)
+    if match is None:
+        return None
+    return match.group(0).rstrip(".,);]")
+
+
+def coords_from_google_url(url: str) -> tuple[float, float] | None:
+    bang = _BANG_COORDS_RE.search(url)
+    if bang:
+        pair = _georgian_lat_lng(float(bang.group(1)), float(bang.group(2)))
+        if pair:
+            return pair
+    parsed_url = urlparse(url)
+    query = parse_qs(parsed_url.query)
+    for key in ("query", "q"):
+        values = query.get(key)
+        if not values:
+            continue
+        pair = _parse_lat_lng_csv(values[0])
+        if pair:
+            return pair
+    at = _AT_COORDS_RE.search(unquote(parsed_url.path))
+    if at:
+        return _georgian_lat_lng(float(at.group(1)), float(at.group(2)))
+    return None
+
+
+def coords_for_address(address: str, cached_google_url: str | None) -> tuple[float, float] | None:
+    if cached_google_url:
+        cached_pair = coords_from_google_url(cached_google_url)
+        if cached_pair:
+            return cached_pair
+    embedded = extract_address_url(address)
+    if embedded:
+        return coords_from_google_url(embedded)
     return None
 
 

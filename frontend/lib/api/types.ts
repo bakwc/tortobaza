@@ -312,6 +312,29 @@ export const CrmMonthlyOrdersResponseSchema = z.object({
   orders: z.array(CrmOrderSchema),
 });
 
+export const CrmMapOrderRangeSchema = z.enum(["next_3_hours", "today"]);
+
+export const CrmMapOrderSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  time_start: z.string().nullable(),
+  time_end: z.string().nullable(),
+  when_ready: z.boolean(),
+  filling: z.string(),
+  weight: z.string(),
+  description: z.string(),
+  fulfillment_type: z.enum(["delivery", "pickup"]),
+  status: z.enum(["unconfirmed", "new", "in_work", "client_approved", "in_delivery", "delivered"]),
+  lat: z.number(),
+  lng: z.number(),
+  image: ResponsiveImageSchema.nullable(),
+});
+
+export const CrmMapOrdersResponseSchema = z.object({
+  range: CrmMapOrderRangeSchema,
+  orders: z.array(CrmMapOrderSchema),
+});
+
 export const CrmExpensesDaySchema = z.object({
   date: z.string(),
   salary: z.string(),
@@ -392,6 +415,9 @@ export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
+export type CrmMapOrderRange = z.infer<typeof CrmMapOrderRangeSchema>;
+export type CrmMapOrder = z.infer<typeof CrmMapOrderSchema>;
+export type CrmMapOrdersResponse = z.infer<typeof CrmMapOrdersResponseSchema>;
 export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
 export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;

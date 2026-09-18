@@ -273,6 +273,26 @@ class CrmOrderQuerySerializer(serializers.Serializer):
         return attrs
 
 
+class CrmOrderMapQuerySerializer(serializers.Serializer):
+    range = serializers.ChoiceField(choices=["next_3_hours", "today"])
+
+
+class CrmMapOrderSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    time_start = serializers.TimeField(allow_null=True)
+    time_end = serializers.TimeField(allow_null=True)
+    when_ready = serializers.BooleanField()
+    filling = serializers.CharField()
+    weight = serializers.CharField()
+    description = serializers.CharField()
+    fulfillment_type = serializers.CharField()
+    status = serializers.CharField()
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+    image = serializers.JSONField(allow_null=True)
+
+
 class CrmExpensesBreakdownSerializer(serializers.Serializer):
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from crm.google_maps import yandex_url_to_google_url
+from crm.google_maps import coords_from_google_url, extract_address_url, yandex_url_to_google_url
 from crm.models import ResolvedGoogleAddress, ResolvedYandexAddress
 from crm.yandex_maps import YANDEX_MAPS_PROMPT_ID, YANDEX_MAPS_PROMPT_VERSION
 
@@ -136,6 +136,43 @@ class YandexUrlToGoogleUrlTests(TestCase):
         self.assertEqual(
             yandex_url_to_google_url(INSTAGRAM_URL),
             GOOGLE_CONTINUE_URL,
+        )
+
+
+class GoogleUrlCoordsTests(TestCase):
+    def test_query_param(self):
+        self.assertEqual(coords_from_google_url(GOOGLE_URL), (41.623987, 41.645449))
+
+    def test_q_param(self):
+        self.assertEqual(
+            coords_from_google_url("https://maps.google.com/maps?q=41.623987,41.645449"),
+            (41.623987, 41.645449),
+        )
+
+    def test_place_at_path(self):
+        self.assertEqual(coords_from_google_url(GOOGLE_PLACE_URL), (41.6, 41.6))
+
+    def test_bang_coords_preferred_over_camera(self):
+        url = (
+            "https://www.google.com/maps/place/Pin/@41.61,41.63,17z"
+            "/data=!3d41.627274!4d41.61273"
+        )
+        self.assertEqual(coords_from_google_url(url), (41.627274, 41.61273))
+
+    def test_plus_code_returns_none(self):
+        self.assertIsNone(coords_from_google_url(GOOGLE_CONTINUE_URL))
+
+    def test_outside_georgia_returns_none(self):
+        self.assertIsNone(
+            coords_from_google_url(
+                "https://www.google.com/maps/search/?api=1&query=10.0,20.0"
+            )
+        )
+
+    def test_extract_address_url_strips_trailing_punctuation(self):
+        self.assertEqual(
+            extract_address_url("Meet at " + GOOGLE_URL + "."),
+            GOOGLE_URL,
         )
 
 

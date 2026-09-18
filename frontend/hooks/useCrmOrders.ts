@@ -9,6 +9,8 @@ import { api } from "@/lib/api";
 import type {
   CrmExpensesDay,
   CrmExpensesMonth,
+  CrmMapOrderRange,
+  CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
   CrmOrder,
   CrmOrdersResponse,
@@ -21,6 +23,9 @@ export const crmOrdersQueryKey = (date?: string) =>
 
 export const crmMonthlyOrdersQueryKey = (month: string) =>
   ["crm-orders", "month", month] as const;
+
+export const crmMapOrdersQueryKey = (range: CrmMapOrderRange) =>
+  ["crm-orders", "map", range] as const;
 
 export const crmExpensesQueryKey = (date?: string) =>
   date ? (["crm-expenses", date] as const) : (["crm-expenses"] as const);
@@ -46,6 +51,16 @@ export function useCrmOrdersByMonth(month: string) {
   return useQuery<CrmMonthlyOrdersResponse>({
     queryKey: crmMonthlyOrdersQueryKey(month),
     queryFn: () => api.getCrmOrdersByMonth(month),
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmMapOrders(range: CrmMapOrderRange) {
+  return useQuery<CrmMapOrdersResponse>({
+    queryKey: crmMapOrdersQueryKey(range),
+    queryFn: () => api.getCrmMapOrders(range),
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,

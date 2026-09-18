@@ -1,5 +1,5 @@
 from calendar import monthrange
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.shortcuts import get_object_or_404
@@ -17,13 +17,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from attendance.salary import compute_all_salaries
-from crm.google_maps import resolve_google_maps_url
-from crm.models import CrmOrder
+from catalog.responsive_urls import detail_image
+from crm.google_maps import coords_for_address, resolve_google_maps_url
+from crm.models import CrmOrder, ResolvedGoogleAddress
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     CrmExpensesDaySerializer,
     CrmExpensesMonthSerializer,
+    CrmMapOrderSerializer,
     CrmOrderClientSerializer,
+    CrmOrderMapQuerySerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
@@ -51,6 +54,73 @@ class CrmOrderWritePermission(BasePermission):
 
 def live_orders():
     return CrmOrder.objects.filter(deleted=False).select_related("taken_by", "created_by")
+
+
+def _tbilisi_now() -> datetime:
+    return timezone.now().astimezone(_TB)
+
+
+def _slot_overlaps_window(order: CrmOrder, window_start: datetime, window_end: datetime) -> bool:
+    start = datetime.combine(order.date, order.time_start, tzinfo=_TB)
+    end_time = order.time_end if order.time_end is not None else order.time_start
+    end = datetime.combine(order.date, end_time, tzinfo=_TB)
+    return start <= window_end and end >= window_start
+
+
+def _map_orders_queryset(range_key: str, now: datetime):
+    today = now.date()
+    orders = live_orders().prefetch_related("images")
+    if range_key == "today":
+        return orders.filter(date=today)
+    until = now + timedelta(hours=3)
+    return orders.filter(date__in={today, until.date()}).filter(
+        when_ready=False,
+        time_start__isnull=False,
+    ).exclude(time_start=time(0, 0))
+
+
+def _map_order_payloads(orders, range_key: str, now: datetime, public_base_url: str) -> list[dict]:
+    until = now + timedelta(hours=3)
+    candidates = []
+    for order in orders:
+        if range_key == "next_3_hours" and not _slot_overlaps_window(order, now, until):
+            continue
+        candidates.append(order)
+    addresses = [order.delivery_address for order in candidates if order.delivery_address]
+    cached = {
+        row.address: row.google_url
+        for row in ResolvedGoogleAddress.objects.filter(address__in=addresses)
+    }
+    payloads = []
+    for order in candidates:
+        address = order.delivery_address
+        if not address:
+            continue
+        pair = coords_for_address(address, cached.get(address))
+        if pair is None:
+            continue
+        images = list(order.images.all())
+        image = None
+        if images:
+            image = detail_image(images[0].image.name, public_base_url)
+        payloads.append(
+            {
+                "id": order.id,
+                "date": order.date,
+                "time_start": order.time_start,
+                "time_end": order.time_end,
+                "when_ready": order.when_ready,
+                "filling": order.filling,
+                "weight": order.weight,
+                "description": order.description,
+                "fulfillment_type": order.fulfillment_type,
+                "status": order.status,
+                "lat": pair[0],
+                "lng": pair[1],
+                "image": image,
+            }
+        )
+    return payloads
 
 
 def crm_order_write_payload(request):
@@ -112,6 +182,22 @@ class CrmOrderListView(APIView):
             CrmOrderSerializer(order, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class CrmOrderMapView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query_serializer = CrmOrderMapQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        range_key = query_serializer.validated_data["range"]
+        now = _tbilisi_now()
+        orders = _map_orders_queryset(range_key, now)
+        public_base_url = request.build_absolute_uri("/").rstrip("/")
+        payloads = _map_order_payloads(orders, range_key, now, public_base_url)
+        serializer = CrmMapOrderSerializer(payloads, many=True)
+        return Response({"range": range_key, "orders": serializer.data})
 
 
 class CrmOrderDetailView(APIView):

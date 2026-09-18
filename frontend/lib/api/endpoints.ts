@@ -8,6 +8,7 @@ import {
   CrmClientOrderSchema,
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
+  CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -34,6 +35,8 @@ import {
   type CrmClientOrder,
   type CrmExpensesDay,
   type CrmExpensesMonth,
+  type CrmMapOrderRange,
+  type CrmMapOrdersResponse,
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
   type CrmOrdersResponse,
@@ -256,6 +259,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(CrmMonthlyOrdersResponseSchema, raw);
+    },
+
+    async getCrmMapOrders(range: CrmMapOrderRange): Promise<CrmMapOrdersResponse> {
+      const raw = await fetcher<unknown>("/api/crm/orders/map/", {
+        searchParams: { range },
+      });
+      return parse(CrmMapOrdersResponseSchema, raw);
     },
 
     async patchCrmOrder(id: number, body: UpdateCrmOrderBody): Promise<CrmOrder> {

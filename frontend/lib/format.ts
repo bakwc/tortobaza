@@ -215,6 +215,12 @@ function crmOrderTimeSortValue(timeStart: string | null): number {
   return hours * 60 + minutes;
 }
 
+export function minutesUntilTbilisiSlot(dateIso: string, timeStart: string, nowMs: number): number {
+  const clock = timeStart.slice(0, 8);
+  const target = new Date(`${dateIso}T${clock}+04:00`).getTime();
+  return Math.round((target - nowMs) / 60_000);
+}
+
 export function sortCrmBoardOrders<T extends { date: string; time_start: string | null }>(
   orders: T[],
 ): T[] {

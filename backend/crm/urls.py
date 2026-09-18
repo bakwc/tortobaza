@@ -6,12 +6,14 @@ from crm.views import (
     CrmOrderClientView,
     CrmOrderDetailView,
     CrmOrderListView,
+    CrmOrderMapView,
     ResolveGoogleAddressView,
     ResolveYandexAddressView,
 )
 
 urlpatterns = [
     path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
+    path("crm/orders/map/", CrmOrderMapView.as_view(), name="crm-order-map"),
     path("crm/orders/", CrmOrderListView.as_view(), name="crm-order-list"),
     path(
         "crm/orders/client/<str:token>/map/",

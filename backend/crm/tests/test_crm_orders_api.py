@@ -1,5 +1,5 @@
 import io
-from datetime import date, time
+from datetime import date, datetime, time
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -1045,3 +1045,152 @@ class CrmOrdersApiTests(TestCase):
         )
         response = self.client.get(f"/api/crm/orders/client/{order.client_token}/map/")
         self.assertEqual(response.status_code, 404)
+
+
+class CrmOrderMapApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="worker", password="password")
+        self.now = datetime(2026, 9, 17, 14, 0, tzinfo=_TB)
+        self.address = "Rustaveli 12, Batumi"
+        self.google_url = "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"
+        ResolvedGoogleAddress.objects.create(address=self.address, google_url=self.google_url)
+
+    def _order(self, **kwargs):
+        payload = {
+            "date": date(2026, 9, 17),
+            "time_start": time(15, 0),
+            "contact": "Customer",
+            "delivery_address": self.address,
+            "fulfillment_type": CrmOrder.FULFILLMENT_DELIVERY,
+            "weight": "2kg",
+            "filling": "Vanilla",
+            "description": "Happy birthday",
+            "cake_price": Decimal("100.00"),
+            "prepayment": Decimal("0.00"),
+            "is_paid": False,
+            "payment_type": CrmOrder.PAYMENT_CASH,
+        }
+        payload.update(kwargs)
+        return CrmOrder.objects.create(**payload)
+
+    def test_unauthenticated_access_denied(self):
+        response = self.client.get("/api/crm/orders/map/", {"range": "today"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_range_required(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/")
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_range_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "week"})
+        self.assertEqual(response.status_code, 400)
+
+    @patch("crm.views._tbilisi_now")
+    def test_today_includes_when_ready_midnight_and_skips_missing_coords(self, tbilisi_now):
+        tbilisi_now.return_value = self.now
+        with_cache = self._order(time_start=time(10, 0), filling="Cached")
+        from_url = self._order(
+            time_start=time(11, 0),
+            filling="FromUrl",
+            delivery_address=(
+                "Gorgiladze 15 https://www.google.com/maps/place/Pin/@41.61,41.63,17z"
+            ),
+        )
+        when_ready = self._order(time_start=None, when_ready=True, filling="Ready")
+        midnight = self._order(time_start=time(0, 0), filling="Midnight")
+        self._order(
+            time_start=time(12, 0),
+            filling="NoCoords",
+            delivery_address="Somewhere without a map",
+        )
+        self._order(date=date(2026, 9, 16), filling="Yesterday")
+        deleted = self._order(filling="Deleted")
+        deleted.deleted = True
+        deleted.save(update_fields=["deleted"])
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "today"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["range"], "today")
+        ids = [order["id"] for order in data["orders"]]
+        self.assertEqual(set(ids), {with_cache.id, from_url.id, when_ready.id, midnight.id})
+        by_id = {order["id"]: order for order in data["orders"]}
+        self.assertEqual(by_id[with_cache.id]["lat"], 41.623987)
+        self.assertEqual(by_id[with_cache.id]["lng"], 41.645449)
+        self.assertEqual(by_id[from_url.id]["lat"], 41.61)
+        self.assertEqual(by_id[from_url.id]["lng"], 41.63)
+        self.assertEqual(by_id[with_cache.id]["filling"], "Cached")
+        self.assertEqual(by_id[with_cache.id]["weight"], "2kg")
+        self.assertEqual(by_id[with_cache.id]["description"], "Happy birthday")
+        self.assertIsNone(by_id[with_cache.id]["image"])
+
+    @patch("crm.views._tbilisi_now")
+    def test_today_returns_first_image(self, tbilisi_now):
+        tbilisi_now.return_value = self.now
+        order = self._order()
+        buf = io.BytesIO()
+        im = Image.new("RGB", (40, 40), color="pink")
+        im.save(buf, format="JPEG")
+        CrmOrderImage.objects.create(
+            order=order,
+            image=SimpleUploadedFile("cake.jpg", buf.getvalue(), content_type="image/jpeg"),
+            position=0,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "today"})
+        self.assertEqual(response.status_code, 200)
+        image = response.json()["orders"][0]["image"]
+        self.assertIn("src", image)
+        self.assertIn("srcset", image)
+
+    @patch("crm.views._tbilisi_now")
+    def test_next_3_hours_filters_slot_and_special_times(self, tbilisi_now):
+        tbilisi_now.return_value = self.now
+        inside = self._order(time_start=time(15, 0), filling="Inside")
+        overlapping = self._order(
+            time_start=time(13, 0),
+            time_end=time(14, 30),
+            filling="Overlap",
+        )
+        self._order(time_start=time(18, 0), filling="Later")
+        self._order(time_start=time(12, 0), time_end=time(13, 0), filling="Past")
+        self._order(time_start=None, when_ready=True, filling="Ready")
+        self._order(time_start=time(0, 0), filling="Midnight")
+        self._order(time_start=None, filling="Unknown")
+        tomorrow_inside = self._order(
+            date=date(2026, 9, 18),
+            time_start=time(1, 0),
+            filling="TomorrowEarly",
+        )
+        self._order(
+            date=date(2026, 9, 18),
+            time_start=time(10, 0),
+            filling="TomorrowLate",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "next_3_hours"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["range"], "next_3_hours")
+        ids = [order["id"] for order in data["orders"]]
+        self.assertEqual(set(ids), {inside.id, overlapping.id})
+        self.assertNotIn(tomorrow_inside.id, ids)
+
+    @patch("crm.views._tbilisi_now")
+    def test_next_3_hours_crosses_midnight(self, tbilisi_now):
+        tbilisi_now.return_value = datetime(2026, 9, 17, 22, 30, tzinfo=_TB)
+        evening = self._order(time_start=time(23, 0), filling="Evening")
+        early = self._order(date=date(2026, 9, 18), time_start=time(1, 0), filling="Early")
+        self._order(date=date(2026, 9, 18), time_start=time(2, 0), filling="TooLate")
+        self._order(time_start=time(21, 0), time_end=time(22, 0), filling="Ended")
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "next_3_hours"})
+        self.assertEqual(response.status_code, 200)
+        ids = [order["id"] for order in response.json()["orders"]]
+        self.assertEqual(set(ids), {evening.id, early.id})
