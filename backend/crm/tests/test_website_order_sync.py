@@ -122,6 +122,39 @@ class WebsiteOrderCrmSyncTests(TestCase):
         self.assertTrue(images[1].image.name.startswith("crm_orders/"))
         mock_sync.assert_called_once_with(crm.pk)
 
+    def _order_with_option_group(self, group_name: str, slug: str, option_name: str):
+        group = OptionGroup.objects.create(
+            name=group_name,
+            slug=slug,
+            selection_type=OptionGroup.SELECTION_SINGLE,
+        )
+        option = Option.objects.create(
+            group=group,
+            name=option_name,
+            price_delta=Decimal("0.00"),
+            position=0,
+        )
+        cart = Cart.objects.create()
+        item = CartItem.objects.create(cart=cart, product=self.product, quantity=1)
+        CartItemOption.objects.create(cart_item=item, option=option)
+        return create_order_from_cart(cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
+
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_flovers_bento_group_sets_crm_filling(self, mock_now, mock_sync):
+        mock_now.return_value = self._frozen_now()
+        order = self._order_with_option_group("flovers bento", "flovers-bento", "Snickers")
+        crm = CrmOrder.objects.get(website_order=order)
+        self.assertEqual(crm.filling, "Snickers")
+
+    @patch("crm.website.schedule_crm_order_telegram_sync")
+    @patch("django.utils.timezone.now")
+    def test_flavor_group_sets_crm_filling(self, mock_now, mock_sync):
+        mock_now.return_value = self._frozen_now()
+        order = self._order_with_option_group("Flavor", "flavor", "Mango")
+        crm = CrmOrder.objects.get(website_order=order)
+        self.assertEqual(crm.filling, "Mango")
+
     @patch("crm.website.schedule_crm_order_telegram_sync")
     @patch("django.utils.timezone.now")
     def test_dev_order_does_not_create_crm_order(self, mock_now, mock_sync):

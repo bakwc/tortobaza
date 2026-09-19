@@ -12,7 +12,7 @@ from orders.models import Order, OrderItem
 _TB = ZoneInfo("Asia/Tbilisi")
 
 _WEIGHT_GROUPS = frozenset({"weight", "size", "вес", "размер"})
-_FILLING_GROUPS = frozenset({"filling", "начинка"})
+_FILLING_GROUPS = frozenset({"filling", "начинка", "flavor", "flovers bento"})
 
 _PAYMENT_MAP = {
     Order.PAYMENT_CARD: CrmOrder.PAYMENT_ONLINE,
@@ -37,7 +37,7 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
     start = timezone.localtime(order.timeslot_start, _TB)
     end = timezone.localtime(order.timeslot_end, _TB)
     weight_parts = _option_names(order, _WEIGHT_GROUPS)
-    filling_parts = _option_names(order, _FILLING_GROUPS)
+    filling = filling_for_website_order(order)
     product_names = [_item_label(item) for item in order.items.all()]
     nickname = order.customer_instagram or order.customer_telegram
     crm_order = CrmOrder.objects.create(
@@ -50,7 +50,7 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
         delivery_address=_format_address(order),
         fulfillment_type=order.fulfillment_type,
         weight=", ".join(weight_parts) if weight_parts else "—",
-        filling=", ".join(filling_parts) if filling_parts else ", ".join(product_names),
+        filling=filling if filling is not None else ", ".join(product_names),
         description=_build_description(order),
         cake_price=order.total,
         prepayment=Decimal("0"),
@@ -84,6 +84,13 @@ def sync_website_order_status_from_crm(crm_order: CrmOrder) -> None:
         return
     website_order.status = mapped
     website_order.save(update_fields=["status"])
+
+
+def filling_for_website_order(order: Order) -> str | None:
+    filling_parts = _option_names(order, _FILLING_GROUPS)
+    if not filling_parts:
+        return None
+    return ", ".join(filling_parts)
 
 
 def _option_names(order: Order, groups: frozenset[str]) -> list[str]:

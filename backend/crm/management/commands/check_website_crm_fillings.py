@@ -4,14 +4,14 @@ from django.core.management.base import BaseCommand
 
 from catalog.models import OptionGroup
 from crm.models import CrmOrder
-from crm.website import _FILLING_GROUPS, _item_label, _option_names
+from crm.website import _FILLING_GROUPS, _item_label, filling_for_website_order
 from orders.models import OrderItemOption
 
 
 def _live_filling(order) -> str:
-    filling_parts = _option_names(order, _FILLING_GROUPS)
-    if filling_parts:
-        return ", ".join(filling_parts)
+    filling = filling_for_website_order(order)
+    if filling is not None:
+        return filling
     return ", ".join(_item_label(item) for item in order.items.all())
 
 
