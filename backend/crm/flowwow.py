@@ -52,16 +52,54 @@ def log_webhook(payload: dict, body: bytes) -> None:
 
 def sync_flowwow_orders() -> None:
     now = timezone.now().astimezone(_TB)
-    cutoff_ts = int((now - timedelta(hours=24)).timestamp())
-    for item in _fetch_orders():
+    cutoff = now - timedelta(hours=24)
+    cutoff_ts = int(cutoff.timestamp())
+    items = _fetch_orders()
+    logger.info(
+        "flowwow sync now=%s cutoff=%s fetched=%s",
+        now.isoformat(),
+        cutoff.isoformat(),
+        len(items),
+    )
+    print(
+        f"flowwow sync now={now.isoformat()} cutoff={cutoff.isoformat()} fetched={len(items)}",
+        flush=True,
+    )
+    kept: list[dict] = []
+    for item in items:
+        created = datetime.fromtimestamp(item["createdDate"], tz=_TB)
+        delivery = datetime.fromtimestamp(item["deliveryDateFrom"], tz=_TB)
+        logger.info(
+            "flowwow order id=%s created=%s delivery_date=%s status=%s",
+            item["id"],
+            created.isoformat(),
+            delivery.date().isoformat(),
+            item["status"],
+        )
+        print(
+            f"flowwow order id={item['id']} created={created.isoformat()} "
+            f"delivery_date={delivery.date().isoformat()} status={item['status']}",
+            flush=True,
+        )
         if item["createdDate"] < cutoff_ts:
+            logger.info("flowwow order id=%s skipped older than 24h", item["id"])
+            print(f"flowwow order id={item['id']} skipped older than 24h", flush=True)
             continue
+        kept.append(item)
+    logger.info("flowwow after 24h filter kept=%s skipped=%s", len(kept), len(items) - len(kept))
+    print(
+        f"flowwow after 24h filter kept={len(kept)} skipped={len(items) - len(kept)}",
+        flush=True,
+    )
+    for item in kept:
         _upsert_crm_order(item)
 
 
 def _fetch_orders() -> list[dict]:
     shop_id = int(settings.FLOWWOW_SHOP_ID.strip('"'))
     token = settings.FLOWWOW_API_TOKEN.strip('"')
+    logger.info("flowwow fetch shopId=%s", shop_id)
+    print(f"flowwow fetch shopId={shop_id}", flush=True)
     response = requests.get(
         _ORDERS_LIST_URL,
         params={"shopId": shop_id},
@@ -72,7 +110,11 @@ def _fetch_orders() -> list[dict]:
         timeout=60,
     )
     response.raise_for_status()
-    return response.json()["items"]
+    payload = response.json()
+    items = payload["items"]
+    logger.info("flowwow response total=%s items=%s", payload.get("total"), len(items))
+    print(f"flowwow response total={payload.get('total')} items={len(items)}", flush=True)
+    return items
 
 
 def _upsert_crm_order(item: dict) -> CrmOrder:
@@ -84,10 +126,14 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
             status=CrmOrder.STATUS_NEW,
             **fields,
         )
+        logger.info("flowwow order id=%s created crm_id=%s", item["id"], crm_order.pk)
+        print(f"flowwow order id={item['id']} created crm_id={crm_order.pk}", flush=True)
     else:
         for name, value in fields.items():
             setattr(crm_order, name, value)
         crm_order.save(update_fields=[*fields, "updated_at"])
+        logger.info("flowwow order id=%s updated crm_id=%s", item["id"], crm_order.pk)
+        print(f"flowwow order id={item['id']} updated crm_id={crm_order.pk}", flush=True)
     _sync_images(crm_order, item)
     return crm_order
 
