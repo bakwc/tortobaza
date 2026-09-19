@@ -103,53 +103,45 @@ class FlowwowOrderSyncTests(TestCase):
     def setUp(self):
         self.list_calls: list[dict] = []
         self.image_calls: list[str] = []
-        self.items_by_date_page: dict[tuple[str, int], tuple[list[dict], int]] = {}
+        self.items: list[dict] = []
 
     def _get(self, url, params=None, headers=None, timeout=None):
         if url == "https://apis.flowwow.com/apiseller/orders/list":
             self.list_calls.append({"params": params, "headers": headers})
-            key = (params["createdDate"], params["page"])
-            items, total = self.items_by_date_page[key]
-            return _list_response(items, total)
+            return _list_response(self.items)
         self.image_calls.append(url)
         return _image_response()
 
-    def _set_pages(self, mapping: dict[tuple[str, int], tuple[list[dict], int]]):
-        self.items_by_date_page = mapping
-        for created_date in ("2026-09-18", "2026-09-19"):
-            if (created_date, 0) not in self.items_by_date_page:
-                self.items_by_date_page[(created_date, 0)] = ([], 0)
-
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_fetches_pages_with_bearer_and_limit(self, mock_get, _mock_now):
-        page0 = _flowwow_order(id=1)
-        page1 = _flowwow_order(id=2)
-        self._set_pages(
-            {
-                ("2026-09-18", 0): ([page0], 2),
-                ("2026-09-18", 1): ([page1], 2),
-            }
-        )
+    def test_fetches_list_with_shop_id_and_bearer(self, mock_get, _mock_now):
+        self.items = [_flowwow_order(id=1), _flowwow_order(id=2)]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
         sync_flowwow_orders()
-        yesterday_pages = [
-            call["params"]["page"]
-            for call in self.list_calls
-            if call["params"]["createdDate"] == "2026-09-18"
-        ]
-        self.assertEqual(yesterday_pages, [0, 1])
-        for call in self.list_calls:
-            self.assertEqual(call["params"]["shopId"], 395006)
-            self.assertEqual(call["params"]["limit"], 100)
-            self.assertEqual(call["headers"]["Authorization"], "Bearer secret-token")
-            self.assertEqual(call["headers"]["Accept"], "*/*")
+        self.assertEqual(len(self.list_calls), 1)
+        call = self.list_calls[0]
+        self.assertEqual(call["params"], {"shopId": 395006})
+        self.assertEqual(call["headers"]["Authorization"], "Bearer secret-token")
+        self.assertEqual(call["headers"]["Accept"], "*/*")
         self.assertEqual(
             set(CrmOrder.objects.values_list("flowwow_order_id", flat=True)),
             {1, 2},
         )
+
+    @override_settings(FLOWWOW_API_TOKEN='"secret-token"', FLOWWOW_SHOP_ID='"395006"')
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_strips_quoted_systemd_env_values(self, mock_get, _mock_now):
+        self.items = [_flowwow_order(id=1)]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        call = self.list_calls[0]
+        self.assertEqual(call["params"]["shopId"], 395006)
+        self.assertEqual(call["headers"]["Authorization"], "Bearer secret-token")
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
@@ -159,7 +151,7 @@ class FlowwowOrderSyncTests(TestCase):
             id=12,
             createdDate=_ts(datetime(2026, 9, 18, 14, 0, tzinfo=_TB)),
         )
-        self._set_pages({("2026-09-18", 0): ([recent, old], 2)})
+        self.items = [recent, old]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
@@ -169,7 +161,7 @@ class FlowwowOrderSyncTests(TestCase):
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
     def test_creates_crm_order_from_flowwow_payload(self, mock_get, _mock_now):
-        self._set_pages({("2026-09-18", 0): ([_flowwow_order()], 1)})
+        self.items = [_flowwow_order()]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
@@ -209,7 +201,7 @@ class FlowwowOrderSyncTests(TestCase):
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
     def test_uses_buyer_contact_when_recipient_missing(self, mock_get, _mock_now):
-        self._set_pages({("2026-09-18", 0): ([_flowwow_order(recipient=None)], 1)})
+        self.items = [_flowwow_order(recipient=None)]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
@@ -220,14 +212,7 @@ class FlowwowOrderSyncTests(TestCase):
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
     def test_maps_pickup_and_asap_delivery(self, mock_get, _mock_now):
-        self._set_pages(
-            {
-                ("2026-09-18", 0): (
-                    [_flowwow_order(deliveryType=4, deliveryTimeType=1)],
-                    1,
-                )
-            }
-        )
+        self.items = [_flowwow_order(deliveryType=4, deliveryTimeType=1)]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
@@ -264,7 +249,7 @@ class FlowwowOrderSyncTests(TestCase):
                 }
             ],
         )
-        self._set_pages({("2026-09-18", 0): ([first], 1)})
+        self.items = [first]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
@@ -278,7 +263,7 @@ class FlowwowOrderSyncTests(TestCase):
             position=10,
         )
         self.image_calls.clear()
-        self._set_pages({("2026-09-18", 0): ([second], 1)})
+        self.items = [second]
         sync_flowwow_orders()
         self.assertEqual(CrmOrder.objects.filter(flowwow_order_id=25836184).count(), 1)
         order.refresh_from_db()
@@ -295,7 +280,7 @@ class FlowwowOrderSyncTests(TestCase):
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
     def test_does_not_redownload_existing_images(self, mock_get, _mock_now):
-        self._set_pages({("2026-09-18", 0): ([_flowwow_order()], 1)})
+        self.items = [_flowwow_order()]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 

@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from urllib.parse import urlparse
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
-_PAGE_LIMIT = 100
 _PRODUCT_TYPE_ADDITIONAL = 3
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
@@ -53,49 +52,27 @@ def log_webhook(payload: dict, body: bytes) -> None:
 
 def sync_flowwow_orders() -> None:
     now = timezone.now().astimezone(_TB)
-    cutoff = now - timedelta(hours=24)
-    cutoff_ts = int(cutoff.timestamp())
-    seen_ids: set[int] = set()
-    for created_date in sorted({cutoff.date(), now.date()}):
-        for item in _fetch_orders_for_date(created_date):
-            if item["id"] in seen_ids:
-                continue
-            if item["createdDate"] < cutoff_ts:
-                continue
-            seen_ids.add(item["id"])
-            _upsert_crm_order(item)
+    cutoff_ts = int((now - timedelta(hours=24)).timestamp())
+    for item in _fetch_orders():
+        if item["createdDate"] < cutoff_ts:
+            continue
+        _upsert_crm_order(item)
 
 
-def _fetch_orders_for_date(created_date: date) -> list[dict]:
-    page = 0
-    items: list[dict] = []
-    while True:
-        payload = _request_orders_page(created_date, page)
-        batch = payload["items"]
-        items.extend(batch)
-        if len(items) >= payload["total"] or not batch:
-            break
-        page += 1
-    return items
-
-
-def _request_orders_page(created_date: date, page: int) -> dict:
+def _fetch_orders() -> list[dict]:
+    shop_id = int(settings.FLOWWOW_SHOP_ID.strip('"'))
+    token = settings.FLOWWOW_API_TOKEN.strip('"')
     response = requests.get(
         _ORDERS_LIST_URL,
-        params={
-            "shopId": int(settings.FLOWWOW_SHOP_ID),
-            "createdDate": created_date.isoformat(),
-            "page": page,
-            "limit": _PAGE_LIMIT,
-        },
+        params={"shopId": shop_id},
         headers={
-            "Authorization": f"Bearer {settings.FLOWWOW_API_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Accept": "*/*",
         },
         timeout=60,
     )
     response.raise_for_status()
-    return response.json()
+    return response.json()["items"]
 
 
 def _upsert_crm_order(item: dict) -> CrmOrder:
