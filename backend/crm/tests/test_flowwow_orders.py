@@ -145,18 +145,35 @@ class FlowwowOrderSyncTests(TestCase):
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_skips_orders_older_than_24_hours(self, mock_get, _mock_now):
-        recent = _flowwow_order(id=11)
-        old = _flowwow_order(
+    def test_skips_orders_with_old_created_and_old_delivery(self, mock_get, _mock_now):
+        recent_created = _flowwow_order(id=11)
+        future_delivery = _flowwow_order(
             id=12,
-            createdDate=_ts(datetime(2026, 9, 18, 14, 0, tzinfo=_TB)),
+            createdDate=_ts(datetime(2026, 9, 17, 10, 0, tzinfo=_TB)),
+            deliveryDateFrom=_ts(datetime(2026, 9, 20, 18, 0, tzinfo=_TB)),
+            deliveryDateTo=_ts(datetime(2026, 9, 20, 18, 30, tzinfo=_TB)),
         )
-        self.items = [recent, old]
+        recent_delivery = _flowwow_order(
+            id=13,
+            createdDate=_ts(datetime(2026, 9, 17, 10, 0, tzinfo=_TB)),
+            deliveryDateFrom=_ts(datetime(2026, 9, 19, 10, 0, tzinfo=_TB)),
+            deliveryDateTo=_ts(datetime(2026, 9, 19, 10, 30, tzinfo=_TB)),
+        )
+        old = _flowwow_order(
+            id=14,
+            createdDate=_ts(datetime(2026, 9, 17, 10, 0, tzinfo=_TB)),
+            deliveryDateFrom=_ts(datetime(2026, 9, 18, 10, 0, tzinfo=_TB)),
+            deliveryDateTo=_ts(datetime(2026, 9, 18, 10, 30, tzinfo=_TB)),
+        )
+        self.items = [recent_created, future_delivery, recent_delivery, old]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
         sync_flowwow_orders()
-        self.assertEqual(list(CrmOrder.objects.values_list("flowwow_order_id", flat=True)), [11])
+        self.assertEqual(
+            set(CrmOrder.objects.values_list("flowwow_order_id", flat=True)),
+            {11, 12, 13},
+        )
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")

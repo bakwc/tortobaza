@@ -81,14 +81,20 @@ def sync_flowwow_orders() -> None:
             f"delivery_date={delivery.date().isoformat()} status={item['status']}",
             flush=True,
         )
-        if item["createdDate"] < cutoff_ts:
-            logger.info("flowwow order id=%s skipped older than 24h", item["id"])
-            print(f"flowwow order id={item['id']} skipped older than 24h", flush=True)
+        if item["createdDate"] < cutoff_ts and item["deliveryDateFrom"] < cutoff_ts:
+            logger.info(
+                "flowwow order id=%s skipped created and delivery older than 24h",
+                item["id"],
+            )
+            print(
+                f"flowwow order id={item['id']} skipped created and delivery older than 24h",
+                flush=True,
+            )
             continue
         kept.append(item)
-    logger.info("flowwow after 24h filter kept=%s skipped=%s", len(kept), len(items) - len(kept))
+    logger.info("flowwow after filter kept=%s skipped=%s", len(kept), len(items) - len(kept))
     print(
-        f"flowwow after 24h filter kept={len(kept)} skipped={len(items) - len(kept)}",
+        f"flowwow after filter kept={len(kept)} skipped={len(items) - len(kept)}",
         flush=True,
     )
     for item in kept:
