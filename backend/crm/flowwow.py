@@ -22,6 +22,7 @@ _TB = ZoneInfo("Asia/Tbilisi")
 _ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
 _ORDERS_VIEW_URL = "https://apis.flowwow.com/apiseller/orders/view"
 _ORDERS_COURIER_LEFT_URL = "https://apis.flowwow.com/apiseller/orders/courierLeft"
+_ORDERS_FINISH_URL = "https://apis.flowwow.com/apiseller/orders/finish"
 _PRODUCT_TYPE_ADDITIONAL = 3
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
@@ -66,19 +67,22 @@ def log_webhook(payload: dict, body: bytes) -> None:
 def sync_flowwow_order_status_from_crm(crm_order: CrmOrder, previous_status: str) -> None:
     if crm_order.flowwow_order_id is None:
         return
-    if crm_order.status != CrmOrder.STATUS_IN_DELIVERY:
+    if crm_order.status == previous_status:
         return
-    if previous_status == CrmOrder.STATUS_IN_DELIVERY:
+    if crm_order.status == CrmOrder.STATUS_IN_DELIVERY:
+        _post_order_action(_ORDERS_COURIER_LEFT_URL, crm_order.flowwow_order_id)
         return
-    _post_courier_left(crm_order.flowwow_order_id)
+    if crm_order.status != CrmOrder.STATUS_DELIVERED:
+        return
+    _post_order_action(_ORDERS_FINISH_URL, crm_order.flowwow_order_id)
 
 
-def _post_courier_left(order_id: int) -> None:
+def _post_order_action(url: str, order_id: int) -> None:
     token = settings.FLOWWOW_API_TOKEN.strip('"')
     for attempt in range(3):
         try:
             response = requests.post(
-                _ORDERS_COURIER_LEFT_URL,
+                url,
                 json={"orderId": order_id},
                 headers={
                     "Authorization": f"Bearer {token}",
