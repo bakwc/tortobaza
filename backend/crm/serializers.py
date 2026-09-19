@@ -165,6 +165,22 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         model = CrmOrder
         fields = ["status", "is_paid", "take_in_work", "payment_type"]
 
+    def validate(self, attrs):
+        if self.instance is not None and self.instance.status == CrmOrder.STATUS_UNCONFIRMED:
+            if attrs.get("take_in_work"):
+                raise serializers.ValidationError(
+                    "Unconfirmed orders can only be moved to new."
+                )
+            status = attrs.get("status")
+            if status is not None and status not in {
+                CrmOrder.STATUS_UNCONFIRMED,
+                CrmOrder.STATUS_NEW,
+            }:
+                raise serializers.ValidationError(
+                    "Unconfirmed orders can only be moved to new."
+                )
+        return attrs
+
     def update(self, instance, validated_data):
         previous_status = instance.status
         take_in_work = validated_data.pop("take_in_work", None)
@@ -233,6 +249,18 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         if missing:
             raise serializers.ValidationError("Unknown image ids.")
         return value
+
+    def validate(self, attrs):
+        if self.instance is not None and self.instance.status == CrmOrder.STATUS_UNCONFIRMED:
+            status = attrs.get("status")
+            if status is not None and status not in {
+                CrmOrder.STATUS_UNCONFIRMED,
+                CrmOrder.STATUS_NEW,
+            }:
+                raise serializers.ValidationError(
+                    "Unconfirmed orders can only be moved to new."
+                )
+        return attrs
 
     def create(self, validated_data):
         images = validated_data.pop("images", [])

@@ -20,7 +20,11 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { useCreateCrmOrder, useUpdateCrmOrder } from "@/hooks/useCrmOrders";
 import { ApiError } from "@/lib/api/client";
 import type { CrmOrder, CrmOrderPaymentType, CrmOrderStatus, CrmOrderWriteFields } from "@/lib/api/types";
-import { CRM_ORDER_STATUS_MESSAGE_KEYS, CRM_ORDER_STATUSES } from "@/lib/crmStatus";
+import {
+  CRM_ORDER_STATUS_MESSAGE_KEYS,
+  CRM_ORDER_STATUSES,
+  crmOrderSelectableStatuses,
+} from "@/lib/crmStatus";
 import { cn } from "@/lib/utils";
 
 function extractDetail(error: ApiError, fallback: string): string {
@@ -147,6 +151,11 @@ export function CrmOrderForm(
   const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
     null,
   );
+
+  const selectableStatuses =
+    props.mode === "edit"
+      ? crmOrderSelectableStatuses(props.order.status)
+      : CRM_ORDER_STATUSES;
 
   const pending = createMutation.isPending || updateMutation.isPending;
   const mutationError = createMutation.error ?? updateMutation.error;
@@ -500,7 +509,7 @@ export function CrmOrderForm(
               onChange={(event) => setField("status", event.target.value as CrmOrderStatus)}
               className="h-12 w-full rounded-full border border-[var(--line)] bg-white px-5 text-sm text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30"
             >
-              {CRM_ORDER_STATUSES.map((status) => (
+              {selectableStatuses.map((status) => (
                 <option key={status} value={status}>
                   {t(CRM_ORDER_STATUS_MESSAGE_KEYS[status])}
                 </option>

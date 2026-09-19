@@ -580,6 +580,13 @@ class CrmTelegramTests(TestCase):
         self.assertNotIn("взять в работу", text)
         self.assertNotIn("take_in_work_url", build_crm_order_telegram_payload(order))
 
+    def test_unconfirmed_omits_take_in_work_url(self):
+        order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_UNCONFIRMED)
+        text = build_crm_order_telegram_html(order)
+        self.assertNotIn("/take", text)
+        self.assertNotIn("взять в работу", text)
+        self.assertNotIn("take_in_work_url", build_crm_order_telegram_payload(order))
+
     def test_delivered_stale_hash_without_take_url_skips_edit(self):
         order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         sync_crm_order_to_telegram(order.pk)

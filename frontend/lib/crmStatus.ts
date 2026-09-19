@@ -117,6 +117,15 @@ const TONES: Record<CrmOrderStatus, CrmOrderStatusTone> = {
   },
 };
 
+export function crmOrderSelectableStatuses(
+  status: CrmOrderStatus,
+): readonly CrmOrderStatus[] {
+  if (status === "unconfirmed") {
+    return ["unconfirmed", "new"];
+  }
+  return CRM_ORDER_STATUSES;
+}
+
 export function crmOrderCookingIsPast(status: CrmOrderStatus): boolean {
   return (
     status === "ready" ||

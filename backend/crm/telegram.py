@@ -152,7 +152,10 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         name, url, _nick, _gender = chef_identity(order.created_by)
         payload["created_by_name"] = name
         payload["created_by_telegram_url"] = url
-    if order.status != CrmOrder.STATUS_DELIVERED:
+    if (
+        order.status != CrmOrder.STATUS_DELIVERED
+        and order.status != CrmOrder.STATUS_UNCONFIRMED
+    ):
         payload["take_in_work_url"] = _crm_order_take_url(order)
     if order.fulfillment_type == CrmOrder.FULFILLMENT_DELIVERY and order.delivery_address:
         yandex_url = cached_yandex_maps_url(order.delivery_address)
@@ -224,7 +227,10 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"{mark} <b>CRM заказ #{order.pk}</b>")
     view_href = html.escape(_crm_order_view_url(order), quote=True)
     edit_href = html.escape(_crm_order_edit_url(order), quote=True)
-    if order.status == CrmOrder.STATUS_DELIVERED:
+    if (
+        order.status == CrmOrder.STATUS_DELIVERED
+        or order.status == CrmOrder.STATUS_UNCONFIRMED
+    ):
         lines.append(f'<a href="{view_href}">смотреть</a> · <a href="{edit_href}">редактировать</a>')
     else:
         take_href = html.escape(_crm_order_take_url(order), quote=True)

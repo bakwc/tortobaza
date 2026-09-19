@@ -55,8 +55,8 @@ import {
   CRM_ORDER_NEXT_STATUS,
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
   CRM_ORDER_STATUS_MESSAGE_KEYS,
-  CRM_ORDER_STATUSES,
   crmOrderCookingIsPast,
+  crmOrderSelectableStatuses,
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
@@ -330,7 +330,7 @@ function CrmOrderStatusMenu({
       </Button>
       {open ? (
         <div className="absolute bottom-full right-0 z-20 mb-2 min-w-[220px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-          {CRM_ORDER_STATUSES.map((status) => (
+          {crmOrderSelectableStatuses(order.status).map((status) => (
             <button
               key={status}
               type="button"

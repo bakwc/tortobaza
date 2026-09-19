@@ -127,6 +127,20 @@ class FlowwowWebhookTests(TestCase):
         self.assertEqual(self.image_calls, [_CAKE_IMAGE, _CARD_IMAGE])
         self.mock_schedule.assert_called_once_with(order.pk)
 
+    def test_order_paid_with_flowwow_new_creates_unconfirmed(self):
+        self.view_item = _flowwow_order(id=98765, status=1)
+        payload = {
+            "uuid": "558e8b80-e29b-41dc-a716-446554440012",
+            "event": "order.paid",
+            "shopId": 1123,
+            "order": {"id": 98765},
+        }
+        response = self._post(payload)
+        self.assertEqual(response.status_code, 200)
+        order = CrmOrder.objects.get(flowwow_order_id=98765)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.mock_schedule.assert_called_once_with(order.pk)
+
     def test_duplicate_uuid_does_not_create_second_row(self):
         payload = {
             "uuid": "558e8b80-e29b-41dc-a716-446554440001",

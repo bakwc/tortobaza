@@ -4,6 +4,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 from decimal import Decimal
+from enum import IntEnum
 from pathlib import Path
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
@@ -21,9 +22,24 @@ logger = logging.getLogger(__name__)
 _TB = ZoneInfo("Asia/Tbilisi")
 _ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
 _ORDERS_VIEW_URL = "https://apis.flowwow.com/apiseller/orders/view"
+_ORDERS_ACCEPT_URL = "https://apis.flowwow.com/apiseller/orders/accept"
 _ORDERS_COURIER_LEFT_URL = "https://apis.flowwow.com/apiseller/orders/courierLeft"
 _ORDERS_FINISH_URL = "https://apis.flowwow.com/apiseller/orders/finish"
 _PRODUCT_TYPE_ADDITIONAL = 3
+
+
+class FlowwowOrderStatus(IntEnum):
+    NEW = 1
+    ACCEPTED = 2
+    FINISHED = 3
+    HANDED_TO_DELIVERY = 4
+    PHOTO_BEFORE_DELIVERY = 5
+    WAITING_PICKUP = 7
+    POST_ASSEMBLED = 10
+    POST_DELIVERING = 11
+    POST_WAITING_PICKUP = 12
+
+
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
 _DELIVERY_TIME_INTERVAL = 2
@@ -68,6 +84,12 @@ def sync_flowwow_order_status_from_crm(crm_order: CrmOrder, previous_status: str
     if crm_order.flowwow_order_id is None:
         return
     if crm_order.status == previous_status:
+        return
+    if (
+        previous_status == CrmOrder.STATUS_UNCONFIRMED
+        and crm_order.status == CrmOrder.STATUS_NEW
+    ):
+        _post_order_action(_ORDERS_ACCEPT_URL, crm_order.flowwow_order_id)
         return
     if crm_order.status == CrmOrder.STATUS_IN_DELIVERY:
         _post_order_action(_ORDERS_COURIER_LEFT_URL, crm_order.flowwow_order_id)
@@ -209,13 +231,28 @@ def _fetch_order(order_id: int) -> dict:
     return response.json()
 
 
+def _mapped_crm_status(flowwow_status: int, current_status: str | None) -> str | None:
+    if flowwow_status == FlowwowOrderStatus.NEW:
+        return CrmOrder.STATUS_UNCONFIRMED
+    if (
+        flowwow_status == FlowwowOrderStatus.ACCEPTED
+        and current_status == CrmOrder.STATUS_UNCONFIRMED
+    ):
+        return CrmOrder.STATUS_NEW
+    return None
+
+
 def _upsert_crm_order(item: dict) -> CrmOrder:
     fields = _crm_fields(item)
     crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
+    mapped_status = _mapped_crm_status(
+        item["status"],
+        None if crm_order is None else crm_order.status,
+    )
     if crm_order is None:
         crm_order = CrmOrder.objects.create(
             flowwow_order_id=item["id"],
-            status=CrmOrder.STATUS_NEW,
+            status=mapped_status if mapped_status is not None else CrmOrder.STATUS_NEW,
             **fields,
         )
         logger.info("flowwow order id=%s created crm_id=%s", item["id"], crm_order.pk)
@@ -223,7 +260,11 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
     else:
         for name, value in fields.items():
             setattr(crm_order, name, value)
-        crm_order.save(update_fields=[*fields, "updated_at"])
+        update_fields = [*fields, "updated_at"]
+        if mapped_status is not None:
+            crm_order.status = mapped_status
+            update_fields.append("status")
+        crm_order.save(update_fields=update_fields)
         logger.info("flowwow order id=%s updated crm_id=%s", item["id"], crm_order.pk)
         print(f"flowwow order id={item['id']} updated crm_id={crm_order.pk}", flush=True)
     _sync_images(crm_order, item)

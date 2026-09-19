@@ -308,6 +308,77 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(CrmOrderImage.objects.count(), 2)
         self.assertEqual(self.image_calls, [])
 
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_creates_unconfirmed_when_flowwow_status_is_new(self, mock_get, _mock_now):
+        self.items = [_flowwow_order(status=1)]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_promotes_unconfirmed_when_flowwow_accepted(self, mock_get, _mock_now):
+        self.items = [_flowwow_order(status=1)]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.items = [_flowwow_order(status=2)]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_keeps_unconfirmed_when_flowwow_status_is_not_accepted(self, mock_get, _mock_now):
+        self.items = [_flowwow_order(status=1)]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.items = [_flowwow_order(status=3)]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_resets_in_work_to_unconfirmed_when_flowwow_is_new(self, mock_get, _mock_now):
+        self.items = [_flowwow_order()]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        order.status = CrmOrder.STATUS_IN_WORK
+        order.save(update_fields=["status"])
+        self.items = [_flowwow_order(status=1)]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_resets_new_to_unconfirmed_when_flowwow_is_new(self, mock_get, _mock_now):
+        self.items = [_flowwow_order()]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.items = [_flowwow_order(status=1)]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+
 
 class FlowwowProductFieldsTests(TestCase):
     def test_uses_selected_weight_and_filling_properties(self):
@@ -415,6 +486,13 @@ class FlowwowCourierLeftSyncTests(TestCase):
         self._assert_post(
             mock_post,
             "https://apis.flowwow.com/apiseller/orders/finish",
+            order_id,
+        )
+
+    def _assert_accept(self, mock_post, order_id: int):
+        self._assert_post(
+            mock_post,
+            "https://apis.flowwow.com/apiseller/orders/accept",
             order_id,
         )
 
@@ -623,3 +701,59 @@ class FlowwowCourierLeftSyncTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, CrmOrder.STATUS_CLIENT_APPROVED)
         self.assertEqual(mock_post.call_count, 3)
+
+    @patch("crm.flowwow.requests.post", return_value=_ok_post_response())
+    def test_patch_unconfirmed_to_new_posts_accept(self, mock_post):
+        order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self._assert_accept(mock_post, 9977016)
+
+    @patch("crm.flowwow.requests.post")
+    def test_patch_in_work_to_new_does_not_post_accept(self, mock_post):
+        order = _flowwow_crm_order(status=CrmOrder.STATUS_IN_WORK)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        mock_post.assert_not_called()
+
+    @patch("crm.flowwow.requests.post")
+    def test_patch_unconfirmed_to_new_without_flowwow_id_does_not_post(self, mock_post):
+        order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED, flowwow_order_id=None)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        mock_post.assert_not_called()
+
+    @patch("crm.flowwow.requests.post", return_value=_error_post_response(400))
+    def test_accept_http_400_keeps_unconfirmed(self, mock_post):
+        order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED)
+        self.client.force_authenticate(user=self.user)
+        with self.assertRaises(requests.HTTPError):
+            self.client.patch(
+                f"/api/crm/orders/{order.id}/",
+                {"status": CrmOrder.STATUS_NEW},
+                format="json",
+            )
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(mock_post.call_count, 1)
