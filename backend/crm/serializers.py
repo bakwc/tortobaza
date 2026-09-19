@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
+from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.google_maps import cached_google_maps_url
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
@@ -165,6 +166,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         fields = ["status", "is_paid", "take_in_work", "payment_type"]
 
     def update(self, instance, validated_data):
+        previous_status = instance.status
         take_in_work = validated_data.pop("take_in_work", None)
         status = validated_data.pop("status", None)
         if take_in_work:
@@ -180,6 +182,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.promote_if_paid()
+        sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         return instance
 
@@ -240,11 +243,13 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
+        previous_status = instance.status
         images = validated_data.pop("images", [])
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.promote_if_paid()
+        sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
         return instance

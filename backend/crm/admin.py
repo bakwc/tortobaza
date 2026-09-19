@@ -4,6 +4,7 @@ from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
 
+from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.models import CrmOrder, CrmOrderImage, CrmSettings, WhatsAppGetNewQr, WhatsAppNumberCheck
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
@@ -142,6 +143,11 @@ class CrmOrderAdmin(admin.ModelAdmin):
     @admin.display(description="Contact")
     def contact_summary(self, obj: CrmOrder) -> str:
         return obj.contact[:50]
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            sync_flowwow_order_status_from_crm(obj, form.initial["status"])
+        super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)

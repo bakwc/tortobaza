@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 _TB = ZoneInfo("Asia/Tbilisi")
 _ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
 _ORDERS_VIEW_URL = "https://apis.flowwow.com/apiseller/orders/view"
+_ORDERS_COURIER_LEFT_URL = "https://apis.flowwow.com/apiseller/orders/courierLeft"
 _PRODUCT_TYPE_ADDITIONAL = 3
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
@@ -60,6 +61,42 @@ def log_webhook(payload: dict, body: bytes) -> None:
         order.get("id"),
         body.decode("utf-8"),
     )
+
+
+def sync_flowwow_order_status_from_crm(crm_order: CrmOrder, previous_status: str) -> None:
+    if crm_order.flowwow_order_id is None:
+        return
+    if crm_order.status != CrmOrder.STATUS_IN_DELIVERY:
+        return
+    if previous_status == CrmOrder.STATUS_IN_DELIVERY:
+        return
+    _post_courier_left(crm_order.flowwow_order_id)
+
+
+def _post_courier_left(order_id: int) -> None:
+    token = settings.FLOWWOW_API_TOKEN.strip('"')
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                _ORDERS_COURIER_LEFT_URL,
+                json={"orderId": order_id},
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "*/*",
+                    "Content-Type": "application/json",
+                },
+                timeout=60,
+            )
+        except (requests.Timeout, requests.ConnectionError):
+            if attempt == 2:
+                raise
+            continue
+        if response.status_code == 429 or response.status_code >= 500:
+            if attempt == 2:
+                response.raise_for_status()
+            continue
+        response.raise_for_status()
+        return
 
 
 def process_flowwow_webhook(payload: dict) -> None:

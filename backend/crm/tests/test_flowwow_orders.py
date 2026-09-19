@@ -1,13 +1,16 @@
 import io
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
+import requests
+from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from PIL import Image
+from rest_framework.test import APIClient
 
 from crm.flowwow import _filling, _weight
 from crm.models import CrmOrder, CrmOrderImage
@@ -348,3 +351,165 @@ class FlowwowSyncCommandTests(TestCase):
     def test_existing_timer_command_imports_flowwow_orders(self, mock_sync):
         call_command("sync_crm_orders_to_telegram")
         mock_sync.assert_called_once_with()
+
+
+def _ok_post_response() -> MagicMock:
+    response = MagicMock()
+    response.status_code = 200
+    response.raise_for_status = MagicMock()
+    return response
+
+
+def _error_post_response(status_code: int) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    error = requests.HTTPError(response=response)
+    response.raise_for_status.side_effect = error
+    return response
+
+
+def _flowwow_crm_order(**overrides) -> CrmOrder:
+    fields = {
+        "date": date(2026, 8, 25),
+        "time_start": time(11, 0),
+        "contact": "Customer",
+        "fulfillment_type": CrmOrder.FULFILLMENT_DELIVERY,
+        "weight": "2kg",
+        "filling": "Mango",
+        "cake_price": Decimal("100.00"),
+        "prepayment": Decimal("100.00"),
+        "status": CrmOrder.STATUS_CLIENT_APPROVED,
+        "is_paid": True,
+        "payment_type": CrmOrder.PAYMENT_FLOWWOW,
+        "flowwow_order_id": 9977016,
+    }
+    fields.update(overrides)
+    return CrmOrder.objects.create(**fields)
+
+
+@override_settings(FLOWWOW_API_TOKEN=_TOKEN, FLOWWOW_SHOP_ID=_SHOP_ID)
+class FlowwowCourierLeftSyncTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="worker", password="password")
+        self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+
+    def _assert_courier_left(self, mock_post, order_id: int):
+        mock_post.assert_called_once()
+        call = mock_post.call_args
+        self.assertEqual(call.args[0], "https://apis.flowwow.com/apiseller/orders/courierLeft")
+        self.assertEqual(call.kwargs["json"], {"orderId": order_id})
+        self.assertEqual(call.kwargs["headers"]["Authorization"], "Bearer secret-token")
+        self.assertEqual(call.kwargs["headers"]["Accept"], "*/*")
+        self.assertEqual(call.kwargs["headers"]["Content-Type"], "application/json")
+        self.assertEqual(call.kwargs["timeout"], 60)
+
+    @patch("crm.flowwow.requests.post", return_value=_ok_post_response())
+    def test_patch_in_delivery_posts_courier_left(self, mock_post):
+        order = _flowwow_crm_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_IN_DELIVERY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_DELIVERY)
+        self._assert_courier_left(mock_post, 9977016)
+
+    @patch("crm.flowwow.requests.post")
+    def test_patch_other_status_does_not_post(self, mock_post):
+        order = _flowwow_crm_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_READY)
+        mock_post.assert_not_called()
+
+    @patch("crm.flowwow.requests.post")
+    def test_patch_in_delivery_without_flowwow_id_does_not_post(self, mock_post):
+        order = _flowwow_crm_order(flowwow_order_id=None)
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_IN_DELIVERY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_DELIVERY)
+        mock_post.assert_not_called()
+
+    @patch("crm.flowwow.requests.post")
+    def test_put_already_in_delivery_does_not_post(self, mock_post):
+        order = _flowwow_crm_order(status=CrmOrder.STATUS_IN_DELIVERY)
+        self.client.force_authenticate(user=self.admin)
+        payload = {
+            "date": "2026-08-25",
+            "time_start": "11:00:00",
+            "contact": "Updated",
+            "delivery_address": "Rustaveli 1",
+            "fulfillment_type": CrmOrder.FULFILLMENT_DELIVERY,
+            "status": CrmOrder.STATUS_IN_DELIVERY,
+            "weight": "2kg",
+            "filling": "Mango",
+            "cake_price": "100.00",
+            "prepayment": "100.00",
+            "is_paid": True,
+            "payment_type": CrmOrder.PAYMENT_FLOWWOW,
+        }
+        response = self.client.put(f"/api/crm/orders/{order.id}/", payload, format="multipart")
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_DELIVERY)
+        self.assertEqual(order.contact, "Updated")
+        mock_post.assert_not_called()
+
+    @patch("crm.flowwow.requests.post", return_value=_error_post_response(400))
+    def test_http_400_does_not_retry_and_keeps_status(self, mock_post):
+        order = _flowwow_crm_order()
+        self.client.force_authenticate(user=self.user)
+        with self.assertRaises(requests.HTTPError):
+            self.client.patch(
+                f"/api/crm/orders/{order.id}/",
+                {"status": CrmOrder.STATUS_IN_DELIVERY},
+                format="json",
+            )
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_CLIENT_APPROVED)
+        self.assertEqual(mock_post.call_count, 1)
+
+    @patch("crm.flowwow.requests.post")
+    def test_timeout_then_success_retries_and_saves(self, mock_post):
+        mock_post.side_effect = [requests.Timeout(), _ok_post_response()]
+        order = _flowwow_crm_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_IN_DELIVERY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_DELIVERY)
+        self.assertEqual(mock_post.call_count, 2)
+
+    @patch("crm.flowwow.requests.post", side_effect=requests.Timeout())
+    def test_three_timeouts_keep_status(self, mock_post):
+        order = _flowwow_crm_order()
+        self.client.force_authenticate(user=self.user)
+        with self.assertRaises(requests.Timeout):
+            self.client.patch(
+                f"/api/crm/orders/{order.id}/",
+                {"status": CrmOrder.STATUS_IN_DELIVERY},
+                format="json",
+            )
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_CLIENT_APPROVED)
+        self.assertEqual(mock_post.call_count, 3)
