@@ -1,9 +1,12 @@
+import json
 from calendar import monthrange
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import (
@@ -18,8 +21,9 @@ from rest_framework.views import APIView
 
 from attendance.salary import compute_all_salaries
 from catalog.responsive_urls import detail_image
+from crm.flowwow import log_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_address, resolve_google_maps_url
-from crm.models import CrmOrder, ResolvedGoogleAddress
+from crm.models import CrmOrder, FlowwowWebhookEvent, ResolvedGoogleAddress
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     CrmExpensesDaySerializer,
@@ -346,3 +350,27 @@ class CrmExpensesView(APIView):
             }
         )
         return Response(serializer.data)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class FlowwowWebhookView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        body = request.body
+        signature = request.headers.get("X-Webhook-Signature")
+        if not verify_webhook_signature(body, signature):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        uuid_value = payload.get("uuid")
+        if not uuid_value:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        _event, created = FlowwowWebhookEvent.objects.get_or_create(uuid=uuid_value)
+        if not created:
+            return Response(status=status.HTTP_200_OK)
+        log_webhook(payload, body)
+        return Response(status=status.HTTP_200_OK)

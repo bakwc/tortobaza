@@ -158,3 +158,20 @@ LIBERTY_PAY_SECRET = os.environ.get("LIBERTY_PAY_SECRET", "")
 LIBERTY_PAY_URL = os.environ.get("LIBERTY_PAY_URL", "https://www.pay.ge/pay")
 LIBERTY_PAY_TESTMODE = os.environ.get("LIBERTY_PAY_TESTMODE", "0")
 LIBERTY_PAY_ENABLED = os.environ.get("LIBERTY_PAY_ENABLED")
+FLOWWOW_WEBHOOK_SECRET = os.environ.get("FLOWWOW_WEBHOOK_SECRET", "")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "crm.flowwow": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}

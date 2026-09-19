@@ -219,6 +219,11 @@ class CrmOrderImage(models.Model):
         return f"Image #{self.pk} for CrmOrder #{self.order_id}"
 
 
+class FlowwowWebhookEvent(models.Model):
+    uuid = models.CharField(max_length=36, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
 class WhatsAppNumberCheck(CrmOrder):
     class Meta:
         proxy = True
