@@ -21,7 +21,7 @@ from rest_framework.views import APIView
 
 from attendance.salary import compute_all_salaries
 from catalog.responsive_urls import detail_image
-from crm.flowwow import log_webhook, verify_webhook_signature
+from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_address, resolve_google_maps_url
 from crm.models import CrmOrder, FlowwowWebhookEvent, ResolvedGoogleAddress
 from crm.rent import daily_rent, monthly_rent
@@ -369,8 +369,9 @@ class FlowwowWebhookView(APIView):
         uuid_value = payload.get("uuid")
         if not uuid_value:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        _event, created = FlowwowWebhookEvent.objects.get_or_create(uuid=uuid_value)
-        if not created:
+        if FlowwowWebhookEvent.objects.filter(uuid=uuid_value).exists():
             return Response(status=status.HTTP_200_OK)
         log_webhook(payload, body)
+        process_flowwow_webhook(payload)
+        FlowwowWebhookEvent.objects.get_or_create(uuid=uuid_value)
         return Response(status=status.HTTP_200_OK)

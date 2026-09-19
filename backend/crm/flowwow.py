@@ -14,11 +14,13 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from crm.models import CrmOrder, CrmOrderImage
+from crm.telegram import schedule_crm_order_telegram_sync
 
 logger = logging.getLogger(__name__)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
+_ORDERS_VIEW_URL = "https://apis.flowwow.com/apiseller/orders/view"
 _PRODUCT_TYPE_ADDITIONAL = 3
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
@@ -58,6 +60,21 @@ def log_webhook(payload: dict, body: bytes) -> None:
         order.get("id"),
         body.decode("utf-8"),
     )
+
+
+def process_flowwow_webhook(payload: dict) -> None:
+    event = payload["event"]
+    if event == "order.paid":
+        item = _fetch_order(payload["order"]["id"])
+        crm_order = _upsert_crm_order(item)
+        schedule_crm_order_telegram_sync(crm_order.pk)
+        return
+    if event == "order.cancelled":
+        item = _fetch_order(payload["order"]["id"])
+        crm_order = _upsert_crm_order(item)
+        crm_order.deleted = True
+        crm_order.save(update_fields=["deleted", "updated_at"])
+        schedule_crm_order_telegram_sync(crm_order.pk)
 
 
 def sync_flowwow_orders() -> None:
@@ -131,6 +148,24 @@ def _fetch_orders() -> list[dict]:
     logger.info("flowwow response total=%s items=%s", payload.get("total"), len(items))
     print(f"flowwow response total={payload.get('total')} items={len(items)}", flush=True)
     return items
+
+
+def _fetch_order(order_id: int) -> dict:
+    shop_id = int(settings.FLOWWOW_SHOP_ID.strip('"'))
+    token = settings.FLOWWOW_API_TOKEN.strip('"')
+    logger.info("flowwow fetch order shopId=%s orderId=%s", shop_id, order_id)
+    print(f"flowwow fetch order shopId={shop_id} orderId={order_id}", flush=True)
+    response = requests.get(
+        _ORDERS_VIEW_URL,
+        params={"shopId": shop_id, "orderId": order_id},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "*/*",
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 def _upsert_crm_order(item: dict) -> CrmOrder:
