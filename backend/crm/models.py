@@ -131,6 +131,7 @@ class CrmOrder(models.Model):
         null=True,
         blank=True,
     )
+    flowwow_order_id = models.IntegerField(unique=True, null=True, blank=True)
     deleted = models.BooleanField(default=False)
     client_token = models.CharField(
         max_length=64,
@@ -211,9 +212,16 @@ class CrmOrderImage(models.Model):
     order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="crm_orders/")
     position = models.PositiveIntegerField(default=0)
+    source_url = models.TextField(null=True, blank=True)
 
     class Meta:
         ordering = ["position", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "source_url"],
+                name="uniq_crmorderimage_order_source_url",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Image #{self.pk} for CrmOrder #{self.order_id}"

@@ -1,10 +1,28 @@
 import hashlib
 import hmac
 import logging
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from pathlib import Path
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
+import requests
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.utils import timezone
+
+from crm.models import CrmOrder, CrmOrderImage
 
 logger = logging.getLogger(__name__)
+
+_TB = ZoneInfo("Asia/Tbilisi")
+_ORDERS_LIST_URL = "https://apis.flowwow.com/apiseller/orders/list"
+_PAGE_LIMIT = 100
+_PRODUCT_TYPE_ADDITIONAL = 3
+_DELIVERY_TYPE_PICKUP = 4
+_DELIVERY_TIME_ASAP = 1
+_DELIVERY_TIME_INTERVAL = 2
 
 
 def verify_webhook_signature(body: bytes, header: str | None) -> bool:
@@ -31,3 +49,199 @@ def log_webhook(payload: dict, body: bytes) -> None:
         order.get("id"),
         body.decode("utf-8"),
     )
+
+
+def sync_flowwow_orders() -> None:
+    now = timezone.now().astimezone(_TB)
+    cutoff = now - timedelta(hours=24)
+    cutoff_ts = int(cutoff.timestamp())
+    seen_ids: set[int] = set()
+    for created_date in sorted({cutoff.date(), now.date()}):
+        for item in _fetch_orders_for_date(created_date):
+            if item["id"] in seen_ids:
+                continue
+            if item["createdDate"] < cutoff_ts:
+                continue
+            seen_ids.add(item["id"])
+            _upsert_crm_order(item)
+
+
+def _fetch_orders_for_date(created_date: date) -> list[dict]:
+    page = 0
+    items: list[dict] = []
+    while True:
+        payload = _request_orders_page(created_date, page)
+        batch = payload["items"]
+        items.extend(batch)
+        if len(items) >= payload["total"] or not batch:
+            break
+        page += 1
+    return items
+
+
+def _request_orders_page(created_date: date, page: int) -> dict:
+    response = requests.get(
+        _ORDERS_LIST_URL,
+        params={
+            "shopId": int(settings.FLOWWOW_SHOP_ID),
+            "createdDate": created_date.isoformat(),
+            "page": page,
+            "limit": _PAGE_LIMIT,
+        },
+        headers={
+            "Authorization": f"Bearer {settings.FLOWWOW_API_TOKEN}",
+            "Accept": "*/*",
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _upsert_crm_order(item: dict) -> CrmOrder:
+    fields = _crm_fields(item)
+    crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
+    if crm_order is None:
+        crm_order = CrmOrder.objects.create(
+            flowwow_order_id=item["id"],
+            status=CrmOrder.STATUS_NEW,
+            **fields,
+        )
+    else:
+        for name, value in fields.items():
+            setattr(crm_order, name, value)
+        crm_order.save(update_fields=[*fields, "updated_at"])
+    _sync_images(crm_order, item)
+    return crm_order
+
+
+def _crm_fields(item: dict) -> dict:
+    start = datetime.fromtimestamp(item["deliveryDateFrom"], tz=_TB)
+    end = datetime.fromtimestamp(item["deliveryDateTo"], tz=_TB)
+    time_type = item["deliveryTimeType"]
+    if time_type == _DELIVERY_TIME_INTERVAL:
+        time_start = start.time().replace(second=0, microsecond=0)
+        time_end = end.time().replace(second=0, microsecond=0)
+        when_ready = False
+    elif time_type == _DELIVERY_TIME_ASAP:
+        time_start = None
+        time_end = None
+        when_ready = True
+    else:
+        time_start = None
+        time_end = None
+        when_ready = False
+    if item["deliveryType"] == _DELIVERY_TYPE_PICKUP:
+        fulfillment_type = CrmOrder.FULFILLMENT_PICKUP
+    else:
+        fulfillment_type = CrmOrder.FULFILLMENT_DELIVERY
+    products = item["products"]
+    cake_price = sum(
+        (Decimal(product["price"]) * product["count"] for product in products),
+        Decimal("0.00"),
+    )
+    return {
+        "date": start.date(),
+        "time_start": time_start,
+        "time_end": time_end,
+        "when_ready": when_ready,
+        "contact": _contact(item),
+        "delivery_address": item["address"],
+        "fulfillment_type": fulfillment_type,
+        "weight": "—",
+        "filling": _filling(products),
+        "description": _description(item),
+        "internal_description": item["shopAdditionalInfo"] or "",
+        "cake_price": cake_price,
+        "prepayment": cake_price,
+        "is_paid": True,
+        "payment_type": CrmOrder.PAYMENT_FLOWWOW,
+    }
+
+
+def _contact(item: dict) -> str:
+    person = item["recipient"] if item.get("recipient") is not None else item.get("user")
+    return _person_label(person)
+
+
+def _person_label(person: dict | None) -> str:
+    if person is None:
+        return ""
+    return f"{person.get('name') or ''} {person.get('phone') or ''}".strip()
+
+
+def _filling(products: list[dict]) -> str:
+    parts: list[str] = []
+    for product in products:
+        if product["type"] == _PRODUCT_TYPE_ADDITIONAL:
+            continue
+        parts.append(product["name"])
+        for prop in product.get("selectedProperties") or []:
+            parts.append(prop["valueTitle"])
+    return ", ".join(parts)
+
+
+def _description(item: dict) -> str:
+    lines = [f"Flowwow #{item['id']}"]
+    for product in item["products"]:
+        line = f"{product['name']} × {product['count']} — {product['price']}"
+        props = product.get("selectedProperties") or []
+        if props:
+            opt_parts = [f"{p['propertyTitle']}: {p['valueTitle']}" for p in props]
+            line += f"\n  {', '.join(opt_parts)}"
+        lines.append(line)
+    message = item.get("message") or ""
+    if message:
+        lines.append(f"Открытка: {message}")
+    user = item.get("user")
+    if user:
+        lines.append(f"Покупатель: {_person_label(user)}")
+    comment = item.get("comment") or ""
+    if comment:
+        lines.append(comment)
+    courier = item.get("courierInfo") or ""
+    if courier:
+        lines.append(f"Курьеру: {courier}")
+    return "\n".join(lines)
+
+
+def _sync_images(crm_order: CrmOrder, item: dict) -> None:
+    urls: list[str] = []
+    seen: set[str] = set()
+    for product in item["products"]:
+        for url in product.get("images") or []:
+            if url in seen:
+                continue
+            seen.add(url)
+            urls.append(url)
+    existing = {
+        image.source_url: image
+        for image in crm_order.images.exclude(source_url=None)
+    }
+    wanted = set(urls)
+    for url, image in existing.items():
+        if url not in wanted:
+            image.delete()
+    last = crm_order.images.order_by("-position").first()
+    next_position = last.position + 1 if last else 0
+    remaining = {
+        image.source_url: image
+        for image in crm_order.images.exclude(source_url=None)
+    }
+    for url in urls:
+        if url in remaining:
+            continue
+        name = Path(urlparse(url).path).name
+        CrmOrderImage.objects.create(
+            order=crm_order,
+            image=ContentFile(_download_image(url), name=name),
+            position=next_position,
+            source_url=url,
+        )
+        next_position += 1
+
+
+def _download_image(url: str) -> bytes:
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    return response.content

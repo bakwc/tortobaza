@@ -75,6 +75,11 @@ class CrmTelegramTests(TestCase):
         )
         self.urlopen_patcher.start()
         self.addCleanup(self.urlopen_patcher.stop)
+        self.flowwow_sync_patcher = patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders"
+        )
+        self.flowwow_sync_patcher.start()
+        self.addCleanup(self.flowwow_sync_patcher.stop)
         self.google_get_patcher = patch("crm.google_maps.requests.get")
         self.google_get = self.google_get_patcher.start()
         self.addCleanup(self.google_get_patcher.stop)

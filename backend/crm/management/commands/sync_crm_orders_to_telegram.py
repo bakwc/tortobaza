@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from crm.flowwow import sync_flowwow_orders
 from crm.google_maps import resolve_google_maps_url
 from crm.models import (
     CrmOrder,
@@ -23,6 +24,7 @@ GOOGLE_ADDRESS_RESOLVE_MAX_FAILURES = 3
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
+        sync_flowwow_orders()
         now = timezone.now().astimezone(_TB)
         start = (now - timedelta(days=7)).date()
         end = now.date()
