@@ -9,6 +9,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from PIL import Image
 
+from crm.flowwow import _filling, _weight
 from crm.models import CrmOrder, CrmOrderImage
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -194,11 +195,8 @@ class FlowwowOrderSyncTests(TestCase):
             "Sherif Khimshiashvili Street, 57; Orbi beach tower, room 1720",
         )
         self.assertEqual(order.fulfillment_type, CrmOrder.FULFILLMENT_DELIVERY)
-        self.assertEqual(order.weight, "—")
-        self.assertEqual(
-            order.filling,
-            "Бенто торт 900 грамм С ВАШЕЙ НАДПИСЬЮ, vanilla with strawberries",
-        )
+        self.assertEqual(order.weight, "900 грамм")
+        self.assertEqual(order.filling, "vanilla with strawberries")
         self.assertEqual(order.cake_price, Decimal("80.00"))
         self.assertEqual(order.prepayment, Decimal("80.00"))
         self.assertTrue(order.is_paid)
@@ -287,7 +285,7 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
         self.assertEqual(order.delivery_address, "улица Палиашвили, 16;")
         self.assertEqual(order.cake_price, Decimal("120.00"))
-        self.assertEqual(order.filling, "Бенто торт Горы, pistachio raspberry")
+        self.assertEqual(order.filling, "pistachio raspberry")
         urls = set(order.images.values_list("source_url", flat=True))
         self.assertEqual(urls, {_OTHER_IMAGE, None})
         self.assertTrue(CrmOrderImage.objects.filter(pk=manual.pk).exists())
@@ -306,6 +304,43 @@ class FlowwowOrderSyncTests(TestCase):
         sync_flowwow_orders()
         self.assertEqual(CrmOrderImage.objects.count(), 2)
         self.assertEqual(self.image_calls, [])
+
+
+class FlowwowProductFieldsTests(TestCase):
+    def test_uses_selected_weight_and_filling_properties(self):
+        products = [
+            {
+                "type": 1,
+                "name": "Cake 900 grams",
+                "description": "",
+                "selectedProperties": [
+                    {
+                        "propertyId": 10,
+                        "propertyTitle": "Weight",
+                        "valueTitle": "1.2 kg",
+                    },
+                    {
+                        "propertyId": 45,
+                        "propertyTitle": "Начинка",
+                        "valueTitle": "mango passion fruit",
+                    },
+                ],
+            }
+        ]
+        self.assertEqual(_weight(products), "1.2 kg")
+        self.assertEqual(_filling(products), "mango passion fruit")
+
+    def test_extracts_weight_from_description_when_name_has_no_weight(self):
+        products = [
+            {
+                "type": 1,
+                "name": "Бенто торт",
+                "description": "Вес готового торта 0,9 кг",
+                "selectedProperties": [],
+            }
+        ]
+        self.assertEqual(_weight(products), "0,9 кг")
+        self.assertEqual(_filling(products), "—")
 
 
 class FlowwowSyncCommandTests(TestCase):

@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import logging
+import re
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -22,6 +23,15 @@ _PRODUCT_TYPE_ADDITIONAL = 3
 _DELIVERY_TYPE_PICKUP = 4
 _DELIVERY_TIME_ASAP = 1
 _DELIVERY_TIME_INTERVAL = 2
+_FILLING_PROPERTY_ID = 45
+_FILLING_PROPERTY_TITLES = frozenset({"filling", "flavor", "начинка", "вкус"})
+_WEIGHT_PROPERTY_TITLES = frozenset({"weight", "size", "вес", "размер"})
+_WEIGHT_RE = re.compile(
+    r"(?<!\w)\d+(?:[.,]\d+)?\s*"
+    r"(?:килограмм(?:а|ов)?|кг|грамм(?:а|ов)?|гр|г|kilograms?|kgs?|kg|grams?|gr|g)"
+    r"(?!\w)",
+    re.IGNORECASE,
+)
 
 
 def verify_webhook_signature(body: bytes, header: str | None) -> bool:
@@ -177,7 +187,7 @@ def _crm_fields(item: dict) -> dict:
         "contact": _contact(item),
         "delivery_address": item["address"],
         "fulfillment_type": fulfillment_type,
-        "weight": "—",
+        "weight": _weight(products),
         "filling": _filling(products),
         "description": _description(item),
         "internal_description": item["shopAdditionalInfo"] or "",
@@ -200,14 +210,43 @@ def _person_label(person: dict | None) -> str:
 
 
 def _filling(products: list[dict]) -> str:
-    parts: list[str] = []
+    values: list[str] = []
     for product in products:
         if product["type"] == _PRODUCT_TYPE_ADDITIONAL:
             continue
-        parts.append(product["name"])
         for prop in product.get("selectedProperties") or []:
-            parts.append(prop["valueTitle"])
-    return ", ".join(parts)
+            title = prop["propertyTitle"].strip().casefold()
+            if prop["propertyId"] == _FILLING_PROPERTY_ID or title in _FILLING_PROPERTY_TITLES:
+                _append_unique(values, prop["valueTitle"].strip())
+    return ", ".join(values) if values else "—"
+
+
+def _weight(products: list[dict]) -> str:
+    values: list[str] = []
+    for product in products:
+        if product["type"] == _PRODUCT_TYPE_ADDITIONAL:
+            continue
+        properties = product.get("selectedProperties") or []
+        property_weights = [
+            prop["valueTitle"].strip()
+            for prop in properties
+            if prop["propertyTitle"].strip().casefold() in _WEIGHT_PROPERTY_TITLES
+        ]
+        if property_weights:
+            for value in property_weights:
+                _append_unique(values, value)
+            continue
+        for text in (product["name"], product.get("description") or ""):
+            match = _WEIGHT_RE.search(text)
+            if match is not None:
+                _append_unique(values, match.group().strip())
+                break
+    return ", ".join(values) if values else "—"
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    if value and value not in values:
+        values.append(value)
 
 
 def _description(item: dict) -> str:
