@@ -22,7 +22,7 @@ from rest_framework.views import APIView
 from attendance.salary import compute_all_salaries
 from catalog.responsive_urls import detail_image
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
-from crm.google_maps import coords_for_address, resolve_google_maps_url
+from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.models import CrmOrder, FlowwowWebhookEvent, ResolvedGoogleAddress
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
@@ -99,9 +99,7 @@ def _map_order_payloads(orders, range_key: str | None, now: datetime, public_bas
     payloads = []
     for order in candidates:
         address = order.delivery_address
-        if not address:
-            continue
-        pair = coords_for_address(address, cached.get(address))
+        pair = coords_for_map_order(address, order.fulfillment_type, cached.get(address))
         if pair is None:
             continue
         images = list(order.images.all())

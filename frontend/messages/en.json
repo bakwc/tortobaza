@@ -365,6 +365,7 @@
     "mapLoadError": "Could not load the order map. Please try again.",
     "mapEmptyTitle": "No mapped orders in this range",
     "mapEmptyHint": "Orders without Google coordinates are hidden.",
+    "mapBakery": "Bakery",
     "mapEtaIn": "in {eta}",
     "mapEtaOverdue": "{eta} late",
     "mapNow": "now",

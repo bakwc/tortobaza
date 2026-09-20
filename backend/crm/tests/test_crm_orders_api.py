@@ -1295,6 +1295,29 @@ class CrmOrderMapApiTests(TestCase):
         self.assertIsNone(by_id[with_cache.id]["image"])
 
     @patch("crm.views._tbilisi_now")
+    def test_pickup_and_samovyvoz_use_bakery_coords(self, tbilisi_now):
+        tbilisi_now.return_value = self.now
+        ResolvedGoogleAddress.objects.create(
+            address="самовывоз",
+            google_url="https://www.google.com/maps/search/?api=1&query=41.60,41.60",
+        )
+        samovyvoz = self._order(delivery_address="самовывоз", filling="PickupText")
+        pickup = self._order(
+            delivery_address="",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            filling="PickupType",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/map/", {"range": "today"})
+        self.assertEqual(response.status_code, 200)
+        by_id = {order["id"]: order for order in response.json()["orders"]}
+        self.assertEqual(by_id[samovyvoz.id]["lat"], 41.6211876)
+        self.assertEqual(by_id[samovyvoz.id]["lng"], 41.6142691)
+        self.assertEqual(by_id[pickup.id]["lat"], 41.6211876)
+        self.assertEqual(by_id[pickup.id]["lng"], 41.6142691)
+
+    @patch("crm.views._tbilisi_now")
     def test_today_returns_first_image(self, tbilisi_now):
         tbilisi_now.return_value = self.now
         order = self._order()

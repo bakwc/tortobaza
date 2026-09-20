@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Clock, Package } from "lucide-react";
+import { Clock, Home, Package } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { CrmMapOrder } from "@/lib/api/types";
 import { crmOrderStatusTone } from "@/lib/crmStatus";
@@ -18,6 +18,7 @@ import {
   loadGoogleMaps,
   type GoogleMapInstance,
 } from "@/lib/google-maps";
+import { SITE_INFO } from "@/lib/site-info";
 import { cn } from "@/lib/utils";
 
 const BATUMI = { lat: 41.6168, lng: 41.6367 };
@@ -161,6 +162,7 @@ function CrmMapOverlay({
     container.style.position = "absolute";
     container.style.transform = "translate(-50%, calc(-100% - 6px))";
     container.style.pointerEvents = "auto";
+    container.style.zIndex = "1";
     setHost(container);
     const overlay = attachHtmlOverlay(
       googleMapsApi(),
@@ -177,6 +179,53 @@ function CrmMapOverlay({
     return null;
   }
   return createPortal(<CrmMapOrderCard order={order} />, host);
+}
+
+function CrmMapBakeryCard() {
+  const t = useTranslations("crm");
+  return (
+    <div className="relative flex w-[180px] items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--cream)] p-1.5 shadow-lg">
+      <span className="absolute -top-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-l border-t border-[var(--line)] bg-[var(--cream)]" />
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-white text-[var(--brand)]">
+        <Home className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[11px] font-semibold leading-tight text-[var(--ink)]">
+          {SITE_INFO.brand}
+        </p>
+        <p className="truncate text-[10px] leading-tight text-[var(--muted-2)]">
+          {t("mapBakery")}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CrmMapBakeryOverlay({ map }: { map: GoogleMapInstance }) {
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.transform = "translate(-50%, 8px)";
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "0";
+    setHost(container);
+    const overlay = attachHtmlOverlay(
+      googleMapsApi(),
+      map,
+      { lat: SITE_INFO.geo.latitude, lng: SITE_INFO.geo.longitude },
+      container,
+    );
+    return () => {
+      overlay.setMap(null);
+    };
+  }, [map]);
+
+  if (!host) {
+    return null;
+  }
+  return createPortal(<CrmMapBakeryCard />, host);
 }
 
 export function CrmOrdersMap({ orders }: { orders: CrmMapOrder[] }) {
@@ -215,11 +264,12 @@ export function CrmOrdersMap({ orders }: { orders: CrmMapOrder[] }) {
   }, [apiKey]);
 
   useEffect(() => {
-    if (!map || orders.length === 0) {
+    if (!map) {
       return;
     }
     const maps = googleMapsApi();
     const bounds = new maps.LatLngBounds();
+    bounds.extend(new maps.LatLng(SITE_INFO.geo.latitude, SITE_INFO.geo.longitude));
     for (const order of orders) {
       bounds.extend(new maps.LatLng(order.lat, order.lng));
     }
@@ -231,11 +281,14 @@ export function CrmOrdersMap({ orders }: { orders: CrmMapOrder[] }) {
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
-      {map
-        ? overlays.map((order) => (
+      {map ? (
+        <>
+          <CrmMapBakeryOverlay map={map} />
+          {overlays.map((order) => (
             <CrmMapOverlay key={order.id} map={map} order={order} />
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
     </div>
   );
 }

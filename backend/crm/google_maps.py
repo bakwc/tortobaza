@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 
-from crm.models import ResolvedGoogleAddress
+from crm.models import CrmOrder, ResolvedGoogleAddress
 
 _YANDEX_FETCH_HEADERS = {
     "User-Agent": (
@@ -31,6 +31,9 @@ _FLOAT_RE = re.compile(r"^-?\d+(?:\.\d+)?$")
 _ADDRESS_URL_RE = re.compile(r"https?://[^\s]+", re.I)
 _AT_COORDS_RE = re.compile(r"/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)")
 _BANG_COORDS_RE = re.compile(r"!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)")
+_PICKUP_ADDRESS = "самовывоз"
+
+SWEET_CHILL_COORDS = (41.6211876, 41.6142691)
 
 
 def cached_google_maps_url(address: str) -> str | None:
@@ -132,6 +135,10 @@ def coords_from_google_url(url: str) -> tuple[float, float] | None:
     return None
 
 
+def is_bakery_pickup_address(address: str) -> bool:
+    return address.strip().casefold() == _PICKUP_ADDRESS
+
+
 def coords_for_address(address: str, cached_google_url: str | None) -> tuple[float, float] | None:
     if cached_google_url:
         cached_pair = coords_from_google_url(cached_google_url)
@@ -141,6 +148,18 @@ def coords_for_address(address: str, cached_google_url: str | None) -> tuple[flo
     if embedded:
         return coords_from_google_url(embedded)
     return None
+
+
+def coords_for_map_order(
+    address: str,
+    fulfillment_type: str,
+    cached_google_url: str | None,
+) -> tuple[float, float] | None:
+    if fulfillment_type == CrmOrder.FULFILLMENT_PICKUP or is_bakery_pickup_address(address):
+        return SWEET_CHILL_COORDS
+    if not address:
+        return None
+    return coords_for_address(address, cached_google_url)
 
 
 def _parse_lon_lat_csv(value: str) -> tuple[float, float] | None:

@@ -365,6 +365,7 @@
     "mapLoadError": "რუკის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "mapEmptyTitle": "ამ დიაპაზონში რუკაზე შეკვეთები არ არის",
     "mapEmptyHint": "შეკვეთები Google-კოორდინატების გარეშე არ ჩანს.",
+    "mapBakery": "ბაზა",
     "mapEtaIn": "{eta}-ში",
     "mapEtaOverdue": "დაგვიანება {eta}",
     "mapNow": "ახლა",
