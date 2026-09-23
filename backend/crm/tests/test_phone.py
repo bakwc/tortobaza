@@ -54,13 +54,19 @@ class PhoneNormalizeTests(SimpleTestCase):
     def test_phones_from_contact_and_nickname(self):
         self.assertEqual(
             phones_from_fields("Анна +995555111222", "555333444 @cake"),
-            ["995555111222", "995555333444"],
+            [
+                {"value": "995555111222", "party": "recipient"},
+                {"value": "995555333444", "party": "sender"},
+            ],
         )
 
     def test_phones_from_fields_dedup(self):
         self.assertEqual(
             phones_from_fields("+995555111222", "555111222"),
-            ["995555111222"],
+            [
+                {"value": "995555111222", "party": "recipient"},
+                {"value": "995555111222", "party": "sender"},
+            ],
         )
 
 
@@ -164,13 +170,19 @@ class PhoneTrickyCasesTests(SimpleTestCase):
                 "клиент 380 93 544 04 35",
                 "599 09 51 06",
             ),
-            ["380935440435", "995599095106"],
+            [
+                {"value": "380935440435", "party": "recipient"},
+                {"value": "995599095106", "party": "sender"},
+            ],
         )
 
     def test_same_georgian_number_with_and_without_code(self):
         self.assertEqual(
             phones_from_fields("599 09 51 06", "+995 599 09 51 06"),
-            ["995599095106"],
+            [
+                {"value": "995599095106", "party": "recipient"},
+                {"value": "995599095106", "party": "sender"},
+            ],
         )
 
 
@@ -200,16 +212,25 @@ class TelegramNicknameTests(SimpleTestCase):
         ]
         for text, expected in cases:
             with self.subTest(text=text):
-                self.assertEqual(phones_from_fields(text, ""), expected)
+                self.assertEqual(
+                    phones_from_fields(text, ""),
+                    [{"value": value, "party": "recipient"} for value in expected],
+                )
 
     def test_from_contact_and_nickname(self):
         self.assertEqual(
             phones_from_fields("Анна 599 09 51 06", "https://t.me/yashechka_ph"),
-            ["995599095106", "tg:yashechka_ph"],
+            [
+                {"value": "995599095106", "party": "recipient"},
+                {"value": "tg:yashechka_ph", "party": "sender"},
+            ],
         )
         self.assertEqual(
             phones_from_fields("https://t.me/Yashechka_ph", "@yashechka_ph"),
-            ["tg:Yashechka_ph"],
+            [
+                {"value": "tg:Yashechka_ph", "party": "recipient"},
+                {"value": "tg:yashechka_ph", "party": "sender"},
+            ],
         )
 
     def test_telegram_nick_links_only_telegram(self):

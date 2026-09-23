@@ -275,6 +275,7 @@ export const CrmPhoneSchema = z.object({
   tel: z.string().nullable(),
   whatsapp: z.string().nullable(),
   telegram: z.string(),
+  party: z.enum(["recipient", "sender"]),
 });
 
 export const CrmOrderSchema = z.object({

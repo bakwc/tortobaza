@@ -286,14 +286,14 @@ def contact_links(contact: str) -> dict[str, str] | None:
     return links_for_digits(phones[0])
 
 
-def phones_from_fields(contact: str, nickname: str) -> list[str]:
-    phones: list[str] = []
-    seen: set[str] = set()
-    for source in (contact, nickname):
+def phones_from_fields(contact: str, nickname: str) -> list[dict[str, str]]:
+    phones: list[dict[str, str]] = []
+    for party, source in (("recipient", contact), ("sender", nickname)):
+        seen: set[str] = set()
         for value in _entries_from_text(source):
             key = value.lower() if value.startswith(_TG_PREFIX) else value
             if key in seen:
                 continue
             seen.add(key)
-            phones.append(value)
+            phones.append({"value": value, "party": party})
     return phones

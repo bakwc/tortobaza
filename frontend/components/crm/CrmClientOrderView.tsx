@@ -240,43 +240,38 @@ export function CrmClientOrderView({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 lg:gap-4">
-              <div className="flex flex-col gap-2.5 lg:gap-4">
+            <div className="flex flex-col gap-2.5 lg:gap-4">
+              <div className="rounded-xl bg-[var(--cream-soft)] p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4">
+                <div className="flex items-start gap-2">
+                  <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
+                      {t("contact")}
+                    </span>
+                    <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.contact}</p>
+                    <CrmPhoneList
+                      phones={order.phones.filter((phone) => phone.party === "recipient")}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {order.nickname ? (
                 <div className="rounded-xl bg-[var(--cream-soft)] p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4">
                   <div className="flex items-start gap-2">
-                    <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                    <AtSign className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
                     <div className="min-w-0 flex-1">
                       <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
-                        {t("contact")}
+                        {t("nickname")}
                       </span>
-                      <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.contact}</p>
+                      <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.nickname}</p>
+                      <CrmPhoneList
+                        phones={order.phones.filter((phone) => phone.party === "sender")}
+                      />
                     </div>
                   </div>
                 </div>
-
-                {order.nickname ? (
-                  <div className="rounded-xl bg-[var(--cream-soft)] p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4">
-                    <div className="flex items-start gap-2">
-                      <AtSign className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
-                      <div>
-                        <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
-                          {t("nickname")}
-                        </span>
-                        <p className="mt-0.5 whitespace-pre-wrap font-medium lg:mt-1">{order.nickname}</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-              <div>
-                {order.phones.length > 0 ? (
-                  <div className="rounded-xl bg-[var(--cream-soft)] p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4">
-                    <CrmPhoneList phones={order.phones} />
-                  </div>
-                ) : (
-                  <div className="hidden lg:block" />
-                )}
-              </div>
+              ) : null}
             </div>
 
             {showPickupBadge ? (

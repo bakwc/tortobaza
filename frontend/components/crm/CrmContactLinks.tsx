@@ -15,14 +15,14 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
     return null;
   }
   return (
-    <span className="flex shrink-0 items-center gap-2">
+    <span className="inline-flex shrink-0 items-center gap-1">
       {tel ? (
         <a
           href={tel}
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="Phone"
         >
-          <Phone className="h-6 w-6" />
+          <Phone className="h-4 w-4" />
         </a>
       ) : null}
       {whatsapp ? (
@@ -33,7 +33,7 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="WhatsApp"
         >
-          <WhatsAppIcon className="h-6 w-6" />
+          <WhatsAppIcon className="h-4 w-4" />
         </a>
       ) : null}
       {telegram ? (
@@ -44,7 +44,7 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="Telegram"
         >
-          <TelegramIcon className="h-6 w-6" />
+          <TelegramIcon className="h-4 w-4" />
         </a>
       ) : null}
     </span>
@@ -52,14 +52,18 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
 }
 
 export function CrmPhoneList({ phones }: { phones: CrmPhone[] }) {
+  if (phones.length === 0) {
+    return null;
+  }
   return (
-    <div className="flex flex-col gap-2">
-      {phones.map((phone) => (
-        <div key={phone.e164} className="flex items-center justify-between gap-3">
-          <span className="min-w-0 font-medium">{phone.e164}</span>
+    <p className="mt-1 flex flex-wrap items-center gap-y-1 font-medium">
+      {phones.map((phone, index) => (
+        <span key={`${phone.e164}-${index}`} className="inline-flex items-center gap-1.5">
+          {index > 0 ? <span className="mx-1.5">,</span> : null}
+          <span>{phone.e164}</span>
           <CrmContactLinks tel={phone.tel} whatsapp={phone.whatsapp} telegram={phone.telegram} />
-        </div>
+        </span>
       ))}
-    </div>
+    </p>
   );
 }

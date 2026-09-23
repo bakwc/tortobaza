@@ -90,12 +90,14 @@ class CrmOrdersApiTests(TestCase):
                     "tel": "tel:+995555111222",
                     "whatsapp": "https://wa.me/995555111222",
                     "telegram": "https://t.me/+995555111222",
+                    "party": "recipient",
                 },
                 {
                     "e164": "@cake_lover",
                     "tel": None,
                     "whatsapp": None,
                     "telegram": "https://t.me/cake_lover",
+                    "party": "sender",
                 },
             ],
         )

@@ -89,7 +89,12 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         return data
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
-        return [links_for_stored(value) for value in instance.phones]
+        phones: list[dict[str, str | None]] = []
+        for phone in instance.phones:
+            links = links_for_stored(phone["value"])
+            links["party"] = phone["party"]
+            phones.append(links)
+        return phones
 
 
 class CrmOrderClientSerializer(serializers.ModelSerializer):
@@ -131,7 +136,12 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
         return cached_google_maps_url(address)
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
-        return [links_for_stored(value) for value in instance.phones]
+        phones: list[dict[str, str | None]] = []
+        for phone in instance.phones:
+            links = links_for_stored(phone["value"])
+            links["party"] = phone["party"]
+            phones.append(links)
+        return phones
 
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):
