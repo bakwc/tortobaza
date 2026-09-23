@@ -544,7 +544,7 @@ class CrmTelegramTests(TestCase):
         self.assertIn(">смотреть</a>", text)
         self.assertIn(">редактировать</a>", text)
         self.assertIn("<b>Адрес:</b> Rustaveli 1", text)
-        self.assertIn("<b>Контакт:</b> Customer", text)
+        self.assertIn("<b>Получатель:</b> Customer", text)
         self.assertNotIn("WhatsApp", text)
         self.assertNotIn("wa.me", text)
         self.assertNotIn("t.me", text)
@@ -645,7 +645,7 @@ class CrmTelegramTests(TestCase):
     def test_html_adds_e164_and_whatsapp_for_phone_contact(self):
         order = self._create_order(delta=timedelta(hours=2), contact="+7 916 123 45 67 Иван")
         text = build_crm_order_telegram_html(order)
-        self.assertIn("<b>Контакт:</b> +7 916 123 45 67 Иван", text)
+        self.assertIn("<b>Получатель:</b> +7 916 123 45 67 Иван", text)
         self.assertIn("+79161234567", text)
         self.assertIn('<a href="https://wa.me/79161234567">WhatsApp</a>', text)
         self.assertNotIn("t.me", text)

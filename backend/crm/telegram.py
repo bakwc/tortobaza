@@ -251,14 +251,14 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
             lines.append(f'<b>Адрес:</b> <a href="{href}">{_esc(order.delivery_address)}</a>')
         else:
             lines.append(f"<b>Адрес:</b> {_esc(order.delivery_address)}")
-    lines.append(f"<b>Контакт:</b> {_esc(order.contact)}")
+    lines.append(f"<b>Получатель:</b> {_esc(order.contact)}")
     links = contact_links(order.contact)
     if links is not None:
         lines.append(_esc(links["e164"]))
         wa_href = html.escape(links["whatsapp"], quote=True)
         lines.append(f'<a href="{wa_href}">WhatsApp</a>')
     if order.nickname:
-        lines.append(f"<b>Ник:</b> {_esc(order.nickname)}")
+        lines.append(f"<b>Отправитель:</b> {_esc(order.nickname)}")
     lines.append(f"<b>Вес:</b> {_esc(order.weight)}")
     lines.append(f"<b>Начинка:</b> {_esc(order.filling)}")
     if order.description:
