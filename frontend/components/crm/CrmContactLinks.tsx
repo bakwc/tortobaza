@@ -15,14 +15,14 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
     return null;
   }
   return (
-    <span className="inline-flex shrink-0 items-center gap-1">
+    <span className="inline-flex shrink-0 items-center gap-2">
       {tel ? (
         <a
           href={tel}
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="Phone"
         >
-          <Phone className="h-4 w-4" />
+          <Phone className="h-5 w-5" />
         </a>
       ) : null}
       {whatsapp ? (
@@ -33,7 +33,7 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="WhatsApp"
         >
-          <WhatsAppIcon className="h-4 w-4" />
+          <WhatsAppIcon className="h-5 w-5" />
         </a>
       ) : null}
       {telegram ? (
@@ -44,7 +44,7 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
           className="text-[var(--brand)] hover:opacity-80"
           aria-label="Telegram"
         >
-          <TelegramIcon className="h-4 w-4" />
+          <TelegramIcon className="h-5 w-5" />
         </a>
       ) : null}
     </span>
