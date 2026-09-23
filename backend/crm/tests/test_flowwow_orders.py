@@ -206,6 +206,8 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(order.payment_type, CrmOrder.PAYMENT_FLOWWOW)
         self.assertEqual(order.status, CrmOrder.STATUS_NEW)
         self.assertEqual(order.internal_description, "напишите, пожалуйста, на тортике надпись")
+        self.assertEqual(order.flowwow_synced_description, order.description)
+        self.assertEqual(order.flowwow_synced_internal_description, order.internal_description)
         self.assertIn("Flowwow #25836184", order.description)
         self.assertIn("Filling: vanilla with strawberries", order.description)
         self.assertIn("Открытка: с днем рождения", order.description)
@@ -294,6 +296,60 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertTrue(CrmOrderImage.objects.filter(pk=manual.pk).exists())
         self.assertFalse(CrmOrderImage.objects.filter(source_url=_CAKE_IMAGE).exists())
         self.assertEqual(self.image_calls, [_OTHER_IMAGE])
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_repeated_sync_updates_unedited_text(self, mock_get, _mock_now):
+        self.items = [_flowwow_order()]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        self.items = [
+            _flowwow_order(
+                comment="новый комментарий",
+                shopAdditionalInfo="новая надпись",
+            )
+        ]
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertIn("новый комментарий", order.description)
+        self.assertEqual(order.internal_description, "новая надпись")
+        self.assertEqual(order.flowwow_synced_description, order.description)
+        self.assertEqual(
+            order.flowwow_synced_internal_description,
+            order.internal_description,
+        )
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_repeated_sync_keeps_edited_text(self, mock_get, _mock_now):
+        self.items = [_flowwow_order()]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        edited_description = f"{order.description}\nручная правка"
+        edited_internal = "кухонная заметка"
+        synced_description = order.flowwow_synced_description
+        synced_internal = order.flowwow_synced_internal_description
+        order.description = edited_description
+        order.internal_description = edited_internal
+        order.save(update_fields=["description", "internal_description"])
+        self.items = [
+            _flowwow_order(
+                comment="новый комментарий",
+                shopAdditionalInfo="новая надпись",
+            )
+        ]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.description, edited_description)
+        self.assertEqual(order.internal_description, edited_internal)
+        self.assertEqual(order.flowwow_synced_description, synced_description)
+        self.assertEqual(order.flowwow_synced_internal_description, synced_internal)
+        self.assertNotIn("новый комментарий", order.description)
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")

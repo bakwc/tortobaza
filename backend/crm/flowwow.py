@@ -46,6 +46,10 @@ _DELIVERY_TIME_INTERVAL = 2
 _FILLING_PROPERTY_ID = 45
 _FILLING_PROPERTY_TITLES = frozenset({"filling", "flavor", "начинка", "вкус"})
 _WEIGHT_PROPERTY_TITLES = frozenset({"weight", "size", "вес", "размер"})
+_SYNCED_TEXT_FIELDS = (
+    ("description", "flowwow_synced_description"),
+    ("internal_description", "flowwow_synced_internal_description"),
+)
 _WEIGHT_RE = re.compile(
     r"(?<!\w)\d+(?:[.,]\d+)?\s*"
     r"(?:килограмм(?:а|ов)?|кг|грамм(?:а|ов)?|гр|г|kilograms?|kgs?|kg|grams?|gr|g)"
@@ -242,9 +246,22 @@ def _mapped_crm_status(flowwow_status: int, current_status: str | None) -> str |
     return None
 
 
+def _apply_synced_text(crm_order: CrmOrder | None, fields: dict) -> None:
+    if crm_order is None:
+        for field_name, snapshot_name in _SYNCED_TEXT_FIELDS:
+            fields[snapshot_name] = fields[field_name]
+        return
+    for field_name, snapshot_name in _SYNCED_TEXT_FIELDS:
+        incoming = fields.pop(field_name)
+        if getattr(crm_order, field_name) == getattr(crm_order, snapshot_name):
+            fields[field_name] = incoming
+            fields[snapshot_name] = incoming
+
+
 def _upsert_crm_order(item: dict) -> CrmOrder:
     fields = _crm_fields(item)
     crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
+    _apply_synced_text(crm_order, fields)
     mapped_status = _mapped_crm_status(
         item["status"],
         None if crm_order is None else crm_order.status,

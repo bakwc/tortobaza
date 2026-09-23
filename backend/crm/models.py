@@ -135,6 +135,8 @@ class CrmOrder(models.Model):
         blank=True,
     )
     flowwow_order_id = models.IntegerField(unique=True, null=True, blank=True)
+    flowwow_synced_description = models.TextField(blank=True, default="")
+    flowwow_synced_internal_description = models.TextField(blank=True, default="")
     deleted = models.BooleanField(default=False)
     client_token = models.CharField(
         max_length=64,
