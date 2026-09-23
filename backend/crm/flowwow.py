@@ -121,6 +121,13 @@ def _post_order_action(url: str, order_id: int) -> None:
             if attempt == 2:
                 raise
             continue
+        if response.status_code == 400 and url == _ORDERS_ACCEPT_URL:
+            logger.warning(
+                "flowwow accept skipped order_id=%s body=%s",
+                order_id,
+                response.text,
+            )
+            return
         if response.status_code == 429 or response.status_code >= 500:
             if attempt == 2:
                 response.raise_for_status()

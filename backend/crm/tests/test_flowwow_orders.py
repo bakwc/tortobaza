@@ -801,15 +801,15 @@ class FlowwowCourierLeftSyncTests(TestCase):
         mock_post.assert_not_called()
 
     @patch("crm.flowwow.requests.post", return_value=_error_post_response(400))
-    def test_accept_http_400_keeps_unconfirmed(self, mock_post):
+    def test_accept_http_400_saves_new(self, mock_post):
         order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED)
         self.client.force_authenticate(user=self.user)
-        with self.assertRaises(requests.HTTPError):
-            self.client.patch(
-                f"/api/crm/orders/{order.id}/",
-                {"status": CrmOrder.STATUS_NEW},
-                format="json",
-            )
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
         order.refresh_from_db()
-        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
         self.assertEqual(mock_post.call_count, 1)
