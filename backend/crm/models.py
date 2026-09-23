@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, Value, When
+from django.utils import timezone
 
 from crm.phone import phones_from_fields
 
@@ -198,6 +199,50 @@ class CrmOrder(models.Model):
     def promote_if_paid(self) -> None:
         if self.is_paid and self.status == self.STATUS_UNCONFIRMED:
             self.status = self.STATUS_NEW
+
+
+class CrmOrderEvent(models.Model):
+    ACTION_CREATED = "created"
+    ACTION_UPDATED = "updated"
+    ACTION_DELETED = "deleted"
+    ACTION_CHOICES = [
+        (ACTION_CREATED, "Created"),
+        (ACTION_UPDATED, "Updated"),
+        (ACTION_DELETED, "Deleted"),
+    ]
+
+    SOURCE_CRM = "crm"
+    SOURCE_ADMIN = "admin"
+    SOURCE_WEBSITE = "website"
+    SOURCE_FLOWWOW = "flowwow"
+    SOURCE_CHOICES = [
+        (SOURCE_CRM, "CRM"),
+        (SOURCE_ADMIN, "Admin"),
+        (SOURCE_WEBSITE, "Website"),
+        (SOURCE_FLOWWOW, "Flowwow"),
+    ]
+
+    order = models.ForeignKey(CrmOrder, related_name="events", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="crm_order_events",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    changes = models.JSONField()
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["order", "created_at"], name="crm_order_event_order_at"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.created_at:%Y-%m-%d %H:%M} {self.action} {self.source} order #{self.order_id}"
 
 
 class ResolvedYandexAddress(models.Model):

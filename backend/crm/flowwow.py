@@ -14,7 +14,8 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from crm.models import CrmOrder, CrmOrderImage
+from crm.history import record_crm_order_event, snapshot_crm_order
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.telegram import schedule_crm_order_telegram_sync
 
 logger = logging.getLogger(__name__)
@@ -146,8 +147,16 @@ def process_flowwow_webhook(payload: dict) -> None:
     if event == "order.cancelled":
         item = _fetch_order(payload["order"]["id"])
         crm_order = _upsert_crm_order(item)
+        before = snapshot_crm_order(crm_order)
         crm_order.deleted = True
         crm_order.save(update_fields=["deleted", "updated_at"])
+        record_crm_order_event(
+            crm_order,
+            CrmOrderEvent.ACTION_DELETED,
+            CrmOrderEvent.SOURCE_FLOWWOW,
+            None,
+            before,
+        )
         schedule_crm_order_telegram_sync(crm_order.pk)
 
 
@@ -268,6 +277,7 @@ def _apply_synced_text(crm_order: CrmOrder | None, fields: dict) -> None:
 def _upsert_crm_order(item: dict) -> CrmOrder:
     fields = _crm_fields(item)
     crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
+    before = None if crm_order is None else snapshot_crm_order(crm_order)
     _apply_synced_text(crm_order, fields)
     mapped_status = _mapped_crm_status(
         item["status"],
@@ -279,6 +289,7 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
             status=mapped_status if mapped_status is not None else CrmOrder.STATUS_NEW,
             **fields,
         )
+        action = CrmOrderEvent.ACTION_CREATED
         logger.info("flowwow order id=%s created crm_id=%s", item["id"], crm_order.pk)
         print(f"flowwow order id={item['id']} created crm_id={crm_order.pk}", flush=True)
     else:
@@ -289,9 +300,17 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
             crm_order.status = mapped_status
             update_fields.append("status")
         crm_order.save(update_fields=update_fields)
+        action = CrmOrderEvent.ACTION_UPDATED
         logger.info("flowwow order id=%s updated crm_id=%s", item["id"], crm_order.pk)
         print(f"flowwow order id={item['id']} updated crm_id={crm_order.pk}", flush=True)
     _sync_images(crm_order, item)
+    record_crm_order_event(
+        crm_order,
+        action,
+        CrmOrderEvent.SOURCE_FLOWWOW,
+        None,
+        before,
+    )
     return crm_order
 
 

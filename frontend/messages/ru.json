@@ -413,6 +413,25 @@
     "invoiceCompanyId": "Идентификатор компании",
     "invoiceEmail": "Email",
     "invoicePhone": "Телефон",
-    "invoiceCompanyAddress": "Адрес"
+    "invoiceCompanyAddress": "Адрес",
+    "history": "История",
+    "historyEmpty": "Изменений нет",
+    "historyLoadError": "Не удалось загрузить историю заказа.",
+    "historyActionCreated": "Создан",
+    "historyActionUpdated": "Изменён",
+    "historyActionDeleted": "Удалён",
+    "historySourceCrm": "CRM",
+    "historySourceAdmin": "Админка",
+    "historySourceWebsite": "Сайт",
+    "historySourceFlowwow": "Flowwow",
+    "historyFieldStatus": "Статус",
+    "historyFieldTakenBy": "Взял в работу",
+    "historyFieldCreatedBy": "Создал",
+    "historyFieldDeliveredBy": "Доставил",
+    "historyFieldWebsiteOrder": "Заказ с сайта",
+    "historyFieldFlowwowOrder": "Заказ Flowwow",
+    "historyFieldDeleted": "Удалён",
+    "historyYes": "Да",
+    "historyNo": "Нет"
   }
 }

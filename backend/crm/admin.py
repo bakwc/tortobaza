@@ -5,7 +5,15 @@ from django.template.response import TemplateResponse
 from django.urls import reverse
 
 from crm.flowwow import sync_flowwow_order_status_from_crm
-from crm.models import CrmOrder, CrmOrderImage, CrmSettings, WhatsAppGetNewQr, WhatsAppNumberCheck
+from crm.history import record_crm_order_event, snapshot_crm_order
+from crm.models import (
+    CrmOrder,
+    CrmOrderEvent,
+    CrmOrderImage,
+    CrmSettings,
+    WhatsAppGetNewQr,
+    WhatsAppNumberCheck,
+)
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.whatsapp import check_number, get_new_qr
@@ -148,11 +156,26 @@ class CrmOrderAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if change:
+            request.crm_order_event_before = snapshot_crm_order(CrmOrder.objects.get(pk=obj.pk))
             sync_flowwow_order_status_from_crm(obj, form.initial["status"])
+        else:
+            request.crm_order_event_before = None
         super().save_model(request, obj, form, change)
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
+        action = (
+            CrmOrderEvent.ACTION_CREATED
+            if request.crm_order_event_before is None
+            else CrmOrderEvent.ACTION_UPDATED
+        )
+        record_crm_order_event(
+            form.instance,
+            action,
+            CrmOrderEvent.SOURCE_ADMIN,
+            request.user,
+            request.crm_order_event_before,
+        )
         sync_website_order_status_from_crm(form.instance)
         schedule_crm_order_telegram_sync(form.instance.pk)
 

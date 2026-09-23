@@ -413,6 +413,25 @@
     "invoiceCompanyId": "კომპანიის ID",
     "invoiceEmail": "ელფოსტა",
     "invoicePhone": "ტელეფონი",
-    "invoiceCompanyAddress": "მისამართი"
+    "invoiceCompanyAddress": "მისამართი",
+    "history": "ისტორია",
+    "historyEmpty": "ცვლილებები არ არის",
+    "historyLoadError": "შეკვეთის ისტორიის ჩატვირთვა ვერ მოხერხდა.",
+    "historyActionCreated": "შექმნილია",
+    "historyActionUpdated": "შეცვლილია",
+    "historyActionDeleted": "წაშლილია",
+    "historySourceCrm": "CRM",
+    "historySourceAdmin": "ადმინკა",
+    "historySourceWebsite": "საიტი",
+    "historySourceFlowwow": "Flowwow",
+    "historyFieldStatus": "სტატუსი",
+    "historyFieldTakenBy": "აიღო სამუშაოდ",
+    "historyFieldCreatedBy": "შექმნა",
+    "historyFieldDeliveredBy": "მიაწოდა",
+    "historyFieldWebsiteOrder": "საიტის შეკვეთა",
+    "historyFieldFlowwowOrder": "Flowwow შეკვეთა",
+    "historyFieldDeleted": "წაშლილია",
+    "historyYes": "დიახ",
+    "historyNo": "არა"
   }
 }

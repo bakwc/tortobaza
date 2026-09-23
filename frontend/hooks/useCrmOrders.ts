@@ -13,6 +13,7 @@ import type {
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
   CrmOrder,
+  CrmOrderEvent,
   CrmOrdersResponse,
   ResolveGoogleAddressResponse,
   UpdateCrmOrderBody,
@@ -36,6 +37,8 @@ export const crmMonthlyExpensesQueryKey = (month: string) =>
   ["crm-expenses", "month", month] as const;
 
 export const crmOrderQueryKey = (id: number) => ["crm-order", id] as const;
+
+export const crmOrderEventsQueryKey = (id: number) => ["crm-order-events", id] as const;
 
 const CRM_BOARD_REFETCH_INTERVAL_MS = 15_000;
 
@@ -96,6 +99,14 @@ export function useCrmOrder(id: number) {
     queryKey: crmOrderQueryKey(id),
     queryFn: () => api.getCrmOrder(id),
     enabled: Number.isFinite(id),
+  });
+}
+
+export function useCrmOrderEvents(orderId: number, enabled: boolean) {
+  return useQuery<CrmOrderEvent[]>({
+    queryKey: crmOrderEventsQueryKey(orderId),
+    queryFn: () => api.getCrmOrderEvents(orderId),
+    enabled,
   });
 }
 

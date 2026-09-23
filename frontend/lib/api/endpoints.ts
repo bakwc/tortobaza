@@ -10,6 +10,7 @@ import {
   CrmExpensesMonthSchema,
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
+  CrmOrderEventSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
   ResolveGoogleAddressResponseSchema,
@@ -39,6 +40,7 @@ import {
   type CrmMapOrdersResponse,
   type CrmMonthlyOrdersResponse,
   type CrmOrder,
+  type CrmOrderEvent,
   type CrmOrdersResponse,
   type ResolveGoogleAddressResponse,
   type ResolveYandexAddressResponse,
@@ -282,6 +284,11 @@ export function endpoints(fetcher: Fetcher) {
     async getCrmOrder(id: number): Promise<CrmOrder> {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`);
       return parse(CrmOrderSchema, raw);
+    },
+
+    async getCrmOrderEvents(id: number): Promise<CrmOrderEvent[]> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/events/`);
+      return parse(z.array(CrmOrderEventSchema), raw);
     },
 
     async getCrmClientOrder(token: string): Promise<CrmClientOrder> {

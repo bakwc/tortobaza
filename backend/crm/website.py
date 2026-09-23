@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 from django.core.files.base import ContentFile
 from django.utils import timezone
 
-from crm.models import CrmOrder, CrmOrderImage
+from crm.history import record_crm_order_event, snapshot_crm_order
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.telegram import schedule_crm_order_telegram_sync
 from orders.models import Order, OrderItem
 
@@ -60,6 +61,13 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
         website_order=order,
     )
     _copy_product_images(order, crm_order)
+    record_crm_order_event(
+        crm_order,
+        CrmOrderEvent.ACTION_CREATED,
+        CrmOrderEvent.SOURCE_WEBSITE,
+        None,
+        None,
+    )
     schedule_crm_order_telegram_sync(crm_order.pk)
     return crm_order
 
@@ -68,10 +76,18 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
     if order.environment == Order.ENV_DEV:
         return
     crm_order = CrmOrder.objects.get(website_order=order)
+    before = snapshot_crm_order(crm_order)
     crm_order.is_paid = True
     crm_order.prepayment = crm_order.cake_price
     crm_order.promote_if_paid()
     crm_order.save(update_fields=["is_paid", "prepayment", "status", "updated_at"])
+    record_crm_order_event(
+        crm_order,
+        CrmOrderEvent.ACTION_UPDATED,
+        CrmOrderEvent.SOURCE_WEBSITE,
+        None,
+        before,
+    )
     schedule_crm_order_telegram_sync(crm_order.pk)
 
 

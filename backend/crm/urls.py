@@ -5,6 +5,7 @@ from crm.views import (
     CrmOrderClientMapView,
     CrmOrderClientView,
     CrmOrderDetailView,
+    CrmOrderEventsView,
     CrmOrderListView,
     CrmOrderMapView,
     FlowwowWebhookView,
@@ -28,6 +29,7 @@ urlpatterns = [
         name="crm-order-client",
     ),
     path("crm/orders/<int:pk>/", CrmOrderDetailView.as_view(), name="crm-order-detail"),
+    path("crm/orders/<int:pk>/events/", CrmOrderEventsView.as_view(), name="crm-order-events"),
     path(
         "crm/resolve-yandex-address/",
         ResolveYandexAddressView.as_view(),

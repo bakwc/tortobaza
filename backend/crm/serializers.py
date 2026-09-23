@@ -4,7 +4,8 @@ from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.google_maps import cached_google_maps_url
-from crm.models import CrmOrder, CrmOrderImage
+from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.phone import links_for_stored
 
 
@@ -112,6 +113,72 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         return phones
 
 
+def _chef_identity_cached(user, cache: dict) -> tuple[str, str | None, str | None, str]:
+    found = cache.get(user.id)
+    if found is not None:
+        return found
+    identity = chef_identity(user)
+    cache[user.id] = identity
+    return identity
+
+
+def _user_change_value(user_id: int | None, users_by_id: dict, cache: dict) -> dict | None:
+    if user_id is None:
+        return None
+    user = users_by_id.get(user_id)
+    if user is None:
+        return {"id": user_id, "name": None, "telegram_url": None, "gender": None}
+    name, url, _nick, gender = _chef_identity_cached(user, cache)
+    return {"id": user.id, "name": name, "telegram_url": url, "gender": gender}
+
+
+class CrmOrderEventSerializer(serializers.ModelSerializer):
+    actor_name = serializers.CharField(read_only=True, allow_null=True)
+    actor_telegram_url = serializers.CharField(read_only=True, allow_null=True)
+    actor_gender = serializers.CharField(read_only=True, allow_null=True)
+
+    class Meta:
+        model = CrmOrderEvent
+        fields = [
+            "id",
+            "created_at",
+            "action",
+            "source",
+            "actor_name",
+            "actor_telegram_url",
+            "actor_gender",
+            "changes",
+        ]
+
+    def to_representation(self, instance: CrmOrderEvent):
+        data = super().to_representation(instance)
+        request = self.context["request"]
+        users_by_id = self.context["users_by_id"]
+        cache = self.context["identities"]
+        changes = {key: value for key, value in instance.changes.items()}
+        if not request.user.is_staff:
+            changes.pop("internal_description", None)
+        for field in USER_ID_FIELDS:
+            change = changes.get(field)
+            if change is None:
+                continue
+            changes[field] = {
+                "old": _user_change_value(change["old"], users_by_id, cache),
+                "new": _user_change_value(change["new"], users_by_id, cache),
+            }
+        data["changes"] = changes
+        if instance.actor_id is None:
+            data["actor_name"] = None
+            data["actor_telegram_url"] = None
+            data["actor_gender"] = None
+        else:
+            name, url, _nick, gender = _chef_identity_cached(instance.actor, cache)
+            data["actor_name"] = name
+            data["actor_telegram_url"] = url
+            data["actor_gender"] = gender
+        return data
+
+
 class CrmOrderClientSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
@@ -183,6 +250,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
+        before = snapshot_crm_order(instance)
         previous_status = instance.status
         take_in_work = validated_data.pop("take_in_work", None)
         status = validated_data.pop("status", None)
@@ -206,6 +274,13 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
         instance.promote_if_paid()
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
+        record_crm_order_event(
+            instance,
+            CrmOrderEvent.ACTION_UPDATED,
+            CrmOrderEvent.SOURCE_CRM,
+            self.context["request"].user,
+            before,
+        )
         return instance
 
 
@@ -274,9 +349,17 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         validated_data["created_by"] = self.context["request"].user
         order = CrmOrder.objects.create(**validated_data)
         self._apply_images(order, images, [])
+        record_crm_order_event(
+            order,
+            CrmOrderEvent.ACTION_CREATED,
+            CrmOrderEvent.SOURCE_CRM,
+            self.context["request"].user,
+            None,
+        )
         return order
 
     def update(self, instance, validated_data):
+        before = snapshot_crm_order(instance)
         previous_status = instance.status
         images = validated_data.pop("images", [])
         delete_image_ids = validated_data.pop("delete_image_ids", [])
@@ -286,6 +369,13 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
+        record_crm_order_event(
+            instance,
+            CrmOrderEvent.ACTION_UPDATED,
+            CrmOrderEvent.SOURCE_CRM,
+            self.context["request"].user,
+            before,
+        )
         return instance
 
     def _apply_images(self, order: CrmOrder, images: list, delete_image_ids: list[int]) -> None:

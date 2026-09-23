@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { FileText, MoreHorizontal, Trash2, Link2 } from "lucide-react";
+import { FileText, History, MoreHorizontal, Trash2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CrmOrderHistoryDialog } from "@/components/crm/CrmOrderHistoryDialog";
 import { Link } from "@/i18n/navigation";
 
 export function CrmOrderActionsMenu({
@@ -17,6 +18,7 @@ export function CrmOrderActionsMenu({
 }) {
   const t = useTranslations("crm");
   const [open, setOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   return (
     <div className="relative">
@@ -33,6 +35,17 @@ export function CrmOrderActionsMenu({
       </Button>
       {open ? (
         <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
+            onClick={() => {
+              setOpen(false);
+              setHistoryOpen(true);
+            }}
+          >
+            <History className="h-4 w-4" />
+            {t("history")}
+          </button>
           {clientToken ? (
             <Link
               href={`/crm/client/${clientToken}`}
@@ -68,6 +81,11 @@ export function CrmOrderActionsMenu({
           ) : null}
         </div>
       ) : null}
+      <CrmOrderHistoryDialog
+        orderId={orderId}
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+      />
     </div>
   );
 }

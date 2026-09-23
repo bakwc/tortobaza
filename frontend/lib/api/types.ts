@@ -313,6 +313,22 @@ export const CrmOrderSchema = z.object({
   images: z.array(CrmOrderImageSchema),
 });
 
+export const CrmOrderEventChangeSchema = z.object({
+  old: z.unknown(),
+  new: z.unknown(),
+});
+
+export const CrmOrderEventSchema = z.object({
+  id: z.number(),
+  created_at: z.string(),
+  action: z.enum(["created", "updated", "deleted"]),
+  source: z.enum(["crm", "admin", "website", "flowwow"]),
+  actor_name: z.string().nullable(),
+  actor_telegram_url: z.string().nullable(),
+  actor_gender: z.enum(["male", "female"]).nullable(),
+  changes: z.record(z.string(), CrmOrderEventChangeSchema),
+});
+
 export const CrmOrdersResponseSchema = z.object({
   date: z.string(),
   orders: z.array(CrmOrderSchema),
@@ -421,6 +437,7 @@ export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
+export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;

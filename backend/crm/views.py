@@ -3,6 +3,7 @@ from calendar import monthrange
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -23,13 +24,15 @@ from attendance.salary import compute_all_salaries
 from catalog.responsive_urls import detail_image
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
-from crm.models import CrmOrder, FlowwowWebhookEvent, ResolvedGoogleAddress
+from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
+from crm.models import CrmOrder, CrmOrderEvent, FlowwowWebhookEvent, ResolvedGoogleAddress
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     CrmExpensesDaySerializer,
     CrmExpensesMonthSerializer,
     CrmMapOrderSerializer,
     CrmOrderClientSerializer,
+    CrmOrderEventSerializer,
     CrmOrderMapQuerySerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
@@ -245,10 +248,44 @@ class CrmOrderDetailView(APIView):
 
     def delete(self, request, pk: int):
         order = get_object_or_404(live_orders(), pk=pk)
+        before = snapshot_crm_order(order)
         order.deleted = True
         order.save(update_fields=["deleted", "updated_at"])
+        record_crm_order_event(
+            order,
+            CrmOrderEvent.ACTION_DELETED,
+            CrmOrderEvent.SOURCE_CRM,
+            request.user,
+            before,
+        )
         schedule_crm_order_telegram_sync(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CrmOrderEventsView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, CrmOrderWritePermission]
+
+    def get(self, request, pk: int):
+        order = get_object_or_404(live_orders(), pk=pk)
+        events = list(order.events.select_related("actor"))
+        user_ids: set[int] = set()
+        for event in events:
+            for field in USER_ID_FIELDS:
+                change = event.changes.get(field)
+                if change is None:
+                    continue
+                if change["old"] is not None:
+                    user_ids.add(change["old"])
+                if change["new"] is not None:
+                    user_ids.add(change["new"])
+        users_by_id = {user.id: user for user in User.objects.filter(id__in=user_ids)}
+        serializer = CrmOrderEventSerializer(
+            events,
+            many=True,
+            context={"request": request, "users_by_id": users_by_id, "identities": {}},
+        )
+        return Response(serializer.data)
 
 
 def _client_no_store_headers(response: Response) -> Response:

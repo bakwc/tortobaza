@@ -413,6 +413,25 @@
     "invoiceCompanyId": "Company ID",
     "invoiceEmail": "Email",
     "invoicePhone": "Phone",
-    "invoiceCompanyAddress": "Address"
+    "invoiceCompanyAddress": "Address",
+    "history": "History",
+    "historyEmpty": "No changes recorded",
+    "historyLoadError": "Could not load the order history.",
+    "historyActionCreated": "Created",
+    "historyActionUpdated": "Updated",
+    "historyActionDeleted": "Deleted",
+    "historySourceCrm": "CRM",
+    "historySourceAdmin": "Admin",
+    "historySourceWebsite": "Website",
+    "historySourceFlowwow": "Flowwow",
+    "historyFieldStatus": "Status",
+    "historyFieldTakenBy": "Taken by",
+    "historyFieldCreatedBy": "Created by",
+    "historyFieldDeliveredBy": "Delivered by",
+    "historyFieldWebsiteOrder": "Website order",
+    "historyFieldFlowwowOrder": "Flowwow order",
+    "historyFieldDeleted": "Deleted",
+    "historyYes": "Yes",
+    "historyNo": "No"
   }
 }
