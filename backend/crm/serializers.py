@@ -31,6 +31,9 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(read_only=True, allow_null=True)
     created_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
     created_by_gender = serializers.CharField(read_only=True, allow_null=True)
+    delivered_by_name = serializers.CharField(read_only=True, allow_null=True)
+    delivered_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
+    delivered_by_gender = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = CrmOrder
@@ -53,6 +56,9 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "created_by_name",
             "created_by_telegram_url",
             "created_by_gender",
+            "delivered_by_name",
+            "delivered_by_telegram_url",
+            "delivered_by_gender",
             "weight",
             "filling",
             "description",
@@ -86,6 +92,15 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             data["created_by_name"] = None
             data["created_by_telegram_url"] = None
             data["created_by_gender"] = None
+        if instance.delivered_by_id:
+            name, url, _nick, gender = chef_identity(instance.delivered_by)
+            data["delivered_by_name"] = name
+            data["delivered_by_telegram_url"] = url
+            data["delivered_by_gender"] = gender
+        else:
+            data["delivered_by_name"] = None
+            data["delivered_by_telegram_url"] = None
+            data["delivered_by_gender"] = None
         return data
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
@@ -181,6 +196,11 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.taken_by = None
             elif status == CrmOrder.STATUS_IN_WORK and instance.taken_by_id is None:
                 instance.taken_by = self.context["request"].user
+            if status in {CrmOrder.STATUS_IN_DELIVERY, CrmOrder.STATUS_DELIVERED}:
+                if instance.delivered_by_id is None:
+                    instance.delivered_by = self.context["request"].user
+            else:
+                instance.delivered_by = None
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.promote_if_paid()

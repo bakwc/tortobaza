@@ -57,7 +57,9 @@ class CrmOrderWritePermission(BasePermission):
 
 
 def live_orders():
-    return CrmOrder.objects.filter(deleted=False).select_related("taken_by", "created_by")
+    return CrmOrder.objects.filter(deleted=False).select_related(
+        "taken_by", "created_by", "delivered_by"
+    )
 
 
 def _tbilisi_now() -> datetime:

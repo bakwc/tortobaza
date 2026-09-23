@@ -402,6 +402,52 @@ class CrmTelegramTests(TestCase):
         self.assertIn("оформил ", html)
         self.assertNotIn("оформила", html)
 
+    def test_delivered_by_telegram_nick_in_html(self):
+        courier = User.objects.create_user(username="courier", password="password")
+        UserProfile.objects.create(user=courier, telegram_username="courier_anna")
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            delivered_by=courier,
+            status=CrmOrder.STATUS_IN_DELIVERY,
+        )
+        html = build_crm_order_telegram_html(order)
+        self.assertIn(
+            '<a href="https://t.me/courier_anna">courier_anna</a> доставляет (@courier_anna)',
+            html,
+        )
+        payload = build_crm_order_telegram_payload(order)
+        self.assertEqual(payload["delivered_by_name"], "courier_anna")
+        self.assertEqual(payload["delivered_by_telegram_url"], "https://t.me/courier_anna")
+
+    def test_delivered_by_male_when_delivered(self):
+        courier = User.objects.create_user(username="courier", password="password")
+        UserProfile.objects.create(
+            user=courier,
+            telegram_username="courier_bob",
+            gender=UserProfile.GENDER_MALE,
+        )
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            delivered_by=courier,
+            status=CrmOrder.STATUS_DELIVERED,
+        )
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("доставил (@courier_bob)", html)
+        self.assertNotIn("доставила", html)
+        self.assertNotIn("доставляет", html)
+
+    def test_delivered_by_female_when_delivered(self):
+        courier = User.objects.create_user(username="courier", password="password")
+        UserProfile.objects.create(user=courier, telegram_username="courier_anna")
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            delivered_by=courier,
+            status=CrmOrder.STATUS_DELIVERED,
+        )
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("доставила (@courier_anna)", html)
+        self.assertNotIn("доставляет", html)
+
     def test_slot_change_edits_and_replies(self):
         order = self._create_order(delta=timedelta(hours=2))
         sync_crm_order_to_telegram(order.pk)

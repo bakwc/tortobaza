@@ -492,6 +492,127 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
         self.assertEqual(order.taken_by_id, self.user.id)
 
+    def test_patch_status_in_delivery_assigns_current_user(self):
+        UserProfile.objects.create(
+            user=self.user,
+            telegram_username="courier_anna",
+            gender=UserProfile.GENDER_MALE,
+        )
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_CLIENT_APPROVED,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_IN_DELIVERY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["delivered_by_name"], "courier_anna")
+        self.assertEqual(data["delivered_by_telegram_url"], "https://t.me/courier_anna")
+        self.assertEqual(data["delivered_by_gender"], "male")
+        self.assertEqual(data["status"], CrmOrder.STATUS_IN_DELIVERY)
+        order.refresh_from_db()
+        self.assertEqual(order.delivered_by_id, self.user.id)
+
+    def test_patch_status_delivered_assigns_current_user_when_empty(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_CLIENT_APPROVED,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["delivered_by_name"], "worker")
+        self.assertIsNone(data["delivered_by_telegram_url"])
+        self.assertEqual(data["delivered_by_gender"], "female")
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
+        self.assertEqual(order.delivered_by_id, self.user.id)
+
+    def test_patch_status_delivered_keeps_existing_delivered_by(self):
+        UserProfile.objects.create(user=self.user, telegram_username="courier_one")
+        other = User.objects.create_user(username="other", password="password")
+        UserProfile.objects.create(user=other, telegram_username="courier_two")
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_IN_DELIVERY,
+            delivered_by=self.user,
+        )
+        self.client.force_authenticate(user=other)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["delivered_by_name"], "courier_one")
+        self.assertEqual(data["delivered_by_telegram_url"], "https://t.me/courier_one")
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
+        self.assertEqual(order.delivered_by_id, self.user.id)
+
+    def test_patch_status_before_delivery_clears_delivered_by(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_IN_DELIVERY,
+            delivered_by=self.user,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_CLIENT_APPROVED},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsNone(data["delivered_by_name"])
+        self.assertIsNone(data["delivered_by_telegram_url"])
+        self.assertIsNone(data["delivered_by_gender"])
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_CLIENT_APPROVED)
+        self.assertIsNone(order.delivered_by_id)
+
     def test_invalid_date_returns_400(self):
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/api/crm/orders/", {"date": "invalid-date"})
@@ -1089,8 +1210,10 @@ class CrmOrdersApiTests(TestCase):
         self.assertIsNone(data["google_maps_url"])
         self.assertNotIn("taken_by_name", data)
         self.assertNotIn("created_by_name", data)
+        self.assertNotIn("delivered_by_name", data)
         self.assertNotIn("taken_by_gender", data)
         self.assertNotIn("created_by_gender", data)
+        self.assertNotIn("delivered_by_gender", data)
         self.assertNotIn("client_token", data)
         self.assertEqual(response["Cache-Control"], "private, no-store, no-cache, must-revalidate")
         self.assertEqual(response["Pragma"], "no-cache")

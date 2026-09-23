@@ -135,6 +135,10 @@ export function crmOrderCookingIsPast(status: CrmOrderStatus): boolean {
   );
 }
 
+export function crmOrderDeliveryIsPast(status: CrmOrderStatus): boolean {
+  return status === "delivered";
+}
+
 export function crmOrderStatusTone(status: CrmOrderStatus): CrmOrderStatusTone {
   return TONES[status];
 }

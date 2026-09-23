@@ -56,6 +56,7 @@ import {
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   crmOrderCookingIsPast,
+  crmOrderDeliveryIsPast,
   crmOrderSelectableStatuses,
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
@@ -933,6 +934,30 @@ function CrmOrderCard({
                         ? t("cookedPaws")
                         : t("cookedPawsFemale")
                       : t("cookingPaws")}
+                  </span>
+                </span>
+              ) : null}
+              {order.delivered_by_name ? (
+                <span className="flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-900">
+                  <Truck className="h-3.5 w-3.5" />
+                  {order.delivered_by_telegram_url ? (
+                    <a
+                      href={order.delivered_by_telegram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {order.delivered_by_name}
+                    </a>
+                  ) : (
+                    <span>{order.delivered_by_name}</span>
+                  )}
+                  <span>
+                    {crmOrderDeliveryIsPast(order.status)
+                      ? order.delivered_by_gender === "male"
+                        ? t("deliveredBy")
+                        : t("deliveredByFemale")
+                      : t("delivering")}
                   </span>
                 </span>
               ) : null}

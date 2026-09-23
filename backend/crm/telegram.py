@@ -97,6 +97,14 @@ def _cooking_phrase(status: str, gender: str) -> str:
     return "готовит лапками"
 
 
+def _delivery_phrase(status: str, gender: str) -> str:
+    if status == CrmOrder.STATUS_DELIVERED:
+        if gender == UserProfile.GENDER_MALE:
+            return "доставил"
+        return "доставила"
+    return "доставляет"
+
+
 def crm_order_slot_datetime(order: CrmOrder) -> datetime:
     if order.time_start is None:
         return datetime.combine(order.date, time(0, 0), tzinfo=_TB)
@@ -135,6 +143,8 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "prepayment": str(order.prepayment),
         "taken_by_name": None,
         "taken_by_telegram_url": None,
+        "delivered_by_name": None,
+        "delivered_by_telegram_url": None,
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "time_lines": "delivery_prep_two_lines",
@@ -152,6 +162,10 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         name, url, _nick, _gender = chef_identity(order.created_by)
         payload["created_by_name"] = name
         payload["created_by_telegram_url"] = url
+    if order.delivered_by_id:
+        name, url, _nick, _gender = chef_identity(order.delivered_by)
+        payload["delivered_by_name"] = name
+        payload["delivered_by_telegram_url"] = url
     if (
         order.status != CrmOrder.STATUS_DELIVERED
         and order.status != CrmOrder.STATUS_UNCONFIRMED
@@ -277,6 +291,12 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
         name, url, nick, gender = chef_identity(order.taken_by)
         lines.append(
             f"{_staff_name_html(name, url)} {_cooking_phrase(order.status, gender)}"
+            f"{_staff_telegram_suffix(nick)}"
+        )
+    if order.delivered_by_id:
+        name, url, nick, gender = chef_identity(order.delivered_by)
+        lines.append(
+            f"{_staff_name_html(name, url)} {_delivery_phrase(order.status, gender)}"
             f"{_staff_telegram_suffix(nick)}"
         )
     return "\n".join(lines)
@@ -476,7 +496,9 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
     if not token or not chat_id:
         return
     with transaction.atomic():
-        order = CrmOrder.objects.select_for_update().select_related("taken_by", "created_by").get(pk=order_id)
+        order = CrmOrder.objects.select_for_update().select_related(
+            "taken_by", "created_by", "delivered_by"
+        ).get(pk=order_id)
         list(order.images.all())
         new_hash = crm_order_telegram_hash(order)
         posted_before = order.telegram_message_id is not None
