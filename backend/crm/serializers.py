@@ -5,7 +5,7 @@ from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.google_maps import cached_google_maps_url
 from crm.models import CrmOrder, CrmOrderImage
-from crm.phone import contact_links
+from crm.phone import links_for_stored
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -24,9 +24,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
-    contact_tel = serializers.CharField(read_only=True, allow_null=True)
-    contact_whatsapp = serializers.CharField(read_only=True, allow_null=True)
-    contact_telegram = serializers.CharField(read_only=True, allow_null=True)
+    phones = serializers.SerializerMethodField()
     taken_by_name = serializers.CharField(read_only=True, allow_null=True)
     taken_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
     taken_by_gender = serializers.CharField(read_only=True, allow_null=True)
@@ -44,9 +42,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "time_end",
             "when_ready",
             "contact",
-            "contact_tel",
-            "contact_whatsapp",
-            "contact_telegram",
+            "phones",
             "nickname",
             "delivery_address",
             "fulfillment_type",
@@ -90,25 +86,17 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             data["created_by_name"] = None
             data["created_by_telegram_url"] = None
             data["created_by_gender"] = None
-        links = contact_links(instance.contact)
-        if links is None:
-            data["contact_tel"] = None
-            data["contact_whatsapp"] = None
-            data["contact_telegram"] = None
-            return data
-        data["contact_tel"] = links["tel"]
-        data["contact_whatsapp"] = links["whatsapp"]
-        data["contact_telegram"] = links["telegram"]
         return data
+
+    def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
+        return [links_for_stored(value) for value in instance.phones]
 
 
 class CrmOrderClientSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
-    contact_tel = serializers.CharField(read_only=True, allow_null=True)
-    contact_whatsapp = serializers.CharField(read_only=True, allow_null=True)
-    contact_telegram = serializers.CharField(read_only=True, allow_null=True)
+    phones = serializers.SerializerMethodField()
     google_maps_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -120,9 +108,7 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
             "time_end",
             "when_ready",
             "contact",
-            "contact_tel",
-            "contact_whatsapp",
-            "contact_telegram",
+            "phones",
             "nickname",
             "delivery_address",
             "fulfillment_type",
@@ -144,18 +130,8 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
             return None
         return cached_google_maps_url(address)
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        links = contact_links(instance.contact)
-        if links is None:
-            data["contact_tel"] = None
-            data["contact_whatsapp"] = None
-            data["contact_telegram"] = None
-            return data
-        data["contact_tel"] = links["tel"]
-        data["contact_whatsapp"] = links["whatsapp"]
-        data["contact_telegram"] = links["telegram"]
-        return data
+    def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
+        return [links_for_stored(value) for value in instance.phones]
 
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):

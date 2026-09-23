@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, Value, When
 
+from crm.phone import phones_from_fields
+
 
 def generate_crm_client_token() -> str:
     return secrets.token_hex(32)
@@ -71,6 +73,7 @@ class CrmOrder(models.Model):
     when_ready = models.BooleanField(default=False)
     contact = models.TextField()
     nickname = models.CharField(max_length=100, blank=True)
+    phones = models.JSONField(default=list)
     delivery_address = models.TextField(blank=True)
     fulfillment_type = models.CharField(
         max_length=10,
@@ -174,6 +177,14 @@ class CrmOrder(models.Model):
         else:
             time_display = self.time_start.strftime("%H:%M")
         return f"{self.date} {time_display} - {self.contact[:30]}"
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get("update_fields")
+        if update_fields is None or "contact" in update_fields or "nickname" in update_fields:
+            self.phones = phones_from_fields(self.contact, self.nickname)
+            if update_fields is not None and "phones" not in update_fields:
+                kwargs["update_fields"] = [*update_fields, "phones"]
+        super().save(*args, **kwargs)
 
     def promote_if_paid(self) -> None:
         if self.is_paid and self.status == self.STATUS_UNCONFIRMED:

@@ -270,6 +270,13 @@ export const CrmOrderImageSchema = z.object({
   position: z.number(),
 });
 
+export const CrmPhoneSchema = z.object({
+  e164: z.string(),
+  tel: z.string().nullable(),
+  whatsapp: z.string().nullable(),
+  telegram: z.string(),
+});
+
 export const CrmOrderSchema = z.object({
   id: z.number(),
   client_token: z.string(),
@@ -278,9 +285,7 @@ export const CrmOrderSchema = z.object({
   time_end: z.string().nullable(),
   when_ready: z.boolean(),
   contact: z.string(),
-  contact_tel: z.string().nullable(),
-  contact_whatsapp: z.string().nullable(),
-  contact_telegram: z.string().nullable(),
+  phones: z.array(CrmPhoneSchema),
   nickname: z.string(),
   delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
@@ -371,9 +376,7 @@ export const CrmClientOrderSchema = z.object({
   time_end: z.string().nullable(),
   when_ready: z.boolean(),
   contact: z.string(),
-  contact_tel: z.string().nullable(),
-  contact_whatsapp: z.string().nullable(),
-  contact_telegram: z.string().nullable(),
+  phones: z.array(CrmPhoneSchema),
   nickname: z.string(),
   delivery_address: z.string(),
   fulfillment_type: z.enum(["delivery", "pickup"]),

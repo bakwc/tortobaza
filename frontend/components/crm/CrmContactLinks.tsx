@@ -1,5 +1,8 @@
 import { Phone } from "lucide-react";
 import { TelegramIcon, WhatsAppIcon } from "@/content/contacts/icons";
+import type { CrmOrder } from "@/lib/api/types";
+
+type CrmPhone = CrmOrder["phones"][number];
 
 type CrmContactLinksProps = {
   tel: string | null;
@@ -45,5 +48,18 @@ export function CrmContactLinks({ tel, whatsapp, telegram }: CrmContactLinksProp
         </a>
       ) : null}
     </span>
+  );
+}
+
+export function CrmPhoneList({ phones }: { phones: CrmPhone[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {phones.map((phone) => (
+        <div key={phone.e164} className="flex items-center justify-between gap-3">
+          <span className="min-w-0 font-medium">{phone.e164}</span>
+          <CrmContactLinks tel={phone.tel} whatsapp={phone.whatsapp} telegram={phone.telegram} />
+        </div>
+      ))}
+    </div>
   );
 }
