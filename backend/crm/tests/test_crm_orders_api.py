@@ -553,10 +553,14 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
         self.assertEqual(order.delivered_by_id, self.user.id)
 
-    def test_patch_status_delivered_keeps_existing_delivered_by(self):
+    def test_patch_status_delivered_replaces_existing_delivered_by(self):
         UserProfile.objects.create(user=self.user, telegram_username="courier_one")
         other = User.objects.create_user(username="other", password="password")
-        UserProfile.objects.create(user=other, telegram_username="courier_two")
+        UserProfile.objects.create(
+            user=other,
+            telegram_username="courier_two",
+            gender=UserProfile.GENDER_FEMALE,
+        )
         order = CrmOrder.objects.create(
             date=date(2026, 8, 25),
             time_start=time(11, 0),
@@ -578,11 +582,12 @@ class CrmOrdersApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["delivered_by_name"], "courier_one")
-        self.assertEqual(data["delivered_by_telegram_url"], "https://t.me/courier_one")
+        self.assertEqual(data["delivered_by_name"], "courier_two")
+        self.assertEqual(data["delivered_by_telegram_url"], "https://t.me/courier_two")
+        self.assertEqual(data["delivered_by_gender"], "female")
         order.refresh_from_db()
         self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
-        self.assertEqual(order.delivered_by_id, self.user.id)
+        self.assertEqual(order.delivered_by_id, other.id)
 
     def test_patch_status_before_delivery_clears_delivered_by(self):
         order = CrmOrder.objects.create(

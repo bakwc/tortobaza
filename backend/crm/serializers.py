@@ -264,9 +264,11 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.taken_by = None
             elif status == CrmOrder.STATUS_IN_WORK and instance.taken_by_id is None:
                 instance.taken_by = self.context["request"].user
-            if status in {CrmOrder.STATUS_IN_DELIVERY, CrmOrder.STATUS_DELIVERED}:
+            if status == CrmOrder.STATUS_IN_DELIVERY:
                 if instance.delivered_by_id is None:
                     instance.delivered_by = self.context["request"].user
+            elif status == CrmOrder.STATUS_DELIVERED:
+                instance.delivered_by = self.context["request"].user
             else:
                 instance.delivered_by = None
         for attr, value in validated_data.items():
