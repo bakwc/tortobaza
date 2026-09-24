@@ -100,7 +100,7 @@ class OrderCreateInputSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(choices=Order.PAYMENT_METHOD_CHOICES)
     customer_name = serializers.CharField(max_length=200)
     customer_phone = serializers.CharField(max_length=50)
-    customer_email = serializers.EmailField(required=False, allow_blank=True, default="")
+    customer_email = serializers.EmailField()
     customer_instagram = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
     customer_telegram = serializers.CharField(required=False, allow_blank=True, default="", max_length=100)
     comment = serializers.CharField(required=False, allow_blank=True, default="")

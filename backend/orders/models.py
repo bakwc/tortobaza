@@ -121,7 +121,7 @@ class Order(models.Model):
 
     customer_name = models.CharField(max_length=200)
     customer_phone = models.CharField(max_length=50)
-    customer_email = models.EmailField(blank=True)
+    customer_email = models.EmailField()
     customer_instagram = models.CharField(max_length=100, blank=True)
     customer_telegram = models.CharField(max_length=100, blank=True)
     comment = models.TextField(blank=True)

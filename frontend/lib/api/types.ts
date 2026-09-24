@@ -520,7 +520,7 @@ export type PlaceOrderBody = {
   payment_method: PaymentMethod;
   customer_name: string;
   customer_phone: string;
-  customer_email?: string;
+  customer_email: string;
   customer_instagram?: string;
   customer_telegram?: string;
   comment: string;

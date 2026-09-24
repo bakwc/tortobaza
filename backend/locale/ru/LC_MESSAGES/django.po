@@ -139,3 +139,26 @@ msgstr "Нужен токен для просмотра заказа."
 #, python-format
 msgid "✅ <b>Order #%(number)s paid by card</b>"
 msgstr "✅ <b>Заказ #%(number)s оплачен картой</b>"
+
+msgid "Delivery fee:"
+msgstr "Доставка:"
+
+#, python-format
+msgid "Order #%(number)s received"
+msgstr "Заказ #%(number)s принят"
+
+#, python-format
+msgid "Order #%(number)s confirmed"
+msgstr "Заказ #%(number)s подтверждён"
+
+#, python-format
+msgid "Hello, %(name)s!"
+msgstr "Здравствуйте, %(name)s!"
+
+#, python-format
+msgid "We have received your order #%(number)s. It is not confirmed yet. It will be confirmed after card payment or by a manager."
+msgstr "Мы получили ваш заказ #%(number)s. Он ещё не подтверждён. Подтверждение будет после оплаты картой или менеджером."
+
+#, python-format
+msgid "Your order #%(number)s is confirmed."
+msgstr "Ваш заказ #%(number)s подтверждён."

@@ -7,6 +7,7 @@ from crm.google_maps import cached_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.phone import links_for_stored
+from orders.email import schedule_order_confirmed_email
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -283,6 +284,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
             self.context["request"].user,
             before,
         )
+        schedule_order_confirmed_email(instance, previous_status)
         return instance
 
 
@@ -378,6 +380,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             self.context["request"].user,
             before,
         )
+        schedule_order_confirmed_email(instance, previous_status)
         return instance
 
     def _apply_images(self, order: CrmOrder, images: list, delete_image_ids: list[int]) -> None:

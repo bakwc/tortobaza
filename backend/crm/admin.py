@@ -16,6 +16,7 @@ from crm.models import (
 )
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
+from orders.email import schedule_order_confirmed_email
 from crm.whatsapp import check_number, get_new_qr
 
 
@@ -178,6 +179,11 @@ class CrmOrderAdmin(admin.ModelAdmin):
         )
         sync_website_order_status_from_crm(form.instance)
         schedule_crm_order_telegram_sync(form.instance.pk)
+        if request.crm_order_event_before is not None:
+            schedule_order_confirmed_email(
+                form.instance,
+                request.crm_order_event_before["status"],
+            )
 
 
 @admin.register(WhatsAppNumberCheck)

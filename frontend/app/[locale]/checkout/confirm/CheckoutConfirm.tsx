@@ -115,6 +115,7 @@ export function CheckoutConfirm() {
     }
     if (!draft.customer_name.trim()) return false;
     if (!draft.customer_phone.trim()) return false;
+    if (!draft.customer_email.trim()) return false;
     return true;
   }, [draft]);
 
@@ -139,9 +140,7 @@ export function CheckoutConfirm() {
       payment_method: draft.payment_method,
       customer_name: draft.customer_name.trim(),
       customer_phone: draft.customer_phone.trim(),
-      ...(draft.customer_email.trim()
-        ? { customer_email: draft.customer_email.trim() }
-        : {}),
+      customer_email: draft.customer_email.trim(),
       ...(draft.customer_instagram.trim()
         ? { customer_instagram: draft.customer_instagram.trim() }
         : {}),
@@ -257,7 +256,7 @@ export function CheckoutConfirm() {
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
-            <Input
+            <RequiredInput
               type="email"
               placeholder={t("emailPlaceholder")}
               value={draft.customer_email}

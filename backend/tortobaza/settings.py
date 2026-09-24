@@ -162,6 +162,14 @@ FLOWWOW_WEBHOOK_SECRET = os.environ.get("FLOWWOW_WEBHOOK_SECRET", "")
 FLOWWOW_API_TOKEN = os.environ.get("FLOWWOW_API_TOKEN")
 FLOWWOW_SHOP_ID = os.environ.get("FLOWWOW_SHOP_ID")
 
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = "info@sweet-chill.ge"
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

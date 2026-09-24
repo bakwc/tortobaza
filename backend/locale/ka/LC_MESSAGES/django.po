@@ -138,3 +138,26 @@ msgstr "გამოძახების ჟეტონი საჭირო�
 #, python-format
 msgid "✅ <b>Order #%(number)s paid by card</b>"
 msgstr "✅ <b>შეკვეთა #%(number)s გადახდილია ბარათით</b>"
+
+msgid "Delivery fee:"
+msgstr "მიწოდება:"
+
+#, python-format
+msgid "Order #%(number)s received"
+msgstr "შეკვეთა #%(number)s მიღებულია"
+
+#, python-format
+msgid "Order #%(number)s confirmed"
+msgstr "შეკვეთა #%(number)s დადასტურებულია"
+
+#, python-format
+msgid "Hello, %(name)s!"
+msgstr "გამარჯობა, %(name)s!"
+
+#, python-format
+msgid "We have received your order #%(number)s. It is not confirmed yet. It will be confirmed after card payment or by a manager."
+msgstr "თქვენი შეკვეთა #%(number)s მიღებულია. ის ჯერ არ არის დადასტურებული. დადასტურდება ბარათით გადახდის ან მენეჯერის შემდეგ."
+
+#, python-format
+msgid "Your order #%(number)s is confirmed."
+msgstr "თქვენი შეკვეთა #%(number)s დადასტურებულია."

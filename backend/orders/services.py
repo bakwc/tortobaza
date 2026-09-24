@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from cart.models import Cart
 from crm.website import create_crm_order_from_website_order
+from orders.email import schedule_order_received_email
 from orders.schedule import resolve_schedule_selection
 from orders.telegram import send_order_notification, send_order_paid_notification
 from orders.models import (
@@ -115,7 +116,7 @@ def create_order_from_cart(cart: Cart, payload: dict, environment: str) -> Order
         payment_method=payload["payment_method"],
         customer_name=payload["customer_name"],
         customer_phone=payload["customer_phone"],
-        customer_email=payload.get("customer_email", ""),
+        customer_email=payload["customer_email"],
         customer_instagram=payload.get("customer_instagram", ""),
         customer_telegram=payload.get("customer_telegram", ""),
         comment=payload.get("comment", ""),
@@ -184,6 +185,7 @@ def create_order_from_cart(cart: Cart, payload: dict, environment: str) -> Order
             daemon=True,
         ).start()
     )
+    schedule_order_received_email(order_id)
 
     return order
 
