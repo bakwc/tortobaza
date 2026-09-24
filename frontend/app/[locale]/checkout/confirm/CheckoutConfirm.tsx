@@ -255,13 +255,16 @@ export function CheckoutConfirm() {
               onChange={(e) => update({ customer_phone: e.target.value })}
             />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
             <RequiredInput
               type="email"
               placeholder={t("emailPlaceholder")}
               value={draft.customer_email}
               onChange={(e) => update({ customer_email: e.target.value })}
             />
+            <p className="text-sm leading-snug text-[var(--ink)]/60">{t("emailOrderNotice")}</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input
               placeholder={t("instagramPlaceholder")}
               value={draft.customer_instagram}

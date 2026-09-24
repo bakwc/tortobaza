@@ -106,6 +106,7 @@
     "namePlaceholder": "Name",
     "phonePlaceholder": "Phone",
     "emailPlaceholder": "Email",
+    "emailOrderNotice": "An order notification will be sent to this email.",
     "instagramPlaceholder": "Instagram",
     "telegramPlaceholder": "Telegram",
     "deliverTo": "Deliver to",

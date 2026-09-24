@@ -106,6 +106,7 @@
     "namePlaceholder": "Имя",
     "phonePlaceholder": "Телефон",
     "emailPlaceholder": "Email",
+    "emailOrderNotice": "На e-mail придёт уведомление о заказе.",
     "instagramPlaceholder": "Instagram",
     "telegramPlaceholder": "Telegram",
     "deliverTo": "Доставить по адресу",
