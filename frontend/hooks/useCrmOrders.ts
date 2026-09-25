@@ -12,6 +12,7 @@ import type {
   CrmMapOrderRange,
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
+  CrmUnconfirmedOrdersResponse,
   CrmOrder,
   CrmOrderEvent,
   CrmOrdersResponse,
@@ -24,6 +25,8 @@ export const crmOrdersQueryKey = (date?: string) =>
 
 export const crmMonthlyOrdersQueryKey = (month: string) =>
   ["crm-orders", "month", month] as const;
+
+export const crmUnconfirmedOrdersQueryKey = ["crm-orders", "unconfirmed"] as const;
 
 export const crmMapOrdersQueryKey = (
   range: CrmMapOrderRange | null,
@@ -56,6 +59,16 @@ export function useCrmOrdersByMonth(month: string) {
   return useQuery<CrmMonthlyOrdersResponse>({
     queryKey: crmMonthlyOrdersQueryKey(month),
     queryFn: () => api.getCrmOrdersByMonth(month),
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmUnconfirmedOrders() {
+  return useQuery<CrmUnconfirmedOrdersResponse>({
+    queryKey: crmUnconfirmedOrdersQueryKey,
+    queryFn: () => api.getCrmUnconfirmedOrders(),
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,

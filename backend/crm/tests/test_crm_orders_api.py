@@ -269,6 +269,80 @@ class CrmOrdersApiTests(TestCase):
         response = self.client.get("/api/crm/orders/", {"date": "2026-08-25", "month": "2026-08"})
         self.assertEqual(response.status_code, 400)
 
+    def test_get_unconfirmed_orders_across_dates(self):
+        later = CrmOrder.objects.create(
+            date=date(2026, 9, 2),
+            time_start=time(11, 0),
+            contact="Later",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        earlier = CrmOrder.objects.create(
+            date=date(2026, 7, 15),
+            time_start=time(16, 0),
+            contact="Earlier",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Honey",
+            cake_price=Decimal("80.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        CrmOrder.objects.create(
+            date=date(2026, 8, 1),
+            time_start=time(12, 0),
+            contact="Confirmed",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("90.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_NEW,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        CrmOrder.objects.create(
+            date=date(2026, 8, 2),
+            time_start=time(12, 0),
+            contact="Deleted",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("90.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            deleted=True,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/", {"status": "unconfirmed"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertNotIn("date", data)
+        self.assertNotIn("month", data)
+        self.assertEqual([order["id"] for order in data["orders"]], [earlier.id, later.id])
+
+        with_date = self.client.get(
+            "/api/crm/orders/",
+            {"status": "unconfirmed", "date": "2026-08-25"},
+        )
+        self.assertEqual(with_date.status_code, 400)
+        with_month = self.client.get(
+            "/api/crm/orders/",
+            {"status": "unconfirmed", "month": "2026-08"},
+        )
+        self.assertEqual(with_month.status_code, 400)
+
     def test_patch_order_status(self):
         order = CrmOrder.objects.create(
             date=date(2026, 8, 25),

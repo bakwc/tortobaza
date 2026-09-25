@@ -1,63 +1,28 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  Calendar,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  Package,
-  Pencil,
-  Plus,
-  Store,
-  Truck,
-} from "lucide-react";
+import { CreditCard, Package, Pencil, Plus, Store, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
-import { CrmUnconfirmedOrdersLink } from "@/components/crm/CrmUnconfirmedOrdersLink";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
-import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
-import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
-import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
+import { useCrmUnconfirmedOrders, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import {
   formatAed,
   formatCrmCompactDate,
   formatCrmDate,
-  formatCrmMonth,
   getTbilisiTodayIsoDate,
   sortCrmBoardOrders,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
-function daysInMonth(yyyyMm: string): number {
-  const [yearStr, monthStr] = yyyyMm.split("-");
-  return new Date(Number(yearStr), Number(monthStr), 0).getDate();
-}
-
-function dailyRentFromMonth(monthlyRent: string, yyyyMm: string): string {
-  return (Number.parseFloat(monthlyRent) / daysInMonth(yyyyMm)).toFixed(2);
-}
-
-function shiftMonth(yyyyMm: string, delta: number): string {
-  const [yearStr, monthStr] = yyyyMm.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
-  const nextYear = date.getUTCFullYear();
-  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${nextYear}-${nextMonth}`;
-}
 
 function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder[] }[] {
   const groups: { date: string; orders: CrmOrder[] }[] = [];
@@ -72,7 +37,7 @@ function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder
   return groups;
 }
 
-export default function CrmMonthPage() {
+export default function CrmUnconfirmedPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-3 py-6 md:px-4 md:py-12">
       <CrmAuthGate>
@@ -83,135 +48,41 @@ export default function CrmMonthPage() {
             </div>
           }
         >
-          <CrmMonthBoard />
+          <CrmUnconfirmedBoard />
         </Suspense>
       </CrmAuthGate>
     </div>
   );
 }
 
-function CrmMonthBoard() {
+function CrmUnconfirmedBoard() {
   const t = useTranslations("crm");
   const currentUser = useCurrentUser();
   const locale = useLocale();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentMonth = getTbilisiTodayIsoDate().slice(0, 7);
-  const selectedMonth = searchParams.get("month") ?? currentMonth;
-
-  const setSelectedMonth = (next: string) => {
-    router.replace(`/crm/month?month=${next}`);
-  };
-
-  const ordersQuery = useCrmOrdersByMonth(selectedMonth);
-  const expensesQuery = useCrmExpensesByMonth(
-    selectedMonth,
-    Boolean(currentUser.data?.is_staff),
-  );
+  const ordersQuery = useCrmUnconfirmedOrders();
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
-  const isCurrentMonth = selectedMonth === currentMonth;
-
-  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
-  const paidCount = orders.filter((o) => o.is_paid).length;
 
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap justify-end gap-2">
-        <CrmUnconfirmedOrdersLink />
         <Button asChild variant="outline">
           <Link href="/crm/map">{t("ordersMap")}</Link>
         </Button>
         <Button asChild variant="outline">
           <Link href="/crm">{t("dailyBoard")}</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/crm/month">{t("monthlyOrders")}</Link>
+        </Button>
         {currentUser.data?.is_staff ? (
           <Button asChild>
-            <Link
-              href={`/crm/new?date=${isCurrentMonth ? getTbilisiTodayIsoDate() : `${selectedMonth}-01`}`}
-            >
+            <Link href={`/crm/new?date=${getTbilisiTodayIsoDate()}`}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("createOrder")}
             </Link>
           </Button>
         ) : null}
         <CrmOverflowMenu />
-      </div>
-      <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedMonth(shiftMonth(selectedMonth, -1))}
-            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("prevMonth")}</span>
-          </Button>
-
-          <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-            <div className="flex items-center gap-2 text-base font-semibold text-[var(--ink)] md:text-lg">
-              <Calendar className="h-4 w-4 shrink-0 text-[var(--brand)] md:h-5 md:w-5" />
-              <span className="truncate">{formatCrmMonth(selectedMonth, locale)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {isCurrentMonth ? (
-                <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
-                  {t("thisMonth")}
-                </span>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedMonth(currentMonth)}
-                  className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
-                >
-                  {t("jumpToThisMonth")}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedMonth(shiftMonth(selectedMonth, 1))}
-            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
-          >
-            <span className="hidden sm:inline">{t("nextMonth")}</span>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--line)] pt-4 text-xs sm:gap-6 sm:text-sm">
-          <div className="flex items-center gap-1.5 text-[var(--ink)]">
-            <Package className="h-4 w-4 text-[var(--muted-2)]" />
-            <span>{t("total")}</span>
-            <span className="font-bold">{orders.length}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-emerald-700">
-            <Check className="h-4 w-4" />
-            <span>{t("deliveredCount")}</span>
-            <span className="font-bold">
-              {deliveredCount} / {orders.length}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[var(--brand)]">
-            <CreditCard className="h-4 w-4" />
-            <span>{t("paidCount")}</span>
-            <span className="font-bold">
-              {paidCount} / {orders.length}
-            </span>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <CrmIncomeStats orders={orders} compact={false} detailed={true} />
-          <CrmExpenseStats
-            salary={expensesQuery.data?.salary}
-            rent={expensesQuery.data?.rent}
-            compact={false}
-            detailed={true}
-          />
-        </div>
       </div>
 
       {ordersQuery.isLoading ? (
@@ -220,17 +91,15 @@ function CrmMonthBoard() {
         </div>
       ) : ordersQuery.isError ? (
         <div className="rounded-3xl border border-[var(--line)] bg-white p-12 text-center text-sm text-[var(--danger)]">
-          {t("monthLoadError")}
+          {t("unconfirmedLoadError")}
         </div>
       ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-white p-12 text-center">
           <Package className="h-12 w-12 text-[var(--muted)]" />
           <p className="mt-4 text-base font-semibold text-[var(--ink)]">
-            {t("monthEmptyTitle")}
+            {t("unconfirmedEmptyTitle")}
           </p>
-          <p className="mt-1 text-sm text-[var(--muted-2)]">
-            {t("monthEmptyHint")}
-          </p>
+          <p className="mt-1 text-sm text-[var(--muted-2)]">{t("unconfirmedEmptyHint")}</p>
         </div>
       ) : (
         <div className="grid gap-6">
@@ -244,28 +113,12 @@ function CrmMonthBoard() {
                   <span className="md:hidden">{formatCrmCompactDate(group.date, locale)}</span>
                   <span className="hidden md:inline">{formatCrmDate(group.date, locale)}</span>
                 </span>
-                <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
-                  <span>{group.orders.length}</span>
-                  <CrmIncomeStats orders={group.orders} compact={true} detailed={false} />
-                  <CrmExpenseStats
-                    salary={
-                      expensesQuery.data
-                        ? (expensesQuery.data.by_date[group.date]?.salary ?? "0.00")
-                        : undefined
-                    }
-                    rent={
-                      expensesQuery.data
-                        ? (expensesQuery.data.by_date[group.date]?.rent ??
-                          dailyRentFromMonth(expensesQuery.data.rent, selectedMonth))
-                        : undefined
-                    }
-                    compact={true}
-                    detailed={false}
-                  />
+                <span className="shrink-0 text-xs font-medium text-[var(--muted-2)]">
+                  {group.orders.length}
                 </span>
               </Link>
               {group.orders.map((order) => (
-                <CrmMonthOrderRow key={order.id} order={order} />
+                <CrmUnconfirmedOrderRow key={order.id} order={order} />
               ))}
             </section>
           ))}
@@ -275,7 +128,7 @@ function CrmMonthBoard() {
   );
 }
 
-function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
+function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
   const currentUser = useCurrentUser();
   const thumb = order.images[0];

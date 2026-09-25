@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { CrmUnconfirmedOrdersLink } from "@/components/crm/CrmUnconfirmedOrdersLink";
 import { CrmPhoneList } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
@@ -137,6 +138,7 @@ function CrmBoard() {
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap justify-end gap-2">
+        <CrmUnconfirmedOrdersLink />
         <Button asChild variant="outline">
           <Link href={`/crm/map?date=${selectedDate}`}>{t("ordersMap")}</Link>
         </Button>

@@ -10,6 +10,7 @@ import {
   CrmExpensesMonthSchema,
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
+  CrmUnconfirmedOrdersResponseSchema,
   CrmOrderEventSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -39,6 +40,7 @@ import {
   type CrmMapOrderRange,
   type CrmMapOrdersResponse,
   type CrmMonthlyOrdersResponse,
+  type CrmUnconfirmedOrdersResponse,
   type CrmOrder,
   type CrmOrderEvent,
   type CrmOrdersResponse,
@@ -261,6 +263,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(CrmMonthlyOrdersResponseSchema, raw);
+    },
+
+    async getCrmUnconfirmedOrders(): Promise<CrmUnconfirmedOrdersResponse> {
+      const raw = await fetcher<unknown>("/api/crm/orders/", {
+        searchParams: { status: "unconfirmed" },
+      });
+      return parse(CrmUnconfirmedOrdersResponseSchema, raw);
     },
 
     async getCrmMapOrders(

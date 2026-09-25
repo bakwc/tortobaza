@@ -263,7 +263,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
             instance.status = status
             if (
                 previous_status == CrmOrder.STATUS_UNCONFIRMED
-                and status != CrmOrder.STATUS_UNCONFIRMED
+                and status == CrmOrder.STATUS_NEW
                 and instance.created_by_id is None
             ):
                 instance.created_by = self.context["request"].user
@@ -418,10 +418,13 @@ class ResolveGoogleAddressSerializer(serializers.Serializer):
 class CrmOrderQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+    status = serializers.ChoiceField(choices=[CrmOrder.STATUS_UNCONFIRMED], required=False)
 
     def validate(self, attrs):
         if attrs.get("date") is not None and attrs.get("month") is not None:
             raise serializers.ValidationError("Pass either date or month, not both.")
+        if attrs.get("status") and (attrs.get("date") is not None or attrs.get("month") is not None):
+            raise serializers.ValidationError("Pass status alone.")
         return attrs
 
 

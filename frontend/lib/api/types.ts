@@ -339,6 +339,10 @@ export const CrmMonthlyOrdersResponseSchema = z.object({
   orders: z.array(CrmOrderSchema),
 });
 
+export const CrmUnconfirmedOrdersResponseSchema = z.object({
+  orders: z.array(CrmOrderSchema),
+});
+
 export const CrmMapOrderRangeSchema = z.enum(["next_3_hours", "today"]);
 
 export const CrmMapOrderSchema = z.object({
@@ -441,6 +445,7 @@ export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
+export type CrmUnconfirmedOrdersResponse = z.infer<typeof CrmUnconfirmedOrdersResponseSchema>;
 export type CrmMapOrderRange = z.infer<typeof CrmMapOrderRangeSchema>;
 export type CrmMapOrder = z.infer<typeof CrmMapOrderSchema>;
 export type CrmMapOrdersResponse = z.infer<typeof CrmMapOrdersResponseSchema>;

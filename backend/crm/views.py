@@ -153,6 +153,13 @@ class CrmOrderListView(APIView):
     def get(self, request):
         query_serializer = CrmOrderQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
+        order_status = query_serializer.validated_data.get("status")
+        if order_status == CrmOrder.STATUS_UNCONFIRMED:
+            orders = live_orders().filter(
+                status=CrmOrder.STATUS_UNCONFIRMED,
+            ).prefetch_related("images")
+            serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
+            return Response({"orders": serializer.data})
         month = query_serializer.validated_data.get("month")
         if month:
             year_str, month_str = month.split("-")
