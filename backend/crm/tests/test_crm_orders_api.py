@@ -816,6 +816,58 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         order.refresh_from_db()
         self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.created_by_id, self.user.id)
+
+    def test_patch_unconfirmed_to_new_keeps_existing_created_by(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+            created_by=self.admin,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.created_by_id, self.admin.id)
+
+    def test_put_unconfirmed_to_new_sets_created_by(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_UNCONFIRMED,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.put(
+            f"/api/crm/orders/{order.id}/",
+            self._order_payload(status=CrmOrder.STATUS_NEW),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.created_by_id, self.admin.id)
 
     def test_patch_unconfirmed_to_in_work_is_rejected(self):
         order = CrmOrder.objects.create(

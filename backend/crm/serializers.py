@@ -261,6 +261,12 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.status = CrmOrder.STATUS_IN_WORK
         if status is not None:
             instance.status = status
+            if (
+                previous_status == CrmOrder.STATUS_UNCONFIRMED
+                and status != CrmOrder.STATUS_UNCONFIRMED
+                and instance.created_by_id is None
+            ):
+                instance.created_by = self.context["request"].user
             if status == CrmOrder.STATUS_NEW:
                 instance.taken_by = None
             elif status == CrmOrder.STATUS_IN_WORK and instance.taken_by_id is None:
@@ -368,6 +374,12 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        if (
+            previous_status == CrmOrder.STATUS_UNCONFIRMED
+            and instance.status == CrmOrder.STATUS_NEW
+            and instance.created_by_id is None
+        ):
+            instance.created_by = self.context["request"].user
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
