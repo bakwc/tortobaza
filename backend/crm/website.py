@@ -8,7 +8,6 @@ from django.utils import timezone
 from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.telegram import schedule_crm_order_telegram_sync
-from orders.email import schedule_order_confirmed_email
 from orders.models import Order, OrderItem
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -78,11 +77,9 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
         return
     crm_order = CrmOrder.objects.get(website_order=order)
     before = snapshot_crm_order(crm_order)
-    previous_status = crm_order.status
     crm_order.is_paid = True
     crm_order.prepayment = crm_order.cake_price
-    crm_order.promote_if_paid()
-    crm_order.save(update_fields=["is_paid", "prepayment", "status", "updated_at"])
+    crm_order.save(update_fields=["is_paid", "prepayment", "updated_at"])
     record_crm_order_event(
         crm_order,
         CrmOrderEvent.ACTION_UPDATED,
@@ -91,7 +88,6 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
         before,
     )
     schedule_crm_order_telegram_sync(crm_order.pk)
-    schedule_order_confirmed_email(crm_order, previous_status)
 
 
 def sync_website_order_status_from_crm(crm_order: CrmOrder) -> None:

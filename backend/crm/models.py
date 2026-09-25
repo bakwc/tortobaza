@@ -196,10 +196,6 @@ class CrmOrder(models.Model):
                 kwargs["update_fields"] = [*update_fields, "phones"]
         super().save(*args, **kwargs)
 
-    def promote_if_paid(self) -> None:
-        if self.is_paid and self.status == self.STATUS_UNCONFIRMED:
-            self.status = self.STATUS_NEW
-
 
 class CrmOrderEvent(models.Model):
     ACTION_CREATED = "created"

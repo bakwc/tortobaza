@@ -274,7 +274,6 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 instance.delivered_by = None
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.promote_if_paid()
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         record_crm_order_event(
@@ -369,7 +368,6 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.promote_if_paid()
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)

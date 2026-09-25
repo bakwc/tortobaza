@@ -204,7 +204,7 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(order.prepayment, Decimal("80.00"))
         self.assertTrue(order.is_paid)
         self.assertEqual(order.payment_type, CrmOrder.PAYMENT_FLOWWOW)
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertEqual(order.internal_description, "напишите, пожалуйста, на тортике надпись")
         self.assertEqual(order.flowwow_synced_description, order.description)
         self.assertEqual(order.flowwow_synced_internal_description, order.internal_description)
@@ -377,7 +377,7 @@ class FlowwowOrderSyncTests(TestCase):
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_promotes_unconfirmed_when_flowwow_accepted(self, mock_get, _mock_now):
+    def test_keeps_unconfirmed_when_flowwow_accepted(self, mock_get, _mock_now):
         self.items = [_flowwow_order(status=1)]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
@@ -388,7 +388,7 @@ class FlowwowOrderSyncTests(TestCase):
         self.items = [_flowwow_order(status=2)]
         sync_flowwow_orders()
         order.refresh_from_db()
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
@@ -429,7 +429,8 @@ class FlowwowOrderSyncTests(TestCase):
 
         sync_flowwow_orders()
         order = CrmOrder.objects.get(flowwow_order_id=25836184)
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        order.status = CrmOrder.STATUS_NEW
+        order.save(update_fields=["status"])
         self.items = [_flowwow_order(status=1)]
         sync_flowwow_orders()
         order.refresh_from_db()

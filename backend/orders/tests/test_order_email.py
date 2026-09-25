@@ -103,14 +103,14 @@ class OrderEmailTests(TestCase):
         self.assertEqual(mail.outbox, [])
 
     @patch("django.utils.timezone.now")
-    def test_card_payment_sends_confirmed_email(self, mock_now, _mock_crm_tg, _mock_order_tg):
+    def test_card_payment_does_not_send_confirmed_email(self, mock_now, _mock_crm_tg, _mock_order_tg):
         mock_now.return_value = self._frozen_now()
         order = create_order_from_cart(self.cart, self._payload(), Order.ENV_PROD)
         with self.captureOnCommitCallbacks(execute=True):
             mark_crm_order_paid_for_website_order(order)
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, f"Order #{order.number} confirmed")
-        self.assertEqual(mail.outbox[0].to, ["anna@example.com"])
+        self.assertEqual(mail.outbox, [])
+        crm = CrmOrder.objects.get(website_order=order)
+        self.assertEqual(crm.status, CrmOrder.STATUS_UNCONFIRMED)
 
     @patch("django.utils.timezone.now")
     def test_manager_confirm_sends_confirmed_email_once(self, mock_now, _mock_crm_tg, _mock_order_tg):

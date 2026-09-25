@@ -251,14 +251,9 @@ def _fetch_order(order_id: int) -> dict:
     return response.json()
 
 
-def _mapped_crm_status(flowwow_status: int, current_status: str | None) -> str | None:
+def _mapped_crm_status(flowwow_status: int) -> str | None:
     if flowwow_status == FlowwowOrderStatus.NEW:
         return CrmOrder.STATUS_UNCONFIRMED
-    if (
-        flowwow_status == FlowwowOrderStatus.ACCEPTED
-        and current_status == CrmOrder.STATUS_UNCONFIRMED
-    ):
-        return CrmOrder.STATUS_NEW
     return None
 
 
@@ -279,14 +274,11 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
     crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
     before = None if crm_order is None else snapshot_crm_order(crm_order)
     _apply_synced_text(crm_order, fields)
-    mapped_status = _mapped_crm_status(
-        item["status"],
-        None if crm_order is None else crm_order.status,
-    )
+    mapped_status = _mapped_crm_status(item["status"])
     if crm_order is None:
         crm_order = CrmOrder.objects.create(
             flowwow_order_id=item["id"],
-            status=mapped_status if mapped_status is not None else CrmOrder.STATUS_NEW,
+            status=mapped_status if mapped_status is not None else CrmOrder.STATUS_UNCONFIRMED,
             **fields,
         )
         action = CrmOrderEvent.ACTION_CREATED

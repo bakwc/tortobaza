@@ -118,7 +118,7 @@ class FlowwowWebhookTests(TestCase):
         self.assertEqual(order.prepayment, Decimal("80.00"))
         self.assertTrue(order.is_paid)
         self.assertEqual(order.payment_type, CrmOrder.PAYMENT_FLOWWOW)
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertFalse(order.deleted)
         self.assertEqual(order.internal_description, "напишите, пожалуйста, на тортике надпись")
         self.assertIn("Flowwow #98765", order.description)
@@ -169,7 +169,7 @@ class FlowwowWebhookTests(TestCase):
         self.assertEqual(len(self.view_calls), 1)
         order = CrmOrder.objects.get(flowwow_order_id=98765)
         self.assertTrue(order.deleted)
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertEqual(order.contact, "kristina 595032371")
         self.mock_schedule.assert_called_once_with(order.pk)
 

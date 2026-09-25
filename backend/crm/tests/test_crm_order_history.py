@@ -131,10 +131,7 @@ class CrmOrderHistoryTests(TestCase):
         self.assertEqual(paid.source, CrmOrderEvent.SOURCE_WEBSITE)
         self.assertIsNone(paid.actor_id)
         self.assertEqual(paid.changes["is_paid"], {"old": False, "new": True})
-        self.assertEqual(
-            paid.changes["status"],
-            {"old": CrmOrder.STATUS_UNCONFIRMED, "new": CrmOrder.STATUS_NEW},
-        )
+        self.assertNotIn("status", paid.changes)
         self.assertEqual(paid.changes["prepayment"], {"old": "0.00", "new": "100.00"})
 
     @patch("crm.flowwow.requests.get")

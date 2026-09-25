@@ -207,7 +207,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         crm = CrmOrder.objects.get(website_order=order)
         crm.refresh_from_db()
         self.assertTrue(crm.is_paid)
-        self.assertEqual(crm.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(crm.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertEqual(crm.prepayment, crm.cake_price)
         order.refresh_from_db()
         self.assertEqual(order.payment_status, Order.PAYMENT_PAID)

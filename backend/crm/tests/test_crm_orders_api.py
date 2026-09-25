@@ -768,7 +768,7 @@ class CrmOrdersApiTests(TestCase):
         order = CrmOrder.objects.get(pk=data["id"])
         self.assertEqual(order.status, CrmOrder.STATUS_NEW)
 
-    def test_patch_is_paid_promotes_unconfirmed_to_new(self):
+    def test_patch_is_paid_keeps_unconfirmed(self):
         order = CrmOrder.objects.create(
             date=date(2026, 8, 25),
             time_start=time(11, 0),
@@ -791,7 +791,7 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         order.refresh_from_db()
         self.assertTrue(order.is_paid)
-        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
 
     def test_patch_unconfirmed_to_new_succeeds(self):
         order = CrmOrder.objects.create(
