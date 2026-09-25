@@ -269,16 +269,25 @@ def _apply_synced_text(crm_order: CrmOrder | None, fields: dict) -> None:
             fields[snapshot_name] = incoming
 
 
+def _flowwow_sync_frozen(crm_order: CrmOrder) -> bool:
+    if crm_order.status != CrmOrder.STATUS_UNCONFIRMED:
+        return True
+    return crm_order.events.filter(
+        source__in=(CrmOrderEvent.SOURCE_CRM, CrmOrderEvent.SOURCE_ADMIN),
+    ).exists()
+
+
 def _upsert_crm_order(item: dict) -> CrmOrder:
-    fields = _crm_fields(item)
     crm_order = CrmOrder.objects.filter(flowwow_order_id=item["id"]).first()
+    if crm_order is not None and _flowwow_sync_frozen(crm_order):
+        return crm_order
+    fields = _crm_fields(item)
     before = None if crm_order is None else snapshot_crm_order(crm_order)
     _apply_synced_text(crm_order, fields)
-    mapped_status = _mapped_crm_status(item["status"])
     if crm_order is None:
         crm_order = CrmOrder.objects.create(
             flowwow_order_id=item["id"],
-            status=mapped_status if mapped_status is not None else CrmOrder.STATUS_UNCONFIRMED,
+            status=CrmOrder.STATUS_UNCONFIRMED,
             **fields,
         )
         action = CrmOrderEvent.ACTION_CREATED
@@ -288,6 +297,7 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
         for name, value in fields.items():
             setattr(crm_order, name, value)
         update_fields = [*fields, "updated_at"]
+        mapped_status = _mapped_crm_status(item["status"])
         if mapped_status is not None:
             crm_order.status = mapped_status
             update_fields.append("status")

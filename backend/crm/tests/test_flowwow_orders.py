@@ -13,7 +13,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from crm.flowwow import _filling, _weight
-from crm.models import CrmOrder, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _NOW = datetime(2026, 9, 19, 15, 0, tzinfo=_TB)
@@ -277,6 +277,9 @@ class FlowwowOrderSyncTests(TestCase):
         order = CrmOrder.objects.get(flowwow_order_id=25836184)
         order.status = CrmOrder.STATUS_IN_WORK
         order.save(update_fields=["status"])
+        address = order.delivery_address
+        price = order.cake_price
+        filling = order.filling
         manual = CrmOrderImage.objects.create(
             order=order,
             image=_jpeg_file("manual.jpg"),
@@ -288,14 +291,13 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(CrmOrder.objects.filter(flowwow_order_id=25836184).count(), 1)
         order.refresh_from_db()
         self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
-        self.assertEqual(order.delivery_address, "улица Палиашвили, 16;")
-        self.assertEqual(order.cake_price, Decimal("120.00"))
-        self.assertEqual(order.filling, "pistachio raspberry")
+        self.assertEqual(order.delivery_address, address)
+        self.assertEqual(order.cake_price, price)
+        self.assertEqual(order.filling, filling)
         urls = set(order.images.values_list("source_url", flat=True))
-        self.assertEqual(urls, {_OTHER_IMAGE, None})
+        self.assertEqual(urls, {_CAKE_IMAGE, _CARD_IMAGE, None})
         self.assertTrue(CrmOrderImage.objects.filter(pk=manual.pk).exists())
-        self.assertFalse(CrmOrderImage.objects.filter(source_url=_CAKE_IMAGE).exists())
-        self.assertEqual(self.image_calls, [_OTHER_IMAGE])
+        self.assertEqual(self.image_calls, [])
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
@@ -339,17 +341,68 @@ class FlowwowOrderSyncTests(TestCase):
         order.save(update_fields=["description", "internal_description"])
         self.items = [
             _flowwow_order(
+                address="улица Палиашвили, 16;",
                 comment="новый комментарий",
                 shopAdditionalInfo="новая надпись",
             )
         ]
         sync_flowwow_orders()
         order.refresh_from_db()
+        self.assertEqual(order.delivery_address, "улица Палиашвили, 16;")
         self.assertEqual(order.description, edited_description)
         self.assertEqual(order.internal_description, edited_internal)
         self.assertEqual(order.flowwow_synced_description, synced_description)
         self.assertEqual(order.flowwow_synced_internal_description, synced_internal)
         self.assertNotIn("новый комментарий", order.description)
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_human_edit_freezes_unconfirmed_order(self, mock_get, _mock_now):
+        self.items = [_flowwow_order()]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        address = order.delivery_address
+        description = order.description
+        internal_description = order.internal_description
+        CrmOrderEvent.objects.create(
+            order=order,
+            action=CrmOrderEvent.ACTION_UPDATED,
+            source=CrmOrderEvent.SOURCE_CRM,
+            changes={"contact": {"old": order.contact, "new": "правка"}},
+        )
+        self.image_calls.clear()
+        self.items = [
+            _flowwow_order(
+                address="улица Палиашвили, 16;",
+                comment="новый комментарий",
+                shopAdditionalInfo="новая надпись",
+                products=[
+                    {
+                        "productId": 76014182,
+                        "type": 1,
+                        "name": "Бенто торт Горы",
+                        "price": "60.00",
+                        "count": 1,
+                        "images": [_OTHER_IMAGE],
+                        "selectedProperties": [],
+                    }
+                ],
+            )
+        ]
+        sync_flowwow_orders()
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(order.delivery_address, address)
+        self.assertEqual(order.description, description)
+        self.assertEqual(order.internal_description, internal_description)
+        self.assertEqual(
+            set(order.images.values_list("source_url", flat=True)),
+            {_CAKE_IMAGE, _CARD_IMAGE},
+        )
+        self.assertEqual(self.image_calls, [])
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
@@ -366,14 +419,19 @@ class FlowwowOrderSyncTests(TestCase):
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_creates_unconfirmed_when_flowwow_status_is_new(self, mock_get, _mock_now):
-        self.items = [_flowwow_order(status=1)]
+    def test_creates_unconfirmed_regardless_of_flowwow_status(self, mock_get, _mock_now):
+        flowwow_statuses = (1, 2, 3, 4, 7)
+        self.items = [
+            _flowwow_order(id=status, status=status) for status in flowwow_statuses
+        ]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
 
         sync_flowwow_orders()
-        order = CrmOrder.objects.get(flowwow_order_id=25836184)
-        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(
+            set(CrmOrder.objects.values_list("flowwow_order_id", "status")),
+            {(status, CrmOrder.STATUS_UNCONFIRMED) for status in flowwow_statuses},
+        )
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
@@ -406,7 +464,7 @@ class FlowwowOrderSyncTests(TestCase):
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_resets_in_work_to_unconfirmed_when_flowwow_is_new(self, mock_get, _mock_now):
+    def test_keeps_in_work_when_flowwow_is_new(self, mock_get, _mock_now):
         self.items = [_flowwow_order()]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
@@ -415,14 +473,16 @@ class FlowwowOrderSyncTests(TestCase):
         order = CrmOrder.objects.get(flowwow_order_id=25836184)
         order.status = CrmOrder.STATUS_IN_WORK
         order.save(update_fields=["status"])
-        self.items = [_flowwow_order(status=1)]
+        address = order.delivery_address
+        self.items = [_flowwow_order(status=1, address="улица Палиашвили, 16;")]
         sync_flowwow_orders()
         order.refresh_from_db()
-        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
+        self.assertEqual(order.delivery_address, address)
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")
-    def test_resets_new_to_unconfirmed_when_flowwow_is_new(self, mock_get, _mock_now):
+    def test_keeps_new_when_flowwow_is_new(self, mock_get, _mock_now):
         self.items = [_flowwow_order()]
         mock_get.side_effect = self._get
         from crm.flowwow import sync_flowwow_orders
@@ -431,10 +491,12 @@ class FlowwowOrderSyncTests(TestCase):
         order = CrmOrder.objects.get(flowwow_order_id=25836184)
         order.status = CrmOrder.STATUS_NEW
         order.save(update_fields=["status"])
-        self.items = [_flowwow_order(status=1)]
+        address = order.delivery_address
+        self.items = [_flowwow_order(status=1, address="улица Палиашвили, 16;")]
         sync_flowwow_orders()
         order.refresh_from_db()
-        self.assertEqual(order.status, CrmOrder.STATUS_UNCONFIRMED)
+        self.assertEqual(order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(order.delivery_address, address)
 
 
 class FlowwowProductFieldsTests(TestCase):
