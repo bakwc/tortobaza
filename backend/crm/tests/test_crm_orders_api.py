@@ -12,7 +12,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress
+from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress, ResolvedTelegramPhone
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -103,6 +103,61 @@ class CrmOrdersApiTests(TestCase):
         )
         self.assertEqual(data["orders"][0]["nickname"], "@cake_lover")
         self.assertEqual(data["orders"][0]["delivery_address"], "Rustaveli 12, Batumi")
+
+    def test_telegram_link_follows_resolved_phone(self):
+        today = timezone.now().astimezone(_TB).date()
+        ResolvedTelegramPhone.objects.create(number="995555333444", resolved=False)
+        ResolvedTelegramPhone.objects.create(number="995555555666", resolved=True, user_id=42)
+        CrmOrder.objects.create(
+            date=today,
+            time_start=time(12, 0),
+            contact="+995555111222 +995555333444 +995555555666",
+            nickname="@cake_lover",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("80.00"),
+            prepayment=Decimal("0.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["orders"][0]["phones"],
+            [
+                {
+                    "e164": "+995555111222",
+                    "tel": "tel:+995555111222",
+                    "whatsapp": "https://wa.me/995555111222",
+                    "telegram": "https://t.me/+995555111222",
+                    "party": "recipient",
+                },
+                {
+                    "e164": "+995555333444",
+                    "tel": "tel:+995555333444",
+                    "whatsapp": "https://wa.me/995555333444",
+                    "telegram": None,
+                    "party": "recipient",
+                },
+                {
+                    "e164": "+995555555666",
+                    "tel": "tel:+995555555666",
+                    "whatsapp": "https://wa.me/995555555666",
+                    "telegram": "https://t.me/+995555555666",
+                    "party": "recipient",
+                },
+                {
+                    "e164": "@cake_lover",
+                    "tel": None,
+                    "whatsapp": None,
+                    "telegram": "https://t.me/cake_lover",
+                    "party": "sender",
+                },
+            ],
+        )
 
     def test_get_orders_by_date_and_ordering(self):
         target_date = date(2026, 8, 25)

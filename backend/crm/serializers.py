@@ -5,9 +5,30 @@ from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.google_maps import cached_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, ResolvedTelegramPhone
 from crm.phone import links_for_stored
 from orders.email import schedule_order_confirmed_email
+
+
+def _telegram_resolved(context: dict) -> dict[str, bool]:
+    flags = context.get("telegram_resolved")
+    if flags is None:
+        flags = dict(ResolvedTelegramPhone.objects.values_list("number", "resolved"))
+        context["telegram_resolved"] = flags
+    return flags
+
+
+def order_phones(instance: CrmOrder, context: dict) -> list[dict[str, str | None]]:
+    flags = _telegram_resolved(context)
+    phones: list[dict[str, str | None]] = []
+    for phone in instance.phones:
+        links = links_for_stored(phone["value"])
+        value = phone["value"]
+        if value.isdigit() and value in flags and not flags[value]:
+            links["telegram"] = None
+        links["party"] = phone["party"]
+        phones.append(links)
+    return phones
 
 
 class CrmOrderImageSerializer(serializers.ModelSerializer):
@@ -106,12 +127,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         return data
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
-        phones: list[dict[str, str | None]] = []
-        for phone in instance.phones:
-            links = links_for_stored(phone["value"])
-            links["party"] = phone["party"]
-            phones.append(links)
-        return phones
+        return order_phones(instance, self.context)
 
 
 def _chef_identity_cached(user, cache: dict) -> tuple[str, str | None, str | None, str]:
@@ -219,12 +235,7 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
         return cached_google_maps_url(address)
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
-        phones: list[dict[str, str | None]] = []
-        for phone in instance.phones:
-            links = links_for_stored(phone["value"])
-            links["party"] = phone["party"]
-            phones.append(links)
-        return phones
+        return order_phones(instance, self.context)
 
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):
