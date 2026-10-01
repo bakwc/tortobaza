@@ -10,16 +10,19 @@ from crm.models import (
     CrmOrder,
     GoogleAddressResolveFailure,
     ResolvedGoogleAddress,
+    ResolvedTelegramPhone,
     ResolvedYandexAddress,
     YandexAddressResolveFailure,
 )
 from crm.telegram import sync_crm_order_to_telegram
+from crm.telegram_user import pending_telegram_phones, resolve_phone
 from crm.yandex_maps import resolve_yandex_maps_url
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
 YANDEX_ADDRESS_RESOLVE_MAX_FAILURES = 3
 GOOGLE_ADDRESS_RESOLVE_MAX_FAILURES = 3
+TELEGRAM_PHONE_CHECKS_PER_SYNC = 5
 
 
 class Command(BaseCommand):
@@ -97,3 +100,12 @@ class Command(BaseCommand):
         )
         for order_id in order_ids:
             sync_crm_order_to_telegram(order_id)
+        for number in pending_telegram_phones(TELEGRAM_PHONE_CHECKS_PER_SYNC):
+            result = resolve_phone(number)
+            username = result["username"]
+            ResolvedTelegramPhone.objects.create(
+                number=result["number"],
+                resolved=result["resolved"],
+                user_id=result["user_id"],
+                username="" if username is None else username,
+            )

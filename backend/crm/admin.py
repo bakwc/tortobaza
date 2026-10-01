@@ -11,6 +11,7 @@ from crm.models import (
     CrmOrderEvent,
     CrmOrderImage,
     CrmSettings,
+    ResolvedTelegramPhone,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
@@ -258,6 +259,22 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
             "admin/crm/whatsappgetnewqr/change_list.html",
             context,
         )
+
+
+@admin.register(ResolvedTelegramPhone)
+class ResolvedTelegramPhoneAdmin(admin.ModelAdmin):
+    list_display = ["number", "resolved", "user_id", "username", "checked_at"]
+    search_fields = ["number"]
+    list_filter = ["resolved"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(TelegramNumberCheck)

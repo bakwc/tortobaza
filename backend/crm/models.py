@@ -269,6 +269,21 @@ class GoogleAddressResolveFailure(models.Model):
     failure_count = models.PositiveSmallIntegerField()
 
 
+class ResolvedTelegramPhone(models.Model):
+    number = models.CharField(max_length=15, unique=True)
+    resolved = models.BooleanField()
+    user_id = models.BigIntegerField(null=True, blank=True)
+    username = models.CharField(max_length=32, blank=True, default="")
+    checked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Resolved Telegram phone"
+        verbose_name_plural = "Resolved Telegram phones"
+
+    def __str__(self) -> str:
+        return self.number
+
+
 class CrmOrderImage(models.Model):
     order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE)
     image = models.ImageField(upload_to="crm_orders/")

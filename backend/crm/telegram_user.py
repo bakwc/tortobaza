@@ -1,14 +1,20 @@
 import fcntl
 import time
+from datetime import timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.utils import timezone
 from telethon.errors.rpcerrorlist import PhoneNotOccupiedError
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 from telethon.tl.functions.contacts import ResolvePhoneRequest
 
+from crm.models import CrmOrder, ResolvedTelegramPhone
+
 _MIN_INTERVAL_SECONDS = 3
+_TB = ZoneInfo("Asia/Tbilisi")
 
 
 def _api_credentials() -> tuple[int, str]:
@@ -73,3 +79,24 @@ def resolve_phone(phone: str) -> dict:
         "user_id": user.id,
         "username": user.username,
     }
+
+
+def pending_telegram_phones(limit: int) -> list[str]:
+    now = timezone.now().astimezone(_TB)
+    cutoff = (now - timedelta(days=1)).date()
+    checked = set(ResolvedTelegramPhone.objects.values_list("number", flat=True))
+    pending: list[str] = []
+    seen: set[str] = set()
+    orders = CrmOrder.objects.filter(deleted=False, date__gte=cutoff)
+    for order in orders:
+        for phone in order.phones:
+            value = phone["value"]
+            if not value.isdigit():
+                continue
+            if value in checked or value in seen:
+                continue
+            seen.add(value)
+            pending.append(value)
+            if len(pending) == limit:
+                return pending
+    return pending
