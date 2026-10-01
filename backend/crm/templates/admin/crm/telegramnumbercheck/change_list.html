@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+  <form method="get">
+    <fieldset class="module aligned">
+      <div class="form-row">
+        {{ form.number.errors }}
+        <label for="{{ form.number.id_for_label }}">Number</label>
+        {{ form.number }}
+      </div>
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="Check" class="default">
+    </div>
+  </form>
+
+  {% if result %}
+  <div class="module">
+    <table>
+      <tr>
+        <th>Number</th>
+        <td>{{ result.number }}</td>
+      </tr>
+      <tr>
+        <th>Resolved</th>
+        <td>{{ result.resolved }}</td>
+      </tr>
+      <tr>
+        <th>User ID</th>
+        <td>{{ result.user_id }}</td>
+      </tr>
+      <tr>
+        <th>Username</th>
+        <td>{{ result.username }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

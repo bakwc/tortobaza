@@ -11,16 +11,22 @@ from crm.models import (
     CrmOrderEvent,
     CrmOrderImage,
     CrmSettings,
+    TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
 )
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.telegram_user import resolve_phone
 from crm.website import sync_website_order_status_from_crm
 from orders.email import schedule_order_confirmed_email
 from crm.whatsapp import check_number, get_new_qr
 
 
 class WhatsAppNumberCheckForm(forms.Form):
+    number = forms.CharField()
+
+
+class TelegramNumberCheckForm(forms.Form):
     number = forms.CharField()
 
 
@@ -250,5 +256,40 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
         return TemplateResponse(
             request,
             "admin/crm/whatsappgetnewqr/change_list.html",
+            context,
+        )
+
+
+@admin.register(TelegramNumberCheck)
+class TelegramNumberCheckAdmin(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        form = TelegramNumberCheckForm(request.GET or None)
+        result = None
+        if form.is_valid():
+            result = resolve_phone(form.cleaned_data["number"])
+
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Telegram number check",
+            "form": form,
+            "result": result,
+            "opts": self.model._meta,
+            "cl": {"opts": self.model._meta},
+        }
+        if extra_context:
+            context.update(extra_context)
+
+        return TemplateResponse(
+            request,
+            "admin/crm/telegramnumbercheck/change_list.html",
             context,
         )
