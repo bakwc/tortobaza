@@ -540,6 +540,28 @@ class CrmTelegramTests(TestCase):
         methods = [c["method"] for c in self.calls]
         self.assertEqual(methods, ["editMessageText", "sendMessage"])
 
+    def test_command_edits_posted_order_moved_beyond_horizon(self):
+        ResolvedYandexAddress.objects.create(
+            address="Rustaveli 1",
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        order = self._create_order(delta=timedelta(hours=2))
+        sync_crm_order_to_telegram(order.pk)
+        self.calls.clear()
+        new_date, new_time = self._slot(timedelta(days=5))
+        order.date = new_date
+        order.time_start = new_time
+        order.save(update_fields=["date", "time_start", "updated_at"])
+        call_command("sync_crm_orders_to_telegram")
+        methods = [c["method"] for c in self.calls]
+        self.assertEqual(methods, ["editMessageText", "sendMessage"])
+        self.assertIn("время доставки / выдачи поменялось на", self.calls[1]["payload"]["text"])
+        order.refresh_from_db()
+        self.assertEqual(order.telegram_posted_date, new_date)
+        self.calls.clear()
+        call_command("sync_crm_orders_to_telegram")
+        self.assertEqual(self.calls, [])
+
     def test_single_photo_uses_send_photo(self):
         order = self._create_order(delta=timedelta(hours=2))
         CrmOrderImage.objects.create(order=order, image=_jpeg("one.jpg"), position=0)

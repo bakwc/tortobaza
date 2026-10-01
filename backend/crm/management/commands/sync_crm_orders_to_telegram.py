@@ -2,6 +2,7 @@ from datetime import time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
 from crm.flowwow import sync_flowwow_orders
@@ -93,9 +94,8 @@ class Command(BaseCommand):
                     failure.save(update_fields=["failure_count"])
         order_ids = list(
             CrmOrder.objects.filter(
-                deleted=False,
-                date__gte=start,
-                date__lte=end,
+                Q(deleted=False, date__gte=start, date__lte=end)
+                | Q(telegram_message_id__isnull=False, date__gte=start)
             ).values_list("pk", flat=True)
         )
         for order_id in order_ids:
