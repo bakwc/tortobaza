@@ -48,7 +48,7 @@ export function formatPrepTime(start: string, durationSeconds: number | null): s
   const lead =
     durationSeconds === null
       ? 30
-      : Math.ceil(Math.max(30, 1.5 * (durationSeconds / 60) + 7));
+      : Math.ceil(Math.max(30, 1.5 * (durationSeconds / 60) + 7) / 5) * 5;
   let total = h * 60 + m - lead;
   if (total < 0) {
     total += 24 * 60;

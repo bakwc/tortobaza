@@ -762,7 +762,7 @@ class CrmTelegramTests(TestCase):
         order.delivery_duration_seconds = 20 * 60
         text = build_crm_order_telegram_html(order)
         date_part = order.date.strftime("%d.%m.%Y")
-        self.assertIn(f"<b>Приготовить к:</b> {date_part}, 12:23", text)
+        self.assertIn(f"<b>Приготовить к:</b> {date_part}, 12:20", text)
 
     def test_layout_key_changes_hash(self):
         order = self._create_order(delta=timedelta(hours=2))

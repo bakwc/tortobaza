@@ -222,7 +222,8 @@ def _prep_lead_minutes(duration_seconds: int | None) -> int:
     if duration_seconds is None:
         return 30
     route_minutes = duration_seconds / 60
-    return math.ceil(max(30, 1.5 * route_minutes + 7))
+    lead = max(30, 1.5 * route_minutes + 7)
+    return math.ceil(lead / 5) * 5
 
 
 def _format_prep_slot(order: CrmOrder) -> str | None:
