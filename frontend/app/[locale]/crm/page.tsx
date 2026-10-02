@@ -722,100 +722,98 @@ function CrmOrderCard({
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("deliveryAddress")}
                     </span>
-                    <div className="mt-0.5 flex items-start gap-2 lg:mt-1">
-                      {resolvingTarget === "address" && resolveYandex.isPending ? (
-                        <p className="flex min-w-0 flex-1 items-center gap-2 font-medium">
-                          <Spinner className="h-4 w-4 text-[var(--brand)]" />
-                          {t("resolvingAddress")}
-                        </p>
-                      ) : addressUrl !== null ? (
-                        <a
-                          href={addressUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="min-w-0 flex-1 cursor-pointer break-all whitespace-pre-wrap text-left font-medium"
-                        >
-                          {order.delivery_address}
-                        </a>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={resolveYandex.isPending || resolveGoogle.isPending}
-                          onClick={() => {
-                            if (resolveYandex.isPending || resolveGoogle.isPending) return;
-                            setResolvingTarget("address");
-                            resolveYandex.mutate(order.delivery_address, {
-                              onSuccess: (data) => {
-                                window.open(data.url, "_blank", "noopener,noreferrer");
-                              },
-                              onSettled: () => setResolvingTarget(null),
-                            });
-                          }}
-                          className="min-w-0 flex-1 cursor-pointer break-all whitespace-pre-wrap text-left font-medium"
-                        >
-                          {order.delivery_address}
-                        </button>
-                      )}
-                      <span className="flex shrink-0 flex-col items-center gap-0.5">
-                        <span className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            disabled={resolveYandex.isPending || resolveGoogle.isPending}
-                            aria-label={t("openYandexMaps")}
-                            onClick={() => {
-                              if (resolveYandex.isPending || resolveGoogle.isPending) return;
-                              setResolvingTarget("yandex");
-                              resolveYandex.mutate(order.delivery_address, {
-                                onSuccess: (data) => {
-                                  window.open(data.url, "_blank", "noopener,noreferrer");
-                                },
-                                onSettled: () => setResolvingTarget(null),
-                              });
-                            }}
-                            className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
-                          >
-                            {resolvingTarget === "yandex" && resolveYandex.isPending ? (
-                              <Spinner className="h-6 w-6 text-[var(--brand)]" />
-                            ) : (
-                              <YandexMapsIcon className="h-6 w-6" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={resolveYandex.isPending || resolveGoogle.isPending}
-                            aria-label={t("openGoogleMaps")}
-                            onClick={() => {
-                              if (resolveYandex.isPending || resolveGoogle.isPending) return;
-                              setResolvingTarget("google");
-                              resolveGoogle.mutate(order.delivery_address, {
-                                onSuccess: (data) => {
-                                  window.open(data.url, "_blank", "noopener,noreferrer");
-                                },
-                                onSettled: () => setResolvingTarget(null),
-                              });
-                            }}
-                            className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
-                          >
-                            {resolvingTarget === "google" && resolveGoogle.isPending ? (
-                              <Spinner className="h-6 w-6 text-[var(--brand)]" />
-                            ) : (
-                              <GoogleMapsIcon className="h-6 w-6" />
-                            )}
-                          </button>
-                        </span>
-                        {routeDistance !== null && order.delivery_duration_seconds !== null ? (
-                          <span className="whitespace-nowrap text-[10px] leading-none text-[var(--muted-2)]">
-                            {t("routeValue", {
-                              distance: t(routeDistance.key, { value: routeDistance.value }),
-                              duration: t("routeMinutes", {
-                                value: formatRouteMinutes(order.delivery_duration_seconds),
-                              }),
-                            })}
-                          </span>
-                        ) : null}
-                      </span>
-                    </div>
+                    {resolvingTarget === "address" && resolveYandex.isPending ? (
+                      <p className="mt-0.5 flex items-center gap-2 font-medium lg:mt-1">
+                        <Spinner className="h-4 w-4 text-[var(--brand)]" />
+                        {t("resolvingAddress")}
+                      </p>
+                    ) : addressUrl !== null ? (
+                      <a
+                        href={addressUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-0.5 block cursor-pointer break-all whitespace-pre-wrap text-left font-medium lg:mt-1"
+                      >
+                        {order.delivery_address}
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                        onClick={() => {
+                          if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                          setResolvingTarget("address");
+                          resolveYandex.mutate(order.delivery_address, {
+                            onSuccess: (data) => {
+                              window.open(data.url, "_blank", "noopener,noreferrer");
+                            },
+                            onSettled: () => setResolvingTarget(null),
+                          });
+                        }}
+                        className="mt-0.5 block w-full cursor-pointer break-all whitespace-pre-wrap text-left font-medium lg:mt-1"
+                      >
+                        {order.delivery_address}
+                      </button>
+                    )}
                   </div>
+                  <span className="flex shrink-0 flex-col items-center gap-0.5 self-start">
+                    <span className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                        aria-label={t("openYandexMaps")}
+                        onClick={() => {
+                          if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                          setResolvingTarget("yandex");
+                          resolveYandex.mutate(order.delivery_address, {
+                            onSuccess: (data) => {
+                              window.open(data.url, "_blank", "noopener,noreferrer");
+                            },
+                            onSettled: () => setResolvingTarget(null),
+                          });
+                        }}
+                        className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
+                      >
+                        {resolvingTarget === "yandex" && resolveYandex.isPending ? (
+                          <Spinner className="h-6 w-6 text-[var(--brand)]" />
+                        ) : (
+                          <YandexMapsIcon className="h-6 w-6" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={resolveYandex.isPending || resolveGoogle.isPending}
+                        aria-label={t("openGoogleMaps")}
+                        onClick={() => {
+                          if (resolveYandex.isPending || resolveGoogle.isPending) return;
+                          setResolvingTarget("google");
+                          resolveGoogle.mutate(order.delivery_address, {
+                            onSuccess: (data) => {
+                              window.open(data.url, "_blank", "noopener,noreferrer");
+                            },
+                            onSettled: () => setResolvingTarget(null),
+                          });
+                        }}
+                        className="text-[var(--brand)] hover:opacity-80 disabled:opacity-50"
+                      >
+                        {resolvingTarget === "google" && resolveGoogle.isPending ? (
+                          <Spinner className="h-6 w-6 text-[var(--brand)]" />
+                        ) : (
+                          <GoogleMapsIcon className="h-6 w-6" />
+                        )}
+                      </button>
+                    </span>
+                    {routeDistance !== null && order.delivery_duration_seconds !== null ? (
+                      <span className="whitespace-nowrap text-[10px] leading-none text-[var(--muted-2)]">
+                        {t("routeValue", {
+                          distance: t(routeDistance.key, { value: routeDistance.value }),
+                          duration: t("routeMinutes", {
+                            value: formatRouteMinutes(order.delivery_duration_seconds),
+                          }),
+                        })}
+                      </span>
+                    ) : null}
+                  </span>
                 </div>
               </div>
             ) : null}
