@@ -8,11 +8,13 @@ export function CrmOrderTimeSlot({
   timeStart,
   timeEnd,
   whenReady,
+  deliveryDurationSeconds,
   layout,
 }: {
   timeStart: string | null;
   timeEnd: string | null;
   whenReady: boolean;
+  deliveryDurationSeconds: number | null;
   layout: "day" | "month";
 }) {
   const t = useTranslations("crm");
@@ -44,7 +46,7 @@ export function CrmOrderTimeSlot({
         <span className="inline-flex shrink-0 items-baseline gap-1.5 text-sm font-medium text-[var(--muted-2)] lg:text-base">
           {t.rich("prepareBy", {
             time: () => (
-              <span className={timeClass}>{formatPrepTime(timeStart)}</span>
+              <span className={timeClass}>{formatPrepTime(timeStart, deliveryDurationSeconds)}</span>
             ),
           })}
         </span>

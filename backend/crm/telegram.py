@@ -1,6 +1,7 @@
 import hashlib
 import html
 import json
+import math
 import threading
 import time as time_module
 import urllib.error
@@ -217,10 +218,18 @@ def _format_slot(order: CrmOrder) -> str:
     return f"{date_part}, {start}"
 
 
+def _prep_lead_minutes(duration_seconds: int | None) -> int:
+    if duration_seconds is None:
+        return 30
+    route_minutes = duration_seconds / 60
+    return math.ceil(max(30, 1.5 * route_minutes + 7))
+
+
 def _format_prep_slot(order: CrmOrder) -> str | None:
     if order.when_ready or order.time_start is None:
         return None
-    dt = datetime.combine(order.date, order.time_start) - timedelta(minutes=30)
+    lead = _prep_lead_minutes(order.delivery_duration_seconds)
+    dt = datetime.combine(order.date, order.time_start) - timedelta(minutes=lead)
     return dt.strftime("%d.%m.%Y, %H:%M")
 
 

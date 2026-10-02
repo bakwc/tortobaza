@@ -43,9 +43,13 @@ export function formatTimeslot(start: string, end: string): string {
   return `${sh}:${sm} – ${eh}:${em}`;
 }
 
-export function formatPrepTime(start: string): string {
+export function formatPrepTime(start: string, durationSeconds: number | null): string {
   const [h, m] = start.slice(0, 5).split(":").map(Number);
-  let total = h * 60 + m - 30;
+  const lead =
+    durationSeconds === null
+      ? 30
+      : Math.ceil(Math.max(30, 1.5 * (durationSeconds / 60) + 7));
+  let total = h * 60 + m - lead;
   if (total < 0) {
     total += 24 * 60;
   }

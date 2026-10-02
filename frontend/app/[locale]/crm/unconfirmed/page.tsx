@@ -176,6 +176,7 @@ function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
                 timeStart={order.time_start}
                 timeEnd={order.time_end}
                 whenReady={order.when_ready}
+                deliveryDurationSeconds={order.delivery_duration_seconds}
                 layout="month"
               />
             </div>

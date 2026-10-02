@@ -407,6 +407,7 @@ export const CrmClientOrderSchema = z.object({
   phones: z.array(CrmPhoneSchema),
   nickname: z.string(),
   delivery_address: z.string(),
+  delivery_duration_seconds: z.number().nullable(),
   fulfillment_type: z.enum(["delivery", "pickup"]),
   status: z.enum(["unconfirmed", "new", "in_work", "ready", "client_approved", "in_delivery", "delivered"]),
   weight: z.string(),

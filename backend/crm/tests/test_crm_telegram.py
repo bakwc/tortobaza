@@ -751,6 +751,19 @@ class CrmTelegramTests(TestCase):
         self.assertIn(f"<b>Время доставки:</b> {date_part}, 13:00 – 14:00", text)
         self.assertIn(f"<b>Приготовить к:</b> {date_part}, 12:30", text)
 
+    def test_html_prep_uses_route_duration(self):
+        now_tb = timezone.now().astimezone(_TB)
+        order = self._create_order(
+            delta=timedelta(hours=2),
+            date=now_tb.date(),
+            time_start=time(13, 0),
+            time_end=time(14, 0),
+        )
+        order.delivery_duration_seconds = 20 * 60
+        text = build_crm_order_telegram_html(order)
+        date_part = order.date.strftime("%d.%m.%Y")
+        self.assertIn(f"<b>Приготовить к:</b> {date_part}, 12:23", text)
+
     def test_layout_key_changes_hash(self):
         order = self._create_order(delta=timedelta(hours=2))
         payload = build_crm_order_telegram_payload(order)
