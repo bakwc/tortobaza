@@ -440,6 +440,10 @@ function CrmOrderCard({
     order.delivery_distance_meters === null
       ? null
       : formatRouteDistance(order.delivery_distance_meters);
+  const routeMinutes =
+    order.delivery_duration_seconds === null
+      ? null
+      : formatRouteMinutes(order.delivery_duration_seconds);
 
   const priceNum = Number.parseFloat(order.cake_price);
   const prepayNum = Number.parseFloat(order.prepayment);
@@ -803,15 +807,27 @@ function CrmOrderCard({
                         )}
                       </button>
                     </span>
-                    {routeDistance !== null && order.delivery_duration_seconds !== null ? (
-                      <span className="whitespace-nowrap text-[10px] leading-none text-[var(--muted-2)]">
-                        {t("routeValue", {
-                          distance: t(routeDistance.key, { value: routeDistance.value }),
-                          duration: t("routeMinutes", {
-                            value: formatRouteMinutes(order.delivery_duration_seconds),
-                          }),
-                        })}
-                      </span>
+                    {routeDistance !== null && routeMinutes !== null ? (
+                      <>
+                        <span className="whitespace-nowrap text-[10px] leading-none text-[var(--muted-2)]">
+                          {t("routeValue", {
+                            distance: t(routeDistance.key, { value: routeDistance.value }),
+                            duration: t("routeMinutes", {
+                              value: routeMinutes,
+                            }),
+                          })}
+                        </span>
+                        <span
+                          className={cn(
+                            "h-1.5 w-full rounded-full",
+                            routeMinutes < 10
+                              ? "bg-emerald-500"
+                              : routeMinutes < 20
+                                ? "bg-orange-500"
+                                : "bg-red-500",
+                          )}
+                        />
+                      </>
                     ) : null}
                   </span>
                 </div>
