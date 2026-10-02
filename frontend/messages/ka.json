@@ -302,7 +302,7 @@
     "routeDistanceKm": "{value} კმ",
     "routeDistanceM": "{value} მ",
     "routeMinutes": "{value} წთ",
-    "routeValue": "{distance}, {duration}",
+    "routeValue": "{distance} / {duration}",
     "weight": "Weight",
     "filling": "Filling",
     "notes": "Notes / Description",

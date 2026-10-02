@@ -302,7 +302,7 @@
     "routeDistanceKm": "{value} km",
     "routeDistanceM": "{value} m",
     "routeMinutes": "{value} min",
-    "routeValue": "{distance}, {duration}",
+    "routeValue": "{distance} / {duration}",
     "weight": "Weight",
     "filling": "Filling",
     "notes": "Notes / Description",

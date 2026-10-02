@@ -302,7 +302,7 @@
     "routeDistanceKm": "{value} км",
     "routeDistanceM": "{value} м",
     "routeMinutes": "{value} мин",
-    "routeValue": "{distance}, {duration}",
+    "routeValue": "{distance} / {duration}",
     "weight": "Вес",
     "filling": "Начинка",
     "notes": "Заметки / описание",
