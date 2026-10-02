@@ -18,9 +18,11 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from crm.google_maps import SWEET_CHILL_COORDS
 from crm.models import (
     CrmOrder,
     CrmOrderImage,
+    DeliveryRouteResolveFailure,
     GoogleAddressResolveFailure,
     ResolvedGoogleAddress,
     ResolvedYandexAddress,
@@ -88,6 +90,23 @@ class CrmTelegramTests(TestCase):
         google_response.url = "https://yandex.com/maps/?text=Rustaveli"
         google_response.raise_for_status = MagicMock()
         self.google_get.return_value = google_response
+        self.routes_post_patcher = patch("crm.google_routes.requests.post")
+        self.routes_post = self.routes_post_patcher.start()
+        self.addCleanup(self.routes_post_patcher.stop)
+        route_response = MagicMock()
+        route_response.raise_for_status = MagicMock()
+        route_response.json.return_value = [
+            {
+                "originIndex": 0,
+                "destinationIndex": 0,
+                "status": {},
+                "condition": "ROUTE_EXISTS",
+                "distanceMeters": 4200,
+                "duration": "165s",
+                "staticDuration": "150s",
+            }
+        ]
+        self.routes_post.return_value = route_response
 
     def _next_message_id(self) -> int:
         self._next_id += 1
@@ -1011,3 +1030,137 @@ class CrmTelegramTests(TestCase):
         self.google_get.reset_mock()
         call_command("sync_crm_orders_to_telegram")
         self.google_get.assert_not_called()
+
+    def _cache_resolved_address(self, address: str) -> None:
+        ResolvedYandexAddress.objects.create(
+            address=address,
+            yandex_url="https://yandex.com/maps/?text=Rustaveli",
+        )
+        ResolvedGoogleAddress.objects.create(
+            address=address,
+            google_url="https://www.google.com/maps/search/?api=1&query=41.623987,41.645449",
+        )
+
+    def test_html_route_line_only_when_distance_and_duration_are_set(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        text = build_crm_order_telegram_html(order)
+        self.assertNotIn("В пути", text)
+        order.delivery_distance_meters = 4200
+        order.delivery_duration_seconds = None
+        self.assertNotIn("В пути", build_crm_order_telegram_html(order))
+        order.delivery_duration_seconds = 165
+        self.assertIn("<b>В пути:</b> 4.2 км, 3 мин", build_crm_order_telegram_html(order))
+        order.delivery_distance_meters = 2000
+        order.delivery_duration_seconds = 120
+        self.assertIn("<b>В пути:</b> 2 км, 2 мин", build_crm_order_telegram_html(order))
+        order.delivery_distance_meters = 800
+        order.delivery_duration_seconds = 20
+        self.assertIn("<b>В пути:</b> 800 м, 1 мин", build_crm_order_telegram_html(order))
+
+    def test_command_computes_route_once_after_google_address(self):
+        self._cache_resolved_address("Rustaveli 1")
+        order = self._create_order(delta=timedelta(hours=2))
+        call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 4200)
+        self.assertEqual(order.delivery_duration_seconds, 165)
+        self.assertIsNotNone(order.delivery_route_computed_at)
+        body = self.routes_post.call_args.kwargs["json"]
+        self.assertEqual(body["travelMode"], "DRIVE")
+        self.assertEqual(body["routingPreference"], "TRAFFIC_AWARE_OPTIMAL")
+        self.assertEqual(body["departureTime"], crm_order_slot_datetime(order).isoformat())
+        origin = body["origins"][0]["waypoint"]["location"]["latLng"]
+        self.assertEqual(origin["latitude"], SWEET_CHILL_COORDS[0])
+        self.assertEqual(origin["longitude"], SWEET_CHILL_COORDS[1])
+        destination = body["destinations"][0]["waypoint"]["location"]["latLng"]
+        self.assertEqual(destination["latitude"], 41.623987)
+        self.assertEqual(destination["longitude"], 41.645449)
+        self.assertIn("<b>В пути:</b> 4.2 км, 3 мин", self.calls[0]["payload"]["text"])
+        self.routes_post.reset_mock()
+        call_command("sync_crm_orders_to_telegram")
+        self.routes_post.assert_not_called()
+
+    def test_command_refreshes_route_once_within_the_last_hour(self):
+        self._cache_resolved_address("Rustaveli 1")
+        order = self._create_order(delta=timedelta(hours=3))
+        call_command("sync_crm_orders_to_telegram")
+        self.assertEqual(self.routes_post.call_count, 1)
+        order.refresh_from_db()
+        slot = crm_order_slot_datetime(order)
+        refresh_now = slot - timedelta(minutes=30)
+        self.routes_post.reset_mock()
+        with patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.timezone.now",
+            return_value=refresh_now,
+        ):
+            call_command("sync_crm_orders_to_telegram")
+            self.assertEqual(self.routes_post.call_count, 1)
+            call_command("sync_crm_orders_to_telegram")
+            self.assertEqual(self.routes_post.call_count, 1)
+
+    def test_address_change_clears_route_and_sync_recomputes(self):
+        self._cache_resolved_address("Rustaveli 1")
+        self._cache_resolved_address("Gorgiladze 15")
+        order = self._create_order(delta=timedelta(hours=2))
+        call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 4200)
+        DeliveryRouteResolveFailure.objects.create(order=order, failure_count=3)
+        order.delivery_address = "Gorgiladze 15"
+        order.save(update_fields=["delivery_address", "updated_at"])
+        order.refresh_from_db()
+        self.assertIsNone(order.delivery_distance_meters)
+        self.assertIsNone(order.delivery_duration_seconds)
+        self.assertIsNone(order.delivery_route_computed_at)
+        self.assertFalse(DeliveryRouteResolveFailure.objects.filter(order=order).exists())
+        self.routes_post.reset_mock()
+        call_command("sync_crm_orders_to_telegram")
+        self.routes_post.assert_called_once()
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 4200)
+        self.assertEqual(order.delivery_duration_seconds, 165)
+
+    def test_command_skips_route_without_a_future_delivery_slot(self):
+        self._cache_resolved_address("Rustaveli 1")
+        self._cache_resolved_address("самовывоз")
+        self._cache_resolved_address("Pickup Street")
+        now_tb = timezone.now().astimezone(_TB)
+        self._create_order(
+            delta=timedelta(hours=2),
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            delivery_address="Pickup Street",
+        )
+        self._create_order(delta=timedelta(hours=2), when_ready=True)
+        self._create_order(delta=timedelta(hours=2), time_start=None)
+        self._create_order(delta=timedelta(hours=2), delivery_address="самовывоз")
+        self._create_order(
+            delta=timedelta(0),
+            date=now_tb.date() - timedelta(days=1),
+            time_start=time(12, 0),
+        )
+        call_command("sync_crm_orders_to_telegram")
+        self.routes_post.assert_not_called()
+
+    def test_command_route_failure_stops_after_three(self):
+        self._cache_resolved_address("Rustaveli 1")
+        order = self._create_order(delta=timedelta(hours=2))
+        self.routes_post.side_effect = RuntimeError("down")
+        call_command("sync_crm_orders_to_telegram")
+        failure = DeliveryRouteResolveFailure.objects.get(order=order)
+        self.assertEqual(failure.failure_count, 1)
+        for expected in (2, 3):
+            call_command("sync_crm_orders_to_telegram")
+            failure.refresh_from_db()
+            self.assertEqual(failure.failure_count, expected)
+        self.routes_post.reset_mock()
+        call_command("sync_crm_orders_to_telegram")
+        self.routes_post.assert_not_called()
+
+    def test_command_route_success_deletes_failure_row(self):
+        self._cache_resolved_address("Rustaveli 1")
+        order = self._create_order(delta=timedelta(hours=2))
+        DeliveryRouteResolveFailure.objects.create(order=order, failure_count=2)
+        call_command("sync_crm_orders_to_telegram")
+        self.assertFalse(DeliveryRouteResolveFailure.objects.filter(order=order).exists())
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 4200)

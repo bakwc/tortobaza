@@ -189,6 +189,22 @@ def _format_money(amount: Decimal) -> str:
     return f"{amount:.2f} ₾"
 
 
+def format_delivery_route(distance_meters: int, duration_seconds: int) -> str:
+    if distance_meters >= 1000:
+        km = distance_meters / 1000
+        if km == int(km):
+            distance = f"{int(km)} км"
+        else:
+            distance = f"{km:.1f} км"
+    else:
+        distance = f"{distance_meters} м"
+    if duration_seconds < 30:
+        minutes = 1
+    else:
+        minutes = int(duration_seconds / 60 + 0.5)
+    return f"{distance}, {minutes} мин"
+
+
 def _format_slot(order: CrmOrder) -> str:
     date_part = order.date.strftime("%d.%m.%Y")
     if order.when_ready:
@@ -265,6 +281,19 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
             lines.append(f'<b>Адрес:</b> <a href="{href}">{_esc(order.delivery_address)}</a>')
         else:
             lines.append(f"<b>Адрес:</b> {_esc(order.delivery_address)}")
+        if (
+            order.delivery_distance_meters is not None
+            and order.delivery_duration_seconds is not None
+        ):
+            lines.append(
+                "<b>В пути:</b> "
+                + _esc(
+                    format_delivery_route(
+                        order.delivery_distance_meters,
+                        order.delivery_duration_seconds,
+                    )
+                )
+            )
     lines.append(f"<b>Получатель:</b> {_esc(order.contact)}")
     links = contact_links(order.contact)
     if links is not None:

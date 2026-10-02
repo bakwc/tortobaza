@@ -19,6 +19,7 @@ import {
   PackageCheck,
   Pencil,
   Plus,
+  Route,
   Store,
   ThumbsUp,
   Truck,
@@ -63,6 +64,22 @@ import {
 } from "@/lib/crmStatus";
 import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+function formatRouteMinutes(seconds: number): number {
+  if (seconds < 30) {
+    return 1;
+  }
+  return Math.round(seconds / 60);
+}
+
+function formatRouteDistance(meters: number): { key: "routeDistanceKm" | "routeDistanceM"; value: string | number } {
+  if (meters >= 1000) {
+    const km = meters / 1000;
+    const value = Number.isInteger(km) ? String(km) : km.toFixed(1);
+    return { key: "routeDistanceKm", value };
+  }
+  return { key: "routeDistanceM", value: meters };
+}
 
 function extractAddressUrl(address: string): string | null {
   const match = address.match(/https?:\/\/[^\s]+/i);
@@ -420,6 +437,10 @@ function CrmOrderCard({
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
   const addressUrl = extractAddressUrl(order.delivery_address);
+  const routeDistance =
+    order.delivery_distance_meters === null
+      ? null
+      : formatRouteDistance(order.delivery_distance_meters);
 
   const priceNum = Number.parseFloat(order.cake_price);
   const prepayNum = Number.parseFloat(order.prepayment);
@@ -783,6 +804,32 @@ function CrmOrderCard({
                         </button>
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {routeDistance !== null && order.delivery_duration_seconds !== null ? (
+              <div
+                className={cn(
+                  "w-full rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
+                  tone.panelSoft,
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <Route className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
+                      {t("route")}
+                    </span>
+                    <p className="mt-0.5 font-medium lg:mt-1">
+                      {t("routeValue", {
+                        distance: t(routeDistance.key, { value: routeDistance.value }),
+                        duration: t("routeMinutes", {
+                          value: formatRouteMinutes(order.delivery_duration_seconds),
+                        }),
+                      })}
+                    </p>
                   </div>
                 </div>
               </div>

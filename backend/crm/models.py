@@ -76,6 +76,9 @@ class CrmOrder(models.Model):
     nickname = models.CharField(max_length=100, blank=True)
     phones = models.JSONField(default=list)
     delivery_address = models.TextField(blank=True)
+    delivery_distance_meters = models.PositiveIntegerField(null=True, blank=True)
+    delivery_duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    delivery_route_computed_at = models.DateTimeField(null=True, blank=True)
     fulfillment_type = models.CharField(
         max_length=10,
         choices=FULFILLMENT_CHOICES,
@@ -193,8 +196,32 @@ class CrmOrder(models.Model):
         if update_fields is None or "contact" in update_fields or "nickname" in update_fields:
             self.phones = phones_from_fields(self.contact, self.nickname)
             if update_fields is not None and "phones" not in update_fields:
-                kwargs["update_fields"] = [*update_fields, "phones"]
+                update_fields = [*update_fields, "phones"]
+                kwargs["update_fields"] = update_fields
+        address_changed = False
+        if self.pk is not None and (update_fields is None or "delivery_address" in update_fields):
+            previous_address = (
+                CrmOrder.objects.filter(pk=self.pk)
+                .values_list("delivery_address", flat=True)
+                .first()
+            )
+            if previous_address != self.delivery_address:
+                address_changed = True
+                self.delivery_distance_meters = None
+                self.delivery_duration_seconds = None
+                self.delivery_route_computed_at = None
+                if update_fields is not None:
+                    for name in (
+                        "delivery_distance_meters",
+                        "delivery_duration_seconds",
+                        "delivery_route_computed_at",
+                    ):
+                        if name not in update_fields:
+                            update_fields = [*update_fields, name]
+                    kwargs["update_fields"] = update_fields
         super().save(*args, **kwargs)
+        if address_changed:
+            DeliveryRouteResolveFailure.objects.filter(order_id=self.pk).delete()
 
 
 class CrmOrderEvent(models.Model):
@@ -266,6 +293,11 @@ class ResolvedGoogleAddress(models.Model):
 
 class GoogleAddressResolveFailure(models.Model):
     address = models.TextField(unique=True)
+    failure_count = models.PositiveSmallIntegerField()
+
+
+class DeliveryRouteResolveFailure(models.Model):
+    order = models.OneToOneField(CrmOrder, on_delete=models.CASCADE)
     failure_count = models.PositiveSmallIntegerField()
 
 
