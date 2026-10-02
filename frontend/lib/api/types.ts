@@ -361,6 +361,8 @@ export const CrmMapOrderSchema = z.object({
   lat: z.number(),
   lng: z.number(),
   image: ResponsiveImageSchema.nullable(),
+  delivery_distance_meters: z.number().nullable(),
+  delivery_duration_seconds: z.number().nullable(),
 });
 
 export const CrmMapOrdersResponseSchema = z.object({

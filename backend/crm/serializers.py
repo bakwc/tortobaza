@@ -469,6 +469,8 @@ class CrmMapOrderSerializer(serializers.Serializer):
     lat = serializers.FloatField()
     lng = serializers.FloatField()
     image = serializers.JSONField(allow_null=True)
+    delivery_distance_meters = serializers.IntegerField(allow_null=True)
+    delivery_duration_seconds = serializers.IntegerField(allow_null=True)
 
 
 class CrmExpensesBreakdownSerializer(serializers.Serializer):

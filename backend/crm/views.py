@@ -126,6 +126,8 @@ def _map_order_payloads(orders, range_key: str | None, now: datetime, public_bas
                 "lat": pair[0],
                 "lng": pair[1],
                 "image": image,
+                "delivery_distance_meters": order.delivery_distance_meters,
+                "delivery_duration_seconds": order.delivery_duration_seconds,
             }
         )
     return payloads
