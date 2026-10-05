@@ -368,6 +368,7 @@ class FinancialTransaction(models.Model):
     KIND_TRANSFER = "transfer"
     KIND_WITHDRAWAL = "withdrawal"
     KIND_INVESTMENT = "investment"
+    KIND_CORRECTION = "correction"
     KIND_OTHER = "other"
     KIND_CHOICES = [
         (KIND_INCOME, "Income"),
@@ -375,6 +376,7 @@ class FinancialTransaction(models.Model):
         (KIND_TRANSFER, "Transfer"),
         (KIND_WITHDRAWAL, "Withdrawal"),
         (KIND_INVESTMENT, "Investment"),
+        (KIND_CORRECTION, "Correction"),
         (KIND_OTHER, "Other"),
     ]
 
