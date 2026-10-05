@@ -340,6 +340,103 @@ class FlowwowWebhookEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class FinancialAccount(models.Model):
+    KIND_BANK = "bank"
+    KIND_CASH = "cash"
+    KIND_CRYPTO = "crypto"
+    KIND_VIRTUAL = "virtual"
+    KIND_CHOICES = [
+        (KIND_BANK, "Bank"),
+        (KIND_CASH, "Cash"),
+        (KIND_CRYPTO, "Crypto"),
+        (KIND_VIRTUAL, "Virtual"),
+    ]
+
+    name = models.CharField(max_length=100)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    bank_name = models.CharField(max_length=100, blank=True)
+    iban = models.CharField(max_length=34, blank=True)
+    currency = models.CharField(max_length=3, default="GEL")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class FinancialTransaction(models.Model):
+    KIND_INCOME = "income"
+    KIND_EXPENSE = "expense"
+    KIND_TRANSFER = "transfer"
+    KIND_WITHDRAWAL = "withdrawal"
+    KIND_INVESTMENT = "investment"
+    KIND_OTHER = "other"
+    KIND_CHOICES = [
+        (KIND_INCOME, "Income"),
+        (KIND_EXPENSE, "Expense"),
+        (KIND_TRANSFER, "Transfer"),
+        (KIND_WITHDRAWAL, "Withdrawal"),
+        (KIND_INVESTMENT, "Investment"),
+        (KIND_OTHER, "Other"),
+    ]
+
+    EXPENSE_SALARY = "salary"
+    EXPENSE_RENT = "rent"
+    EXPENSE_PRODUCTS = "products"
+    EXPENSE_CONSUMABLES = "consumables"
+    EXPENSE_EQUIPMENT = "equipment"
+    EXPENSE_TYPE_CHOICES = [
+        (EXPENSE_SALARY, "Salary"),
+        (EXPENSE_RENT, "Rent"),
+        (EXPENSE_PRODUCTS, "Products"),
+        (EXPENSE_CONSUMABLES, "Consumables"),
+        (EXPENSE_EQUIPMENT, "Equipment"),
+    ]
+
+    account = models.ForeignKey(
+        FinancialAccount,
+        related_name="transactions",
+        on_delete=models.PROTECT,
+    )
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    expense_type = models.CharField(
+        max_length=20,
+        choices=EXPENSE_TYPE_CHOICES,
+        blank=True,
+    )
+    transfer_id = models.UUIDField(null=True, blank=True)
+    counterparty_name = models.CharField(max_length=255, blank=True)
+    counterparty_iban = models.CharField(max_length=34, blank=True)
+    description = models.TextField(blank=True)
+    external_id = models.CharField(max_length=128, blank=True)
+    crm_order = models.ForeignKey(
+        CrmOrder,
+        related_name="financial_transactions",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+        indexes = [
+            models.Index(fields=["date"], name="crm_fin_tx_date"),
+            models.Index(fields=["transfer_id"], name="crm_fin_tx_transfer"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account", "external_id"],
+                condition=~models.Q(external_id=""),
+                name="uniq_fin_tx_account_external_id",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.date} {self.amount} {self.account}"
+
+
 class WhatsAppNumberCheck(CrmOrder):
     class Meta:
         proxy = True

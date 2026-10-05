@@ -11,6 +11,8 @@ from crm.models import (
     CrmOrderEvent,
     CrmOrderImage,
     CrmSettings,
+    FinancialAccount,
+    FinancialTransaction,
     ResolvedTelegramPhone,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
@@ -310,3 +312,18 @@ class TelegramNumberCheckAdmin(admin.ModelAdmin):
             "admin/crm/telegramnumbercheck/change_list.html",
             context,
         )
+
+
+@admin.register(FinancialAccount)
+class FinancialAccountAdmin(admin.ModelAdmin):
+    list_display = ["name", "kind", "bank_name", "iban", "currency"]
+    search_fields = ["name", "bank_name", "iban"]
+
+
+@admin.register(FinancialTransaction)
+class FinancialTransactionAdmin(admin.ModelAdmin):
+    list_display = ["date", "account", "amount", "kind", "expense_type", "crm_order"]
+    list_filter = ["kind", "expense_type", "account"]
+    date_hierarchy = "date"
+    search_fields = ["description", "counterparty_name", "external_id"]
+    autocomplete_fields = ["account", "crm_order"]
