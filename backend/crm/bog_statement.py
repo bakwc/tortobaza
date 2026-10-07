@@ -30,6 +30,7 @@ class ParsedBogRow:
     date: date
     amount: Decimal
     kind: str
+    income_type: str
     counterparty_name: str
     counterparty_iban: str
     description: str
@@ -91,6 +92,7 @@ def import_bog_statement(file) -> BogStatementImportResult:
                     date=row.date,
                     amount=row.amount,
                     kind=row.kind,
+                    income_type=row.income_type,
                     counterparty_name=row.counterparty_name,
                     counterparty_iban=row.counterparty_iban,
                     description=row.description,
@@ -180,6 +182,7 @@ def parse_bog_row(
             date=parsed_date,
             amount=amount,
             kind=kind,
+            income_type=FinancialTransaction.INCOME_TRANSFER,
             counterparty_name=counterparty_name,
             counterparty_iban=counterparty_iban,
             description=description,

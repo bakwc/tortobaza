@@ -123,6 +123,7 @@ class BogStatementImportTests(TestCase):
         self.assertEqual(income.date, datetime(2026, 6, 12).date())
         self.assertEqual(income.amount, Decimal("125.97"))
         self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(income.income_type, FinancialTransaction.INCOME_TRANSFER)
         self.assertEqual(income.counterparty_name, "shps volt jorjia")
         self.assertEqual(income.counterparty_iban, "GE62BG0000000100816256GEL")
         self.assertEqual(income.description, "Wolt payout")
@@ -130,12 +131,14 @@ class BogStatementImportTests(TestCase):
         self.assertEqual(expense.account, gel)
         self.assertEqual(expense.amount, Decimal("-5.00"))
         self.assertEqual(expense.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.income_type, FinancialTransaction.INCOME_TRANSFER)
         self.assertEqual(expense.counterparty_name, "")
         self.assertEqual(expense.counterparty_iban, "")
         self.assertEqual(expense.description, "Business Package S Maintenance Fee")
         usd_income = FinancialTransaction.objects.get(external_id="124553319539")
         self.assertEqual(usd_income.account, usd)
         self.assertEqual(usd_income.kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(usd_income.income_type, FinancialTransaction.INCOME_TRANSFER)
         self.assertEqual(usd_income.counterparty_iban, "UA693052990000026209896773055")
 
     def test_skips_duplicates(self):
