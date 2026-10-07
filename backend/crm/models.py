@@ -393,6 +393,17 @@ class FinancialTransaction(models.Model):
         (EXPENSE_EQUIPMENT, "Equipment"),
     ]
 
+    INCOME_ONLINE = "online"
+    INCOME_TERMINAL = "terminal"
+    INCOME_CASH = "cash"
+    INCOME_TRANSFER = "transfer"
+    INCOME_TYPE_CHOICES = [
+        (INCOME_ONLINE, "Online"),
+        (INCOME_TERMINAL, "Terminal"),
+        (INCOME_CASH, "Cash"),
+        (INCOME_TRANSFER, "Transfer"),
+    ]
+
     account = models.ForeignKey(
         FinancialAccount,
         related_name="transactions",
@@ -406,11 +417,16 @@ class FinancialTransaction(models.Model):
         choices=EXPENSE_TYPE_CHOICES,
         blank=True,
     )
+    income_type = models.CharField(
+        max_length=20,
+        choices=INCOME_TYPE_CHOICES,
+        blank=True,
+    )
     transfer_id = models.UUIDField(null=True, blank=True)
     counterparty_name = models.CharField(max_length=255, blank=True)
     counterparty_iban = models.CharField(max_length=34, blank=True)
     description = models.TextField(blank=True)
-    external_id = models.CharField(max_length=128, blank=True)
+    external_id = models.CharField(max_length=512, blank=True)
     crm_order = models.ForeignKey(
         CrmOrder,
         related_name="financial_transactions",

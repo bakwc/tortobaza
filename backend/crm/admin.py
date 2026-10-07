@@ -8,6 +8,7 @@ from django.urls import path, reverse
 from crm.bog_statement import import_bog_statement
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.history import record_crm_order_event, snapshot_crm_order
+from crm.liberty_statement import import_liberty_statement
 from crm.models import (
     CrmOrder,
     CrmOrderEvent,
@@ -328,8 +329,8 @@ class FinancialAccountAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialTransaction)
 class FinancialTransactionAdmin(admin.ModelAdmin):
-    list_display = ["date", "account", "amount", "kind", "expense_type", "crm_order"]
-    list_filter = ["kind", "expense_type", "account"]
+    list_display = ["date", "account", "amount", "kind", "income_type", "expense_type", "crm_order"]
+    list_filter = ["kind", "income_type", "expense_type", "account"]
     date_hierarchy = "date"
     search_fields = ["description", "counterparty_name", "external_id"]
     autocomplete_fields = ["account", "crm_order"]
@@ -341,6 +342,11 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 "upload-bog/",
                 self.admin_site.admin_view(self.upload_bog_view),
                 name="crm_financialtransaction_upload_bog",
+            ),
+            path(
+                "upload-liberty/",
+                self.admin_site.admin_view(self.upload_liberty_view),
+                name="crm_financialtransaction_upload_liberty",
             ),
         ]
         return urls + super().get_urls()
@@ -367,6 +373,35 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             "form": form,
             "opts": self.model._meta,
             "title": "Upload Bank of Georgia statement",
+        }
+        return TemplateResponse(
+            request,
+            "admin/crm/financialtransaction/upload_bog.html",
+            context,
+        )
+
+    def upload_liberty_view(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        if request.method == "POST":
+            form = BogStatementUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                result = import_liberty_statement(form.cleaned_data["file"])
+                if result.error:
+                    self.message_user(request, result.error, level=messages.ERROR)
+                else:
+                    self.message_user(
+                        request,
+                        f"Imported {result.created}, skipped {result.skipped} duplicates.",
+                    )
+                    return redirect("admin:crm_financialtransaction_changelist")
+        else:
+            form = BogStatementUploadForm()
+        context = {
+            **self.admin_site.each_context(request),
+            "form": form,
+            "opts": self.model._meta,
+            "title": "Upload Liberty statement",
         }
         return TemplateResponse(
             request,
