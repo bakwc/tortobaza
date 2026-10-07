@@ -1,9 +1,11 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
-from django.urls import reverse
+from django.urls import path, reverse
 
+from crm.bog_statement import import_bog_statement
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.models import (
@@ -31,6 +33,10 @@ class WhatsAppNumberCheckForm(forms.Form):
 
 class TelegramNumberCheckForm(forms.Form):
     number = forms.CharField()
+
+
+class BogStatementUploadForm(forms.Form):
+    file = forms.FileField()
 
 
 @admin.register(CrmSettings)
@@ -327,3 +333,43 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
     date_hierarchy = "date"
     search_fields = ["description", "counterparty_name", "external_id"]
     autocomplete_fields = ["account", "crm_order"]
+    change_list_template = "admin/crm/financialtransaction/change_list.html"
+
+    def get_urls(self):
+        urls = [
+            path(
+                "upload-bog/",
+                self.admin_site.admin_view(self.upload_bog_view),
+                name="crm_financialtransaction_upload_bog",
+            ),
+        ]
+        return urls + super().get_urls()
+
+    def upload_bog_view(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
+        if request.method == "POST":
+            form = BogStatementUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                result = import_bog_statement(form.cleaned_data["file"])
+                if result.error:
+                    self.message_user(request, result.error, level=messages.ERROR)
+                else:
+                    self.message_user(
+                        request,
+                        f"Imported {result.created}, skipped {result.skipped} duplicates.",
+                    )
+                    return redirect("admin:crm_financialtransaction_changelist")
+        else:
+            form = BogStatementUploadForm()
+        context = {
+            **self.admin_site.each_context(request),
+            "form": form,
+            "opts": self.model._meta,
+            "title": "Upload Bank of Georgia statement",
+        }
+        return TemplateResponse(
+            request,
+            "admin/crm/financialtransaction/upload_bog.html",
+            context,
+        )
