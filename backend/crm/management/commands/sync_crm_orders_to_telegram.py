@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from crm.cash_transactions import sync_cash_paid_order_transactions
+from crm.liberty_online_links import sync_liberty_online_order_links
 from crm.liberty_terminal_links import sync_liberty_terminal_order_links
 from crm.flowwow import sync_flowwow_orders
 from crm.google_maps import (
@@ -190,3 +191,4 @@ class Command(BaseCommand):
             )
         sync_cash_paid_order_transactions()
         sync_liberty_terminal_order_links()
+        sync_liberty_online_order_links()
