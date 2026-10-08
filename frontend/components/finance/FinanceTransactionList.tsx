@@ -61,6 +61,18 @@ const NEUTRAL_TONE: Tone = {
   amount: "text-[var(--ink)]",
 };
 
+const NEUTRAL_ACTIVE = "bg-[var(--ink)] text-white";
+
+const KIND_ORDER: FinanceTransaction["kind"][] = [
+  "income",
+  "expense",
+  "transfer",
+  "withdrawal",
+  "investment",
+  "correction",
+  "other",
+];
+
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);
 }
@@ -142,6 +154,8 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
   const t = useTranslations("finance");
   const locale = useLocale();
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
+  const [accountFilter, setAccountFilter] = useState<number | null>(null);
+  const [kindFilter, setKindFilter] = useState<FinanceTransaction["kind"] | null>(null);
 
   if (transactions.length === 0) {
     return (
@@ -163,9 +177,57 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
     });
   }
 
+  const accounts = [
+    ...new Map(transactions.map((tx) => [tx.account.id, tx.account.name])).entries(),
+  ].sort((left, right) => left[1].localeCompare(right[1]));
+  const kinds = KIND_ORDER.filter((kind) => transactions.some((tx) => tx.kind === kind));
+  const visible = transactions.filter(
+    (tx) =>
+      (accountFilter === null || tx.account.id === accountFilter) &&
+      (kindFilter === null || tx.kind === kindFilter),
+  );
+
   return (
     <div className="grid gap-6">
-      {groupByDate(transactions).map((day) => {
+      <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
+        <FilterRow label={t("filterAccount")}>
+          <FilterPill active={accountFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => setAccountFilter(null)}>
+            {t("filterAll")}
+          </FilterPill>
+          {accounts.map(([id, name]) => (
+            <FilterPill
+              key={id}
+              active={accountFilter === id}
+              activeClass={NEUTRAL_ACTIVE}
+              onClick={() => setAccountFilter(id)}
+            >
+              {name}
+            </FilterPill>
+          ))}
+        </FilterRow>
+        <FilterRow label={t("filterKind")}>
+          <FilterPill active={kindFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => setKindFilter(null)}>
+            {t("filterAll")}
+          </FilterPill>
+          {kinds.map((kind) => (
+            <FilterPill
+              key={kind}
+              active={kindFilter === kind}
+              activeClass={kindTone(kind) === NEUTRAL_TONE ? NEUTRAL_ACTIVE : kindTone(kind).chip}
+              onClick={() => setKindFilter(kind)}
+            >
+              <KindIcon kind={kind} />
+              {t(`kinds.${kind}`)}
+            </FilterPill>
+          ))}
+        </FilterRow>
+      </div>
+      {visible.length === 0 ? (
+        <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
+          {t("empty")}
+        </div>
+      ) : null}
+      {groupByDate(visible).map((day) => {
         const income = sumAmounts(day.items.filter((tx) => tx.kind === "income"));
         const expense = sumAmounts(day.items.filter((tx) => tx.kind === "expense"));
         return (
@@ -201,6 +263,45 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
         );
       })}
     </div>
+  );
+}
+
+function FilterRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <span className="mr-1 w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function FilterPill({
+  active,
+  activeClass,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  activeClass: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors [&_svg]:h-3 [&_svg]:w-3",
+        active
+          ? cn("border-transparent", activeClass)
+          : "border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

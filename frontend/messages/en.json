@@ -471,6 +471,9 @@
     "empty": "No operations in this period.",
     "loadError": "Could not load operations. Try again.",
     "flowwowOrder": "Flowwow #{id}",
+    "filterAccount": "Account",
+    "filterKind": "Type",
+    "filterAll": "All",
     "operationCount": "{count, plural, one {# operation} other {# operations}}",
     "kinds": {
       "income": "Income",

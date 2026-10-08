@@ -471,6 +471,9 @@
     "empty": "За этот период операций нет.",
     "loadError": "Не удалось загрузить операции. Попробуйте ещё раз.",
     "flowwowOrder": "Flowwow #{id}",
+    "filterAccount": "Счёт",
+    "filterKind": "Тип",
+    "filterAll": "Все",
     "operationCount": "{count, plural, one {# операция} few {# операции} many {# операций} other {# операций}}",
     "kinds": {
       "income": "Доход",
