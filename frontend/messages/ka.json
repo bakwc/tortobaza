@@ -282,6 +282,7 @@
     "paymentTerminal": "Terminal",
     "paymentTbc": "TBC Transfer",
     "paymentBog": "BOG Transfer",
+    "paymentTbank": "T-Bank Transfer",
     "paymentFlowwow": "Flowwow",
     "paymentCrypto": "კრიპტოვალუტა",
     "paymentOnline": "ონლაინ საიტზე",

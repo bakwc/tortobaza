@@ -54,6 +54,7 @@ class CrmOrder(models.Model):
     PAYMENT_TERMINAL = "terminal"
     PAYMENT_TBC = "tbc"
     PAYMENT_BOG = "bog"
+    PAYMENT_TBANK = "tbank"
     PAYMENT_FLOWWOW = "flowwow"
     PAYMENT_CRYPTO = "crypto"
     PAYMENT_ONLINE = "online"
@@ -63,6 +64,7 @@ class CrmOrder(models.Model):
         (PAYMENT_TERMINAL, "Terminal"),
         (PAYMENT_TBC, "TBC Transfer"),
         (PAYMENT_BOG, "BOG Transfer"),
+        (PAYMENT_TBANK, "T-Bank Transfer"),
         (PAYMENT_FLOWWOW, "Flowwow"),
         (PAYMENT_CRYPTO, "Cryptocurrency"),
         (PAYMENT_ONLINE, "Online on website"),
