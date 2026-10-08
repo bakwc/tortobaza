@@ -13,7 +13,11 @@ export function SiteChrome({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const hideChrome = pathname === "/crm" || pathname.startsWith("/crm/");
+  const hideChrome =
+    pathname === "/crm" ||
+    pathname.startsWith("/crm/") ||
+    pathname === "/finance" ||
+    pathname.startsWith("/finance/");
 
   return (
     <>

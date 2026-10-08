@@ -369,6 +369,7 @@
     "nextMonth": "შემდეგი თვე",
     "monthlyOrders": "თვიური შეკვეთები",
     "dailyBoard": "დღიური დაფა",
+    "finance": "ფინანსები",
     "unconfirmedOrders": "დაუდასტურებელი შეკვეთები",
     "unconfirmedLoadError": "დაუდასტურებელი შეკვეთების ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "unconfirmedEmptyTitle": "დაუდასტურებელი შეკვეთები არ არის",
@@ -445,5 +446,52 @@
     "historyFieldDeleted": "წაშლილია",
     "historyYes": "დიახ",
     "historyNo": "არა"
+  },
+  "finance": {
+    "staffOnly": "ეს განყოფილება მხოლოდ თანამშრომლებისთვისაა.",
+    "operations": "ოპერაციები",
+    "income": "შემოსავლები",
+    "expenses": "ხარჯები",
+    "day": "დღე",
+    "month": "თვე",
+    "previousDay": "წინა დღე",
+    "nextDay": "შემდეგი დღე",
+    "today": "დღეს",
+    "jumpToToday": "დღევანდელ დღეზე",
+    "prevMonth": "წინა თვე",
+    "nextMonth": "შემდეგი თვე",
+    "thisMonth": "ეს თვე",
+    "jumpToThisMonth": "მიმდინარე თვეზე",
+    "total": "სულ",
+    "byAccount": "ანგარიშის მიხედვით",
+    "byType": "ოპერაციის ტიპის მიხედვით",
+    "byCounterparty": "კონტრაგენტის მიხედვით",
+    "byDay": "დღეების მიხედვით",
+    "unspecified": "ტიპის გარეშე",
+    "unspecifiedCounterparty": "კონტრაგენტის გარეშე",
+    "empty": "ამ პერიოდში ოპერაციები არ არის.",
+    "loadError": "ოპერაციების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.",
+    "kinds": {
+      "income": "შემოსავალი",
+      "expense": "ხარჯი",
+      "transfer": "გადარიცხვა",
+      "withdrawal": "გატანა",
+      "investment": "ინვესტიცია",
+      "correction": "კორექტირება",
+      "other": "სხვა"
+    },
+    "incomeTypes": {
+      "online": "ონლაინ",
+      "terminal": "ტერმინალი",
+      "cash": "ნაღდი",
+      "transfer": "გადარიცხვა"
+    },
+    "expenseTypes": {
+      "salary": "ხელფასი",
+      "rent": "ქირა",
+      "products": "პროდუქტები",
+      "consumables": "სახარჯი მასალა",
+      "equipment": "აღჭურვილობა"
+    }
   }
 }

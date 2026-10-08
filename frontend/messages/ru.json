@@ -369,6 +369,7 @@
     "nextMonth": "Следующий месяц",
     "monthlyOrders": "Заказы за месяц",
     "dailyBoard": "Дневная доска",
+    "finance": "Финансы",
     "unconfirmedOrders": "Неподтверждённые заказы",
     "unconfirmedLoadError": "Не удалось загрузить неподтверждённые заказы. Попробуйте ещё раз.",
     "unconfirmedEmptyTitle": "Неподтверждённых заказов нет",
@@ -445,5 +446,52 @@
     "historyFieldDeleted": "Удалён",
     "historyYes": "Да",
     "historyNo": "Нет"
+  },
+  "finance": {
+    "staffOnly": "Этот раздел только для сотрудников.",
+    "operations": "Операции",
+    "income": "Доходы",
+    "expenses": "Расходы",
+    "day": "День",
+    "month": "Месяц",
+    "previousDay": "Предыдущий день",
+    "nextDay": "Следующий день",
+    "today": "Сегодня",
+    "jumpToToday": "К сегодняшнему дню",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц",
+    "thisMonth": "Этот месяц",
+    "jumpToThisMonth": "К текущему месяцу",
+    "total": "Итого",
+    "byAccount": "По счёту",
+    "byType": "По типу операции",
+    "byCounterparty": "По контрагенту",
+    "byDay": "По дням",
+    "unspecified": "Без типа",
+    "unspecifiedCounterparty": "Без контрагента",
+    "empty": "За этот период операций нет.",
+    "loadError": "Не удалось загрузить операции. Попробуйте ещё раз.",
+    "kinds": {
+      "income": "Доход",
+      "expense": "Расход",
+      "transfer": "Перевод",
+      "withdrawal": "Вывод",
+      "investment": "Инвестиция",
+      "correction": "Корректировка",
+      "other": "Прочее"
+    },
+    "incomeTypes": {
+      "online": "Онлайн",
+      "terminal": "Терминал",
+      "cash": "Наличные",
+      "transfer": "Перевод"
+    },
+    "expenseTypes": {
+      "salary": "Зарплата",
+      "rent": "Аренда",
+      "products": "Продукты",
+      "consumables": "Расходники",
+      "equipment": "Оборудование"
+    }
   }
 }

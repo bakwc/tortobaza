@@ -25,7 +25,13 @@ from catalog.responsive_urls import detail_image
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
-from crm.models import CrmOrder, CrmOrderEvent, FlowwowWebhookEvent, ResolvedGoogleAddress
+from crm.models import (
+    CrmOrder,
+    CrmOrderEvent,
+    FinancialTransaction,
+    FlowwowWebhookEvent,
+    ResolvedGoogleAddress,
+)
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     CrmExpensesDaySerializer,
@@ -38,6 +44,8 @@ from crm.serializers import (
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
+    FinanceTransactionsQuerySerializer,
+    FinanceTransactionsResponseSerializer,
     ResolveGoogleAddressSerializer,
     ResolveYandexAddressSerializer,
 )
@@ -398,6 +406,30 @@ class CrmExpensesView(APIView):
             }
         )
         return Response(serializer.data)
+
+
+class FinanceTransactionsView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        query_serializer = FinanceTransactionsQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        month = query_serializer.validated_data.get("month")
+        transactions = FinancialTransaction.objects.select_related("account")
+        if month:
+            year_str, month_str = month.split("-")
+            year = int(year_str)
+            month_num = int(month_str)
+            start_date = date(year, month_num, 1)
+            end_date = date(year, month_num, monthrange(year, month_num)[1])
+            transactions = transactions.filter(date__gte=start_date, date__lte=end_date)
+            payload = {"date": None, "month": month, "transactions": transactions}
+        else:
+            target_date = query_serializer.validated_data.get("date") or _tbilisi_now().date()
+            transactions = transactions.filter(date=target_date)
+            payload = {"date": target_date, "month": None, "transactions": transactions}
+        return Response(FinanceTransactionsResponseSerializer(payload).data)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

@@ -162,6 +162,11 @@ function CrmBoard() {
           <Link href="/crm/month">{t("monthlyOrders")}</Link>
         </Button>
         {currentUser.data?.is_staff ? (
+          <Button asChild variant="outline">
+            <Link href={`/finance?date=${selectedDate}`}>{t("finance")}</Link>
+          </Button>
+        ) : null}
+        {currentUser.data?.is_staff ? (
           <Button asChild>
             <Link href={`/crm/new?date=${selectedDate}`}>
               <Plus className="mr-1.5 h-4 w-4" />

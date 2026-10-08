@@ -493,3 +493,36 @@ class CrmExpensesMonthSerializer(serializers.Serializer):
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)
     by_date = serializers.DictField(child=CrmExpensesBreakdownSerializer())
+
+
+class FinanceTransactionsQuerySerializer(serializers.Serializer):
+    date = serializers.DateField(required=False)
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+
+    def validate(self, attrs):
+        if attrs.get("date") is not None and attrs.get("month") is not None:
+            raise serializers.ValidationError("Pass either date or month, not both.")
+        return attrs
+
+
+class FinanceTransactionAccountSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
+class FinanceTransactionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    kind = serializers.CharField()
+    income_type = serializers.CharField()
+    expense_type = serializers.CharField()
+    account = FinanceTransactionAccountSerializer()
+    counterparty_name = serializers.CharField()
+    description = serializers.CharField()
+
+
+class FinanceTransactionsResponseSerializer(serializers.Serializer):
+    date = serializers.DateField(allow_null=True)
+    month = serializers.CharField(allow_null=True)
+    transactions = FinanceTransactionSerializer(many=True)

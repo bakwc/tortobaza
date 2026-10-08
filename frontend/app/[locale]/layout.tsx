@@ -57,7 +57,7 @@ export default async function LocaleLayout({
           dangerouslySetInnerHTML={{
             __html: `window.umamiBeforeSend = function(type, payload) {
   var pathname = new URL(payload.url, window.location.origin).pathname;
-  var isInternal = /^\\/(en|ka|ru)\\/(attendance|crm|login)(\\/|$)/i;
+  var isInternal = /^\\/(en|ka|ru)\\/(attendance|crm|finance|login)(\\/|$)/i;
   if (isInternal.test(pathname)) {
     return false;
   }

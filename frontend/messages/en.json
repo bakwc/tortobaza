@@ -369,6 +369,7 @@
     "nextMonth": "Next month",
     "monthlyOrders": "Monthly orders",
     "dailyBoard": "Daily board",
+    "finance": "Finance",
     "unconfirmedOrders": "Unconfirmed orders",
     "unconfirmedLoadError": "Could not load unconfirmed orders. Please try again.",
     "unconfirmedEmptyTitle": "No unconfirmed orders",
@@ -445,5 +446,52 @@
     "historyFieldDeleted": "Deleted",
     "historyYes": "Yes",
     "historyNo": "No"
+  },
+  "finance": {
+    "staffOnly": "This section is for staff only.",
+    "operations": "Operations",
+    "income": "Income",
+    "expenses": "Expenses",
+    "day": "Day",
+    "month": "Month",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "today": "Today",
+    "jumpToToday": "Jump to today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "thisMonth": "This month",
+    "jumpToThisMonth": "Jump to this month",
+    "total": "Total",
+    "byAccount": "By account",
+    "byType": "By operation type",
+    "byCounterparty": "By counterparty",
+    "byDay": "By day",
+    "unspecified": "Unspecified",
+    "unspecifiedCounterparty": "No counterparty",
+    "empty": "No operations in this period.",
+    "loadError": "Could not load operations. Try again.",
+    "kinds": {
+      "income": "Income",
+      "expense": "Expense",
+      "transfer": "Transfer",
+      "withdrawal": "Withdrawal",
+      "investment": "Investment",
+      "correction": "Correction",
+      "other": "Other"
+    },
+    "incomeTypes": {
+      "online": "Online",
+      "terminal": "Terminal",
+      "cash": "Cash",
+      "transfer": "Transfer"
+    },
+    "expenseTypes": {
+      "salary": "Salary",
+      "rent": "Rent",
+      "products": "Products",
+      "consumables": "Consumables",
+      "equipment": "Equipment"
+    }
   }
 }

@@ -33,6 +33,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/*/attendance/",
         "/*/crm",
         "/*/crm/",
+        "/*/finance",
+        "/*/finance/",
       ],
     },
     sitemap: `${PUBLIC_SITE_ORIGIN}/sitemap.xml`,

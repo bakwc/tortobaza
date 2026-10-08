@@ -8,6 +8,7 @@ import {
   CrmClientOrderSchema,
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
+  FinanceTransactionsResponseSchema,
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmUnconfirmedOrdersResponseSchema,
@@ -37,6 +38,7 @@ import {
   type CrmClientOrder,
   type CrmExpensesDay,
   type CrmExpensesMonth,
+  type FinanceTransactionsResponse,
   type CrmMapOrderRange,
   type CrmMapOrdersResponse,
   type CrmMonthlyOrdersResponse,
@@ -249,6 +251,20 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(CrmExpensesMonthSchema, raw);
+    },
+
+    async getFinanceTransactions(date: string): Promise<FinanceTransactionsResponse> {
+      const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
+        searchParams: { date },
+      });
+      return parse(FinanceTransactionsResponseSchema, raw);
+    },
+
+    async getFinanceTransactionsByMonth(month: string): Promise<FinanceTransactionsResponse> {
+      const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
+        searchParams: { month },
+      });
+      return parse(FinanceTransactionsResponseSchema, raw);
     },
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {

@@ -390,6 +390,35 @@ export const CrmExpensesMonthSchema = z.object({
   ),
 });
 
+export const FinanceTransactionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  kind: z.enum([
+    "income",
+    "expense",
+    "transfer",
+    "withdrawal",
+    "investment",
+    "correction",
+    "other",
+  ]),
+  income_type: z.string(),
+  expense_type: z.string(),
+  account: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
+  counterparty_name: z.string(),
+  description: z.string(),
+});
+
+export const FinanceTransactionsResponseSchema = z.object({
+  date: z.string().nullable(),
+  month: z.string().nullable(),
+  transactions: z.array(FinanceTransactionSchema),
+});
+
 export const ResolveYandexAddressResponseSchema = z.object({
   url: z.string(),
 });
@@ -457,6 +486,8 @@ export type CrmMapOrder = z.infer<typeof CrmMapOrderSchema>;
 export type CrmMapOrdersResponse = z.infer<typeof CrmMapOrdersResponseSchema>;
 export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
 export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
+export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
+export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;
 

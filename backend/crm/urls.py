@@ -8,6 +8,7 @@ from crm.views import (
     CrmOrderEventsView,
     CrmOrderListView,
     CrmOrderMapView,
+    FinanceTransactionsView,
     FlowwowWebhookView,
     ResolveGoogleAddressView,
     ResolveYandexAddressView,
@@ -16,6 +17,11 @@ from crm.views import (
 urlpatterns = [
     path("webhooks/flowwow/", FlowwowWebhookView.as_view(), name="flowwow-webhook"),
     path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
+    path(
+        "crm/finance/transactions/",
+        FinanceTransactionsView.as_view(),
+        name="crm-finance-transactions",
+    ),
     path("crm/orders/map/", CrmOrderMapView.as_view(), name="crm-order-map"),
     path("crm/orders/", CrmOrderListView.as_view(), name="crm-order-list"),
     path(
