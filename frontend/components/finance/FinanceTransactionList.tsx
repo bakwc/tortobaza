@@ -12,13 +12,15 @@ import {
   Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed, formatCrmCompactDate, formatCrmDate } from "@/lib/format";
+import { formatAed, formatCrmCompactDate, formatCrmDate, formatCrmDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
 const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment"] as const;
+const ACCOUNT_KINDS = ["bank", "cash", "crypto", "virtual"] as const;
 
 type FinanceRow =
   | { type: "single"; tx: FinanceTransaction }
@@ -81,6 +83,10 @@ function isExpenseType(value: string): value is (typeof EXPENSE_TYPES)[number] {
   return EXPENSE_TYPES.some((item) => item === value);
 }
 
+function isAccountKind(value: string): value is (typeof ACCOUNT_KINDS)[number] {
+  return ACCOUNT_KINDS.some((item) => item === value);
+}
+
 function kindTone(kind: FinanceTransaction["kind"]): Tone {
   if (kind === "income") return INCOME_TONE;
   if (kind === "expense") return EXPENSE_TONE;
@@ -99,6 +105,21 @@ function KindIcon({ kind }: { kind: FinanceTransaction["kind"] }) {
   if (kind === "expense") return <ArrowUpRight className="h-4 w-4" />;
   if (kind === "transfer") return <ArrowLeftRight className="h-4 w-4" />;
   return <CircleDot className="h-4 w-4" />;
+}
+
+function isIncomingTransfer(tx: FinanceTransaction): boolean {
+  return Number.parseFloat(tx.amount) > 0;
+}
+
+function TxIcon({ tx }: { tx: FinanceTransaction }) {
+  if (tx.kind === "transfer") {
+    return isIncomingTransfer(tx) ? (
+      <ArrowDownLeft className="h-4 w-4" />
+    ) : (
+      <ArrowUpRight className="h-4 w-4" />
+    );
+  }
+  return <KindIcon kind={tx.kind} />;
 }
 
 function sumAmounts(items: FinanceTransaction[]): number {
@@ -156,6 +177,7 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
   const [accountFilter, setAccountFilter] = useState<number | null>(null);
   const [kindFilter, setKindFilter] = useState<FinanceTransaction["kind"] | null>(null);
+  const [selected, setSelected] = useState<FinanceTransaction | null>(null);
 
   if (transactions.length === 0) {
     return (
@@ -245,7 +267,9 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
             </div>
             {groupFlowwow(day.items).map((row) => {
               if (row.type === "single") {
-                return <TransactionRow key={row.tx.id} tx={row.tx} t={t} />;
+                return (
+                  <TransactionRow key={row.tx.id} tx={row.tx} onSelect={() => setSelected(row.tx)} t={t} />
+                );
               }
               const open = openGroups.has(row.orderNumber);
               return (
@@ -255,6 +279,7 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
                   items={row.items}
                   open={open}
                   onToggle={() => toggleGroup(row.orderNumber)}
+                  onSelect={setSelected}
                   t={t}
                 />
               );
@@ -262,6 +287,7 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
           </section>
         );
       })}
+      <TransactionDetailPanel tx={selected} onClose={() => setSelected(null)} t={t} />
     </div>
   );
 }
@@ -313,6 +339,7 @@ function RowShell({
   amount,
   chips,
   action,
+  onClick,
 }: {
   tone: Tone;
   icon: ReactNode;
@@ -321,12 +348,27 @@ function RowShell({
   amount: string;
   chips: ReactNode;
   action: ReactNode;
+  onClick: (() => void) | null;
 }) {
   return (
     <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick ?? undefined}
+      onKeyDown={
+        onClick
+          ? (event) => {
+              if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={cn(
         "flex min-w-0 items-center gap-1.5 rounded-xl border px-1.5 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
         tone.card,
+        onClick && "cursor-pointer transition hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-[var(--ink)]",
       )}
     >
       <div
@@ -372,9 +414,11 @@ function Chip({ className, children }: { className: string; children: ReactNode 
 
 function TransactionRow({
   tx,
+  onSelect,
   t,
 }: {
   tx: FinanceTransaction;
+  onSelect: () => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   const tone = kindTone(tx.kind);
@@ -382,19 +426,36 @@ function TransactionRow({
   return (
     <RowShell
       tone={tone}
-      icon={<KindIcon kind={tx.kind} />}
+      icon={<TxIcon tx={tx} />}
       title={tx.counterparty_name || t(`kinds.${tx.kind}`)}
       subtitle={tx.description}
       amount={formatAed(tx.amount)}
       chips={
         <>
-          <Chip className={tone.chip}>{t(`kinds.${tx.kind}`)}</Chip>
+          <Chip className={tone.chip}>
+            {tx.kind === "transfer"
+              ? t(isIncomingTransfer(tx) ? "transferIncoming" : "transferOutgoing")
+              : t(`kinds.${tx.kind}`)}
+          </Chip>
           {typeLabel ? <Chip className="bg-white/80 text-[var(--ink)]">{typeLabel}</Chip> : null}
           <Chip className="bg-white/80 text-[var(--muted-2)]">{tx.account.name}</Chip>
+          {tx.kind === "transfer" && tx.matched_account ? (
+            <Chip className="bg-white/80 text-sky-800">
+              {isIncomingTransfer(tx) ? (
+                <ArrowDownLeft className="h-3 w-3" />
+              ) : (
+                <ArrowUpRight className="h-3 w-3" />
+              )}
+              {t(isIncomingTransfer(tx) ? "transferFrom" : "transferTo", {
+                account: tx.matched_account.name,
+              })}
+            </Chip>
+          ) : null}
           <CrmOrderChips orders={tx.crm_orders} />
         </>
       }
       action={null}
+      onClick={onSelect}
     />
   );
 }
@@ -404,12 +465,14 @@ function FlowwowGroupRow({
   items,
   open,
   onToggle,
+  onSelect,
   t,
 }: {
   orderNumber: number;
   items: FinanceTransaction[];
   open: boolean;
   onToggle: () => void;
+  onSelect: (tx: FinanceTransaction) => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   const total = sumAmounts(items);
@@ -441,27 +504,30 @@ function FlowwowGroupRow({
             <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
           </Button>
         }
+        onClick={null}
       />
       {open ? (
         <div className="ml-5 grid gap-1 border-l-2 border-[var(--line)] pl-2 md:ml-8 md:pl-3">
           {items.map((tx) => {
             const childTone = kindTone(tx.kind);
             return (
-              <div
+              <button
                 key={tx.id}
+                type="button"
+                onClick={() => onSelect(tx)}
                 className={cn(
-                  "flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1 text-xs md:text-sm",
+                  "flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 py-1 text-left text-xs transition hover:brightness-[0.97] md:text-sm",
                   childTone.card,
                 )}
               >
                 <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center", childTone.amount)}>
-                  <KindIcon kind={tx.kind} />
+                  <TxIcon tx={tx} />
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[var(--ink)]">
                   {tx.description || t(`kinds.${tx.kind}`)}
                 </span>
                 <span className={cn("shrink-0 font-semibold", childTone.amount)}>{formatAed(tx.amount)}</span>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -477,6 +543,7 @@ function CrmOrderChips({ orders }: { orders: CrmOrderLink[] }) {
         <Link
           key={order.id}
           href={`/crm?date=${order.date}&order=${order.id}`}
+          onClick={(event) => event.stopPropagation()}
           className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-[var(--brand)] px-1.5 py-0.5 text-[10px] font-semibold text-white hover:opacity-90"
         >
           <Package className="h-3 w-3 shrink-0" />
@@ -488,6 +555,197 @@ function CrmOrderChips({ orders }: { orders: CrmOrderLink[] }) {
         </Link>
       ))}
     </>
+  );
+}
+
+function TransactionDetailPanel({
+  tx,
+  onClose,
+  t,
+}: {
+  tx: FinanceTransaction | null;
+  onClose: () => void;
+  t: ReturnType<typeof useTranslations<"finance">>;
+}) {
+  return (
+    <Dialog open={tx !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
+      <DialogContent className="left-auto right-0 top-0 h-dvh max-h-dvh w-[min(480px,100vw)] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-l-3xl">
+        {tx ? <TransactionDetail tx={tx} t={t} /> : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TransactionDetail({
+  tx,
+  t,
+}: {
+  tx: FinanceTransaction;
+  t: ReturnType<typeof useTranslations<"finance">>;
+}) {
+  const locale = useLocale();
+  const tone = kindTone(tx.kind);
+  const kindLabel =
+    tx.kind === "transfer"
+      ? t(isIncomingTransfer(tx) ? "transferIncoming" : "transferOutgoing")
+      : t(`kinds.${tx.kind}`);
+  const typeLabel = operationTypeLabel(tx, t);
+  const matched = tx.matched_transaction;
+  return (
+    <div className="grid gap-4 pb-6">
+      <div className={cn("grid gap-2 border-b px-5 pb-4 pt-5 pr-16", tone.card)}>
+        <div className="flex items-center gap-2">
+          <div
+            className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border", tone.media)}
+          >
+            <TxIcon tx={tx} />
+          </div>
+          <Chip className={tone.chip}>{kindLabel}</Chip>
+          {typeLabel ? <Chip className="bg-white/80 text-[var(--ink)]">{typeLabel}</Chip> : null}
+        </div>
+        <DialogTitle className="text-lg font-semibold text-[var(--ink)]">
+          {tx.counterparty_name || t(`kinds.${tx.kind}`)}
+        </DialogTitle>
+        <DialogDescription className="text-sm text-[var(--muted-2)]">
+          {formatCrmDate(tx.date, locale)}
+        </DialogDescription>
+        <span className={cn("text-2xl font-bold", tone.amount)}>{formatAed(tx.amount)}</span>
+      </div>
+
+      <DetailSection title={t("detail.sectionMain")}>
+        <DetailField label={t("detail.date")} value={formatCrmDate(tx.date, locale)} variant="text" />
+        <DetailField
+          label={t("detail.amount")}
+          value={`${formatAed(tx.amount)} · ${tx.account.currency}`}
+          variant="text"
+        />
+        <DetailField label={t("detail.kind")} value={kindLabel} variant="text" />
+        <DetailField label={t("detail.operationType")} value={typeLabel} variant="text" />
+        <DetailField label={t("detail.description")} value={tx.description} variant="multiline" />
+      </DetailSection>
+
+      <DetailSection title={t("detail.sectionAccount")}>
+        <DetailField label={t("detail.account")} value={tx.account.name} variant="text" />
+        <DetailField
+          label={t("detail.accountKind")}
+          value={isAccountKind(tx.account.kind) ? t(`accountKinds.${tx.account.kind}`) : tx.account.kind}
+          variant="text"
+        />
+        <DetailField label={t("detail.bankName")} value={tx.account.bank_name} variant="text" />
+        <DetailField label={t("detail.iban")} value={tx.account.iban} variant="mono" />
+        <DetailField label={t("detail.currency")} value={tx.account.currency} variant="text" />
+      </DetailSection>
+
+      <DetailSection title={t("detail.sectionCounterparty")}>
+        <DetailField label={t("detail.counterparty")} value={tx.counterparty_name} variant="text" />
+        <DetailField label={t("detail.counterpartyIban")} value={tx.counterparty_iban} variant="mono" />
+      </DetailSection>
+
+      <DetailSection title={t("detail.sectionLinks")}>
+        <DetailField
+          label={t("detail.flowwowOrder")}
+          value={tx.flowwow_order_number === null ? "" : t("flowwowOrder", { id: tx.flowwow_order_number })}
+          variant="text"
+        />
+        <div className="grid gap-1">
+          <span className="text-xs font-medium text-[var(--muted-2)]">{t("detail.crmOrders")}</span>
+          {tx.crm_orders.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <CrmOrderChips orders={tx.crm_orders} />
+            </div>
+          ) : (
+            <span className="text-sm text-[var(--muted-2)]">—</span>
+          )}
+        </div>
+        <div className="grid gap-1">
+          <span className="text-xs font-medium text-[var(--muted-2)]">{t("detail.matchedTransaction")}</span>
+          {matched ? (
+            <div
+              className={cn(
+                "grid gap-0.5 rounded-xl border px-3 py-2 text-sm",
+                amountTone(Number.parseFloat(matched.amount)).card,
+              )}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="min-w-0 truncate font-semibold text-[var(--ink)]">{matched.account.name}</span>
+                <span
+                  className={cn("shrink-0 font-bold", amountTone(Number.parseFloat(matched.amount)).amount)}
+                >
+                  {formatAed(matched.amount)}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--muted-2)]">
+                {formatCrmDate(matched.date, locale)} · #{matched.id}
+              </span>
+              {matched.counterparty_name ? (
+                <span className="text-xs text-[var(--ink)]">{matched.counterparty_name}</span>
+              ) : null}
+              {matched.description ? (
+                <span className="whitespace-pre-wrap break-words text-xs text-[var(--muted-2)]">
+                  {matched.description}
+                </span>
+              ) : null}
+            </div>
+          ) : (
+            <span className="text-sm text-[var(--muted-2)]">—</span>
+          )}
+        </div>
+      </DetailSection>
+
+      <DetailSection title={t("detail.sectionTechnical")}>
+        <DetailField label={t("detail.id")} value={`#${tx.id}`} variant="mono" />
+        <DetailField label={t("detail.transferId")} value={tx.transfer_id ?? ""} variant="mono" />
+        <DetailField label={t("detail.externalId")} value={tx.external_id} variant="mono" />
+        <DetailField
+          label={t("detail.createdAt")}
+          value={formatCrmDateTime(tx.created_at, locale)}
+          variant="text"
+        />
+        <DetailField
+          label={t("detail.updatedAt")}
+          value={formatCrmDateTime(tx.updated_at, locale)}
+          variant="text"
+        />
+      </DetailSection>
+    </div>
+  );
+}
+
+function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="grid gap-3 px-5">
+      <h3 className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">{title}</h3>
+      <div className="grid gap-3 rounded-2xl border border-[var(--line)] bg-white p-3">{children}</div>
+    </section>
+  );
+}
+
+function DetailField({
+  label,
+  value,
+  variant,
+}: {
+  label: string;
+  value: string;
+  variant: "text" | "mono" | "multiline";
+}) {
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-xs font-medium text-[var(--muted-2)]">{label}</span>
+      {value ? (
+        <span
+          className={cn(
+            "break-words text-sm text-[var(--ink)]",
+            variant === "mono" && "break-all font-mono text-xs",
+            variant === "multiline" && "whitespace-pre-wrap",
+          )}
+        >
+          {value}
+        </span>
+      ) : (
+        <span className="text-sm text-[var(--muted-2)]">—</span>
+      )}
+    </div>
   );
 }
 

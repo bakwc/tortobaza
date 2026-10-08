@@ -474,6 +474,10 @@
     "filterAccount": "ანგარიში",
     "filterKind": "ტიპი",
     "filterAll": "ყველა",
+    "transferIncoming": "შემომავალი გადარიცხვა",
+    "transferOutgoing": "გამავალი გადარიცხვა",
+    "transferFrom": "საიდან: {account}",
+    "transferTo": "სად: {account}",
     "operationCount": "{count, plural, one {# ოპერაცია} other {# ოპერაციები}}",
     "kinds": {
       "income": "შემოსავალი",
@@ -496,6 +500,39 @@
       "products": "პროდუქტები",
       "consumables": "სახარჯი მასალა",
       "equipment": "აღჭურვილობა"
+    },
+    "accountKinds": {
+      "bank": "ბანკი",
+      "cash": "ნაღდი",
+      "crypto": "კრიპტო",
+      "virtual": "ვირტუალური"
+    },
+    "detail": {
+      "sectionMain": "ძირითადი",
+      "sectionAccount": "ანგარიში",
+      "sectionCounterparty": "კონტრაგენტი",
+      "sectionLinks": "კავშირები",
+      "sectionTechnical": "ტექნიკური",
+      "date": "თარიღი",
+      "amount": "თანხა",
+      "kind": "ოპერაციის სახე",
+      "operationType": "ოპერაციის ტიპი",
+      "description": "აღწერა",
+      "account": "დასახელება",
+      "accountKind": "ანგარიშის ტიპი",
+      "bankName": "ბანკი",
+      "iban": "IBAN",
+      "currency": "ვალუტა",
+      "counterparty": "დასახელება",
+      "counterpartyIban": "კონტრაგენტის IBAN",
+      "flowwowOrder": "Flowwow შეკვეთა",
+      "crmOrders": "CRM შეკვეთები",
+      "matchedTransaction": "დაკავშირებული ოპერაცია",
+      "id": "ოპერაციის ID",
+      "transferId": "გადარიცხვის ID",
+      "externalId": "გარე ID",
+      "createdAt": "შექმნილია",
+      "updatedAt": "განახლებულია"
     }
   }
 }

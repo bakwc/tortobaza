@@ -153,6 +153,18 @@ export function formatCrmDate(dateStr: string, locale: string): string {
   });
 }
 
+export function formatCrmDateTime(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(intlLocaleTag(locale), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: BUSINESS_TIMEZONE,
+  });
+}
+
 export function formatCrmMonth(yyyyMm: string, locale: string): string {
   const d = new Date(`${yyyyMm}-01T00:00:00`);
   return d.toLocaleDateString(intlLocaleTag(locale), {

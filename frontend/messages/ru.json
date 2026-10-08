@@ -474,6 +474,10 @@
     "filterAccount": "Счёт",
     "filterKind": "Тип",
     "filterAll": "Все",
+    "transferIncoming": "Входящий перевод",
+    "transferOutgoing": "Исходящий перевод",
+    "transferFrom": "Откуда: {account}",
+    "transferTo": "Куда: {account}",
     "operationCount": "{count, plural, one {# операция} few {# операции} many {# операций} other {# операций}}",
     "kinds": {
       "income": "Доход",
@@ -496,6 +500,39 @@
       "products": "Продукты",
       "consumables": "Расходники",
       "equipment": "Оборудование"
+    },
+    "accountKinds": {
+      "bank": "Банк",
+      "cash": "Наличные",
+      "crypto": "Крипто",
+      "virtual": "Виртуальный"
+    },
+    "detail": {
+      "sectionMain": "Основное",
+      "sectionAccount": "Счёт",
+      "sectionCounterparty": "Контрагент",
+      "sectionLinks": "Связи",
+      "sectionTechnical": "Служебное",
+      "date": "Дата",
+      "amount": "Сумма",
+      "kind": "Вид операции",
+      "operationType": "Тип операции",
+      "description": "Описание",
+      "account": "Название",
+      "accountKind": "Тип счёта",
+      "bankName": "Банк",
+      "iban": "IBAN",
+      "currency": "Валюта",
+      "counterparty": "Название",
+      "counterpartyIban": "IBAN контрагента",
+      "flowwowOrder": "Заказ Flowwow",
+      "crmOrders": "Заказы CRM",
+      "matchedTransaction": "Связанная операция",
+      "id": "ID операции",
+      "transferId": "ID перевода",
+      "externalId": "Внешний ID",
+      "createdAt": "Создано",
+      "updatedAt": "Обновлено"
     }
   }
 }

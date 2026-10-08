@@ -517,6 +517,24 @@ class FinanceTransactionAccountSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class FinanceTransactionAccountDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    kind = serializers.CharField()
+    bank_name = serializers.CharField()
+    iban = serializers.CharField()
+    currency = serializers.CharField()
+
+
+class FinanceTransactionMatchedSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    account = FinanceTransactionAccountSerializer()
+    counterparty_name = serializers.CharField()
+    description = serializers.CharField()
+
+
 class FinanceTransactionCrmOrderSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     date = serializers.DateField()
@@ -533,11 +551,21 @@ class FinanceTransactionSerializer(serializers.Serializer):
     kind = serializers.CharField()
     income_type = serializers.CharField()
     expense_type = serializers.CharField()
-    account = FinanceTransactionAccountSerializer()
+    account = FinanceTransactionAccountDetailSerializer()
     counterparty_name = serializers.CharField()
+    counterparty_iban = serializers.CharField()
     description = serializers.CharField()
+    external_id = serializers.CharField()
+    transfer_id = serializers.UUIDField(allow_null=True)
     flowwow_order_number = serializers.SerializerMethodField()
     crm_orders = FinanceTransactionCrmOrderSerializer(many=True)
+    matched_account = FinanceTransactionAccountSerializer(
+        source="matched_transaction.account",
+        allow_null=True,
+    )
+    matched_transaction = FinanceTransactionMatchedSerializer(allow_null=True)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
 
     def get_flowwow_order_number(self, obj: FinancialTransaction) -> int | None:
         if obj.account.name != FLOWWOW_ACCOUNT_NAME:

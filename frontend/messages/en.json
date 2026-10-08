@@ -474,6 +474,10 @@
     "filterAccount": "Account",
     "filterKind": "Type",
     "filterAll": "All",
+    "transferIncoming": "Incoming transfer",
+    "transferOutgoing": "Outgoing transfer",
+    "transferFrom": "From: {account}",
+    "transferTo": "To: {account}",
     "operationCount": "{count, plural, one {# operation} other {# operations}}",
     "kinds": {
       "income": "Income",
@@ -496,6 +500,39 @@
       "products": "Products",
       "consumables": "Consumables",
       "equipment": "Equipment"
+    },
+    "accountKinds": {
+      "bank": "Bank",
+      "cash": "Cash",
+      "crypto": "Crypto",
+      "virtual": "Virtual"
+    },
+    "detail": {
+      "sectionMain": "General",
+      "sectionAccount": "Account",
+      "sectionCounterparty": "Counterparty",
+      "sectionLinks": "Links",
+      "sectionTechnical": "Technical",
+      "date": "Date",
+      "amount": "Amount",
+      "kind": "Operation kind",
+      "operationType": "Operation type",
+      "description": "Description",
+      "account": "Name",
+      "accountKind": "Account type",
+      "bankName": "Bank",
+      "iban": "IBAN",
+      "currency": "Currency",
+      "counterparty": "Name",
+      "counterpartyIban": "Counterparty IBAN",
+      "flowwowOrder": "Flowwow order",
+      "crmOrders": "CRM orders",
+      "matchedTransaction": "Matched operation",
+      "id": "Operation ID",
+      "transferId": "Transfer ID",
+      "externalId": "External ID",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
     }
   }
 }

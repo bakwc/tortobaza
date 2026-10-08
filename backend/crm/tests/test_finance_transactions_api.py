@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -5,6 +6,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.test import APIClient
 
 from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
@@ -65,6 +67,7 @@ class FinanceTransactionsApiTests(TestCase):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
         self.assertEqual(response.status_code, 200)
+        inside.refresh_from_db()
         self.assertEqual(
             response.json(),
             {
@@ -78,13 +81,87 @@ class FinanceTransactionsApiTests(TestCase):
                         "kind": "income",
                         "income_type": "online",
                         "expense_type": "",
-                        "account": {"id": self.account.pk, "name": "Liberty"},
+                        "account": {
+                            "id": self.account.pk,
+                            "name": "Liberty",
+                            "kind": "bank",
+                            "bank_name": "",
+                            "iban": "",
+                            "currency": "GEL",
+                        },
                         "counterparty_name": "Client",
+                        "counterparty_iban": "",
                         "description": "Cake",
+                        "external_id": "",
+                        "transfer_id": None,
                         "flowwow_order_number": None,
                         "crm_orders": [],
+                        "matched_account": None,
+                        "matched_transaction": None,
+                        "created_at": serializers.DateTimeField().to_representation(inside.created_at),
+                        "updated_at": serializers.DateTimeField().to_representation(inside.updated_at),
                     }
                 ],
+            },
+        )
+
+    def test_detail_fields(self):
+        account = FinancialAccount.objects.create(
+            name="TBC",
+            kind=FinancialAccount.KIND_BANK,
+            bank_name="TBC Bank",
+            iban="GE00TB0000000000000001",
+            currency="USD",
+        )
+        transfer_id = uuid.uuid4()
+        tx = FinancialTransaction.objects.create(
+            account=account,
+            date=self.day,
+            amount=Decimal("-15.00"),
+            kind=FinancialTransaction.KIND_TRANSFER,
+            counterparty_name="Supplier",
+            counterparty_iban="GE00BG0000000000000002",
+            description="Payment",
+            external_id="ext-1",
+            transfer_id=transfer_id,
+        )
+        other = _tx(
+            self.account,
+            self.day,
+            Decimal("15.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            counterparty="TBC",
+            description="Incoming",
+        )
+        tx.matched_transaction = other
+        tx.save(update_fields=["matched_transaction"])
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
+        self.assertEqual(response.status_code, 200)
+        row = {row["id"]: row for row in response.json()["transactions"]}[tx.pk]
+        self.assertEqual(
+            row["account"],
+            {
+                "id": account.pk,
+                "name": "TBC",
+                "kind": "bank",
+                "bank_name": "TBC Bank",
+                "iban": "GE00TB0000000000000001",
+                "currency": "USD",
+            },
+        )
+        self.assertEqual(row["counterparty_iban"], "GE00BG0000000000000002")
+        self.assertEqual(row["external_id"], "ext-1")
+        self.assertEqual(row["transfer_id"], str(transfer_id))
+        self.assertEqual(
+            row["matched_transaction"],
+            {
+                "id": other.pk,
+                "date": "2026-06-15",
+                "amount": "15.00",
+                "account": {"id": self.account.pk, "name": "Liberty"},
+                "counterparty_name": "TBC",
+                "description": "Incoming",
             },
         )
 
@@ -155,6 +232,24 @@ class FinanceTransactionsApiTests(TestCase):
         )
         self.assertIsNone(rows[other_account.pk]["flowwow_order_number"])
         self.assertEqual(rows[other_account.pk]["crm_orders"], [])
+
+    def test_matched_transfer_returns_other_side_account(self):
+        bog = FinancialAccount.objects.create(name="BOG", kind=FinancialAccount.KIND_BANK)
+        outgoing = _tx(self.account, self.day, Decimal("-50.00"), FinancialTransaction.KIND_TRANSFER)
+        incoming = _tx(bog, self.day, Decimal("50.00"), FinancialTransaction.KIND_TRANSFER)
+        outgoing.matched_transaction = incoming
+        outgoing.save(update_fields=["matched_transaction"])
+        incoming.matched_transaction = outgoing
+        incoming.save(update_fields=["matched_transaction"])
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
+        self.assertEqual(response.status_code, 200)
+        rows = {row["id"]: row for row in response.json()["transactions"]}
+        self.assertEqual(rows[outgoing.pk]["matched_account"], {"id": bog.pk, "name": "BOG"})
+        self.assertEqual(
+            rows[incoming.pk]["matched_account"],
+            {"id": self.account.pk, "name": "Liberty"},
+        )
 
     def test_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()

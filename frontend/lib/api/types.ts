@@ -408,9 +408,16 @@ export const FinanceTransactionSchema = z.object({
   account: z.object({
     id: z.number(),
     name: z.string(),
+    kind: z.string(),
+    bank_name: z.string(),
+    iban: z.string(),
+    currency: z.string(),
   }),
   counterparty_name: z.string(),
+  counterparty_iban: z.string(),
   description: z.string(),
+  external_id: z.string(),
+  transfer_id: z.string().nullable(),
   flowwow_order_number: z.number().nullable(),
   crm_orders: z.array(
     z.object({
@@ -422,6 +429,27 @@ export const FinanceTransactionSchema = z.object({
       cake_price: z.string(),
     }),
   ),
+  matched_account: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+    })
+    .nullable(),
+  matched_transaction: z
+    .object({
+      id: z.number(),
+      date: z.string(),
+      amount: z.string(),
+      account: z.object({
+        id: z.number(),
+        name: z.string(),
+      }),
+      counterparty_name: z.string(),
+      description: z.string(),
+    })
+    .nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
 });
 
 export const FinanceTransactionsResponseSchema = z.object({
