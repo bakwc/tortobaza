@@ -21,7 +21,7 @@ def sync_cash_paid_order_transactions() -> None:
     )
     if account is None:
         raise FinancialAccount.DoesNotExist
-    FinancialTransaction.objects.bulk_create(
+    transactions = FinancialTransaction.objects.bulk_create(
         [
             FinancialTransaction(
                 account=account,
@@ -29,9 +29,17 @@ def sync_cash_paid_order_transactions() -> None:
                 amount=order.cake_price,
                 kind=FinancialTransaction.KIND_INCOME,
                 income_type=FinancialTransaction.INCOME_CASH,
-                crm_order=order,
             )
             for order in orders
+        ]
+    )
+    FinancialTransaction.crm_orders.through.objects.bulk_create(
+        [
+            FinancialTransaction.crm_orders.through(
+                financialtransaction_id=transaction.pk,
+                crmorder_id=order.pk,
+            )
+            for transaction, order in zip(transactions, orders)
         ]
     )
 

@@ -52,7 +52,7 @@ class SyncCashPaidOrderTransactionsTests(TestCase):
         self.assertEqual(transaction.amount, Decimal("120.00"))
         self.assertEqual(transaction.kind, FinancialTransaction.KIND_INCOME)
         self.assertEqual(transaction.income_type, FinancialTransaction.INCOME_CASH)
-        self.assertEqual(transaction.crm_order_id, order.pk)
+        self.assertEqual(transaction.crm_orders.get().pk, order.pk)
 
         sync_cash_paid_order_transactions()
         self.assertEqual(FinancialTransaction.objects.count(), 1)
@@ -77,13 +77,13 @@ class SyncCashPaidOrderTransactionsTests(TestCase):
     def test_skips_order_that_already_has_transaction(self):
         account = _cash_account("Cash")
         order = _order()
-        FinancialTransaction.objects.create(
+        transaction = FinancialTransaction.objects.create(
             account=account,
             date=date(2026, 1, 2),
             amount=Decimal("1.00"),
             kind=FinancialTransaction.KIND_EXPENSE,
-            crm_order=order,
         )
+        transaction.crm_orders.add(order)
 
         sync_cash_paid_order_transactions()
 
@@ -99,7 +99,7 @@ class SyncCashPaidOrderTransactionsTests(TestCase):
         sync_cash_paid_order_transactions()
 
         transaction = FinancialTransaction.objects.get()
-        self.assertEqual(transaction.crm_order_id, kept.pk)
+        self.assertEqual(transaction.crm_orders.get().pk, kept.pk)
         self.assertEqual(transaction.amount, Decimal("40.00"))
 
     def test_uses_first_cash_account(self):
@@ -136,4 +136,4 @@ class SyncCashPaidOrderTransactionsTests(TestCase):
 
         call_command("sync_crm_orders_to_telegram")
 
-        self.assertEqual(FinancialTransaction.objects.get().crm_order_id, order.pk)
+        self.assertEqual(FinancialTransaction.objects.get().crm_orders.get().pk, order.pk)

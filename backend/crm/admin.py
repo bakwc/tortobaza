@@ -329,11 +329,26 @@ class FinancialAccountAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialTransaction)
 class FinancialTransactionAdmin(admin.ModelAdmin):
-    list_display = ["date", "account", "amount", "kind", "income_type", "expense_type", "crm_order"]
+    list_display = [
+        "date",
+        "account",
+        "amount",
+        "kind",
+        "income_type",
+        "expense_type",
+        "crm_orders_display",
+    ]
     list_filter = ["kind", "income_type", "expense_type", "account"]
     date_hierarchy = "date"
     search_fields = ["description", "counterparty_name", "external_id"]
-    autocomplete_fields = ["account", "crm_order"]
+    autocomplete_fields = ["account", "crm_orders"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("crm_orders")
+
+    @admin.display(description="CRM orders")
+    def crm_orders_display(self, obj: FinancialTransaction) -> str:
+        return ", ".join(str(order) for order in obj.crm_orders.all())
     change_list_template = "admin/crm/financialtransaction/change_list.html"
 
     def get_urls(self):

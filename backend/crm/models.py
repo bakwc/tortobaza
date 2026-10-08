@@ -427,11 +427,9 @@ class FinancialTransaction(models.Model):
     counterparty_iban = models.CharField(max_length=34, blank=True)
     description = models.TextField(blank=True)
     external_id = models.CharField(max_length=512, blank=True)
-    crm_order = models.ForeignKey(
+    crm_orders = models.ManyToManyField(
         CrmOrder,
         related_name="financial_transactions",
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
