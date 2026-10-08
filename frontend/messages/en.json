@@ -369,7 +369,6 @@
     "nextMonth": "Next month",
     "monthlyOrders": "Monthly orders",
     "dailyBoard": "Daily board",
-    "finance": "Finance",
     "unconfirmedOrders": "Unconfirmed orders",
     "unconfirmedLoadError": "Could not load unconfirmed orders. Please try again.",
     "unconfirmedEmptyTitle": "No unconfirmed orders",
