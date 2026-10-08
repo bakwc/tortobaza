@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowLeftRight,
+  ArrowUpRight,
+  ChevronDown,
+  CircleDot,
+  Flower,
+  Package,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed, formatCrmCompactDate } from "@/lib/format";
+import { formatAed, formatCrmCompactDate, formatCrmDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
@@ -17,6 +26,41 @@ type FinanceRow =
 
 type CrmOrderLink = FinanceTransaction["crm_orders"][number];
 
+type Tone = {
+  card: string;
+  media: string;
+  chip: string;
+  amount: string;
+};
+
+const INCOME_TONE: Tone = {
+  card: "border-emerald-300 bg-emerald-100",
+  media: "border-emerald-200 bg-white text-emerald-700",
+  chip: "bg-emerald-600 text-white",
+  amount: "text-emerald-800",
+};
+
+const EXPENSE_TONE: Tone = {
+  card: "border-rose-300 bg-rose-100",
+  media: "border-rose-200 bg-white text-rose-700",
+  chip: "bg-rose-600 text-white",
+  amount: "text-rose-800",
+};
+
+const TRANSFER_TONE: Tone = {
+  card: "border-sky-300 bg-sky-100",
+  media: "border-sky-200 bg-white text-sky-700",
+  chip: "bg-sky-600 text-white",
+  amount: "text-sky-800",
+};
+
+const NEUTRAL_TONE: Tone = {
+  card: "border-[var(--line)] bg-white",
+  media: "border-[var(--line)] bg-[var(--cream)] text-[var(--muted-2)]",
+  chip: "bg-[var(--cream)] text-[var(--ink)]",
+  amount: "text-[var(--ink)]",
+};
+
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);
 }
@@ -25,17 +69,24 @@ function isExpenseType(value: string): value is (typeof EXPENSE_TYPES)[number] {
   return EXPENSE_TYPES.some((item) => item === value);
 }
 
-function kindTone(kind: FinanceTransaction["kind"]): string {
-  if (kind === "income") return "bg-green-50";
-  if (kind === "expense") return "bg-red-50";
-  if (kind === "transfer") return "bg-blue-50";
-  return "bg-white";
+function kindTone(kind: FinanceTransaction["kind"]): Tone {
+  if (kind === "income") return INCOME_TONE;
+  if (kind === "expense") return EXPENSE_TONE;
+  if (kind === "transfer") return TRANSFER_TONE;
+  return NEUTRAL_TONE;
 }
 
-function amountTone(amount: number): string {
-  if (amount > 0) return "bg-green-50";
-  if (amount < 0) return "bg-red-50";
-  return "bg-white";
+function amountTone(amount: number): Tone {
+  if (amount > 0) return INCOME_TONE;
+  if (amount < 0) return EXPENSE_TONE;
+  return NEUTRAL_TONE;
+}
+
+function KindIcon({ kind }: { kind: FinanceTransaction["kind"] }) {
+  if (kind === "income") return <ArrowDownLeft className="h-4 w-4" />;
+  if (kind === "expense") return <ArrowUpRight className="h-4 w-4" />;
+  if (kind === "transfer") return <ArrowLeftRight className="h-4 w-4" />;
+  return <CircleDot className="h-4 w-4" />;
 }
 
 function sumAmounts(items: FinanceTransaction[]): number {
@@ -51,6 +102,19 @@ function linkedOrders(items: FinanceTransaction[]): CrmOrderLink[] {
     }
   }
   return [...byId.values()];
+}
+
+function groupByDate(transactions: FinanceTransaction[]): { date: string; items: FinanceTransaction[] }[] {
+  const groups: { date: string; items: FinanceTransaction[] }[] = [];
+  for (const tx of transactions) {
+    const last = groups[groups.length - 1];
+    if (last && last.date === tx.date) {
+      last.items.push(tx);
+    } else {
+      groups.push({ date: tx.date, items: [tx] });
+    }
+  }
+  return groups;
 }
 
 function groupFlowwow(transactions: FinanceTransaction[]): FinanceRow[] {
@@ -100,132 +164,229 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
   }
 
   return (
-    <ul className="grid gap-1.5">
-      {groupFlowwow(transactions).map((row) => {
-        if (row.type === "single") {
-          return (
-            <li key={row.tx.id}>
-              <TransactionRow tx={row.tx} locale={locale} t={t} showOrders />
-            </li>
-          );
-        }
-        const open = openGroups.has(row.orderNumber);
-        const total = sumAmounts(row.items);
+    <div className="grid gap-6">
+      {groupByDate(transactions).map((day) => {
+        const income = sumAmounts(day.items.filter((tx) => tx.kind === "income"));
+        const expense = sumAmounts(day.items.filter((tx) => tx.kind === "expense"));
         return (
-          <li key={`flowwow-${row.orderNumber}`} className="grid gap-1">
-            <div
-              className={cn(
-                "flex items-center gap-3 rounded-2xl border border-[var(--line)] px-3 py-1.5",
-                amountTone(total),
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-baseline gap-2 text-sm">
-                  <span className="shrink-0 font-medium text-[var(--ink)]">
-                    {formatCrmCompactDate(row.items[0].date, locale)}
-                  </span>
-                  <span className="truncate text-[var(--muted-2)]">
-                    {t("flowwowOrder", { id: row.orderNumber })}
-                    {" · "}
-                    {t("operationCount", { count: row.items.length })}
-                  </span>
-                </div>
-                <CrmOrderLinks orders={linkedOrders(row.items)} locale={locale} />
-              </div>
-              <div className="shrink-0 text-sm font-semibold text-[var(--ink)]">{formatAed(total)}</div>
-              <button
-                type="button"
-                aria-expanded={open}
-                aria-label={t("flowwowOrder", { id: row.orderNumber })}
-                onClick={() => toggleGroup(row.orderNumber)}
-                className="shrink-0 rounded-md p-1 text-[var(--ink)]"
-              >
-                <ChevronDown className={cn("h-4 w-4", open && "rotate-180")} />
-              </button>
+          <section key={day.date} className="grid gap-2">
+            <div className="flex items-baseline justify-between gap-3 px-1 text-[var(--ink)]">
+              <span className="min-w-0 truncate text-sm font-semibold md:text-base">
+                <span className="md:hidden">{formatCrmCompactDate(day.date, locale)}</span>
+                <span className="hidden md:inline">{formatCrmDate(day.date, locale)}</span>
+              </span>
+              <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
+                <span>{day.items.length}</span>
+                {income !== 0 ? <span className="text-emerald-700">+{formatAed(income)}</span> : null}
+                {expense !== 0 ? <span className="text-rose-700">{formatAed(expense)}</span> : null}
+              </span>
             </div>
-            {open
-              ? row.items.map((tx) => (
-                  <div key={tx.id} className="ml-4">
-                    <TransactionRow tx={tx} locale={locale} t={t} showOrders={false} />
-                  </div>
-                ))
-              : null}
-          </li>
+            {groupFlowwow(day.items).map((row) => {
+              if (row.type === "single") {
+                return <TransactionRow key={row.tx.id} tx={row.tx} t={t} />;
+              }
+              const open = openGroups.has(row.orderNumber);
+              return (
+                <FlowwowGroupRow
+                  key={`flowwow-${row.orderNumber}`}
+                  orderNumber={row.orderNumber}
+                  items={row.items}
+                  open={open}
+                  onToggle={() => toggleGroup(row.orderNumber)}
+                  t={t}
+                />
+              );
+            })}
+          </section>
         );
       })}
-    </ul>
+    </div>
+  );
+}
+
+function RowShell({
+  tone,
+  icon,
+  title,
+  subtitle,
+  amount,
+  chips,
+  action,
+}: {
+  tone: Tone;
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  amount: string;
+  chips: ReactNode;
+  action: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-1.5 rounded-xl border px-1.5 py-1.5 shadow-sm md:gap-3 md:rounded-2xl md:px-3 md:py-2",
+        tone.card,
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border md:h-10 md:w-10 md:rounded-lg",
+          tone.media,
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
+            <span className="font-semibold text-[var(--ink)]">{title}</span>
+            {subtitle ? (
+              <>
+                <span className="mx-1">·</span>
+                <span>{subtitle}</span>
+              </>
+            ) : null}
+          </p>
+          <span className={cn("shrink-0 text-sm font-bold", tone.amount)}>{amount}</span>
+        </div>
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">{chips}</div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function Chip({ className, children }: { className: string; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+        className,
+      )}
+    >
+      {children}
+    </span>
   );
 }
 
 function TransactionRow({
   tx,
-  locale,
   t,
-  showOrders,
 }: {
   tx: FinanceTransaction;
-  locale: string;
   t: ReturnType<typeof useTranslations<"finance">>;
-  showOrders: boolean;
 }) {
+  const tone = kindTone(tx.kind);
   const typeLabel = operationTypeLabel(tx, t);
-  const meta = [
-    t(`kinds.${tx.kind}`),
-    tx.account.name,
-    typeLabel,
-    tx.counterparty_name,
-  ]
-    .filter((part) => part !== "")
-    .join(" · ");
-
   return (
-    <div
-      className={cn(
-        "flex items-center gap-3 rounded-2xl border border-[var(--line)] px-3 py-1.5",
-        kindTone(tx.kind),
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-baseline gap-2 text-sm">
-          <span className="shrink-0 font-medium text-[var(--ink)]">
-            {formatCrmCompactDate(tx.date, locale)}
-          </span>
-          <span className="truncate text-[var(--muted-2)]">{meta}</span>
+    <RowShell
+      tone={tone}
+      icon={<KindIcon kind={tx.kind} />}
+      title={tx.counterparty_name || t(`kinds.${tx.kind}`)}
+      subtitle={tx.description}
+      amount={formatAed(tx.amount)}
+      chips={
+        <>
+          <Chip className={tone.chip}>{t(`kinds.${tx.kind}`)}</Chip>
+          {typeLabel ? <Chip className="bg-white/80 text-[var(--ink)]">{typeLabel}</Chip> : null}
+          <Chip className="bg-white/80 text-[var(--muted-2)]">{tx.account.name}</Chip>
+          <CrmOrderChips orders={tx.crm_orders} />
+        </>
+      }
+      action={null}
+    />
+  );
+}
+
+function FlowwowGroupRow({
+  orderNumber,
+  items,
+  open,
+  onToggle,
+  t,
+}: {
+  orderNumber: number;
+  items: FinanceTransaction[];
+  open: boolean;
+  onToggle: () => void;
+  t: ReturnType<typeof useTranslations<"finance">>;
+}) {
+  const total = sumAmounts(items);
+  const tone = amountTone(total);
+  return (
+    <div className="grid gap-1">
+      <RowShell
+        tone={tone}
+        icon={<Flower className="h-4 w-4" />}
+        title={t("flowwowOrder", { id: orderNumber })}
+        subtitle={t("operationCount", { count: items.length })}
+        amount={formatAed(total)}
+        chips={
+          <>
+            <Chip className="bg-white/80 text-[var(--muted-2)]">{items[0].account.name}</Chip>
+            <CrmOrderChips orders={linkedOrders(items)} />
+          </>
+        }
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={open}
+            aria-label={t("flowwowOrder", { id: orderNumber })}
+            onClick={onToggle}
+            className="h-8 w-8 shrink-0 px-0"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+          </Button>
+        }
+      />
+      {open ? (
+        <div className="ml-5 grid gap-1 border-l-2 border-[var(--line)] pl-2 md:ml-8 md:pl-3">
+          {items.map((tx) => {
+            const childTone = kindTone(tx.kind);
+            return (
+              <div
+                key={tx.id}
+                className={cn(
+                  "flex min-w-0 items-center gap-2 rounded-lg border px-2 py-1 text-xs md:text-sm",
+                  childTone.card,
+                )}
+              >
+                <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center", childTone.amount)}>
+                  <KindIcon kind={tx.kind} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[var(--ink)]">
+                  {tx.description || t(`kinds.${tx.kind}`)}
+                </span>
+                <span className={cn("shrink-0 font-semibold", childTone.amount)}>{formatAed(tx.amount)}</span>
+              </div>
+            );
+          })}
         </div>
-        {tx.description ? (
-          <div className="truncate text-xs text-[var(--muted-2)]">{tx.description}</div>
-        ) : null}
-        {showOrders ? <CrmOrderLinks orders={tx.crm_orders} locale={locale} /> : null}
-      </div>
-      <div className="shrink-0 text-sm font-semibold text-[var(--ink)]">{formatAed(tx.amount)}</div>
+      ) : null}
     </div>
   );
 }
 
-function CrmOrderLinks({ orders, locale }: { orders: CrmOrderLink[]; locale: string }) {
-  if (orders.length === 0) return null;
+function CrmOrderChips({ orders }: { orders: CrmOrderLink[] }) {
   return (
-    <div className="grid">
+    <>
       {orders.map((order) => (
         <Link
           key={order.id}
           href={`/crm?date=${order.date}&order=${order.id}`}
-          className="truncate text-xs font-medium text-[var(--brand)]"
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-[var(--brand)] px-1.5 py-0.5 text-[10px] font-semibold text-white hover:opacity-90"
         >
-          #{order.id}
-          {" · "}
-          {formatCrmCompactDate(order.date, locale)}
-          {" · "}
-          {order.contact}
-          {" · "}
-          {order.weight}
-          {" · "}
-          {order.filling}
-          {" · "}
-          {formatAed(order.cake_price)}
+          <Package className="h-3 w-3 shrink-0" />
+          <span className="shrink-0">#{order.id}</span>
+          <span className="min-w-0 truncate font-medium">
+            {order.weight} · {order.filling} · {order.contact}
+          </span>
+          <span className="shrink-0">{formatAed(order.cake_price)}</span>
         </Link>
       ))}
-    </div>
+    </>
   );
 }
 
