@@ -7,9 +7,10 @@ from django.utils import timezone
 
 from crm.bog_order_links import sync_bog_order_links
 from crm.cash_transactions import sync_cash_paid_order_transactions
+from crm.flowwow import sync_flowwow_orders
+from crm.flowwow_order_links import sync_flowwow_order_links
 from crm.liberty_online_links import sync_liberty_online_order_links
 from crm.liberty_terminal_links import sync_liberty_terminal_order_links
-from crm.flowwow import sync_flowwow_orders
 from crm.google_maps import (
     SWEET_CHILL_COORDS,
     coords_from_google_url,
@@ -194,3 +195,4 @@ class Command(BaseCommand):
         sync_liberty_terminal_order_links()
         sync_liberty_online_order_links()
         sync_bog_order_links()
+        sync_flowwow_order_links()
