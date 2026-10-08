@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
+from crm.cash_transactions import sync_cash_paid_order_transactions
 from crm.flowwow import sync_flowwow_orders
 from crm.google_maps import (
     SWEET_CHILL_COORDS,
@@ -186,3 +187,4 @@ class Command(BaseCommand):
                 user_id=result["user_id"],
                 username="" if username is None else username,
             )
+        sync_cash_paid_order_transactions()
