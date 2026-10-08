@@ -569,7 +569,7 @@ function TransactionDetailPanel({
 }) {
   return (
     <Dialog open={tx !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="left-auto right-0 top-0 h-dvh max-h-dvh w-[min(480px,100vw)] translate-x-0 translate-y-0 overflow-y-auto rounded-none rounded-l-3xl">
+      <DialogContent className="w-[min(560px,calc(100vw-1.5rem))] overflow-y-auto">
         {tx ? <TransactionDetail tx={tx} t={t} /> : null}
       </DialogContent>
     </Dialog>
