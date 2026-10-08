@@ -90,6 +90,11 @@ class SyncFlowwowOrderLinksTests(TestCase):
             FinancialTransaction.KIND_WITHDRAWAL,
             order_number=2450790,
         )
+        transfer = _operation(
+            "Withdrawal",
+            Decimal("-259.16"),
+            FinancialTransaction.KIND_TRANSFER,
+        )
         unknown = _operation(
             "Paid by customer",
             Decimal("80.00"),
@@ -138,6 +143,7 @@ class SyncFlowwowOrderLinksTests(TestCase):
 
         self.assertEqual(kept.crm_orders.get().pk, order.pk)
         self.assertEqual(withdrawal.crm_orders.count(), 0)
+        self.assertEqual(transfer.crm_orders.count(), 0)
         self.assertEqual(unknown.crm_orders.count(), 0)
         self.assertEqual(malformed.crm_orders.count(), 0)
         self.assertEqual(other_account.crm_orders.count(), 0)

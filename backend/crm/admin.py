@@ -337,15 +337,21 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         "kind",
         "income_type",
         "expense_type",
+        "matched_transaction",
         "crm_orders_display",
     ]
     list_filter = ["kind", "income_type", "expense_type", "account"]
     date_hierarchy = "date"
     search_fields = ["description", "counterparty_name", "external_id"]
-    autocomplete_fields = ["account", "crm_orders"]
+    autocomplete_fields = ["account", "crm_orders", "matched_transaction"]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("crm_orders")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("matched_transaction__account")
+            .prefetch_related("crm_orders")
+        )
 
     @admin.display(description="CRM orders")
     def crm_orders_display(self, obj: FinancialTransaction) -> str:

@@ -6,7 +6,12 @@ def sync_flowwow_order_links() -> None:
     transactions = FinancialTransaction.objects.filter(
         account__name=ACCOUNT_NAME,
         crm_orders__isnull=True,
-    ).exclude(kind=FinancialTransaction.KIND_WITHDRAWAL)
+    ).exclude(
+        kind__in=[
+            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
+        ]
+    )
     orders = {
         order.flowwow_order_id: order.pk
         for order in CrmOrder.objects.filter(

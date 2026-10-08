@@ -8,6 +8,7 @@ from django.utils import timezone
 from crm.bog_order_links import sync_bog_order_links
 from crm.cash_transactions import sync_cash_paid_order_transactions
 from crm.flowwow import sync_flowwow_orders
+from crm.flowwow_bog_transfers import sync_flowwow_bog_transfers
 from crm.flowwow_order_links import sync_flowwow_order_links
 from crm.liberty_online_links import sync_liberty_online_order_links
 from crm.liberty_terminal_links import sync_liberty_terminal_order_links
@@ -194,5 +195,6 @@ class Command(BaseCommand):
         sync_cash_paid_order_transactions()
         sync_liberty_terminal_order_links()
         sync_liberty_online_order_links()
+        sync_flowwow_bog_transfers()
         sync_bog_order_links()
         sync_flowwow_order_links()
