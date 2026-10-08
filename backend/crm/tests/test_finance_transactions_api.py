@@ -7,7 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from crm.models import FinancialAccount, FinancialTransaction
+from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -81,6 +81,8 @@ class FinanceTransactionsApiTests(TestCase):
                         "account": {"id": self.account.pk, "name": "Liberty"},
                         "counterparty_name": "Client",
                         "description": "Cake",
+                        "flowwow_order_number": None,
+                        "crm_orders": [],
                     }
                 ],
             },
@@ -104,6 +106,55 @@ class FinanceTransactionsApiTests(TestCase):
         self.assertEqual(data["transactions"][0]["amount"], "-40.00")
         self.assertEqual(data["transactions"][0]["kind"], "expense")
         self.assertEqual(data["transactions"][0]["account"]["name"], "Liberty")
+        self.assertIsNone(data["transactions"][0]["flowwow_order_number"])
+        self.assertEqual(data["transactions"][0]["crm_orders"], [])
+
+    def test_flowwow_order_number_and_linked_crm_order(self):
+        flowwow = FinancialAccount.objects.create(name="Flowwow", kind=FinancialAccount.KIND_VIRTUAL)
+        order = CrmOrder.objects.create(
+            date=date(2026, 10, 7),
+            contact="Customer",
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("85.00"),
+        )
+        linked = FinancialTransaction.objects.create(
+            account=flowwow,
+            date=self.day,
+            amount=Decimal("75.00"),
+            kind=FinancialTransaction.KIND_INCOME,
+            counterparty_name="Flowwow",
+            description="Paid by customer",
+            external_id="26136332|Paid by customer|2026-06-15 13:00:24|75.00",
+        )
+        linked.crm_orders.add(order)
+        other_account = FinancialTransaction.objects.create(
+            account=self.account,
+            date=self.day,
+            amount=Decimal("10.00"),
+            kind=FinancialTransaction.KIND_INCOME,
+            external_id="26136332|Paid by customer|2026-06-15 13:00:24|10.00",
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
+        self.assertEqual(response.status_code, 200)
+        rows = {row["id"]: row for row in response.json()["transactions"]}
+        self.assertEqual(rows[linked.pk]["flowwow_order_number"], 26136332)
+        self.assertEqual(
+            rows[linked.pk]["crm_orders"],
+            [
+                {
+                    "id": order.pk,
+                    "date": "2026-10-07",
+                    "contact": "Customer",
+                    "weight": "1kg",
+                    "filling": "Vanilla",
+                    "cake_price": "85.00",
+                }
+            ],
+        )
+        self.assertIsNone(rows[other_account.pk]["flowwow_order_number"])
+        self.assertEqual(rows[other_account.pk]["crm_orders"], [])
 
     def test_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()

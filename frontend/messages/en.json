@@ -470,6 +470,8 @@
     "unspecifiedCounterparty": "No counterparty",
     "empty": "No operations in this period.",
     "loadError": "Could not load operations. Try again.",
+    "flowwowOrder": "Flowwow #{id}",
+    "operationCount": "{count, plural, one {# operation} other {# operations}}",
     "kinds": {
       "income": "Income",
       "expense": "Expense",

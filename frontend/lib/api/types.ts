@@ -411,6 +411,17 @@ export const FinanceTransactionSchema = z.object({
   }),
   counterparty_name: z.string(),
   description: z.string(),
+  flowwow_order_number: z.number().nullable(),
+  crm_orders: z.array(
+    z.object({
+      id: z.number(),
+      date: z.string(),
+      contact: z.string(),
+      weight: z.string(),
+      filling: z.string(),
+      cake_price: z.string(),
+    }),
+  ),
 });
 
 export const FinanceTransactionsResponseSchema = z.object({

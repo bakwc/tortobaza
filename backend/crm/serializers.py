@@ -3,9 +3,16 @@ from rest_framework import serializers
 from accounts.models import chef_identity
 from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
+from crm.flowwow_statement import ACCOUNT_NAME as FLOWWOW_ACCOUNT_NAME
 from crm.google_maps import cached_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, ResolvedTelegramPhone
+from crm.models import (
+    CrmOrder,
+    CrmOrderEvent,
+    CrmOrderImage,
+    FinancialTransaction,
+    ResolvedTelegramPhone,
+)
 from crm.phone import links_for_stored
 from orders.email import schedule_order_confirmed_email
 
@@ -510,6 +517,15 @@ class FinanceTransactionAccountSerializer(serializers.Serializer):
     name = serializers.CharField()
 
 
+class FinanceTransactionCrmOrderSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    contact = serializers.CharField()
+    weight = serializers.CharField()
+    filling = serializers.CharField()
+    cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class FinanceTransactionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     date = serializers.DateField()
@@ -520,6 +536,16 @@ class FinanceTransactionSerializer(serializers.Serializer):
     account = FinanceTransactionAccountSerializer()
     counterparty_name = serializers.CharField()
     description = serializers.CharField()
+    flowwow_order_number = serializers.SerializerMethodField()
+    crm_orders = FinanceTransactionCrmOrderSerializer(many=True)
+
+    def get_flowwow_order_number(self, obj: FinancialTransaction) -> int | None:
+        if obj.account.name != FLOWWOW_ACCOUNT_NAME:
+            return None
+        segment, separator, _rest = obj.external_id.partition("|")
+        if separator == "" or not segment.isdigit():
+            return None
+        return int(segment)
 
 
 class FinanceTransactionsResponseSerializer(serializers.Serializer):

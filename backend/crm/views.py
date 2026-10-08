@@ -416,7 +416,9 @@ class FinanceTransactionsView(APIView):
         query_serializer = FinanceTransactionsQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
         month = query_serializer.validated_data.get("month")
-        transactions = FinancialTransaction.objects.select_related("account")
+        transactions = FinancialTransaction.objects.select_related("account").prefetch_related(
+            "crm_orders"
+        )
         if month:
             year_str, month_str = month.split("-")
             year = int(year_str)

@@ -470,6 +470,8 @@
     "unspecifiedCounterparty": "კონტრაგენტის გარეშე",
     "empty": "ამ პერიოდში ოპერაციები არ არის.",
     "loadError": "ოპერაციების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.",
+    "flowwowOrder": "Flowwow #{id}",
+    "operationCount": "{count, plural, one {# ოპერაცია} other {# ოპერაციები}}",
     "kinds": {
       "income": "შემოსავალი",
       "expense": "ხარჯი",
