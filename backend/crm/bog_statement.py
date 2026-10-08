@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.models import FinancialAccount, FinancialTransaction
@@ -62,9 +63,9 @@ def import_bog_statement(file) -> BogStatementImportResult:
     ambiguous = sorted(set(ambiguous))
     messages: list[str] = []
     if missing:
-        messages.append(f"Unknown accounts: {', '.join(missing)}")
+        messages.append(_("Unknown accounts: %(accounts)s") % {"accounts": ", ".join(missing)})
     if ambiguous:
-        messages.append(f"Accounts matched more than once: {', '.join(ambiguous)}")
+        messages.append(_("Accounts matched more than once: %(accounts)s") % {"accounts": ", ".join(ambiguous)})
     if messages:
         return BogStatementImportResult(created=0, skipped=0, error="; ".join(messages))
 
@@ -106,7 +107,7 @@ def import_bog_statement(file) -> BogStatementImportResult:
 def parse_bog_statement(file) -> tuple[list[ParsedBogRow], str]:
     workbook = load_workbook(file, data_only=False)
     if SHEET_NAME not in workbook.sheetnames:
-        return [], "Sheet 'Statement of Account' not found"
+        return [], _("Sheet 'Statement of Account' not found")
     worksheet = workbook[SHEET_NAME]
     header_map: dict[str, int] | None = None
     rows: list[ParsedBogRow] = []
@@ -120,7 +121,7 @@ def parse_bog_statement(file) -> tuple[list[ParsedBogRow], str]:
             if "Date" in names and "Account N" in names:
                 missing_columns = [name for name in REQUIRED_COLUMNS if name not in names]
                 if missing_columns:
-                    return [], f"Missing columns: {', '.join(missing_columns)}"
+                    return [], _("Missing columns: %(columns)s") % {"columns": ", ".join(missing_columns)}
                 header_map = names
             continue
         if not any(is_filled(value) for value in values):
@@ -131,7 +132,7 @@ def parse_bog_statement(file) -> tuple[list[ParsedBogRow], str]:
             return [], error
         rows.append(parsed)
     if header_map is None:
-        return [], "Statement header not found"
+        return [], _("Statement header not found")
     return rows, ""
 
 
@@ -142,27 +143,27 @@ def parse_bog_row(
 ) -> tuple[ParsedBogRow | None, str]:
     external_id = text_value(column_value(values, header_map, "Operation ID"))
     if external_id == "":
-        return None, f"Row {row_number}: missing Operation ID"
+        return None, _("Row %(row_number)s: missing Operation ID") % {"row_number": row_number}
     has_debit = is_filled(column_value(values, header_map, "Debit"))
     has_credit = is_filled(column_value(values, header_map, "Credit"))
     if has_debit and has_credit:
-        return None, f"Row {row_number}: both debit and credit are set"
+        return None, _("Row %(row_number)s: both debit and credit are set") % {"row_number": row_number}
     if not has_debit and not has_credit:
-        return None, f"Row {row_number}: debit and credit are empty"
+        return None, _("Row %(row_number)s: debit and credit are empty") % {"row_number": row_number}
     raw_amount = column_value(values, header_map, "Amount")
     if not is_filled(raw_amount):
-        return None, f"Row {row_number}: missing Amount"
+        return None, _("Row %(row_number)s: missing Amount") % {"row_number": row_number}
     amount = decimal_amount(raw_amount)
     if has_credit and amount <= 0:
-        return None, f"Row {row_number}: amount sign does not match credit"
+        return None, _("Row %(row_number)s: amount sign does not match credit") % {"row_number": row_number}
     if has_debit and amount >= 0:
-        return None, f"Row {row_number}: amount sign does not match debit"
+        return None, _("Row %(row_number)s: amount sign does not match debit") % {"row_number": row_number}
     parsed_date = parse_date(column_value(values, header_map, "Date"))
     if parsed_date is None:
-        return None, f"Row {row_number}: invalid date"
+        return None, _("Row %(row_number)s: invalid date") % {"row_number": row_number}
     account_iban = text_value(column_value(values, header_map, "Account N"))
     if account_iban == "":
-        return None, f"Row {row_number}: missing Account N"
+        return None, _("Row %(row_number)s: missing Account N") % {"row_number": row_number}
     nomination = text_value(column_value(values, header_map, "Nomination"))
     if nomination:
         description = nomination

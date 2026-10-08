@@ -5,6 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.bog_statement import column_value, decimal_amount, is_filled, text_value
@@ -65,12 +66,12 @@ def import_flowwow_statement(file) -> FlowwowStatementImportResult:
 
     accounts = list(FinancialAccount.objects.filter(name=ACCOUNT_NAME))
     if len(accounts) == 0:
-        return FlowwowStatementImportResult(created=0, skipped=0, error="Flowwow account not found")
+        return FlowwowStatementImportResult(created=0, skipped=0, error=_("Flowwow account not found"))
     if len(accounts) > 1:
         return FlowwowStatementImportResult(
             created=0,
             skipped=0,
-            error="Flowwow account matched more than once",
+            error=_("Flowwow account matched more than once"),
         )
     account = accounts[0]
 
@@ -119,7 +120,7 @@ def parse_flowwow_statement(file) -> tuple[list[ParsedFlowwowRow], str]:
             if "Order number" in names and "Transaction type" in names:
                 missing_columns = [name for name in REQUIRED_COLUMNS if name not in names]
                 if missing_columns:
-                    return [], f"Missing columns: {', '.join(missing_columns)}"
+                    return [], _("Missing columns: %(columns)s") % {"columns": ", ".join(missing_columns)}
                 header_map = names
             continue
         if not any(is_filled(value) for value in values):
@@ -130,7 +131,7 @@ def parse_flowwow_statement(file) -> tuple[list[ParsedFlowwowRow], str]:
             return [], error
         rows.append(parsed)
     if header_map is None:
-        return [], "Statement header not found"
+        return [], _("Statement header not found")
     return rows, ""
 
 
@@ -141,20 +142,20 @@ def parse_flowwow_row(
 ) -> tuple[ParsedFlowwowRow | None, str]:
     transaction_type = text_value(column_value(values, header_map, "Transaction type"))
     if transaction_type == "":
-        return None, f"Row {row_number}: missing Transaction type"
+        return None, _("Row %(row_number)s: missing Transaction type") % {"row_number": row_number}
     order_number = text_value(column_value(values, header_map, "Order number"))
     if order_number == "":
-        return None, f"Row {row_number}: missing Order number"
+        return None, _("Row %(row_number)s: missing Order number") % {"row_number": row_number}
     raw_shop_amount = column_value(values, header_map, "Transaction amount in shop currency")
     if not is_filled(raw_shop_amount):
-        return None, f"Row {row_number}: missing Transaction amount in shop currency"
+        return None, _("Row %(row_number)s: missing Transaction amount in shop currency") % {"row_number": row_number}
     amount = decimal_amount(raw_shop_amount)
     currency = text_value(column_value(values, header_map, "Transaction currency"))
     if currency == "":
-        return None, f"Row {row_number}: missing Transaction currency"
+        return None, _("Row %(row_number)s: missing Transaction currency") % {"row_number": row_number}
     payment = parse_payment_datetime(column_value(values, header_map, "Order payment date"))
     if payment is None:
-        return None, f"Row {row_number}: invalid date"
+        return None, _("Row %(row_number)s: invalid date") % {"row_number": row_number}
     kind, error = transaction_kind(transaction_type, amount, row_number)
     if error:
         return None, error
@@ -163,7 +164,7 @@ def parse_flowwow_row(
     else:
         raw_amount = column_value(values, header_map, "Transaction amount")
         if not is_filled(raw_amount):
-            return None, f"Row {row_number}: missing Transaction amount"
+            return None, _("Row %(row_number)s: missing Transaction amount") % {"row_number": row_number}
         description = f"{transaction_type} {decimal_amount(raw_amount)} {currency}"
     external_id = (
         f"{order_number}|{transaction_type}|{payment.strftime('%Y-%m-%d %H:%M:%S')}|{amount}"
@@ -184,17 +185,26 @@ def parse_flowwow_row(
 def transaction_kind(transaction_type: str, amount: Decimal, row_number: int) -> tuple[str, str]:
     if transaction_type in INCOME_TYPES:
         if amount <= 0:
-            return "", f"Row {row_number}: amount sign does not match {transaction_type}"
+            return "", _("Row %(row_number)s: amount sign does not match %(transaction_type)s") % {
+                "row_number": row_number,
+                "transaction_type": transaction_type,
+            }
         return FinancialTransaction.KIND_INCOME, ""
     if transaction_type in EXPENSE_TYPES:
         if amount >= 0:
-            return "", f"Row {row_number}: amount sign does not match {transaction_type}"
+            return "", _("Row %(row_number)s: amount sign does not match %(transaction_type)s") % {
+                "row_number": row_number,
+                "transaction_type": transaction_type,
+            }
         return FinancialTransaction.KIND_EXPENSE, ""
     if transaction_type == WITHDRAWAL_TYPE:
         if amount > 0:
-            return "", f"Row {row_number}: amount sign does not match {transaction_type}"
+            return "", _("Row %(row_number)s: amount sign does not match %(transaction_type)s") % {
+                "row_number": row_number,
+                "transaction_type": transaction_type,
+            }
         return FinancialTransaction.KIND_TRANSFER, ""
-    return "", f"Row {row_number}: unknown transaction type"
+    return "", _("Row %(row_number)s: unknown transaction type") % {"row_number": row_number}
 
 
 def parse_payment_datetime(value) -> datetime | None:

@@ -1,4 +1,5 @@
 {% extends "admin/base_site.html" %}
+{% load i18n %}
 
 {% block content %}
 <div id="content-main">
@@ -6,12 +7,12 @@
     <fieldset class="module aligned">
       <div class="form-row">
         {{ form.number.errors }}
-        <label for="{{ form.number.id_for_label }}">Number</label>
+        <label for="{{ form.number.id_for_label }}">{% trans "Number" %}</label>
         {{ form.number }}
       </div>
     </fieldset>
     <div class="submit-row">
-      <input type="submit" value="Check" class="default">
+      <input type="submit" value="{% trans "Check" %}" class="default">
     </div>
   </form>
 
@@ -19,15 +20,15 @@
   <div class="module">
     <table>
       <tr>
-        <th>Number</th>
+        <th>{% trans "Number" %}</th>
         <td>{{ result.number }}</td>
       </tr>
       <tr>
-        <th>Exists</th>
+        <th>{% trans "Exists" %}</th>
         <td>{{ result.exists }}</td>
       </tr>
       <tr>
-        <th>WhatsApp ID</th>
+        <th>{% trans "WhatsApp ID" %}</th>
         <td>{{ result.whatsappId }}</td>
       </tr>
     </table>

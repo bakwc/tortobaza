@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.admin.widgets import AdminDateWidget
 from django.contrib.auth.models import User
 from django.template.response import TemplateResponse
+from django.utils.translation import gettext_lazy as _
 
 from attendance.models import AttendanceEvent, SalaryCalculation
 from attendance.salary import compute_salary
@@ -11,9 +12,10 @@ from attendance.salary import compute_salary
 class SalaryCalculationForm(forms.Form):
     employee = forms.ModelChoiceField(
         queryset=User.objects.filter(is_active=True).order_by("username"),
+        label=_("Employee"),
     )
-    start_date = forms.DateField(widget=AdminDateWidget())
-    end_date = forms.DateField(widget=AdminDateWidget())
+    start_date = forms.DateField(widget=AdminDateWidget(), label=_("Start date"))
+    end_date = forms.DateField(widget=AdminDateWidget(), label=_("End date"))
 
 
 @admin.register(AttendanceEvent)
@@ -47,7 +49,7 @@ class SalaryCalculationAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Salary calculation",
+            "title": _("Salary calculation"),
             "form": form,
             "result": result,
             "opts": self.model._meta,

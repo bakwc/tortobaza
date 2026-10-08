@@ -1,21 +1,1053 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: tortobaza\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-08 19:09+0400\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
-"Language: ru\n"
+
+msgid "Profile"
+msgstr "Профиль"
+
+msgid "Hourly rate"
+msgstr "Почасовая ставка"
+
+msgid "Accounts"
+msgstr "Аккаунты"
+
+msgid "Male"
+msgstr "Мужской"
+
+msgid "Female"
+msgstr "Женский"
+
+msgid "User"
+msgstr "Пользователь"
+
+msgid "Telegram username"
+msgstr "Имя пользователя Telegram"
+
+msgid "Internal name"
+msgstr "Внутреннее имя"
+
+msgid "Gender"
+msgstr "Пол"
+
+msgid "Profiles"
+msgstr "Профили"
+
+msgid "Employee"
+msgstr "Сотрудник"
+
+msgid "Start date"
+msgstr "Дата начала"
+
+msgid "End date"
+msgstr "Дата окончания"
+
+msgid "Salary calculation"
+msgstr "Расчёт зарплаты"
+
+msgid "Attendance"
+msgstr "Посещаемость"
+
+msgid "Arrival"
+msgstr "Приход"
+
+msgid "Departure"
+msgstr "Уход"
+
+msgid "Event type"
+msgstr "Тип события"
+
+msgid "Timestamp"
+msgstr "Время"
+
+msgid "Attendance event"
+msgstr "Событие посещаемости"
+
+msgid "Attendance events"
+msgstr "События посещаемости"
+
+msgid "Apply"
+msgstr "Применить"
+
+msgid "Date"
+msgstr "Дата"
+
+msgid "Hours"
+msgstr "Часы"
+
+msgid "Salary"
+msgstr "Зарплата"
+
+msgid "Total"
+msgstr "Итого"
+
+msgid "Cart"
+msgstr "Корзина"
+
+msgid "Token"
+msgstr "Токен"
+
+msgid "Created at"
+msgstr "Создано"
+
+msgid "Updated at"
+msgstr "Обновлено"
+
+msgid "Expires at"
+msgstr "Истекает"
+
+msgid "Is ordered"
+msgstr "Оформлена"
+
+msgid "Carts"
+msgstr "Корзины"
+
+msgid "Product"
+msgstr "Товар"
+
+msgid "Quantity"
+msgstr "Количество"
+
+msgid "Comment"
+msgstr "Комментарий"
+
+msgid "Added at"
+msgstr "Добавлено"
+
+msgid "Cart item"
+msgstr "Позиция корзины"
+
+msgid "Cart items"
+msgstr "Позиции корзины"
+
+msgid "Option"
+msgstr "Опция"
+
+msgid "Cart item option"
+msgstr "Опция позиции корзины"
+
+msgid "Cart item options"
+msgstr "Опции позиций корзины"
+
+msgid "SEO"
+msgstr "SEO"
+
+msgid "Catalog"
+msgstr "Каталог"
+
+msgid "All day"
+msgstr "Весь день"
+
+msgid "Same day or later"
+msgstr "В тот же день или позже"
+
+msgid "Next day or later"
+msgstr "На следующий день или позже"
+
+msgid "Two days or later"
+msgstr "Через два дня или позже"
+
+msgid "Three days or later"
+msgstr "Через три дня или позже"
+
+msgid "Name"
+msgstr "Название"
+
+msgid "Slug"
+msgstr "Слаг"
+
+msgid "Page slug"
+msgstr "Слаг страницы"
+
+msgid "Page heading"
+msgstr "Заголовок страницы"
+
+msgid "Page description"
+msgstr "Описание страницы"
+
+msgid "SEO title"
+msgstr "SEO-заголовок"
+
+msgid "SEO description"
+msgstr "SEO-описание"
+
+msgid "Image"
+msgstr "Изображение"
+
+msgid "Position"
+msgstr "Позиция"
+
+msgid "Is active"
+msgstr "Активно"
+
+msgid "Delivery schedule tier"
+msgstr "Уровень расписания доставки"
+
+msgid "Category"
+msgstr "Категория"
+
+msgid "Categories"
+msgstr "Категории"
+
+msgid "Page slugs must be unique across all languages."
+msgstr "Слаги страниц должны быть уникальны на всех языках."
+
+msgid "Page slugs must not collide with existing category landings."
+msgstr "Слаги страниц не должны совпадать с посадочными страницами категорий."
+
+msgid "Source"
+msgstr "Источник"
+
+msgid "Category landing"
+msgstr "Посадочная страница категории"
+
+msgid "Category landings"
+msgstr "Посадочные страницы категорий"
+
+msgid "Page slugs must not collide with existing categories."
+msgstr "Слаги страниц не должны совпадать с существующими категориями."
+
+msgid "Single"
+msgstr "Один"
+
+msgid "Multi"
+msgstr "Несколько"
+
+msgid "Selection type"
+msgstr "Тип выбора"
+
+msgid "Required by default"
+msgstr "Обязательно по умолчанию"
+
+msgid "Minimum selections"
+msgstr "Минимум вариантов"
+
+msgid "Maximum selections"
+msgstr "Максимум вариантов"
+
+msgid "Option group"
+msgstr "Группа опций"
+
+msgid "Option groups"
+msgstr "Группы опций"
+
+msgid "Group"
+msgstr "Группа"
+
+msgid "Price delta"
+msgstr "Изменение цены"
+
+msgid "Options"
+msgstr "Опции"
+
+msgid "Description"
+msgstr "Описание"
+
+msgid "Base price"
+msgstr "Базовая цена"
+
+msgid "Products"
+msgstr "Товары"
+
+msgid "Alt text"
+msgstr "Альтернативный текст"
+
+msgid "Product image"
+msgstr "Изображение товара"
+
+msgid "Product images"
+msgstr "Изображения товаров"
+
+msgid "Is required"
+msgstr "Обязательно"
+
+msgid "Product option group"
+msgstr "Группа опций товара"
+
+msgid "Product option groups"
+msgstr "Группы опций товаров"
+
+msgid "Number"
+msgstr "Номер"
+
+msgid "File"
+msgstr "Файл"
+
+msgid "Schedule"
+msgstr "Расписание"
+
+msgid "Customer & Delivery"
+msgstr "Клиент и доставка"
+
+msgid "Cake Details"
+msgstr "Торт"
+
+msgid "Payment"
+msgstr "Оплата"
+
+msgid "Metadata"
+msgstr "Служебное"
+
+msgid "Telegram"
+msgstr "Telegram"
+
+msgid "Time"
+msgstr "Время"
+
+msgid "When ready"
+msgstr "По готовности"
+
+msgid "Unknown"
+msgstr "Неизвестно"
+
+msgid "Contact"
+msgstr "Контакт"
+
+msgid "WhatsApp number check"
+msgstr "Проверка номера WhatsApp"
+
+msgid "WhatsApp get new QR"
+msgstr "Новый QR WhatsApp"
+
+msgid "Telegram number check"
+msgstr "Проверка номера Telegram"
+
+msgid "CRM orders"
+msgstr "Заказы CRM"
+
+#, python-format
+msgid "Imported %(created)s, skipped %(skipped)s duplicates."
+msgstr "Импортировано %(created)s, пропущено дубликатов: %(skipped)s."
+
+msgid "Upload Bank of Georgia statement"
+msgstr "Загрузить выписку Банка Грузии"
+
+msgid "Upload Liberty statement"
+msgstr "Загрузить выписку Liberty"
+
+msgid "Upload Flowwow statement"
+msgstr "Загрузить выписку Flowwow"
+
+msgid "CRM"
+msgstr "CRM"
+
+#, python-format
+msgid "Unknown accounts: %(accounts)s"
+msgstr "Неизвестные счета: %(accounts)s"
+
+#, python-format
+msgid "Accounts matched more than once: %(accounts)s"
+msgstr "Счета найдены больше одного раза: %(accounts)s"
+
+msgid "Sheet 'Statement of Account' not found"
+msgstr "Лист «Statement of Account» не найден"
+
+#, python-format
+msgid "Missing columns: %(columns)s"
+msgstr "Нет колонок: %(columns)s"
+
+msgid "Statement header not found"
+msgstr "Заголовок выписки не найден"
+
+#, python-format
+msgid "Row %(row_number)s: missing Operation ID"
+msgstr "Строка %(row_number)s: нет Operation ID"
+
+#, python-format
+msgid "Row %(row_number)s: both debit and credit are set"
+msgstr "Строка %(row_number)s: заполнены и дебет, и кредит"
+
+#, python-format
+msgid "Row %(row_number)s: debit and credit are empty"
+msgstr "Строка %(row_number)s: дебет и кредит пустые"
+
+#, python-format
+msgid "Row %(row_number)s: missing Amount"
+msgstr "Строка %(row_number)s: нет Amount"
+
+#, python-format
+msgid "Row %(row_number)s: amount sign does not match credit"
+msgstr "Строка %(row_number)s: знак суммы не совпадает с кредитом"
+
+#, python-format
+msgid "Row %(row_number)s: amount sign does not match debit"
+msgstr "Строка %(row_number)s: знак суммы не совпадает с дебетом"
+
+#, python-format
+msgid "Row %(row_number)s: invalid date"
+msgstr "Строка %(row_number)s: неверная дата"
+
+#, python-format
+msgid "Row %(row_number)s: missing Account N"
+msgstr "Строка %(row_number)s: нет Account N"
+
+msgid "Flowwow account not found"
+msgstr "Счёт Flowwow не найден"
+
+msgid "Flowwow account matched more than once"
+msgstr "Счёт Flowwow найден больше одного раза"
+
+#, python-format
+msgid "Row %(row_number)s: missing Transaction type"
+msgstr "Строка %(row_number)s: нет Transaction type"
+
+#, python-format
+msgid "Row %(row_number)s: missing Order number"
+msgstr "Строка %(row_number)s: нет Order number"
+
+#, python-format
+msgid "Row %(row_number)s: missing Transaction amount in shop currency"
+msgstr "Строка %(row_number)s: нет Transaction amount in shop currency"
+
+#, python-format
+msgid "Row %(row_number)s: missing Transaction currency"
+msgstr "Строка %(row_number)s: нет Transaction currency"
+
+#, python-format
+msgid "Row %(row_number)s: missing Transaction amount"
+msgstr "Строка %(row_number)s: нет Transaction amount"
+
+#, python-format
+msgid "Row %(row_number)s: amount sign does not match %(transaction_type)s"
+msgstr "Строка %(row_number)s: знак суммы не совпадает с %(transaction_type)s"
+
+#, python-format
+msgid "Row %(row_number)s: unknown transaction type"
+msgstr "Строка %(row_number)s: неизвестный тип операции"
+
+msgid "Sheet 'Summary' not found"
+msgstr "Лист «Summary» не найден"
+
+msgid "Sheet 'account_statement' not found"
+msgstr "Лист «account_statement» не найден"
+
+#, python-format
+msgid "Row %(row_number)s: missing Description"
+msgstr "Строка %(row_number)s: нет Description"
+
+#, python-format
+msgid "Row %(row_number)s: missing Document Number"
+msgstr "Строка %(row_number)s: нет Document Number"
+
+#, python-format
+msgid "Row %(row_number)s: external id is too long"
+msgstr "Строка %(row_number)s: внешний идентификатор слишком длинный"
+
+#, python-format
+msgid "Row %(row_number)s: both paid out and paid in are set"
+msgstr "Строка %(row_number)s: заполнены и списание, и зачисление"
+
+#, python-format
+msgid "Row %(row_number)s: paid out and paid in are empty"
+msgstr "Строка %(row_number)s: списание и зачисление пустые"
+
+#, python-format
+msgid "Row %(row_number)s: amount sign does not match paid in"
+msgstr "Строка %(row_number)s: знак суммы не совпадает с зачислением"
+
+#, python-format
+msgid "Row %(row_number)s: amount sign does not match paid out"
+msgstr "Строка %(row_number)s: знак суммы не совпадает со списанием"
+
+#, python-format
+msgid "Multiple account numbers: %(numbers)s"
+msgstr "Несколько номеров счетов: %(numbers)s"
+
+msgid "Account No not found"
+msgstr "Номер счёта не найден"
+
+msgid "Monthly rent"
+msgstr "Месячная аренда"
+
+msgid "CRM settings"
+msgstr "Настройки CRM"
+
+msgid "Delivery"
+msgstr "Доставка"
+
+msgid "Pickup"
+msgstr "Самовывоз"
+
+msgid "Cash"
+msgstr "Наличные"
+
+msgid "Terminal"
+msgstr "Терминал"
+
+msgid "TBC Transfer"
+msgstr "Перевод TBC"
+
+msgid "BOG Transfer"
+msgstr "Перевод BOG"
+
+msgid "T-Bank Transfer"
+msgstr "Перевод T-Bank"
+
+msgid "Flowwow"
+msgstr "Flowwow"
+
+msgid "Cryptocurrency"
+msgstr "Криптовалюта"
+
+msgid "Online on website"
+msgstr "Онлайн на сайте"
+
+msgid "Time start"
+msgstr "Время начала"
+
+msgid "Time end"
+msgstr "Время окончания"
+
+msgid "Nickname"
+msgstr "Ник"
+
+msgid "Phones"
+msgstr "Телефоны"
+
+msgid "Delivery address"
+msgstr "Адрес доставки"
+
+msgid "Delivery distance meters"
+msgstr "Расстояние доставки, м"
+
+msgid "Delivery duration seconds"
+msgstr "Длительность доставки, с"
+
+msgid "Delivery route computed at"
+msgstr "Маршрут рассчитан"
+
+msgid "Fulfillment type"
+msgstr "Тип получения"
+
+msgid "Unconfirmed"
+msgstr "Не подтверждён"
+
+msgid "New"
+msgstr "Новый"
+
+msgid "In work"
+msgstr "В работе"
+
+msgid "Ready"
+msgstr "Готов"
+
+msgid "Client approved"
+msgstr "Одобрен клиентом"
+
+msgid "In delivery"
+msgstr "В доставке"
+
+msgid "Delivered"
+msgstr "Доставлен"
+
+msgid "Status"
+msgstr "Статус"
+
+msgid "Taken by"
+msgstr "Взял"
+
+msgid "Created by"
+msgstr "Создал"
+
+msgid "Delivered by"
+msgstr "Доставил"
+
+msgid "Weight"
+msgstr "Вес"
+
+msgid "Filling"
+msgstr "Начинка"
+
+msgid "Internal description"
+msgstr "Внутреннее описание"
+
+msgid "Cake price"
+msgstr "Цена торта"
+
+msgid "Prepayment"
+msgstr "Предоплата"
+
+msgid "Is paid"
+msgstr "Оплачен"
+
+msgid "Payment type"
+msgstr "Тип оплаты"
+
+msgid "Payment date"
+msgstr "Дата оплаты"
+
+msgid "Website order"
+msgstr "Заказ с сайта"
+
+msgid "Flowwow order id"
+msgstr "ID заказа Flowwow"
+
+msgid "Flowwow synced description"
+msgstr "Описание, синхронизированное с Flowwow"
+
+msgid "Flowwow synced internal description"
+msgstr "Внутреннее описание, синхронизированное с Flowwow"
+
+msgid "Deleted"
+msgstr "Удалён"
+
+msgid "Client token"
+msgstr "Токен клиента"
+
+msgid "Telegram message id"
+msgstr "ID сообщения Telegram"
+
+msgid "Telegram media ids"
+msgstr "ID медиа Telegram"
+
+msgid "Telegram payload hash"
+msgstr "Хеш данных Telegram"
+
+msgid "Telegram posted date"
+msgstr "Дата в Telegram"
+
+msgid "Telegram posted time start"
+msgstr "Время начала в Telegram"
+
+msgid "Telegram posted time end"
+msgstr "Время окончания в Telegram"
+
+msgid "Telegram posted when ready"
+msgstr "По готовности в Telegram"
+
+msgid "Telegram posted delivery address"
+msgstr "Адрес доставки в Telegram"
+
+msgid "CRM order"
+msgstr "Заказ CRM"
+
+msgid "Created"
+msgstr "Создан"
+
+msgid "Updated"
+msgstr "Обновлён"
+
+msgid "Admin"
+msgstr "Админка"
+
+msgid "Website"
+msgstr "Сайт"
+
+msgid "Resolved"
+msgstr "Найден"
+
+msgid "User ID"
+msgstr "ID пользователя"
+
+msgid "Username"
+msgstr "Имя пользователя"
+
+msgid "Checked at"
+msgstr "Проверено"
+
+msgid "Resolved Telegram phone"
+msgstr "Найденный телефон Telegram"
+
+msgid "Resolved Telegram phones"
+msgstr "Найденные телефоны Telegram"
+
+msgid "Order"
+msgstr "Заказ"
+
+msgid "Source URL"
+msgstr "URL источника"
+
+msgid "CRM order image"
+msgstr "Изображение заказа CRM"
+
+msgid "CRM order images"
+msgstr "Изображения заказа CRM"
+
+msgid "Bank"
+msgstr "Банк"
+
+msgid "Crypto"
+msgstr "Крипто"
+
+msgid "Virtual"
+msgstr "Виртуальный"
+
+msgid "Kind"
+msgstr "Вид"
+
+msgid "Bank name"
+msgstr "Название банка"
+
+msgid "IBAN"
+msgstr "IBAN"
+
+msgid "Currency"
+msgstr "Валюта"
+
+msgid "Financial account"
+msgstr "Счёт"
+
+msgid "Financial accounts"
+msgstr "Счета"
+
+msgid "Income"
+msgstr "Доход"
+
+msgid "Expense"
+msgstr "Расход"
+
+msgid "Transfer"
+msgstr "Перевод"
+
+msgid "Withdrawal"
+msgstr "Вывод"
+
+msgid "Investment"
+msgstr "Инвестиция"
+
+msgid "Correction"
+msgstr "Коррекция"
+
+msgid "Other"
+msgstr "Другое"
+
+msgid "Rent"
+msgstr "Аренда"
+
+msgctxt "expense type"
+msgid "Products"
+msgstr "Продукты"
+
+msgid "Consumables"
+msgstr "Расходники"
+
+msgid "Equipment"
+msgstr "Оборудование"
+
+msgid "Online"
+msgstr "Онлайн"
+
+msgid "Account"
+msgstr "Счёт"
+
+msgid "Amount"
+msgstr "Сумма"
+
+msgid "Expense type"
+msgstr "Тип расхода"
+
+msgid "Income type"
+msgstr "Тип дохода"
+
+msgid "Transfer id"
+msgstr "ID перевода"
+
+msgid "Counterparty name"
+msgstr "Контрагент"
+
+msgid "Counterparty IBAN"
+msgstr "IBAN контрагента"
+
+msgid "External id"
+msgstr "Внешний ID"
+
+msgid "Matched transaction"
+msgstr "Парная операция"
+
+msgid "Financial transaction"
+msgstr "Финансовая операция"
+
+msgid "Financial transactions"
+msgstr "Финансовые операции"
+
+msgid "Upload"
+msgstr "Загрузить"
+
+msgid "Check"
+msgstr "Проверить"
+
+msgid "Get new QR"
+msgstr "Получить новый QR"
+
+msgid "WhatsApp QR"
+msgstr "QR WhatsApp"
+
+msgid "Exists"
+msgstr "Есть в WhatsApp"
+
+msgid "WhatsApp ID"
+msgstr "ID WhatsApp"
+
+msgid "Orders"
+msgstr "Заказы"
+
+msgid "Apt."
+msgstr "кв."
+
+msgid "Card"
+msgstr "Карта"
+
+msgid "Bank transfer"
+msgstr "Банковский перевод"
+
+msgid "Address"
+msgstr "Адрес"
+
+msgid "Pickup point"
+msgstr "Пункт самовывоза"
+
+msgid "Type:"
+msgstr "Тип:"
+
+msgid "Delivery time:"
+msgstr "Время доставки:"
+
+msgid "Payment:"
+msgstr "Оплата:"
+
+msgid "Total:"
+msgstr "Итого:"
+
+msgid "Delivery fee:"
+msgstr "Доставка:"
+
+msgid "Items:"
+msgstr "Состав:"
+
+#, python-format
+msgid "Order #%(number)s received"
+msgstr "Заказ #%(number)s принят"
+
+#, python-format
+msgid "Hello, %(name)s!"
+msgstr "Здравствуйте, %(name)s!"
+
+#, python-format
+msgid ""
+"We have received your order #%(number)s. It is not confirmed yet. It will be "
+"confirmed after card payment or by a manager."
+msgstr ""
+"Мы получили ваш заказ #%(number)s. Он ещё не подтверждён. Подтверждение "
+"будет после оплаты картой или менеджером."
+
+#, python-format
+msgid "Order #%(number)s confirmed"
+msgstr "Заказ #%(number)s подтверждён"
+
+#, python-format
+msgid "Your order #%(number)s is confirmed."
+msgstr "Ваш заказ #%(number)s подтверждён."
+
+msgid "Percent"
+msgstr "Процент"
+
+msgid "Fixed"
+msgstr "Фиксированная"
+
+msgid "Code"
+msgstr "Код"
+
+msgid "Discount type"
+msgstr "Тип скидки"
+
+msgid "Discount value"
+msgstr "Размер скидки"
+
+msgid "Valid from"
+msgstr "Действует с"
+
+msgid "Valid to"
+msgstr "Действует до"
+
+msgid "Max uses"
+msgstr "Максимум использований"
+
+msgid "Uses count"
+msgstr "Использований"
+
+msgid "Minimum order amount"
+msgstr "Минимальная сумма заказа"
+
+msgid "Promo code"
+msgstr "Промокод"
+
+msgid "Promo codes"
+msgstr "Промокоды"
+
+msgid "Latitude"
+msgstr "Широта"
+
+msgid "Longitude"
+msgstr "Долгота"
+
+msgid "Pickup location"
+msgstr "Пункт самовывоза"
+
+msgid "Pickup locations"
+msgstr "Пункты самовывоза"
+
+msgid "Pending"
+msgstr "Ожидает"
+
+msgid "Confirmed"
+msgstr "Подтверждён"
+
+msgid "Preparing"
+msgstr "Готовится"
+
+msgid "Cancelled"
+msgstr "Отменён"
+
+msgid "Unpaid"
+msgstr "Не оплачен"
+
+msgid "Paid"
+msgstr "Оплачен"
+
+msgid "Production"
+msgstr "Продакшен"
+
+msgid "Development"
+msgstr "Разработка"
+
+msgid "Lookup token"
+msgstr "Токен просмотра"
+
+msgid "Locale"
+msgstr "Язык"
+
+msgid "Environment"
+msgstr "Окружение"
+
+msgid "Payment method"
+msgstr "Способ оплаты"
+
+msgid "Payment status"
+msgstr "Статус оплаты"
+
+msgid "Customer name"
+msgstr "Имя клиента"
+
+msgid "Customer phone"
+msgstr "Телефон клиента"
+
+msgid "Customer email"
+msgstr "Email клиента"
+
+msgid "Customer Instagram"
+msgstr "Instagram клиента"
+
+msgid "Customer Telegram"
+msgstr "Telegram клиента"
+
+msgid "Timeslot start"
+msgstr "Начало интервала"
+
+msgid "Timeslot end"
+msgstr "Конец интервала"
+
+msgid "Subtotal"
+msgstr "Сумма без доставки"
+
+msgid "Discount total"
+msgstr "Сумма скидки"
+
+msgid "Delivery fee"
+msgstr "Стоимость доставки"
+
+msgid "Product name"
+msgstr "Название товара"
+
+msgid "Unit price"
+msgstr "Цена"
+
+msgid "Line total"
+msgstr "Сумма строки"
+
+msgid "Order item"
+msgstr "Позиция заказа"
+
+msgid "Order items"
+msgstr "Позиции заказа"
+
+msgid "Group name"
+msgstr "Название группы"
+
+msgid "Option name"
+msgstr "Название опции"
+
+msgid "Order item option"
+msgstr "Опция позиции заказа"
+
+msgid "Order item options"
+msgstr "Опции позиций заказа"
+
+msgid "Completed"
+msgstr "Завершён"
+
+msgid "Canceled"
+msgstr "Отменён"
+
+msgid "Error"
+msgstr "Ошибка"
+
+msgid "Order code"
+msgstr "Код заказа"
+
+msgid "Transaction code"
+msgstr "Код транзакции"
+
+msgid "Amount in tetri"
+msgstr "Сумма в тетри"
+
+msgid "Pay method"
+msgstr "Способ оплаты Liberty"
+
+msgid "Test mode"
+msgstr "Тестовый режим"
+
+msgid "Raw callback"
+msgstr "Сырой ответ"
+
+msgid "Liberty payment"
+msgstr "Платёж Liberty"
+
+msgid "Liberty payments"
+msgstr "Платежи Liberty"
+
+msgid "Street"
+msgstr "Улица"
+
+msgid "Building"
+msgstr "Дом"
+
+msgid "Apartment"
+msgstr "Квартира"
+
+msgid "City"
+msgstr "Город"
+
+msgid "Postal code"
+msgstr "Индекс"
+
+msgid "Notes"
+msgstr "Примечания"
+
+msgid "Delivery addresses"
+msgstr "Адреса доставки"
 
 msgid "Cart is empty."
 msgstr "Корзина пуста."
 
 msgid "Invalid schedule tier."
 msgstr "Недопустимый уровень расписания доставки."
-
-msgid "Express delivery is not available for this order."
-msgstr "Экспресс-доставка для этого заказа недоступна."
 
 msgid "Invalid schedule mode."
 msgstr "Недопустимый режим расписания."
@@ -29,8 +1061,8 @@ msgstr "Выбранное время недоступно."
 msgid "This field is required for a scheduled slot."
 msgstr "Это поле обязательно для выбора слота."
 
-msgid "Must be empty when using express scheduling."
-msgstr "При экспресс-доставке это поле должно быть пустым."
+msgid "Card payment is not available."
+msgstr "Оплата картой недоступна."
 
 msgid "Promo code is not active."
 msgstr "Промокод не активен."
@@ -60,30 +1092,6 @@ msgstr "Пункт самовывоза не найден."
 msgid "Delivery address is required."
 msgstr "Нужен адрес доставки."
 
-msgid "Apt."
-msgstr "кв."
-
-msgid "Delivery"
-msgstr "Доставка"
-
-msgid "Pickup"
-msgstr "Самовывоз"
-
-msgid "Card"
-msgstr "Карта"
-
-msgid "Cash"
-msgstr "Наличные"
-
-msgid "Bank transfer"
-msgstr "Банковский перевод"
-
-msgid "Address"
-msgstr "Адрес"
-
-msgid "Pickup point"
-msgstr "Пункт самовывоза"
-
 #, python-format
 msgid "🆕 <b>New order #%(number)s</b>"
 msgstr "🆕 <b>Новый заказ #%(number)s</b>"
@@ -103,20 +1111,8 @@ msgstr "Instagram:"
 msgid "Telegram:"
 msgstr "Telegram:"
 
-msgid "Type:"
-msgstr "Тип:"
-
-msgid "Delivery time:"
-msgstr "Время доставки:"
-
 msgid "Prepare by:"
 msgstr "Приготовить к:"
-
-msgid "Payment:"
-msgstr "Оплата:"
-
-msgid "Total:"
-msgstr "Итого:"
 
 msgid "Discount:"
 msgstr "Скидка:"
@@ -124,11 +1120,12 @@ msgstr "Скидка:"
 msgid "Comment:"
 msgstr "Комментарий:"
 
-msgid "Items:"
-msgstr "Состав:"
-
 msgid "Open in admin"
 msgstr "Открыть в админке"
+
+#, python-format
+msgid "✅ <b>Order #%(number)s paid by card</b>"
+msgstr "✅ <b>Заказ #%(number)s оплачен картой</b>"
 
 msgid "Query parameter type must be delivery or pickup."
 msgstr "Параметр type должен быть delivery или pickup."
@@ -136,29 +1133,15 @@ msgstr "Параметр type должен быть delivery или pickup."
 msgid "Lookup token is required."
 msgstr "Нужен токен для просмотра заказа."
 
-#, python-format
-msgid "✅ <b>Order #%(number)s paid by card</b>"
-msgstr "✅ <b>Заказ #%(number)s оплачен картой</b>"
+msgid "This order does not use card payment."
+msgstr "Этот заказ оплачивается не картой."
 
-msgid "Delivery fee:"
-msgstr "Доставка:"
+msgid "This order is already paid."
+msgstr "Этот заказ уже оплачен."
 
-#, python-format
-msgid "Order #%(number)s received"
-msgstr "Заказ #%(number)s принят"
+#~ msgid "Express delivery is not available for this order."
+#~ msgstr "Экспресс-доставка для этого заказа недоступна."
 
-#, python-format
-msgid "Order #%(number)s confirmed"
-msgstr "Заказ #%(number)s подтверждён"
+#~ msgid "Must be empty when using express scheduling."
+#~ msgstr "При экспресс-доставке это поле должно быть пустым."
 
-#, python-format
-msgid "Hello, %(name)s!"
-msgstr "Здравствуйте, %(name)s!"
-
-#, python-format
-msgid "We have received your order #%(number)s. It is not confirmed yet. It will be confirmed after card payment or by a manager."
-msgstr "Мы получили ваш заказ #%(number)s. Он ещё не подтверждён. Подтверждение будет после оплаты картой или менеджером."
-
-#, python-format
-msgid "Your order #%(number)s is confirmed."
-msgstr "Ваш заказ #%(number)s подтверждён."

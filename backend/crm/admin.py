@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
+from django.utils.translation import gettext_lazy as _
 
 from crm.bog_statement import import_bog_statement
 from crm.flowwow import sync_flowwow_order_status_from_crm
@@ -30,15 +31,15 @@ from crm.whatsapp import check_number, get_new_qr
 
 
 class WhatsAppNumberCheckForm(forms.Form):
-    number = forms.CharField()
+    number = forms.CharField(label=_("Number"))
 
 
 class TelegramNumberCheckForm(forms.Form):
-    number = forms.CharField()
+    number = forms.CharField(label=_("Number"))
 
 
 class BogStatementUploadForm(forms.Form):
-    file = forms.FileField()
+    file = forms.FileField(label=_("File"))
 
 
 @admin.register(CrmSettings)
@@ -102,13 +103,13 @@ class CrmOrderAdmin(admin.ModelAdmin):
     ]
     fieldsets = (
         (
-            "Schedule",
+            _("Schedule"),
             {
                 "fields": ("date", "time_start", "time_end", "when_ready"),
             },
         ),
         (
-            "Customer & Delivery",
+            _("Customer & Delivery"),
             {
                 "fields": (
                     "contact",
@@ -123,26 +124,26 @@ class CrmOrderAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Cake Details",
+            _("Cake Details"),
             {
                 "fields": ("weight", "filling", "description", "internal_description"),
             },
         ),
         (
-            "Payment",
+            _("Payment"),
             {
                 "fields": ("cake_price", "prepayment", "is_paid", "payment_type", "payment_date"),
             },
         ),
         (
-            "Metadata",
+            _("Metadata"),
             {
                 "fields": ("id", "deleted", "created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),
         (
-            "Telegram",
+            _("Telegram"),
             {
                 "fields": (
                     "telegram_message_id",
@@ -158,17 +159,17 @@ class CrmOrderAdmin(admin.ModelAdmin):
         ),
     )
 
-    @admin.display(description="Time")
+    @admin.display(description=_("Time"))
     def time_slot(self, obj: CrmOrder) -> str:
         if obj.when_ready:
-            return "When ready"
+            return _("When ready")
         if obj.time_start is None:
-            return "Unknown"
+            return _("Unknown")
         if obj.time_end:
             return f"{obj.time_start.strftime('%H:%M')} – {obj.time_end.strftime('%H:%M')}"
         return obj.time_start.strftime("%H:%M")
 
-    @admin.display(description="Contact")
+    @admin.display(description=_("Contact"))
     def contact_summary(self, obj: CrmOrder) -> str:
         return obj.contact[:50]
 
@@ -222,7 +223,7 @@ class WhatsAppNumberCheckAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "WhatsApp number check",
+            "title": _("WhatsApp number check"),
             "form": form,
             "result": result,
             "opts": self.model._meta,
@@ -256,7 +257,7 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "WhatsApp get new QR",
+            "title": _("WhatsApp get new QR"),
             "result": result,
             "opts": self.model._meta,
             "cl": {"opts": self.model._meta},
@@ -306,7 +307,7 @@ class TelegramNumberCheckAdmin(admin.ModelAdmin):
 
         context = {
             **self.admin_site.each_context(request),
-            "title": "Telegram number check",
+            "title": _("Telegram number check"),
             "form": form,
             "result": result,
             "opts": self.model._meta,
@@ -353,7 +354,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             .prefetch_related("crm_orders")
         )
 
-    @admin.display(description="CRM orders")
+    @admin.display(description=_("CRM orders"))
     def crm_orders_display(self, obj: FinancialTransaction) -> str:
         return ", ".join(str(order) for order in obj.crm_orders.all())
     change_list_template = "admin/crm/financialtransaction/change_list.html"
@@ -390,7 +391,8 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 else:
                     self.message_user(
                         request,
-                        f"Imported {result.created}, skipped {result.skipped} duplicates.",
+                        _("Imported %(created)s, skipped %(skipped)s duplicates.")
+                        % {"created": result.created, "skipped": result.skipped},
                     )
                     return redirect("admin:crm_financialtransaction_changelist")
         else:
@@ -399,7 +401,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "form": form,
             "opts": self.model._meta,
-            "title": "Upload Bank of Georgia statement",
+            "title": _("Upload Bank of Georgia statement"),
         }
         return TemplateResponse(
             request,
@@ -419,7 +421,8 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 else:
                     self.message_user(
                         request,
-                        f"Imported {result.created}, skipped {result.skipped} duplicates.",
+                        _("Imported %(created)s, skipped %(skipped)s duplicates.")
+                        % {"created": result.created, "skipped": result.skipped},
                     )
                     return redirect("admin:crm_financialtransaction_changelist")
         else:
@@ -428,7 +431,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "form": form,
             "opts": self.model._meta,
-            "title": "Upload Liberty statement",
+            "title": _("Upload Liberty statement"),
         }
         return TemplateResponse(
             request,
@@ -448,7 +451,8 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 else:
                     self.message_user(
                         request,
-                        f"Imported {result.created}, skipped {result.skipped} duplicates.",
+                        _("Imported %(created)s, skipped %(skipped)s duplicates.")
+                        % {"created": result.created, "skipped": result.skipped},
                     )
                     return redirect("admin:crm_financialtransaction_changelist")
         else:
@@ -457,7 +461,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "form": form,
             "opts": self.model._meta,
-            "title": "Upload Flowwow statement",
+            "title": _("Upload Flowwow statement"),
         }
         return TemplateResponse(
             request,

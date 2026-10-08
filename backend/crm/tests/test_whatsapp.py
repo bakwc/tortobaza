@@ -140,7 +140,7 @@ class WhatsAppTests(TestCase):
         client.login(username="admin", password="password")
         response = client.get("/admin/crm/whatsappgetnewqr/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Get new QR")
+        self.assertContains(response, "Получить новый QR")
         self.assertNotContains(response, 'alt="WhatsApp QR"')
 
     def test_admin_qr_post_shows_image(self):

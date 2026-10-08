@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from modeltranslation.admin import TranslationAdmin, TranslationTabularInline
 
 from catalog.models import (
@@ -51,7 +52,7 @@ class CategoryAdmin(TranslationAdmin):
             },
         ),
         (
-            "SEO",
+            _("SEO"),
             {
                 "fields": ("seo_title", "seo_description"),
             },
@@ -81,7 +82,7 @@ class CategoryLandingAdmin(TranslationAdmin):
             },
         ),
         (
-            "SEO",
+            _("SEO"),
             {
                 "fields": ("seo_title", "seo_description"),
             },

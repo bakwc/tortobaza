@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 
+{% load i18n %}
 {% load static %}
 
 {% block extrahead %}
@@ -17,34 +18,34 @@
     <fieldset class="module aligned">
       <div class="form-row">
         {{ form.employee.errors }}
-        <label for="{{ form.employee.id_for_label }}">Employee</label>
+        <label for="{{ form.employee.id_for_label }}">{% trans "Employee" %}</label>
         {{ form.employee }}
       </div>
       <div class="form-row">
         {{ form.start_date.errors }}
-        <label for="{{ form.start_date.id_for_label }}">Start date</label>
+        <label for="{{ form.start_date.id_for_label }}">{% trans "Start date" %}</label>
         {{ form.start_date }}
       </div>
       <div class="form-row">
         {{ form.end_date.errors }}
-        <label for="{{ form.end_date.id_for_label }}">End date</label>
+        <label for="{{ form.end_date.id_for_label }}">{% trans "End date" %}</label>
         {{ form.end_date }}
       </div>
     </fieldset>
     <div class="submit-row">
-      <input type="submit" value="Apply" class="default">
+      <input type="submit" value="{% trans "Apply" %}" class="default">
     </div>
   </form>
 
   {% if result %}
   <div class="module">
-    <h2>Hourly rate: {{ result.hourly_rate }}</h2>
+    <h2>{% trans "Hourly rate" %}: {{ result.hourly_rate }}</h2>
     <table>
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Hours</th>
-          <th>Salary</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Hours" %}</th>
+          <th>{% trans "Salary" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -58,7 +59,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <th>Total</th>
+          <th>{% trans "Total" %}</th>
           <th>{{ result.total_hours }}</th>
           <th>{{ result.total_money }}</th>
         </tr>

@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.utils.translation import pgettext_lazy
 
 from crm.phone import phones_from_fields
 
@@ -19,11 +21,12 @@ class CrmSettings(models.Model):
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
+        verbose_name=_("Monthly rent"),
     )
 
     class Meta:
-        verbose_name = "CRM settings"
-        verbose_name_plural = "CRM settings"
+        verbose_name = _("CRM settings")
+        verbose_name_plural = _("CRM settings")
 
     def save(self, *args, **kwargs):
         self.pk = 1
@@ -45,8 +48,8 @@ class CrmOrder(models.Model):
     FULFILLMENT_DELIVERY = "delivery"
     FULFILLMENT_PICKUP = "pickup"
     FULFILLMENT_CHOICES = [
-        (FULFILLMENT_DELIVERY, "Delivery"),
-        (FULFILLMENT_PICKUP, "Pickup"),
+        (FULFILLMENT_DELIVERY, _("Delivery")),
+        (FULFILLMENT_PICKUP, _("Pickup")),
     ]
 
     PAYMENT_UNKNOWN = "unknown"
@@ -59,32 +62,45 @@ class CrmOrder(models.Model):
     PAYMENT_CRYPTO = "crypto"
     PAYMENT_ONLINE = "online"
     PAYMENT_TYPE_CHOICES = [
-        (PAYMENT_UNKNOWN, "Unknown"),
-        (PAYMENT_CASH, "Cash"),
-        (PAYMENT_TERMINAL, "Terminal"),
-        (PAYMENT_TBC, "TBC Transfer"),
-        (PAYMENT_BOG, "BOG Transfer"),
-        (PAYMENT_TBANK, "T-Bank Transfer"),
-        (PAYMENT_FLOWWOW, "Flowwow"),
-        (PAYMENT_CRYPTO, "Cryptocurrency"),
-        (PAYMENT_ONLINE, "Online on website"),
+        (PAYMENT_UNKNOWN, _("Unknown")),
+        (PAYMENT_CASH, _("Cash")),
+        (PAYMENT_TERMINAL, _("Terminal")),
+        (PAYMENT_TBC, _("TBC Transfer")),
+        (PAYMENT_BOG, _("BOG Transfer")),
+        (PAYMENT_TBANK, _("T-Bank Transfer")),
+        (PAYMENT_FLOWWOW, _("Flowwow")),
+        (PAYMENT_CRYPTO, _("Cryptocurrency")),
+        (PAYMENT_ONLINE, _("Online on website")),
     ]
 
-    date = models.DateField()
-    time_start = models.TimeField(null=True, blank=True)
-    time_end = models.TimeField(null=True, blank=True)
-    when_ready = models.BooleanField(default=False)
-    contact = models.TextField()
-    nickname = models.CharField(max_length=100, blank=True)
-    phones = models.JSONField(default=list)
-    delivery_address = models.TextField(blank=True)
-    delivery_distance_meters = models.PositiveIntegerField(null=True, blank=True)
-    delivery_duration_seconds = models.PositiveIntegerField(null=True, blank=True)
-    delivery_route_computed_at = models.DateTimeField(null=True, blank=True)
+    date = models.DateField(verbose_name=_("Date"))
+    time_start = models.TimeField(null=True, blank=True, verbose_name=_("Time start"))
+    time_end = models.TimeField(null=True, blank=True, verbose_name=_("Time end"))
+    when_ready = models.BooleanField(default=False, verbose_name=_("When ready"))
+    contact = models.TextField(verbose_name=_("Contact"))
+    nickname = models.CharField(max_length=100, blank=True, verbose_name=_("Nickname"))
+    phones = models.JSONField(default=list, verbose_name=_("Phones"))
+    delivery_address = models.TextField(blank=True, verbose_name=_("Delivery address"))
+    delivery_distance_meters = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Delivery distance meters"),
+    )
+    delivery_duration_seconds = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Delivery duration seconds"),
+    )
+    delivery_route_computed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Delivery route computed at"),
+    )
     fulfillment_type = models.CharField(
         max_length=10,
         choices=FULFILLMENT_CHOICES,
         default=FULFILLMENT_DELIVERY,
+        verbose_name=_("Fulfillment type"),
     )
     STATUS_UNCONFIRMED = "unconfirmed"
     STATUS_NEW = "new"
@@ -94,18 +110,19 @@ class CrmOrder(models.Model):
     STATUS_IN_DELIVERY = "in_delivery"
     STATUS_DELIVERED = "delivered"
     STATUS_CHOICES = [
-        (STATUS_UNCONFIRMED, "Unconfirmed"),
-        (STATUS_NEW, "New"),
-        (STATUS_IN_WORK, "In work"),
-        (STATUS_READY, "Ready"),
-        (STATUS_CLIENT_APPROVED, "Client approved"),
-        (STATUS_IN_DELIVERY, "In delivery"),
-        (STATUS_DELIVERED, "Delivered"),
+        (STATUS_UNCONFIRMED, _("Unconfirmed")),
+        (STATUS_NEW, _("New")),
+        (STATUS_IN_WORK, _("In work")),
+        (STATUS_READY, _("Ready")),
+        (STATUS_CLIENT_APPROVED, _("Client approved")),
+        (STATUS_IN_DELIVERY, _("In delivery")),
+        (STATUS_DELIVERED, _("Delivered")),
     ]
     status = models.CharField(
         max_length=30,
         choices=STATUS_CHOICES,
         default=STATUS_NEW,
+        verbose_name=_("Status"),
     )
     taken_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -113,6 +130,7 @@ class CrmOrder(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name=_("Taken by"),
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -120,6 +138,7 @@ class CrmOrder(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name=_("Created by"),
     )
     delivered_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -127,50 +146,81 @@ class CrmOrder(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name=_("Delivered by"),
     )
-    weight = models.CharField(max_length=50)
-    filling = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    internal_description = models.TextField(blank=True)
-    cake_price = models.DecimalField(max_digits=10, decimal_places=2)
-    prepayment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    is_paid = models.BooleanField(default=False)
+    weight = models.CharField(max_length=50, verbose_name=_("Weight"))
+    filling = models.CharField(max_length=255, verbose_name=_("Filling"))
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    internal_description = models.TextField(blank=True, verbose_name=_("Internal description"))
+    cake_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Cake price"))
+    prepayment = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name=_("Prepayment"))
+    is_paid = models.BooleanField(default=False, verbose_name=_("Is paid"))
     payment_type = models.CharField(
         max_length=20,
         choices=PAYMENT_TYPE_CHOICES,
         default=PAYMENT_UNKNOWN,
+        verbose_name=_("Payment type"),
     )
-    payment_date = models.DateField(null=True, blank=True)
+    payment_date = models.DateField(null=True, blank=True, verbose_name=_("Payment date"))
     website_order = models.OneToOneField(
         "orders.Order",
         related_name="crm_order",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        verbose_name=_("Website order"),
     )
-    flowwow_order_id = models.IntegerField(unique=True, null=True, blank=True)
-    flowwow_synced_description = models.TextField(blank=True, default="")
-    flowwow_synced_internal_description = models.TextField(blank=True, default="")
-    deleted = models.BooleanField(default=False)
+    flowwow_order_id = models.IntegerField(unique=True, null=True, blank=True, verbose_name=_("Flowwow order id"))
+    flowwow_synced_description = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Flowwow synced description"),
+    )
+    flowwow_synced_internal_description = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Flowwow synced internal description"),
+    )
+    deleted = models.BooleanField(default=False, verbose_name=_("Deleted"))
     client_token = models.CharField(
         max_length=64,
         unique=True,
         db_index=True,
         editable=False,
         default=generate_crm_client_token,
+        verbose_name=_("Client token"),
     )
-    telegram_message_id = models.BigIntegerField(null=True, blank=True)
-    telegram_media_ids = models.JSONField(default=list)
-    telegram_payload_hash = models.CharField(max_length=64, blank=True, default="")
-    telegram_posted_date = models.DateField(null=True, blank=True)
-    telegram_posted_time_start = models.TimeField(null=True, blank=True)
-    telegram_posted_time_end = models.TimeField(null=True, blank=True)
-    telegram_posted_when_ready = models.BooleanField(default=False)
-    telegram_posted_delivery_address = models.TextField(blank=True, default="")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    telegram_message_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Telegram message id"))
+    telegram_media_ids = models.JSONField(default=list, verbose_name=_("Telegram media ids"))
+    telegram_payload_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Telegram payload hash"),
+    )
+    telegram_posted_date = models.DateField(null=True, blank=True, verbose_name=_("Telegram posted date"))
+    telegram_posted_time_start = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Telegram posted time start"),
+    )
+    telegram_posted_time_end = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Telegram posted time end"),
+    )
+    telegram_posted_when_ready = models.BooleanField(default=False, verbose_name=_("Telegram posted when ready"))
+    telegram_posted_delivery_address = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Telegram posted delivery address"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 
     class Meta:
+        verbose_name = _("CRM order")
+        verbose_name_plural = _("CRM orders")
         ordering = [
             "date",
             Case(
@@ -232,9 +282,9 @@ class CrmOrderEvent(models.Model):
     ACTION_UPDATED = "updated"
     ACTION_DELETED = "deleted"
     ACTION_CHOICES = [
-        (ACTION_CREATED, "Created"),
-        (ACTION_UPDATED, "Updated"),
-        (ACTION_DELETED, "Deleted"),
+        (ACTION_CREATED, _("Created")),
+        (ACTION_UPDATED, _("Updated")),
+        (ACTION_DELETED, _("Deleted")),
     ]
 
     SOURCE_CRM = "crm"
@@ -242,10 +292,10 @@ class CrmOrderEvent(models.Model):
     SOURCE_WEBSITE = "website"
     SOURCE_FLOWWOW = "flowwow"
     SOURCE_CHOICES = [
-        (SOURCE_CRM, "CRM"),
-        (SOURCE_ADMIN, "Admin"),
-        (SOURCE_WEBSITE, "Website"),
-        (SOURCE_FLOWWOW, "Flowwow"),
+        (SOURCE_CRM, _("CRM")),
+        (SOURCE_ADMIN, _("Admin")),
+        (SOURCE_WEBSITE, _("Website")),
+        (SOURCE_FLOWWOW, _("Flowwow")),
     ]
 
     order = models.ForeignKey(CrmOrder, related_name="events", on_delete=models.CASCADE)
@@ -305,28 +355,30 @@ class DeliveryRouteResolveFailure(models.Model):
 
 
 class ResolvedTelegramPhone(models.Model):
-    number = models.CharField(max_length=15, unique=True)
-    resolved = models.BooleanField()
-    user_id = models.BigIntegerField(null=True, blank=True)
-    username = models.CharField(max_length=32, blank=True, default="")
-    checked_at = models.DateTimeField(auto_now_add=True)
+    number = models.CharField(max_length=15, unique=True, verbose_name=_("Number"))
+    resolved = models.BooleanField(verbose_name=_("Resolved"))
+    user_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("User ID"))
+    username = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Username"))
+    checked_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Checked at"))
 
     class Meta:
-        verbose_name = "Resolved Telegram phone"
-        verbose_name_plural = "Resolved Telegram phones"
+        verbose_name = _("Resolved Telegram phone")
+        verbose_name_plural = _("Resolved Telegram phones")
 
     def __str__(self) -> str:
         return self.number
 
 
 class CrmOrderImage(models.Model):
-    order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to="crm_orders/")
-    position = models.PositiveIntegerField(default=0)
-    source_url = models.TextField(null=True, blank=True)
+    order = models.ForeignKey(CrmOrder, related_name="images", on_delete=models.CASCADE, verbose_name=_("Order"))
+    image = models.ImageField(upload_to="crm_orders/", verbose_name=_("Image"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+    source_url = models.TextField(null=True, blank=True, verbose_name=_("Source URL"))
 
     class Meta:
         ordering = ["position", "id"]
+        verbose_name = _("CRM order image")
+        verbose_name_plural = _("CRM order images")
         constraints = [
             models.UniqueConstraint(
                 fields=["order", "source_url"],
@@ -349,17 +401,21 @@ class FinancialAccount(models.Model):
     KIND_CRYPTO = "crypto"
     KIND_VIRTUAL = "virtual"
     KIND_CHOICES = [
-        (KIND_BANK, "Bank"),
-        (KIND_CASH, "Cash"),
-        (KIND_CRYPTO, "Crypto"),
-        (KIND_VIRTUAL, "Virtual"),
+        (KIND_BANK, _("Bank")),
+        (KIND_CASH, _("Cash")),
+        (KIND_CRYPTO, _("Crypto")),
+        (KIND_VIRTUAL, _("Virtual")),
     ]
 
-    name = models.CharField(max_length=100)
-    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
-    bank_name = models.CharField(max_length=100, blank=True)
-    iban = models.CharField(max_length=34, blank=True)
-    currency = models.CharField(max_length=3, default="GEL")
+    name = models.CharField(max_length=100, verbose_name=_("Name"))
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, verbose_name=_("Kind"))
+    bank_name = models.CharField(max_length=100, blank=True, verbose_name=_("Bank name"))
+    iban = models.CharField(max_length=34, blank=True, verbose_name=_("IBAN"))
+    currency = models.CharField(max_length=3, default="GEL", verbose_name=_("Currency"))
+
+    class Meta:
+        verbose_name = _("Financial account")
+        verbose_name_plural = _("Financial accounts")
 
     def __str__(self) -> str:
         return self.name
@@ -374,13 +430,13 @@ class FinancialTransaction(models.Model):
     KIND_CORRECTION = "correction"
     KIND_OTHER = "other"
     KIND_CHOICES = [
-        (KIND_INCOME, "Income"),
-        (KIND_EXPENSE, "Expense"),
-        (KIND_TRANSFER, "Transfer"),
-        (KIND_WITHDRAWAL, "Withdrawal"),
-        (KIND_INVESTMENT, "Investment"),
-        (KIND_CORRECTION, "Correction"),
-        (KIND_OTHER, "Other"),
+        (KIND_INCOME, _("Income")),
+        (KIND_EXPENSE, _("Expense")),
+        (KIND_TRANSFER, _("Transfer")),
+        (KIND_WITHDRAWAL, _("Withdrawal")),
+        (KIND_INVESTMENT, _("Investment")),
+        (KIND_CORRECTION, _("Correction")),
+        (KIND_OTHER, _("Other")),
     ]
 
     EXPENSE_SALARY = "salary"
@@ -389,11 +445,11 @@ class FinancialTransaction(models.Model):
     EXPENSE_CONSUMABLES = "consumables"
     EXPENSE_EQUIPMENT = "equipment"
     EXPENSE_TYPE_CHOICES = [
-        (EXPENSE_SALARY, "Salary"),
-        (EXPENSE_RENT, "Rent"),
-        (EXPENSE_PRODUCTS, "Products"),
-        (EXPENSE_CONSUMABLES, "Consumables"),
-        (EXPENSE_EQUIPMENT, "Equipment"),
+        (EXPENSE_SALARY, _("Salary")),
+        (EXPENSE_RENT, _("Rent")),
+        (EXPENSE_PRODUCTS, pgettext_lazy("expense type", "Products")),
+        (EXPENSE_CONSUMABLES, _("Consumables")),
+        (EXPENSE_EQUIPMENT, _("Equipment")),
     ]
 
     INCOME_ONLINE = "online"
@@ -401,39 +457,43 @@ class FinancialTransaction(models.Model):
     INCOME_CASH = "cash"
     INCOME_TRANSFER = "transfer"
     INCOME_TYPE_CHOICES = [
-        (INCOME_ONLINE, "Online"),
-        (INCOME_TERMINAL, "Terminal"),
-        (INCOME_CASH, "Cash"),
-        (INCOME_TRANSFER, "Transfer"),
+        (INCOME_ONLINE, _("Online")),
+        (INCOME_TERMINAL, _("Terminal")),
+        (INCOME_CASH, _("Cash")),
+        (INCOME_TRANSFER, _("Transfer")),
     ]
 
     account = models.ForeignKey(
         FinancialAccount,
         related_name="transactions",
         on_delete=models.PROTECT,
+        verbose_name=_("Account"),
     )
-    date = models.DateField()
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    date = models.DateField(verbose_name=_("Date"))
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name=_("Amount"))
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, verbose_name=_("Kind"))
     expense_type = models.CharField(
         max_length=20,
         choices=EXPENSE_TYPE_CHOICES,
         blank=True,
+        verbose_name=_("Expense type"),
     )
     income_type = models.CharField(
         max_length=20,
         choices=INCOME_TYPE_CHOICES,
         blank=True,
+        verbose_name=_("Income type"),
     )
-    transfer_id = models.UUIDField(null=True, blank=True)
-    counterparty_name = models.CharField(max_length=255, blank=True)
-    counterparty_iban = models.CharField(max_length=34, blank=True)
-    description = models.TextField(blank=True)
-    external_id = models.CharField(max_length=512, blank=True)
+    transfer_id = models.UUIDField(null=True, blank=True, verbose_name=_("Transfer id"))
+    counterparty_name = models.CharField(max_length=255, blank=True, verbose_name=_("Counterparty name"))
+    counterparty_iban = models.CharField(max_length=34, blank=True, verbose_name=_("Counterparty IBAN"))
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    external_id = models.CharField(max_length=512, blank=True, verbose_name=_("External id"))
     crm_orders = models.ManyToManyField(
         CrmOrder,
         related_name="financial_transactions",
         blank=True,
+        verbose_name=_("CRM orders"),
     )
     matched_transaction = models.OneToOneField(
         "self",
@@ -441,11 +501,14 @@ class FinancialTransaction(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="+",
+        verbose_name=_("Matched transaction"),
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 
     class Meta:
+        verbose_name = _("Financial transaction")
+        verbose_name_plural = _("Financial transactions")
         ordering = ["-date", "-id"]
         indexes = [
             models.Index(fields=["date"], name="crm_fin_tx_date"),
@@ -466,19 +529,19 @@ class FinancialTransaction(models.Model):
 class WhatsAppNumberCheck(CrmOrder):
     class Meta:
         proxy = True
-        verbose_name = "WhatsApp number check"
-        verbose_name_plural = "WhatsApp number check"
+        verbose_name = _("WhatsApp number check")
+        verbose_name_plural = _("WhatsApp number check")
 
 
 class WhatsAppGetNewQr(CrmOrder):
     class Meta:
         proxy = True
-        verbose_name = "WhatsApp get new QR"
-        verbose_name_plural = "WhatsApp get new QR"
+        verbose_name = _("WhatsApp get new QR")
+        verbose_name_plural = _("WhatsApp get new QR")
 
 
 class TelegramNumberCheck(CrmOrder):
     class Meta:
         proxy = True
-        verbose_name = "Telegram number check"
-        verbose_name_plural = "Telegram number check"
+        verbose_name = _("Telegram number check")
+        verbose_name_plural = _("Telegram number check")

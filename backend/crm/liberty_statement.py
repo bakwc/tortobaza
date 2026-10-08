@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.bog_statement import decimal_amount, is_filled, parse_date, text_value
@@ -62,9 +63,9 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
     ambiguous = sorted(set(ambiguous))
     messages: list[str] = []
     if missing:
-        messages.append(f"Unknown accounts: {', '.join(missing)}")
+        messages.append(_("Unknown accounts: %(accounts)s") % {"accounts": ", ".join(missing)})
     if ambiguous:
-        messages.append(f"Accounts matched more than once: {', '.join(ambiguous)}")
+        messages.append(_("Accounts matched more than once: %(accounts)s") % {"accounts": ", ".join(ambiguous)})
     if messages:
         return LibertyStatementImportResult(created=0, skipped=0, error="; ".join(messages))
 
@@ -106,9 +107,9 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
 def parse_liberty_statement(file) -> tuple[list[ParsedLibertyRow], str]:
     workbook = load_workbook(file, data_only=False)
     if SUMMARY_SHEET not in workbook.sheetnames:
-        return [], "Sheet 'Summary' not found"
+        return [], _("Sheet 'Summary' not found")
     if STATEMENT_SHEET not in workbook.sheetnames:
-        return [], "Sheet 'account_statement' not found"
+        return [], _("Sheet 'account_statement' not found")
     account_iban, error = read_account_number(workbook[SUMMARY_SHEET])
     if error:
         return [], error
@@ -125,7 +126,7 @@ def parse_liberty_statement(file) -> tuple[list[ParsedLibertyRow], str]:
             if "Date" in names and "Paid In" in names:
                 missing_columns = [name for name in REQUIRED_COLUMNS if name not in names]
                 if missing_columns:
-                    return [], f"Missing columns: {', '.join(missing_columns)}"
+                    return [], _("Missing columns: %(columns)s") % {"columns": ", ".join(missing_columns)}
                 header_map = names
             continue
         if not any(is_filled(value) for value in values):
@@ -136,7 +137,7 @@ def parse_liberty_statement(file) -> tuple[list[ParsedLibertyRow], str]:
             return [], error
         rows.append(parsed)
     if header_map is None:
-        return [], "Statement header not found"
+        return [], _("Statement header not found")
     return rows, ""
 
 
@@ -148,33 +149,33 @@ def parse_liberty_row(
 ) -> tuple[ParsedLibertyRow | None, str]:
     description = text_value(column_value(values, header_map, "Description"))
     if description == "":
-        return None, f"Row {row_number}: missing Description"
+        return None, _("Row %(row_number)s: missing Description") % {"row_number": row_number}
     document_number = text_value(column_value(values, header_map, "Document Number"))
     if document_number == "":
-        return None, f"Row {row_number}: missing Document Number"
+        return None, _("Row %(row_number)s: missing Document Number") % {"row_number": row_number}
     external_id = f"{document_number}|{description}"
     max_length = FinancialTransaction._meta.get_field("external_id").max_length
     if len(external_id) > max_length:
-        return None, f"Row {row_number}: external id is too long"
+        return None, _("Row %(row_number)s: external id is too long") % {"row_number": row_number}
     has_paid_out = is_filled(column_value(values, header_map, "Paid Out"))
     has_paid_in = is_filled(column_value(values, header_map, "Paid In"))
     if has_paid_out and has_paid_in:
-        return None, f"Row {row_number}: both paid out and paid in are set"
+        return None, _("Row %(row_number)s: both paid out and paid in are set") % {"row_number": row_number}
     if not has_paid_out and not has_paid_in:
-        return None, f"Row {row_number}: paid out and paid in are empty"
+        return None, _("Row %(row_number)s: paid out and paid in are empty") % {"row_number": row_number}
     if has_paid_in:
         amount = decimal_amount(column_value(values, header_map, "Paid In"))
         if amount <= 0:
-            return None, f"Row {row_number}: amount sign does not match paid in"
+            return None, _("Row %(row_number)s: amount sign does not match paid in") % {"row_number": row_number}
         kind = FinancialTransaction.KIND_INCOME
     else:
         amount = -decimal_amount(column_value(values, header_map, "Paid Out"))
         if amount >= 0:
-            return None, f"Row {row_number}: amount sign does not match paid out"
+            return None, _("Row %(row_number)s: amount sign does not match paid out") % {"row_number": row_number}
         kind = FinancialTransaction.KIND_EXPENSE
     parsed_date = parse_date(column_value(values, header_map, "Date"))
     if parsed_date is None:
-        return None, f"Row {row_number}: invalid date"
+        return None, _("Row %(row_number)s: invalid date") % {"row_number": row_number}
     if kind == FinancialTransaction.KIND_INCOME and description.startswith(ONLINE_PREFIX):
         income_type = FinancialTransaction.INCOME_ONLINE
     elif kind == FinancialTransaction.KIND_INCOME and description.startswith(TERMINAL_PREFIX):
@@ -211,8 +212,8 @@ def read_account_number(worksheet) -> tuple[str, str]:
     if len(numbers) == 1 and "" not in found:
         return numbers[0], ""
     if len(numbers) > 1:
-        return "", f"Multiple account numbers: {', '.join(numbers)}"
-    return "", "Account No not found"
+        return "", _("Multiple account numbers: %(numbers)s") % {"numbers": ", ".join(numbers)}
+    return "", _("Account No not found")
 
 
 def column_value(values: list, header_map: dict[str, int], name: str):

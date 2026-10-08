@@ -1,18 +1,19 @@
 {% extends "admin/base_site.html" %}
+{% load i18n %}
 
 {% block content %}
 <div id="content-main">
   <form method="post">
     {% csrf_token %}
     <div class="submit-row">
-      <input type="submit" value="Get new QR" class="default">
+      <input type="submit" value="{% trans "Get new QR" %}" class="default">
     </div>
   </form>
 
   {% if result %}
   <div class="module">
-    <p>Status: {{ result.status }}</p>
-    <img src="{{ result.qrCode }}" alt="WhatsApp QR">
+    <p>{% trans "Status" %}: {{ result.status }}</p>
+    <img src="{{ result.qrCode }}" alt="{% trans "WhatsApp QR" %}">
   </div>
   {% endif %}
 </div>
