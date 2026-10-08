@@ -170,7 +170,7 @@ class FlowwowStatementImportTests(TestCase):
         )
         self.assertEqual(withdrawal.date, date(2026, 10, 6))
         self.assertEqual(withdrawal.amount, Decimal("-391.13"))
-        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(withdrawal.description, "Withdrawal")
 
     def test_skips_duplicates(self):

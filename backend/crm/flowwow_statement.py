@@ -193,7 +193,7 @@ def transaction_kind(transaction_type: str, amount: Decimal, row_number: int) ->
     if transaction_type == WITHDRAWAL_TYPE:
         if amount > 0:
             return "", f"Row {row_number}: amount sign does not match {transaction_type}"
-        return FinancialTransaction.KIND_WITHDRAWAL, ""
+        return FinancialTransaction.KIND_TRANSFER, ""
     return "", f"Row {row_number}: unknown transaction type"
 
 

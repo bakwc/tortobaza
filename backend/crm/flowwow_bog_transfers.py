@@ -11,7 +11,7 @@ def sync_flowwow_bog_transfers() -> None:
     withdrawals = list(
         FinancialTransaction.objects.filter(
             account__name=FLOWWOW_ACCOUNT_NAME,
-            kind=FinancialTransaction.KIND_WITHDRAWAL,
+            kind=FinancialTransaction.KIND_TRANSFER,
             amount__lt=0,
             matched_transaction__isnull=True,
         )

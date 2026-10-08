@@ -39,7 +39,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             date(2026, 9, 29),
             Decimal("-259.16"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         income = _tx(
@@ -71,7 +71,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             date(2026, 9, 29),
             Decimal("-259.16"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         income = _tx(
@@ -86,7 +86,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
 
         withdrawal.refresh_from_db()
         income.refresh_from_db()
-        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
         self.assertIsNone(withdrawal.matched_transaction_id)
         self.assertIsNone(income.matched_transaction_id)
@@ -99,7 +99,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             start,
             Decimal("-10.00"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "inside",
         )
         inside_income = _tx(
@@ -113,7 +113,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             start,
             Decimal("-20.00"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "outside",
         )
         outside_income = _tx(
@@ -134,7 +134,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
         self.assertEqual(inside.matched_transaction_id, inside_income.pk)
         self.assertEqual(inside_income.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(inside_income.matched_transaction_id, inside.pk)
-        self.assertEqual(outside.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(outside.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(outside_income.kind, FinancialTransaction.KIND_INCOME)
         self.assertIsNone(outside.matched_transaction_id)
         self.assertIsNone(outside_income.matched_transaction_id)
@@ -146,7 +146,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             date(2026, 9, 10),
             Decimal("-55.30"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         income = _tx(
@@ -161,7 +161,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
 
         withdrawal.refresh_from_db()
         income.refresh_from_db()
-        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
 
     def test_skips_zero_amount(self):
@@ -171,7 +171,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             date(2026, 9, 1),
             Decimal("0.00"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         income = _tx(
@@ -186,7 +186,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
 
         withdrawal.refresh_from_db()
         income.refresh_from_db()
-        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
         self.assertIsNone(withdrawal.matched_transaction_id)
         self.assertIsNone(income.matched_transaction_id)
@@ -199,7 +199,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             start,
             Decimal("-100.00"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         first = _tx(
@@ -222,7 +222,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
         withdrawal.refresh_from_db()
         first.refresh_from_db()
         second.refresh_from_db()
-        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_WITHDRAWAL)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(first.kind, FinancialTransaction.KIND_INCOME)
         self.assertEqual(second.kind, FinancialTransaction.KIND_INCOME)
         self.assertIsNone(withdrawal.matched_transaction_id)
@@ -236,7 +236,7 @@ class SyncFlowwowBogTransfersTests(TestCase):
             flowwow,
             date(2026, 9, 8),
             Decimal("-417.87"),
-            FinancialTransaction.KIND_WITHDRAWAL,
+            FinancialTransaction.KIND_TRANSFER,
             "withdrawal",
         )
         income = _tx(
