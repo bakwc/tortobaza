@@ -311,6 +311,7 @@
     "prepaid": "Prepaid",
     "remaining": "Remaining",
     "paymentMethod": "Payment Method",
+    "paymentDate": "გადახდის თარიღი",
     "delivered": "Delivered",
     "markDelivered": "Mark Delivered",
     "statusUnconfirmed": "დაუდასტურებელი",

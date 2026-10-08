@@ -92,6 +92,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "prepayment",
             "is_paid",
             "payment_type",
+            "payment_date",
             "created_at",
             "updated_at",
             "images",
@@ -310,6 +311,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
 class CrmOrderWriteSerializer(serializers.ModelSerializer):
     time_start = serializers.TimeField(allow_null=True, required=False)
     time_end = serializers.TimeField(allow_null=True, required=False)
+    payment_date = serializers.DateField(allow_null=True, required=False)
     images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
@@ -341,6 +343,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             "prepayment",
             "is_paid",
             "payment_type",
+            "payment_date",
             "images",
             "delete_image_ids",
         ]

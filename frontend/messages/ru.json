@@ -311,6 +311,7 @@
     "prepaid": "Предоплата",
     "remaining": "К оплате",
     "paymentMethod": "Способ оплаты",
+    "paymentDate": "Дата оплаты",
     "delivered": "Доставлен",
     "markDelivered": "Отметить доставку",
     "statusUnconfirmed": "Не подтвержденный",

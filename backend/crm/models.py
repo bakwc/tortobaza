@@ -138,6 +138,7 @@ class CrmOrder(models.Model):
         choices=PAYMENT_TYPE_CHOICES,
         default=PAYMENT_UNKNOWN,
     )
+    payment_date = models.DateField(null=True, blank=True)
     website_order = models.OneToOneField(
         "orders.Order",
         related_name="crm_order",

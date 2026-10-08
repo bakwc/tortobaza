@@ -74,6 +74,7 @@ function buildCrmOrderFormData(
   form.append("prepayment", fields.prepayment);
   form.append("is_paid", fields.is_paid ? "true" : "false");
   form.append("payment_type", fields.payment_type);
+  form.append("payment_date", fields.payment_date ?? "");
   for (const file of images) {
     form.append("images", file);
   }
@@ -102,6 +103,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     prepayment: order.prepayment,
     is_paid: order.is_paid,
     payment_type: order.payment_type,
+    payment_date: order.payment_date,
   };
 }
 
@@ -124,6 +126,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     prepayment: "0",
     is_paid: false,
     payment_type: "unknown",
+    payment_date: null,
   };
 }
 
@@ -503,6 +506,18 @@ export function CrmOrderForm(
               ))}
             </RadioGroup>
           </div>
+          <label className="flex flex-col gap-1.5 sm:col-span-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+              {t("paymentDate")}
+            </span>
+            <Input
+              type="date"
+              value={fields.payment_date ?? ""}
+              onChange={(event) =>
+                setField("payment_date", event.target.value === "" ? null : event.target.value)
+              }
+            />
+          </label>
           <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
             <select
               value={fields.status}

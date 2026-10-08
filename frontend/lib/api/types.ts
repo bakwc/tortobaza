@@ -310,6 +310,7 @@ export const CrmOrderSchema = z.object({
   prepayment: z.string(),
   is_paid: z.boolean(),
   payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "flowwow", "crypto", "online"]),
+  payment_date: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   images: z.array(CrmOrderImageSchema),
@@ -487,6 +488,7 @@ export type CrmOrderWriteFields = {
   prepayment: string;
   is_paid: boolean;
   payment_type: CrmOrderPaymentType;
+  payment_date: string | null;
 };
 
 export type LoginBody = {

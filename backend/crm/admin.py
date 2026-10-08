@@ -130,7 +130,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             "Payment",
             {
-                "fields": ("cake_price", "prepayment", "is_paid", "payment_type"),
+                "fields": ("cake_price", "prepayment", "is_paid", "payment_type", "payment_date"),
             },
         ),
         (

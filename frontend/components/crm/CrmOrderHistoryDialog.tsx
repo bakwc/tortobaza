@@ -29,6 +29,7 @@ const HISTORY_FIELDS = [
   "prepayment",
   "is_paid",
   "payment_type",
+  "payment_date",
   "website_order_id",
   "flowwow_order_id",
   "deleted",
@@ -56,6 +57,7 @@ const HISTORY_FIELD_KEYS = {
   prepayment: "prepaid",
   is_paid: "paid",
   payment_type: "paymentMethod",
+  payment_date: "paymentDate",
   website_order_id: "historyFieldWebsiteOrder",
   flowwow_order_id: "historyFieldFlowwowOrder",
   deleted: "historyFieldDeleted",
@@ -172,7 +174,7 @@ function CrmOrderHistoryBody({ orderId }: { orderId: number }) {
       if (field === "fulfillment_type" && value === "delivery") return t("delivery");
       if (field === "fulfillment_type" && value === "pickup") return t("pickup");
       if (field === "payment_type") return paymentTypeLabel(value, t);
-      if (field === "date") return formatTimeslotDateLabel(value, locale);
+      if (field === "date" || field === "payment_date") return formatTimeslotDateLabel(value, locale);
       if (field === "time_start" || field === "time_end") return value.slice(0, 5);
       if (field === "cake_price" || field === "prepayment") return formatAed(value);
       return value;

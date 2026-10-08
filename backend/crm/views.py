@@ -143,6 +143,8 @@ def crm_order_write_payload(request):
         payload["time_start"] = None
     if payload.get("time_end") == "":
         payload["time_end"] = None
+    if payload.get("payment_date") == "":
+        payload["payment_date"] = None
     payload["images"] = request.FILES.getlist("images")
     payload["delete_image_ids"] = request.data.getlist("delete_image_ids")
     return payload

@@ -26,6 +26,7 @@ TRACKED_FIELDS = (
     "prepayment",
     "is_paid",
     "payment_type",
+    "payment_date",
     "website_order_id",
     "flowwow_order_id",
     "deleted",
