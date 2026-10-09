@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 
 from crm.bog_statement import decimal_amount, is_filled, parse_date, text_value
 from crm.models import FinancialAccount, FinancialTransaction
+from crm.transaction_rules import assign_expense_types
 
 SUMMARY_SHEET = "Summary"
 STATEMENT_SHEET = "account_statement"
@@ -100,6 +101,7 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
                     external_id=row.external_id,
                 )
             )
+        assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
     return LibertyStatementImportResult(created=len(to_create), skipped=skipped, error="")
 

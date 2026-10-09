@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin, messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.forms.models import BaseInlineFormSet
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -18,11 +19,14 @@ from crm.models import (
     CrmSettings,
     FinancialAccount,
     FinancialTransaction,
+    FinancialTransactionRule,
+    FinancialTransactionRuleCondition,
     ResolvedTelegramPhone,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
 )
+from crm.transaction_rules import categorize_uncategorized_expenses
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.telegram_user import resolve_phone
 from crm.website import sync_website_order_status_from_crm
@@ -329,6 +333,37 @@ class FinancialAccountAdmin(admin.ModelAdmin):
     search_fields = ["name", "bank_name", "iban"]
 
 
+class FinancialTransactionRuleConditionFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+        count = 0
+        for form in self.forms:
+            if not form.cleaned_data:
+                continue
+            if form.cleaned_data.get("DELETE"):
+                continue
+            count += 1
+        if count == 0:
+            raise ValidationError(_("Add at least one condition."))
+
+
+class FinancialTransactionRuleConditionInline(admin.TabularInline):
+    model = FinancialTransactionRuleCondition
+    formset = FinancialTransactionRuleConditionFormSet
+    extra = 1
+    fields = ["field", "pattern"]
+
+
+@admin.register(FinancialTransactionRule)
+class FinancialTransactionRuleAdmin(admin.ModelAdmin):
+    list_display = ["name", "expense_type", "operator", "priority", "is_active"]
+    list_filter = ["expense_type", "operator", "is_active"]
+    ordering = ["priority", "id"]
+    inlines = [FinancialTransactionRuleConditionInline]
+
+
 @admin.register(FinancialTransaction)
 class FinancialTransactionAdmin(admin.ModelAdmin):
     list_display = [
@@ -376,8 +411,34 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.upload_flowwow_view),
                 name="crm_financialtransaction_upload_flowwow",
             ),
+            path(
+                "apply-rules/",
+                self.admin_site.admin_view(self.apply_rules_view),
+                name="crm_financialtransaction_apply_rules",
+            ),
         ]
         return urls + super().get_urls()
+
+    def apply_rules_view(self, request):
+        if not self.has_change_permission(request):
+            raise PermissionDenied
+        if request.method == "POST":
+            categorized = categorize_uncategorized_expenses()
+            self.message_user(
+                request,
+                _("Categorized %(count)s transactions.") % {"count": categorized},
+            )
+            return redirect("admin:crm_financialtransaction_changelist")
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Apply categorization rules"),
+        }
+        return TemplateResponse(
+            request,
+            "admin/crm/financialtransaction/apply_rules.html",
+            context,
+        )
 
     def upload_bog_view(self, request):
         if not self.has_add_permission(request):

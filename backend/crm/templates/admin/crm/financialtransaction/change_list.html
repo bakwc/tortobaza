@@ -3,6 +3,9 @@
 
 {% block object-tools-items %}
 <li>
+  <a href="{% url 'admin:crm_financialtransaction_apply_rules' %}">{% trans "Apply rules to the entire database" %}</a>
+</li>
+<li>
   <a href="{% url 'admin:crm_financialtransaction_upload_bog' %}">{% trans "Upload Bank of Georgia statement" %}</a>
 </li>
 <li>

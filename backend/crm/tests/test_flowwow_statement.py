@@ -6,7 +6,12 @@ from django.test import TestCase
 from openpyxl import Workbook
 
 from crm.flowwow_statement import import_flowwow_statement
-from crm.models import FinancialAccount, FinancialTransaction
+from crm.models import (
+    FinancialAccount,
+    FinancialTransaction,
+    FinancialTransactionRule,
+    FinancialTransactionRuleCondition,
+)
 
 HEADERS = [
     "Contract number",
@@ -172,6 +177,35 @@ class FlowwowStatementImportTests(TestCase):
         self.assertEqual(withdrawal.amount, Decimal("-391.13"))
         self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(withdrawal.description, "Withdrawal")
+
+    def test_applies_expense_rule(self):
+        _account()
+        rule = FinancialTransactionRule.objects.create(
+            name="Card fee",
+            expense_type=FinancialTransaction.EXPENSE_FEES,
+            priority=1,
+            operator=FinancialTransactionRule.OPERATOR_OR,
+            is_active=True,
+        )
+        FinancialTransactionRuleCondition.objects.create(
+            rule=rule,
+            field=FinancialTransactionRuleCondition.FIELD_DESCRIPTION,
+            pattern="Card processing fee",
+        )
+        result = import_flowwow_statement(_statement([_paid(), _fee(), _withdrawal()]))
+        self.assertEqual(result.error, "")
+        fee = FinancialTransaction.objects.get(
+            external_id="26136332|Card processing fee|2026-10-07 13:00:24|-0.30"
+        )
+        income = FinancialTransaction.objects.get(
+            external_id="26136332|Paid by customer|2026-10-07 13:00:24|75.00"
+        )
+        withdrawal = FinancialTransaction.objects.get(
+            external_id="2450790|Withdrawal|2026-10-06 12:08:51|-391.13"
+        )
+        self.assertEqual(fee.expense_type, FinancialTransaction.EXPENSE_FEES)
+        self.assertEqual(income.expense_type, "")
+        self.assertEqual(withdrawal.expense_type, "")
 
     def test_skips_duplicates(self):
         _account()

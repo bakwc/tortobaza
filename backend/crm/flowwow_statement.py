@@ -10,6 +10,7 @@ from openpyxl import load_workbook
 
 from crm.bog_statement import column_value, decimal_amount, is_filled, text_value
 from crm.models import FinancialAccount, FinancialTransaction
+from crm.transaction_rules import assign_expense_types
 
 ACCOUNT_NAME = "Flowwow"
 COUNTERPARTY_NAME = "Flowwow"
@@ -101,6 +102,7 @@ def import_flowwow_statement(file) -> FlowwowStatementImportResult:
                     external_id=row.external_id,
                 )
             )
+        assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
     return FlowwowStatementImportResult(created=len(to_create), skipped=skipped, error="")
 

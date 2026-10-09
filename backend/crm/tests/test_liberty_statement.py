@@ -6,7 +6,12 @@ from django.test import TestCase
 from openpyxl import Workbook
 
 from crm.liberty_statement import import_liberty_statement
-from crm.models import FinancialAccount, FinancialTransaction
+from crm.models import (
+    FinancialAccount,
+    FinancialTransaction,
+    FinancialTransactionRule,
+    FinancialTransactionRuleCondition,
+)
 
 IBAN = "GE53LB0112183991465000"
 EXCEL_EPOCH = datetime(1899, 12, 30)
@@ -142,6 +147,29 @@ class LibertyStatementImportTests(TestCase):
         self.assertEqual(fee.amount, Decimal("-2.00"))
         self.assertEqual(fee.kind, FinancialTransaction.KIND_EXPENSE)
         self.assertEqual(fee.income_type, "")
+
+    def test_applies_expense_rule(self):
+        _account()
+        rule = FinancialTransactionRule.objects.create(
+            name="Transfer fee",
+            expense_type=FinancialTransaction.EXPENSE_FEES,
+            priority=1,
+            operator=FinancialTransactionRule.OPERATOR_OR,
+            is_active=True,
+        )
+        FinancialTransactionRuleCondition.objects.create(
+            rule=rule,
+            field=FinancialTransactionRuleCondition.FIELD_DESCRIPTION,
+            pattern="*საკომისიო",
+        )
+        result = import_liberty_statement(_statement([_transfer(), _fee()]))
+        self.assertEqual(result.error, "")
+        fee = FinancialTransaction.objects.get(external_id=f"{SHARED_DOCUMENT_NUMBER}|{FEE_DESCRIPTION}")
+        transfer = FinancialTransaction.objects.get(
+            external_id=f"{SHARED_DOCUMENT_NUMBER}|{TRANSFER_DESCRIPTION}"
+        )
+        self.assertEqual(fee.expense_type, FinancialTransaction.EXPENSE_FEES)
+        self.assertEqual(transfer.expense_type, "")
 
     def test_skips_duplicates(self):
         _account()

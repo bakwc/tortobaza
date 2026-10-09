@@ -7,6 +7,7 @@ from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.models import FinancialAccount, FinancialTransaction
+from crm.transaction_rules import assign_expense_types
 
 SHEET_NAME = "Statement of Account"
 REQUIRED_COLUMNS = (
@@ -100,6 +101,7 @@ def import_bog_statement(file) -> BogStatementImportResult:
                     external_id=row.external_id,
                 )
             )
+        assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
     return BogStatementImportResult(created=len(to_create), skipped=skipped, error="")
 

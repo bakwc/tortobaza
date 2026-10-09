@@ -499,7 +499,8 @@
       "rent": "ქირა",
       "products": "პროდუქტები",
       "consumables": "სახარჯი მასალა",
-      "equipment": "აღჭურვილობა"
+      "equipment": "აღჭურვილობა",
+      "fees": "საკომისიოები"
     },
     "accountKinds": {
       "bank": "ბანკი",

@@ -499,7 +499,8 @@
       "rent": "Аренда",
       "products": "Продукты",
       "consumables": "Расходники",
-      "equipment": "Оборудование"
+      "equipment": "Оборудование",
+      "fees": "Комиссии"
     },
     "accountKinds": {
       "bank": "Банк",

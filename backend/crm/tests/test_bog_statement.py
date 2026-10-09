@@ -6,7 +6,12 @@ from django.test import TestCase
 from openpyxl import Workbook
 
 from crm.bog_statement import import_bog_statement
-from crm.models import FinancialAccount, FinancialTransaction
+from crm.models import (
+    FinancialAccount,
+    FinancialTransaction,
+    FinancialTransactionRule,
+    FinancialTransactionRuleCondition,
+)
 
 GEL_IBAN = "GE94BG0000000612361573GEL"
 USD_IBAN = "GE94BG0000000612361573USD"
@@ -162,6 +167,27 @@ class BogStatementImportTests(TestCase):
         self.assertEqual(mixed.created, 1)
         self.assertEqual(mixed.skipped, 2)
         self.assertEqual(FinancialTransaction.objects.count(), 4)
+
+    def test_applies_expense_rule(self):
+        _account(GEL_IBAN, "GEL", "SWEET CHILL")
+        rule = FinancialTransactionRule.objects.create(
+            name="Maintenance",
+            expense_type=FinancialTransaction.EXPENSE_FEES,
+            priority=1,
+            operator=FinancialTransactionRule.OPERATOR_OR,
+            is_active=True,
+        )
+        FinancialTransactionRuleCondition.objects.create(
+            rule=rule,
+            field=FinancialTransactionRuleCondition.FIELD_DESCRIPTION,
+            pattern="*Maintenance Fee",
+        )
+        result = import_bog_statement(_statement([_income(), _expense()]))
+        self.assertEqual(result.error, "")
+        expense = FinancialTransaction.objects.get(external_id="119001305817")
+        income = FinancialTransaction.objects.get(external_id="118945436567")
+        self.assertEqual(expense.expense_type, FinancialTransaction.EXPENSE_FEES)
+        self.assertEqual(income.expense_type, "")
 
     def test_unknown_iban_creates_nothing(self):
         _account(GEL_IBAN, "GEL", "SWEET CHILL")

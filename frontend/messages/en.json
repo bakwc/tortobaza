@@ -499,7 +499,8 @@
       "rent": "Rent",
       "products": "Products",
       "consumables": "Consumables",
-      "equipment": "Equipment"
+      "equipment": "Equipment",
+      "fees": "Fees"
     },
     "accountKinds": {
       "bank": "Bank",

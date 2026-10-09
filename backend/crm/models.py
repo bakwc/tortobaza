@@ -444,12 +444,14 @@ class FinancialTransaction(models.Model):
     EXPENSE_PRODUCTS = "products"
     EXPENSE_CONSUMABLES = "consumables"
     EXPENSE_EQUIPMENT = "equipment"
+    EXPENSE_FEES = "fees"
     EXPENSE_TYPE_CHOICES = [
         (EXPENSE_SALARY, _("Salary")),
         (EXPENSE_RENT, _("Rent")),
         (EXPENSE_PRODUCTS, pgettext_lazy("expense type", "Products")),
         (EXPENSE_CONSUMABLES, _("Consumables")),
         (EXPENSE_EQUIPMENT, _("Equipment")),
+        (EXPENSE_FEES, _("Fees")),
     ]
 
     INCOME_ONLINE = "online"
@@ -524,6 +526,63 @@ class FinancialTransaction(models.Model):
 
     def __str__(self) -> str:
         return f"{self.date} {self.amount} {self.account}"
+
+
+class FinancialTransactionRule(models.Model):
+    OPERATOR_AND = "and"
+    OPERATOR_OR = "or"
+    OPERATOR_CHOICES = [
+        (OPERATOR_AND, _("And")),
+        (OPERATOR_OR, _("Or")),
+    ]
+
+    name = models.CharField(max_length=255, verbose_name=_("Name"))
+    expense_type = models.CharField(
+        max_length=20,
+        choices=FinancialTransaction.EXPENSE_TYPE_CHOICES,
+        verbose_name=_("Expense type"),
+    )
+    priority = models.IntegerField(verbose_name=_("Priority"))
+    is_active = models.BooleanField(default=True, verbose_name=_("Active"))
+    operator = models.CharField(max_length=3, choices=OPERATOR_CHOICES, verbose_name=_("Operator"))
+
+    class Meta:
+        verbose_name = _("Financial transaction rule")
+        verbose_name_plural = _("Financial transaction rules")
+        ordering = ["priority", "id"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class FinancialTransactionRuleCondition(models.Model):
+    FIELD_ACCOUNT_IBAN = "account_iban"
+    FIELD_COUNTERPARTY_IBAN = "counterparty_iban"
+    FIELD_COUNTERPARTY_NAME = "counterparty_name"
+    FIELD_DESCRIPTION = "description"
+    FIELD_CHOICES = [
+        (FIELD_ACCOUNT_IBAN, _("Account IBAN")),
+        (FIELD_COUNTERPARTY_IBAN, _("Counterparty IBAN")),
+        (FIELD_COUNTERPARTY_NAME, _("Counterparty name")),
+        (FIELD_DESCRIPTION, _("Description")),
+    ]
+
+    rule = models.ForeignKey(
+        FinancialTransactionRule,
+        related_name="conditions",
+        on_delete=models.CASCADE,
+        verbose_name=_("Rule"),
+    )
+    field = models.CharField(max_length=32, choices=FIELD_CHOICES, verbose_name=_("Field"))
+    pattern = models.CharField(max_length=512, verbose_name=_("Pattern"))
+
+    class Meta:
+        verbose_name = _("Financial transaction rule condition")
+        verbose_name_plural = _("Financial transaction rule conditions")
+        ordering = ["id"]
+
+    def __str__(self) -> str:
+        return f"{self.field} {self.pattern}"
 
 
 class WhatsAppNumberCheck(CrmOrder):
