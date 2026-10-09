@@ -335,6 +335,9 @@ msgstr "Загрузить выписку Liberty"
 msgid "Upload Flowwow statement"
 msgstr "Загрузить выписку Flowwow"
 
+msgid "Upload TBC statement"
+msgstr "Загрузить выписку TBC"
+
 msgid "CRM"
 msgstr "CRM"
 
@@ -393,6 +396,31 @@ msgstr "Счёт Flowwow не найден"
 
 msgid "Flowwow account matched more than once"
 msgstr "Счёт Flowwow найден больше одного раза"
+
+msgid "TBC account not found"
+msgstr "Счёт TBC не найден"
+
+msgid "TBC account matched more than once"
+msgstr "Счёт TBC найден больше одного раза"
+
+msgid "Sheet 'Операции' not found"
+msgstr "Лист «Операции» не найден"
+
+#, python-format
+msgid "Row %(row_number)s: missing operation description"
+msgstr "Строка %(row_number)s: нет описания операции"
+
+#, python-format
+msgid "Row %(row_number)s: missing additional information"
+msgstr "Строка %(row_number)s: нет дополнительной информации"
+
+#, python-format
+msgid "Row %(row_number)s: additional information must have three parts"
+msgstr "Строка %(row_number)s: дополнительная информация должна состоять из трёх частей"
+
+#, python-format
+msgid "Row %(row_number)s: missing IBAN"
+msgstr "Строка %(row_number)s: нет IBAN"
 
 #, python-format
 msgid "Row %(row_number)s: missing Transaction type"
