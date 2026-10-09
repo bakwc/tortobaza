@@ -285,6 +285,7 @@
     "paymentTbank": "T-Bank Transfer",
     "paymentFlowwow": "Flowwow",
     "paymentCrypto": "Cryptocurrency",
+    "paymentPaypal": "PayPal",
     "paymentOnline": "Online on website",
     "enlargeTitle": "Click to enlarge",
     "orderAlt": "Order #{id}",

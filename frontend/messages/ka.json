@@ -285,6 +285,7 @@
     "paymentTbank": "T-Bank Transfer",
     "paymentFlowwow": "Flowwow",
     "paymentCrypto": "კრიპტოვალუტა",
+    "paymentPaypal": "PayPal",
     "paymentOnline": "ონლაინ საიტზე",
     "enlargeTitle": "Click to enlarge",
     "orderAlt": "Order #{id}",

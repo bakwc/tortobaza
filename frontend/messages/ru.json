@@ -285,6 +285,7 @@
     "paymentTbank": "Перевод T-Bank",
     "paymentFlowwow": "Flowwow",
     "paymentCrypto": "Криптовалюта",
+    "paymentPaypal": "PayPal",
     "paymentOnline": "Онлайн на сайте",
     "enlargeTitle": "Нажмите, чтобы увеличить",
     "orderAlt": "Заказ #{id}",

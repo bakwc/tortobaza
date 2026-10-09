@@ -309,7 +309,7 @@ export const CrmOrderSchema = z.object({
   cake_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
-  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "online"]),
+  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
   payment_date: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -485,7 +485,7 @@ export const CrmClientOrderSchema = z.object({
   cake_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
-  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "online"]),
+  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
   images: z.array(CrmOrderImageSchema),
   google_maps_url: z.string().nullable(),
 });

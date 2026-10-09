@@ -219,6 +219,7 @@ export function CrmOrderForm(
     { value: "tbank", label: t("paymentTbank") },
     { value: "flowwow", label: t("paymentFlowwow") },
     { value: "crypto", label: t("paymentCrypto") },
+    { value: "paypal", label: t("paymentPaypal") },
     { value: "online", label: t("paymentOnline") },
   ];
 

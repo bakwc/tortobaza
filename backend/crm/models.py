@@ -60,6 +60,7 @@ class CrmOrder(models.Model):
     PAYMENT_TBANK = "tbank"
     PAYMENT_FLOWWOW = "flowwow"
     PAYMENT_CRYPTO = "crypto"
+    PAYMENT_PAYPAL = "paypal"
     PAYMENT_ONLINE = "online"
     PAYMENT_TYPE_CHOICES = [
         (PAYMENT_UNKNOWN, _("Unknown")),
@@ -70,6 +71,7 @@ class CrmOrder(models.Model):
         (PAYMENT_TBANK, _("T-Bank Transfer")),
         (PAYMENT_FLOWWOW, _("Flowwow")),
         (PAYMENT_CRYPTO, _("Cryptocurrency")),
+        (PAYMENT_PAYPAL, _("PayPal")),
         (PAYMENT_ONLINE, _("Online on website")),
     ]
 

@@ -32,6 +32,7 @@ _PAYMENT_LABELS = {
     CrmOrder.PAYMENT_TBANK: "T-Bank",
     CrmOrder.PAYMENT_FLOWWOW: "Flowwow",
     CrmOrder.PAYMENT_CRYPTO: "Криптовалюта",
+    CrmOrder.PAYMENT_PAYPAL: "PayPal",
     CrmOrder.PAYMENT_ONLINE: "Онлайн на сайте",
 }
 

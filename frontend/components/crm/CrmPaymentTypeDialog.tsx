@@ -19,6 +19,7 @@ const PAYMENT_TYPE_MESSAGE_KEYS = {
   tbank: "paymentTbank",
   flowwow: "paymentFlowwow",
   crypto: "paymentCrypto",
+  paypal: "paymentPaypal",
   online: "paymentOnline",
 } as const;
 
@@ -31,6 +32,7 @@ const PAYMENT_TYPES = [
   "tbank",
   "flowwow",
   "crypto",
+  "paypal",
   "online",
 ] as const satisfies CrmOrderPaymentType[];
 
