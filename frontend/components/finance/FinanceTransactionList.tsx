@@ -399,6 +399,13 @@ function RowShell({
   );
 }
 
+function typeChipClass(kind: FinanceTransaction["kind"]): string {
+  if (kind === "expense") {
+    return "bg-amber-600 text-white";
+  }
+  return "bg-white/80 text-[var(--ink)]";
+}
+
 function Chip({ className, children }: { className: string; children: ReactNode }) {
   return (
     <span
@@ -437,7 +444,7 @@ function TransactionRow({
               ? t(isIncomingTransfer(tx) ? "transferIncoming" : "transferOutgoing")
               : t(`kinds.${tx.kind}`)}
           </Chip>
-          {typeLabel ? <Chip className="bg-white/80 text-[var(--ink)]">{typeLabel}</Chip> : null}
+          {typeLabel ? <Chip className={typeChipClass(tx.kind)}>{typeLabel}</Chip> : null}
           <Chip className="bg-white/80 text-[var(--muted-2)]">{tx.account.name}</Chip>
           {tx.kind === "transfer" && tx.matched_account ? (
             <Chip className="bg-white/80 text-sky-800">
@@ -601,7 +608,7 @@ function TransactionDetail({
             <TxIcon tx={tx} />
           </div>
           <Chip className={tone.chip}>{kindLabel}</Chip>
-          {typeLabel ? <Chip className="bg-white/80 text-[var(--ink)]">{typeLabel}</Chip> : null}
+          {typeLabel ? <Chip className={typeChipClass(tx.kind)}>{typeLabel}</Chip> : null}
         </div>
         <DialogTitle className="text-lg font-semibold text-[var(--ink)]">
           {tx.counterparty_name || t(`kinds.${tx.kind}`)}
