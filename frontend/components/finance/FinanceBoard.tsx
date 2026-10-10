@@ -18,12 +18,13 @@ import { useFinanceTransactions } from "@/hooks/useFinanceTransactions";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
-export type FinanceSection = "operations" | "income" | "expenses";
+export type FinanceSection = "operations" | "income" | "expenses" | "accounts";
 
-const SECTIONS: { section: FinanceSection; href: string; label: "operations" | "income" | "expenses" }[] = [
+const SECTIONS: { section: FinanceSection; href: string; label: FinanceSection }[] = [
   { section: "operations", href: "/finance", label: "operations" },
   { section: "income", href: "/finance/income", label: "income" },
   { section: "expenses", href: "/finance/expenses", label: "expenses" },
+  { section: "accounts", href: "/finance/accounts", label: "accounts" },
 ];
 
 export function FinanceBoard({
