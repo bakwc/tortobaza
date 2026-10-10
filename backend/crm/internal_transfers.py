@@ -3,6 +3,8 @@ from django.db import transaction
 from crm.models import FinancialAccount, FinancialTransaction
 
 BOG_BANK_NAME = "Bank Of Georgia"
+TBC_BANK_NAME = "TBC"
+ATM_CASH_PREFIX = "ATM CASH"
 WINDOW_DAYS = 3
 
 
@@ -23,6 +25,7 @@ def sync_internal_transfers() -> None:
     with transaction.atomic():
         mark_transfers(candidates, fee_ids)
         pair_transfers(by_key)
+        pair_tbc_atm_withdrawals()
 
 
 def bank_accounts_by_iban() -> dict[tuple[str, str], FinancialAccount]:
@@ -137,4 +140,39 @@ def pair_transfers(by_key: dict[tuple[str, str], FinancialAccount]) -> None:
         outgoing.matched_transaction = incoming
         incoming.matched_transaction = outgoing
         outgoing.save(update_fields=["matched_transaction", "updated_at"])
+        incoming.save(update_fields=["matched_transaction", "updated_at"])
+
+
+def pair_tbc_atm_withdrawals() -> None:
+    withdrawals = list(
+        FinancialTransaction.objects.filter(
+            account__bank_name=TBC_BANK_NAME,
+            account__kind=FinancialAccount.KIND_BANK,
+            amount__lt=0,
+            matched_transaction__isnull=True,
+            description__startswith=ATM_CASH_PREFIX,
+        ).select_related("account")
+    )
+    if not withdrawals:
+        return
+    cash = (
+        FinancialAccount.objects.filter(kind=FinancialAccount.KIND_CASH)
+        .order_by("pk")
+        .first()
+    )
+    if cash is None:
+        raise FinancialAccount.DoesNotExist
+    for tx in withdrawals:
+        incoming = FinancialTransaction.objects.create(
+            account=cash,
+            date=tx.date,
+            amount=-tx.amount,
+            kind=FinancialTransaction.KIND_TRANSFER,
+            description=tx.description,
+            external_id=tx.external_id,
+        )
+        tx.kind = FinancialTransaction.KIND_TRANSFER
+        tx.matched_transaction = incoming
+        incoming.matched_transaction = tx
+        tx.save(update_fields=["kind", "matched_transaction", "updated_at"])
         incoming.save(update_fields=["matched_transaction", "updated_at"])
