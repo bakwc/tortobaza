@@ -9,7 +9,9 @@ type AccountSummary = {
   name: string;
   total: number;
   plus: number;
+  plusCents: number;
   minus: number;
+  minusCents: number;
   deltaCents: number;
 };
 
@@ -23,12 +25,20 @@ function summarize(transactions: FinanceTransaction[]): AccountSummary[] {
       name: tx.account.name,
       total: 0,
       plus: 0,
+      plusCents: 0,
       minus: 0,
+      minusCents: 0,
       deltaCents: 0,
     };
     row.total += 1;
-    if (cents > 0) row.plus += 1;
-    if (cents < 0) row.minus += 1;
+    if (cents > 0) {
+      row.plus += 1;
+      row.plusCents += cents;
+    }
+    if (cents < 0) {
+      row.minus += 1;
+      row.minusCents += cents;
+    }
     row.deltaCents += cents;
     if (!existing) byId.set(tx.account.id, row);
   }
@@ -73,13 +83,19 @@ export function FinanceAccountList({ transactions }: { transactions: FinanceTran
                 <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
                   {t("plus")}
                 </dt>
-                <dd className="mt-1 text-lg font-semibold text-emerald-700">{account.plus}</dd>
+                <dd className="mt-1 text-lg font-semibold text-emerald-700">
+                  {account.plus}{" "}
+                  <span className="text-sm font-medium">(+{formatAed(account.plusCents / 100)})</span>
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
                   {t("minus")}
                 </dt>
-                <dd className="mt-1 text-lg font-semibold text-rose-700">{account.minus}</dd>
+                <dd className="mt-1 text-lg font-semibold text-rose-700">
+                  {account.minus}{" "}
+                  <span className="text-sm font-medium">({formatAed(account.minusCents / 100)})</span>
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
