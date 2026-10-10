@@ -501,7 +501,10 @@
       "products": "Продукты",
       "consumables": "Расходники",
       "equipment": "Оборудование",
-      "fees": "Комиссии"
+      "fees": "Комиссии",
+      "taxi": "Такси",
+      "gasoline": "Бензин",
+      "marketing": "Маркетинг"
     },
     "accountKinds": {
       "bank": "Банк",

@@ -501,7 +501,10 @@
       "products": "Products",
       "consumables": "Consumables",
       "equipment": "Equipment",
-      "fees": "Fees"
+      "fees": "Fees",
+      "taxi": "Taxi",
+      "gasoline": "Gasoline",
+      "marketing": "Marketing"
     },
     "accountKinds": {
       "bank": "Bank",

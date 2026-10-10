@@ -501,7 +501,10 @@
       "products": "პროდუქტები",
       "consumables": "სახარჯი მასალა",
       "equipment": "აღჭურვილობა",
-      "fees": "საკომისიოები"
+      "fees": "საკომისიოები",
+      "taxi": "ტაქსი",
+      "gasoline": "ბენზინი",
+      "marketing": "მარკეტინგი"
     },
     "accountKinds": {
       "bank": "ბანკი",

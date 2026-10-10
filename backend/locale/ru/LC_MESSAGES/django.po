@@ -759,6 +759,15 @@ msgstr "Расходники"
 msgid "Equipment"
 msgstr "Оборудование"
 
+msgid "Taxi"
+msgstr "Такси"
+
+msgid "Gasoline"
+msgstr "Бензин"
+
+msgid "Marketing"
+msgstr "Маркетинг"
+
 msgid "Online"
 msgstr "Онлайн"
 

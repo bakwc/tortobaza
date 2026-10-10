@@ -447,6 +447,9 @@ class FinancialTransaction(models.Model):
     EXPENSE_CONSUMABLES = "consumables"
     EXPENSE_EQUIPMENT = "equipment"
     EXPENSE_FEES = "fees"
+    EXPENSE_TAXI = "taxi"
+    EXPENSE_GASOLINE = "gasoline"
+    EXPENSE_MARKETING = "marketing"
     EXPENSE_TYPE_CHOICES = [
         (EXPENSE_SALARY, _("Salary")),
         (EXPENSE_RENT, _("Rent")),
@@ -454,6 +457,9 @@ class FinancialTransaction(models.Model):
         (EXPENSE_CONSUMABLES, _("Consumables")),
         (EXPENSE_EQUIPMENT, _("Equipment")),
         (EXPENSE_FEES, _("Fees")),
+        (EXPENSE_TAXI, _("Taxi")),
+        (EXPENSE_GASOLINE, _("Gasoline")),
+        (EXPENSE_MARKETING, _("Marketing")),
     ]
 
     INCOME_ONLINE = "online"

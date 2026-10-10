@@ -7,7 +7,7 @@ import { formatAed } from "@/lib/format";
 import type { FinancePeriodMode } from "@/hooks/useFinancePeriod";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
-const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees"] as const;
+const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing"] as const;
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);

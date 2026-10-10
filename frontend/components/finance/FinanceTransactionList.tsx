@@ -19,7 +19,7 @@ import { formatAed, formatCrmCompactDate, formatCrmDate, formatCrmDateTime } fro
 import { cn } from "@/lib/utils";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
-const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees"] as const;
+const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing"] as const;
 const ACCOUNT_KINDS = ["bank", "cash", "crypto", "virtual"] as const;
 
 type FinanceRow =
