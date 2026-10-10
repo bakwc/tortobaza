@@ -65,13 +65,20 @@ export function FinanceBreakdown({
     label: typeLabel(typeField, row.key, t),
     amount: row.amount,
   }));
-  const byCounterparty = group(transactions, (tx) => tx.counterparty_name || "unspecified")
-    .slice(0, 20)
-    .map((row) => ({
-      key: row.key,
-      label: row.key === "unspecified" ? t("unspecifiedCounterparty") : row.key,
-      amount: row.amount,
-    }));
+  const counterparties = group(transactions, (tx) => tx.counterparty_name || "unspecified");
+  const otherAmount = counterparties.slice(20).reduce((sum, row) => sum + row.amount, 0);
+  const byCounterparty = counterparties.slice(0, 20).map((row) => ({
+    key: row.key,
+    label: row.key === "unspecified" ? t("unspecifiedCounterparty") : row.key,
+    amount: row.amount,
+  }));
+  if (otherAmount > 0) {
+    byCounterparty.push({
+      key: "other",
+      label: t("otherCounterparties"),
+      amount: otherAmount,
+    });
+  }
   const byDay =
     mode === "month"
       ? monthDays(month).map((day) => ({

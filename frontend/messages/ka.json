@@ -469,6 +469,7 @@
     "byDay": "დღეების მიხედვით",
     "unspecified": "ტიპის გარეშე",
     "unspecifiedCounterparty": "კონტრაგენტის გარეშე",
+    "otherCounterparties": "სხვა კონტრაგენტები",
     "empty": "ამ პერიოდში ოპერაციები არ არის.",
     "loadError": "ოპერაციების ჩატვირთვა ვერ მოხერხდა. სცადეთ თავიდან.",
     "flowwowOrder": "Flowwow #{id}",

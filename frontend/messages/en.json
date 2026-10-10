@@ -469,6 +469,7 @@
     "byDay": "By day",
     "unspecified": "Unspecified",
     "unspecifiedCounterparty": "No counterparty",
+    "otherCounterparties": "Other counterparties",
     "empty": "No operations in this period.",
     "loadError": "Could not load operations. Try again.",
     "flowwowOrder": "Flowwow #{id}",

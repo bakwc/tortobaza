@@ -469,6 +469,7 @@
     "byDay": "По дням",
     "unspecified": "Без типа",
     "unspecifiedCounterparty": "Без контрагента",
+    "otherCounterparties": "Прочие контрагенты",
     "empty": "За этот период операций нет.",
     "loadError": "Не удалось загрузить операции. Попробуйте ещё раз.",
     "flowwowOrder": "Flowwow #{id}",
