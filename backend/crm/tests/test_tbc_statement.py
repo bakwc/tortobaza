@@ -106,9 +106,37 @@ class TbcStatementImportTests(TestCase):
         self.assertEqual(expense.amount, Decimal("-4.70"))
         self.assertEqual(expense.kind, FinancialTransaction.KIND_EXPENSE)
         self.assertEqual(expense.income_type, "")
-        self.assertEqual(expense.counterparty_name, "TBCBank merchant")
+        self.assertEqual(expense.counterparty_name, "POS - Vip Pay*YANDEX.GO")
         self.assertEqual(expense.counterparty_iban, "GE35TB0002511341111111")
         self.assertEqual(expense.description, f"{EXPENSE_OPERATION} | {EXPENSE_ADDITIONAL}")
+
+    def test_transfer_expense_keeps_counterparty_from_additional_information(self):
+        _account("TBC card", "TBC")
+        row = _expense()
+        row["Описание операции"] = "Private transfer within TBC"
+        row["Дополнительная информация"] = INCOME_ADDITIONAL
+        result = import_tbc_statement(_statement([row]))
+        self.assertEqual(result.error, "")
+        expense = FinancialTransaction.objects.get()
+        self.assertEqual(expense.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.counterparty_name, "ავთანდილ გორგაძე")
+
+    def test_reimport_updates_card_expense_counterparty(self):
+        _account("TBC card", "TBC")
+        import_tbc_statement(_statement([_expense()]))
+        expense = FinancialTransaction.objects.get(external_id=EXPENSE_EXTERNAL_ID)
+        expense.counterparty_name = (
+            "თიბისი ბანკის MC ბარათებით სავაჭრო ობიექტებში სხვა ბანკის ტერმინალებში"
+        )
+        expense.save(update_fields=["counterparty_name"])
+        again = import_tbc_statement(_statement([_expense(), _income()]))
+        self.assertEqual(again.error, "")
+        self.assertEqual(again.created, 1)
+        self.assertEqual(again.skipped, 1)
+        expense.refresh_from_db()
+        self.assertEqual(expense.counterparty_name, "POS - Vip Pay*YANDEX.GO")
+        income = FinancialTransaction.objects.get(external_id=INCOME_EXTERNAL_ID)
+        self.assertEqual(income.counterparty_name, "ავთანდილ გორგაძე")
 
     def test_skips_duplicates(self):
         _account("TBC card", "TBC")

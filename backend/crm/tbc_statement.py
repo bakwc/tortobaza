@@ -62,19 +62,26 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
 
     external_ids = [row.external_id for row in rows]
     with transaction.atomic():
-        existing = set(
-            FinancialTransaction.objects.filter(
+        existing = {
+            item.external_id: item
+            for item in FinancialTransaction.objects.filter(
                 account=account,
                 external_id__in=external_ids,
-            ).values_list("external_id", flat=True)
-        )
+            )
+        }
+        seen = set(existing)
         to_create: list[FinancialTransaction] = []
+        to_update: list[FinancialTransaction] = []
         skipped = 0
         for row in rows:
-            if row.external_id in existing:
+            if row.external_id in seen:
+                current = existing.get(row.external_id)
+                if current is not None and current.counterparty_name != row.counterparty_name:
+                    current.counterparty_name = row.counterparty_name
+                    to_update.append(current)
                 skipped += 1
                 continue
-            existing.add(row.external_id)
+            seen.add(row.external_id)
             to_create.append(
                 FinancialTransaction(
                     account=account,
@@ -90,6 +97,8 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
             )
         assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
+        if to_update:
+            FinancialTransaction.objects.bulk_update(to_update, ["counterparty_name"])
     return TbcStatementImportResult(created=len(to_create), skipped=skipped, error="")
 
 
@@ -170,13 +179,18 @@ def parse_tbc_row(
     max_length = FinancialTransaction._meta.get_field("external_id").max_length
     if len(external_id) > max_length:
         return None, _("Row %(row_number)s: external id is too long") % {"row_number": row_number}
+    counterparty_name = parts[0]
+    if kind == FinancialTransaction.KIND_EXPENSE:
+        merchant_name, separator, details = operation.partition(",")
+        if separator and "GEL" in details.split(",", 1)[0]:
+            counterparty_name = merchant_name.strip()
     return (
         ParsedTbcRow(
             date=parsed_date,
             amount=amount,
             kind=kind,
             income_type=income_type,
-            counterparty_name=parts[0],
+            counterparty_name=counterparty_name,
             counterparty_iban=counterparty_iban,
             description=description,
             external_id=external_id,
