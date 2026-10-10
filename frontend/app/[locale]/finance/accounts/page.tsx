@@ -6,7 +6,9 @@ import { FinanceBoard } from "@/components/finance/FinanceBoard";
 export default function FinanceAccountsPage() {
   return (
     <FinanceBoard section="accounts">
-      {(transactions) => <FinanceAccountList transactions={transactions} />}
+      {(transactions, period) => (
+        <FinanceAccountList transactions={transactions} periodQuery={period.query} />
+      )}
     </FinanceBoard>
   );
 }

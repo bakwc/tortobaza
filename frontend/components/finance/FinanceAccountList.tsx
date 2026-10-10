@@ -1,6 +1,8 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { ChevronRight, WalletCards } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed } from "@/lib/format";
 
@@ -45,7 +47,13 @@ function summarize(transactions: FinanceTransaction[]): AccountSummary[] {
   return [...byId.values()];
 }
 
-export function FinanceAccountList({ transactions }: { transactions: FinanceTransaction[] }) {
+export function FinanceAccountList({
+  transactions,
+  periodQuery,
+}: {
+  transactions: FinanceTransaction[];
+  periodQuery: string;
+}) {
   const t = useTranslations("finance");
   const locale = useLocale();
 
@@ -60,51 +68,40 @@ export function FinanceAccountList({ transactions }: { transactions: FinanceTran
   const accounts = summarize(transactions).sort((a, b) => a.name.localeCompare(b.name, locale));
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {accounts.map((account) => {
         const delta = account.deltaCents / 100;
         const deltaClass =
           delta > 0 ? "text-emerald-700" : delta < 0 ? "text-rose-700" : "text-[var(--ink)]";
         const deltaLabel = delta > 0 ? `+${formatAed(delta)}` : formatAed(delta);
         return (
-          <section
+          <Link
             key={account.id}
-            className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm"
+            href={`/finance?${periodQuery}&account=${account.id}`}
+            className="flex min-w-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-2 py-2 shadow-sm transition hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-[var(--ink)] md:gap-3 md:rounded-2xl md:px-3"
           >
-            <h2 className="text-base font-semibold text-[var(--ink)]">{account.name}</h2>
-            <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
-                  {t("operations")}
-                </dt>
-                <dd className="mt-1 text-lg font-semibold text-[var(--ink)]">{account.total}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
-                  {t("plus")}
-                </dt>
-                <dd className="mt-1 text-lg font-semibold text-emerald-700">
-                  {account.plus}{" "}
-                  <span className="text-sm font-medium">(+{formatAed(account.plusCents / 100)})</span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
-                  {t("minus")}
-                </dt>
-                <dd className="mt-1 text-lg font-semibold text-rose-700">
-                  {account.minus}{" "}
-                  <span className="text-sm font-medium">({formatAed(account.minusCents / 100)})</span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
-                  {t("balanceChange")}
-                </dt>
-                <dd className={`mt-1 text-lg font-semibold ${deltaClass}`}>{deltaLabel}</dd>
-              </div>
-            </dl>
-          </section>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--cream)] text-[var(--muted-2)] md:h-10 md:w-10 md:rounded-lg">
+              <WalletCards className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex min-w-0 items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-[var(--ink)]">{account.name}</span>
+                <span className={`shrink-0 text-sm font-bold ${deltaClass}`}>{deltaLabel}</span>
+              </span>
+              <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                <span className="rounded-full bg-[var(--cream)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-2)]">
+                  {t("operationCount", { count: account.total })}
+                </span>
+                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                  +{account.plus} (+{formatAed(account.plusCents / 100)})
+                </span>
+                <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">
+                  −{account.minus} ({formatAed(account.minusCents / 100)})
+                </span>
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted-2)]" />
+          </Link>
         );
       })}
     </div>

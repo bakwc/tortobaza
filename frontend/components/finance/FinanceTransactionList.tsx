@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ArrowDownLeft,
@@ -174,8 +175,12 @@ function groupFlowwow(transactions: FinanceTransaction[]): FinanceRow[] {
 export function FinanceTransactionList({ transactions }: { transactions: FinanceTransaction[] }) {
   const t = useTranslations("finance");
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const accountParam = searchParams.get("account");
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
-  const [accountFilter, setAccountFilter] = useState<number | null>(null);
+  const [accountFilter, setAccountFilter] = useState<number | null>(
+    accountParam === null ? null : Number(accountParam),
+  );
   const [kindFilter, setKindFilter] = useState<FinanceTransaction["kind"] | null>(null);
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
 
