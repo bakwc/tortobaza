@@ -13,6 +13,7 @@ from crm.flowwow_order_links import sync_flowwow_order_links
 from crm.internal_transfers import sync_internal_transfers
 from crm.liberty_online_links import sync_liberty_online_order_links
 from crm.liberty_terminal_links import sync_liberty_terminal_order_links
+from crm.tbc_order_links import sync_tbc_order_links
 from crm.google_maps import (
     SWEET_CHILL_COORDS,
     coords_from_google_url,
@@ -198,5 +199,6 @@ class Command(BaseCommand):
         sync_liberty_online_order_links()
         sync_flowwow_bog_transfers()
         sync_internal_transfers()
+        sync_tbc_order_links()
         sync_bog_order_links()
         sync_flowwow_order_links()
