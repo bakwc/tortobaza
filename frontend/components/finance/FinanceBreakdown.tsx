@@ -66,7 +66,7 @@ export function FinanceBreakdown({
     amount: row.amount,
   }));
   const byCounterparty = group(transactions, (tx) => tx.counterparty_name || "unspecified")
-    .slice(0, 8)
+    .slice(0, 20)
     .map((row) => ({
       key: row.key,
       label: row.key === "unspecified" ? t("unspecifiedCounterparty") : row.key,
