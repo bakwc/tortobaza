@@ -479,6 +479,7 @@
     "flowwowOrder": "Flowwow #{id}",
     "filterAccount": "Счёт",
     "filterKind": "Тип",
+    "filterExpenseType": "Тип расхода",
     "filterAll": "Все",
     "transferIncoming": "Входящий перевод",
     "transferOutgoing": "Исходящий перевод",

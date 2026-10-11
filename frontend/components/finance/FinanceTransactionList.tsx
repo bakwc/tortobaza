@@ -198,6 +198,7 @@ export function FinanceTransactionList({
     accountParam === null ? null : Number(accountParam),
   );
   const [kindFilter, setKindFilter] = useState<FinanceTransaction["kind"] | null>(null);
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
 
   if (transactions.length === 0) {
@@ -224,11 +225,26 @@ export function FinanceTransactionList({
     ...new Map(transactions.map((tx) => [tx.account.id, tx.account.name])).entries(),
   ].sort((left, right) => left[1].localeCompare(right[1]));
   const kinds = KIND_ORDER.filter((kind) => transactions.some((tx) => tx.kind === kind));
+  const expenseTypes = EXPENSE_TYPES.filter((type) =>
+    transactions.some((tx) => tx.kind === "expense" && tx.expense_type === type),
+  );
+  const hasUnspecifiedExpense = transactions.some(
+    (tx) => tx.kind === "expense" && tx.expense_type === "",
+  );
   const visible = transactions.filter(
     (tx) =>
       (accountFilter === null || tx.account.id === accountFilter) &&
-      (kindFilter === null || tx.kind === kindFilter),
+      (kindFilter === null || tx.kind === kindFilter) &&
+      (expenseTypeFilter === null ||
+        (tx.kind === "expense" && tx.expense_type === expenseTypeFilter)),
   );
+
+  function selectKind(kind: FinanceTransaction["kind"] | null) {
+    setKindFilter(kind);
+    if (kind !== "expense") {
+      setExpenseTypeFilter(null);
+    }
+  }
 
   return (
     <div className="grid gap-6">
@@ -249,7 +265,7 @@ export function FinanceTransactionList({
           ))}
         </FilterRow>
         <FilterRow label={t("filterKind")}>
-          <FilterPill active={kindFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => setKindFilter(null)}>
+          <FilterPill active={kindFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => selectKind(null)}>
             {t("filterAll")}
           </FilterPill>
           {kinds.map((kind) => (
@@ -257,13 +273,43 @@ export function FinanceTransactionList({
               key={kind}
               active={kindFilter === kind}
               activeClass={kindTone(kind) === NEUTRAL_TONE ? NEUTRAL_ACTIVE : kindTone(kind).chip}
-              onClick={() => setKindFilter(kind)}
+              onClick={() => selectKind(kind)}
             >
               <KindIcon kind={kind} />
               {t(`kinds.${kind}`)}
             </FilterPill>
           ))}
         </FilterRow>
+        {kindFilter === "expense" ? (
+          <FilterRow label={t("filterExpenseType")}>
+            <FilterPill
+              active={expenseTypeFilter === null}
+              activeClass={NEUTRAL_ACTIVE}
+              onClick={() => setExpenseTypeFilter(null)}
+            >
+              {t("filterAll")}
+            </FilterPill>
+            {expenseTypes.map((type) => (
+              <FilterPill
+                key={type}
+                active={expenseTypeFilter === type}
+                activeClass={EXPENSE_TONE.chip}
+                onClick={() => setExpenseTypeFilter(type)}
+              >
+                {t(`expenseTypes.${type}`)}
+              </FilterPill>
+            ))}
+            {hasUnspecifiedExpense ? (
+              <FilterPill
+                active={expenseTypeFilter === ""}
+                activeClass={EXPENSE_TONE.chip}
+                onClick={() => setExpenseTypeFilter("")}
+              >
+                {t("unspecified")}
+              </FilterPill>
+            ) : null}
+          </FilterRow>
+        ) : null}
       </div>
       {visible.length === 0 ? (
         <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
@@ -329,7 +375,7 @@ export function FinanceTransactionList({
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-      <span className="mr-1 w-16 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">
+      <span className="mr-1 w-28 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">
         {label}
       </span>
       {children}

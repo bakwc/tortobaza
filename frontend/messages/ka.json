@@ -479,6 +479,7 @@
     "flowwowOrder": "Flowwow #{id}",
     "filterAccount": "ანგარიში",
     "filterKind": "ტიპი",
+    "filterExpenseType": "ხარჯის ტიპი",
     "filterAll": "ყველა",
     "transferIncoming": "შემომავალი გადარიცხვა",
     "transferOutgoing": "გამავალი გადარიცხვა",

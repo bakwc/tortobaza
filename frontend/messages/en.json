@@ -479,6 +479,7 @@
     "flowwowOrder": "Flowwow #{id}",
     "filterAccount": "Account",
     "filterKind": "Type",
+    "filterExpenseType": "Expense type",
     "filterAll": "All",
     "transferIncoming": "Incoming transfer",
     "transferOutgoing": "Outgoing transfer",
