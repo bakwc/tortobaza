@@ -169,6 +169,20 @@ function sumGel(items: FinanceTransaction[], rates: Record<string, string>): num
   return cents / 100;
 }
 
+function cashflowCents(
+  items: FinanceTransaction[],
+  rates: Record<string, string>,
+): { plusCents: number; minusCents: number } {
+  let plusCents = 0;
+  let minusCents = 0;
+  for (const tx of items) {
+    const cents = Math.round(toGel(tx.amount, tx.account.currency, rates) * 100);
+    if (cents > 0) plusCents += cents;
+    if (cents < 0) minusCents += cents;
+  }
+  return { plusCents, minusCents };
+}
+
 function linkedOrders(items: FinanceTransaction[]): CrmOrderLink[] {
   const byId = new Map<number, CrmOrderLink>();
   for (const tx of items) {
@@ -227,6 +241,7 @@ export function FinanceTransactionList({
   const searchParams = useSearchParams();
   const accountFilter = readAccountId(searchParams.get("account"));
   const kindFilter = readKind(searchParams.get("kind"));
+  const incomeTypeFilter = kindFilter === "income" ? searchParams.get("income_type") : null;
   const expenseTypeFilter = kindFilter === "expense" ? searchParams.get("expense_type") : null;
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
@@ -234,12 +249,14 @@ export function FinanceTransactionList({
   function replaceFilters(next: {
     account: number | null;
     kind: FinanceTransaction["kind"] | null;
+    incomeType: string | null;
     expenseType: string | null;
   }) {
     router.replace(
       hrefWithParams(pathname, searchParams.toString(), [
         { key: "account", value: next.account === null ? null : String(next.account) },
         { key: "kind", value: next.kind },
+        { key: "income_type", value: next.kind === "income" ? next.incomeType : null },
         { key: "expense_type", value: next.kind === "expense" ? next.expenseType : null },
       ]),
       { scroll: false },
@@ -270,6 +287,12 @@ export function FinanceTransactionList({
     ...new Map(transactions.map((tx) => [tx.account.id, tx.account.name])).entries(),
   ].sort((left, right) => left[1].localeCompare(right[1]));
   const kinds = KIND_ORDER.filter((kind) => transactions.some((tx) => tx.kind === kind));
+  const incomeTypes = INCOME_TYPES.filter((type) =>
+    transactions.some((tx) => tx.kind === "income" && tx.income_type === type),
+  );
+  const hasUnspecifiedIncome = transactions.some(
+    (tx) => tx.kind === "income" && tx.income_type === "",
+  );
   const expenseTypes = EXPENSE_TYPES.filter((type) =>
     transactions.some((tx) => tx.kind === "expense" && tx.expense_type === type),
   );
@@ -280,14 +303,25 @@ export function FinanceTransactionList({
     (tx) =>
       (accountFilter === null || tx.account.id === accountFilter) &&
       (kindFilter === null || tx.kind === kindFilter) &&
+      (incomeTypeFilter === null ||
+        (tx.kind === "income" && tx.income_type === incomeTypeFilter)) &&
       (expenseTypeFilter === null ||
         (tx.kind === "expense" && tx.expense_type === expenseTypeFilter)),
   );
+  const counted =
+    accountFilter === null && kindFilter !== "transfer"
+      ? visible.filter((tx) => tx.kind !== "transfer")
+      : visible;
+  const flow = cashflowCents(counted, rates);
+  const inflow = flow.plusCents / 100;
+  const outflow = flow.minusCents / 100;
+  const net = (flow.plusCents + flow.minusCents) / 100;
 
   function selectKind(kind: FinanceTransaction["kind"] | null) {
     replaceFilters({
       account: accountFilter,
       kind,
+      incomeType: kind === "income" ? incomeTypeFilter : null,
       expenseType: kind === "expense" ? expenseTypeFilter : null,
     });
   }
@@ -299,7 +333,14 @@ export function FinanceTransactionList({
           <FilterPill
             active={accountFilter === null}
             activeClass={NEUTRAL_ACTIVE}
-            onClick={() => replaceFilters({ account: null, kind: kindFilter, expenseType: expenseTypeFilter })}
+            onClick={() =>
+              replaceFilters({
+                account: null,
+                kind: kindFilter,
+                incomeType: incomeTypeFilter,
+                expenseType: expenseTypeFilter,
+              })
+            }
           >
             {t("filterAll")}
           </FilterPill>
@@ -308,7 +349,14 @@ export function FinanceTransactionList({
               key={id}
               active={accountFilter === id}
               activeClass={NEUTRAL_ACTIVE}
-              onClick={() => replaceFilters({ account: id, kind: kindFilter, expenseType: expenseTypeFilter })}
+              onClick={() =>
+                replaceFilters({
+                  account: id,
+                  kind: kindFilter,
+                  incomeType: incomeTypeFilter,
+                  expenseType: expenseTypeFilter,
+                })
+              }
             >
               {name}
             </FilterPill>
@@ -330,12 +378,70 @@ export function FinanceTransactionList({
             </FilterPill>
           ))}
         </FilterRow>
+        {kindFilter === "income" ? (
+          <FilterRow label={t("filterIncomeType")}>
+            <FilterPill
+              active={incomeTypeFilter === null}
+              activeClass={NEUTRAL_ACTIVE}
+              onClick={() =>
+                replaceFilters({
+                  account: accountFilter,
+                  kind: kindFilter,
+                  incomeType: null,
+                  expenseType: null,
+                })
+              }
+            >
+              {t("filterAll")}
+            </FilterPill>
+            {incomeTypes.map((type) => (
+              <FilterPill
+                key={type}
+                active={incomeTypeFilter === type}
+                activeClass={INCOME_TONE.chip}
+                onClick={() =>
+                  replaceFilters({
+                    account: accountFilter,
+                    kind: kindFilter,
+                    incomeType: type,
+                    expenseType: null,
+                  })
+                }
+              >
+                {t(`incomeTypes.${type}`)}
+              </FilterPill>
+            ))}
+            {hasUnspecifiedIncome ? (
+              <FilterPill
+                active={incomeTypeFilter === ""}
+                activeClass={INCOME_TONE.chip}
+                onClick={() =>
+                  replaceFilters({
+                    account: accountFilter,
+                    kind: kindFilter,
+                    incomeType: "",
+                    expenseType: null,
+                  })
+                }
+              >
+                {t("unspecified")}
+              </FilterPill>
+            ) : null}
+          </FilterRow>
+        ) : null}
         {kindFilter === "expense" ? (
           <FilterRow label={t("filterExpenseType")}>
             <FilterPill
               active={expenseTypeFilter === null}
               activeClass={NEUTRAL_ACTIVE}
-              onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: null })}
+              onClick={() =>
+                replaceFilters({
+                  account: accountFilter,
+                  kind: kindFilter,
+                  incomeType: null,
+                  expenseType: null,
+                })
+              }
             >
               {t("filterAll")}
             </FilterPill>
@@ -344,7 +450,14 @@ export function FinanceTransactionList({
                 key={type}
                 active={expenseTypeFilter === type}
                 activeClass={EXPENSE_TONE.chip}
-                onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: type })}
+                onClick={() =>
+                  replaceFilters({
+                    account: accountFilter,
+                    kind: kindFilter,
+                    incomeType: null,
+                    expenseType: type,
+                  })
+                }
               >
                 {t(`expenseTypes.${type}`)}
               </FilterPill>
@@ -353,13 +466,37 @@ export function FinanceTransactionList({
               <FilterPill
                 active={expenseTypeFilter === ""}
                 activeClass={EXPENSE_TONE.chip}
-                onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: "" })}
+                onClick={() =>
+                  replaceFilters({
+                    account: accountFilter,
+                    kind: kindFilter,
+                    incomeType: null,
+                    expenseType: "",
+                  })
+                }
               >
                 {t("unspecified")}
               </FilterPill>
             ) : null}
           </FilterRow>
         ) : null}
+      </div>
+      <div className="grid grid-cols-3 rounded-2xl border border-[var(--line)] bg-white px-2 py-3 shadow-sm md:px-4">
+        <CashflowFigure
+          label={t("inflow")}
+          value={signedAed(inflow)}
+          className={inflow > 0 ? "text-emerald-700" : "text-[var(--ink)]"}
+        />
+        <CashflowFigure
+          label={t("outflow")}
+          value={formatAed(outflow)}
+          className={outflow < 0 ? "text-rose-700" : "text-[var(--ink)]"}
+        />
+        <CashflowFigure
+          label={t("total")}
+          value={signedAed(net)}
+          className={net > 0 ? "text-emerald-700" : net < 0 ? "text-rose-700" : "text-[var(--ink)]"}
+        />
       </div>
       {visible.length === 0 ? (
         <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
@@ -418,6 +555,20 @@ export function FinanceTransactionList({
         );
       })}
       <TransactionDetailPanel tx={selected} rates={rates} onClose={() => setSelected(null)} t={t} />
+    </div>
+  );
+}
+
+function signedAed(value: number): string {
+  if (value > 0) return `+${formatAed(value)}`;
+  return formatAed(value);
+}
+
+function CashflowFigure({ label, value, className }: { label: string; value: string; className: string }) {
+  return (
+    <div className="min-w-0 px-1 text-center">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">{label}</p>
+      <p className={cn("mt-1 text-sm font-bold tabular-nums md:text-base", className)}>{value}</p>
     </div>
   );
 }
