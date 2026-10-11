@@ -98,6 +98,15 @@ export function FinanceBreakdown({
     );
   }
 
+  function openCounterparty(counterparty: string) {
+    router.push(
+      hrefWithParams("/finance", searchParams.toString(), [
+        { key: "kind", values: [typeField === "income_type" ? "income" : "expense"] },
+        { key: "counterparty", values: [counterparty] },
+      ]),
+    );
+  }
+
   if (transactions.length === 0) {
     return (
       <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
@@ -217,6 +226,7 @@ export function FinanceBreakdown({
             <BarList
               rows={byAccount}
               selectedKeys={accountFilters.map(String)}
+              disabledKeys={[]}
               onSelect={(key) =>
                 replaceFilters({
                   account: accountFilters.includes(Number(key)) ? [] : [Number(key)],
@@ -229,6 +239,7 @@ export function FinanceBreakdown({
             <BarList
               rows={byType}
               selectedKeys={typeFilters}
+              disabledKeys={[]}
               onSelect={(key) =>
                 replaceFilters({
                   account: accountFilters,
@@ -238,7 +249,12 @@ export function FinanceBreakdown({
             />
           </ChartCard>
           <ChartCard title={t("byCounterparty")}>
-            <BarList rows={byCounterparty} selectedKeys={[]} onSelect={null} />
+            <BarList
+              rows={byCounterparty}
+              selectedKeys={[]}
+              disabledKeys={["unspecified", "other"]}
+              onSelect={openCounterparty}
+            />
           </ChartCard>
           <ChartCard title={t("byDay")}>
             <DayColumns days={byDay} />
@@ -300,10 +316,12 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
 function BarList({
   rows,
   selectedKeys,
+  disabledKeys,
   onSelect,
 }: {
   rows: { key: string; label: string; amount: number }[];
   selectedKeys: string[];
+  disabledKeys: string[];
   onSelect: ((key: string) => void) | null;
 }) {
   const max = Math.max(...rows.map((row) => row.amount));
@@ -342,7 +360,7 @@ function BarList({
             </div>
           </>
         );
-        if (onSelect) {
+        if (onSelect && !disabledKeys.includes(row.key)) {
           return (
             <button
               key={row.key}
