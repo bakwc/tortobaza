@@ -22,6 +22,7 @@ from rest_framework.views import APIView
 
 from attendance.salary import compute_all_salaries
 from catalog.responsive_urls import detail_image
+from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
@@ -44,6 +45,7 @@ from crm.serializers import (
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
+    ExchangeRatesSerializer,
     FinanceTransactionsQuerySerializer,
     FinanceTransactionsResponseSerializer,
     ResolveGoogleAddressSerializer,
@@ -433,6 +435,17 @@ class FinanceTransactionsView(APIView):
             transactions = transactions.filter(date=target_date)
             payload = {"date": target_date, "month": None, "transactions": transactions}
         return Response(FinanceTransactionsResponseSerializer(payload).data)
+
+
+class ExchangeRatesView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        snapshot = current_exchange_rates()
+        return Response(
+            ExchangeRatesSerializer({"date": snapshot.rates_date, "rates": snapshot.rates}).data
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")

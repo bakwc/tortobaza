@@ -16,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed, formatCrmCompactDate, formatCrmDate, formatCrmDateTime } from "@/lib/format";
+import {
+  formatAed,
+  formatCrmCompactDate,
+  formatCrmDate,
+  formatCrmDateTime,
+  formatMoney,
+  toGel,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
@@ -123,8 +130,11 @@ function TxIcon({ tx }: { tx: FinanceTransaction }) {
   return <KindIcon kind={tx.kind} />;
 }
 
-function sumAmounts(items: FinanceTransaction[]): number {
-  const cents = items.reduce((sum, tx) => sum + Math.round(Number.parseFloat(tx.amount) * 100), 0);
+function sumGel(items: FinanceTransaction[], rates: Record<string, string>): number {
+  const cents = items.reduce(
+    (sum, tx) => sum + Math.round(toGel(tx.amount, tx.account.currency, rates) * 100),
+    0,
+  );
   return cents / 100;
 }
 
@@ -172,7 +182,13 @@ function groupFlowwow(transactions: FinanceTransaction[]): FinanceRow[] {
   return rows;
 }
 
-export function FinanceTransactionList({ transactions }: { transactions: FinanceTransaction[] }) {
+export function FinanceTransactionList({
+  transactions,
+  rates,
+}: {
+  transactions: FinanceTransaction[];
+  rates: Record<string, string>;
+}) {
   const t = useTranslations("finance");
   const locale = useLocale();
   const searchParams = useSearchParams();
@@ -255,8 +271,14 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
         </div>
       ) : null}
       {groupByDate(visible).map((day) => {
-        const income = sumAmounts(day.items.filter((tx) => tx.kind === "income"));
-        const expense = sumAmounts(day.items.filter((tx) => tx.kind === "expense"));
+        const income = sumGel(
+          day.items.filter((tx) => tx.kind === "income"),
+          rates,
+        );
+        const expense = sumGel(
+          day.items.filter((tx) => tx.kind === "expense"),
+          rates,
+        );
         return (
           <section key={day.date} className="grid gap-2">
             <div className="flex items-baseline justify-between gap-3 px-1 text-[var(--ink)]">
@@ -285,6 +307,7 @@ export function FinanceTransactionList({ transactions }: { transactions: Finance
                   open={open}
                   onToggle={() => toggleGroup(row.orderNumber)}
                   onSelect={setSelected}
+                  rates={rates}
                   t={t}
                 />
               );
@@ -441,7 +464,7 @@ function TransactionRow({
       icon={<TxIcon tx={tx} />}
       title={tx.counterparty_name || t(`kinds.${tx.kind}`)}
       subtitle={tx.description}
-      amount={formatAed(tx.amount)}
+      amount={formatMoney(tx.amount, tx.account.currency)}
       chips={
         <>
           <Chip className={tone.chip}>
@@ -478,6 +501,7 @@ function FlowwowGroupRow({
   open,
   onToggle,
   onSelect,
+  rates,
   t,
 }: {
   orderNumber: number;
@@ -485,9 +509,10 @@ function FlowwowGroupRow({
   open: boolean;
   onToggle: () => void;
   onSelect: (tx: FinanceTransaction) => void;
+  rates: Record<string, string>;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
-  const total = sumAmounts(items);
+  const total = sumGel(items, rates);
   const tone = amountTone(total);
   return (
     <div className="grid gap-1">
@@ -538,7 +563,9 @@ function FlowwowGroupRow({
                 <span className="min-w-0 flex-1 truncate text-[var(--ink)]">
                   {tx.description || t(`kinds.${tx.kind}`)}
                 </span>
-                <span className={cn("shrink-0 font-semibold", childTone.amount)}>{formatAed(tx.amount)}</span>
+                <span className={cn("shrink-0 font-semibold", childTone.amount)}>
+                  {formatMoney(tx.amount, tx.account.currency)}
+                </span>
               </button>
             );
           })}
@@ -621,14 +648,16 @@ function TransactionDetail({
         <DialogDescription className="text-sm text-[var(--muted-2)]">
           {formatCrmDate(tx.date, locale)}
         </DialogDescription>
-        <span className={cn("text-2xl font-bold", tone.amount)}>{formatAed(tx.amount)}</span>
+        <span className={cn("text-2xl font-bold", tone.amount)}>
+          {formatMoney(tx.amount, tx.account.currency)}
+        </span>
       </div>
 
       <DetailSection title={t("detail.sectionMain")}>
         <DetailField label={t("detail.date")} value={formatCrmDate(tx.date, locale)} variant="text" />
         <DetailField
           label={t("detail.amount")}
-          value={`${formatAed(tx.amount)} · ${tx.account.currency}`}
+          value={formatMoney(tx.amount, tx.account.currency)}
           variant="text"
         />
         <DetailField label={t("detail.kind")} value={kindLabel} variant="text" />
@@ -683,7 +712,7 @@ function TransactionDetail({
                 <span
                   className={cn("shrink-0 font-bold", amountTone(Number.parseFloat(matched.amount)).amount)}
                 >
-                  {formatAed(matched.amount)}
+                  {formatMoney(matched.amount, matched.account.currency)}
                 </span>
               </div>
               <span className="text-xs text-[var(--muted-2)]">

@@ -4,11 +4,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight, WalletCards } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 
 type AccountSummary = {
   id: number;
   name: string;
+  currency: string;
   total: number;
   plus: number;
   plusCents: number;
@@ -25,6 +26,7 @@ function summarize(transactions: FinanceTransaction[]): AccountSummary[] {
     const row = existing ?? {
       id: tx.account.id,
       name: tx.account.name,
+      currency: tx.account.currency,
       total: 0,
       plus: 0,
       plusCents: 0,
@@ -73,7 +75,8 @@ export function FinanceAccountList({
         const delta = account.deltaCents / 100;
         const deltaClass =
           delta > 0 ? "text-emerald-700" : delta < 0 ? "text-rose-700" : "text-[var(--ink)]";
-        const deltaLabel = delta > 0 ? `+${formatAed(delta)}` : formatAed(delta);
+        const formatted = formatMoney(delta, account.currency);
+        const deltaLabel = delta > 0 ? `+${formatted}` : formatted;
         return (
           <Link
             key={account.id}
@@ -93,10 +96,10 @@ export function FinanceAccountList({
                   {t("operationCount", { count: account.total })}
                 </span>
                 <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
-                  +{account.plus} (+{formatAed(account.plusCents / 100)})
+                  +{account.plus} (+{formatMoney(account.plusCents / 100, account.currency)})
                 </span>
                 <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">
-                  −{account.minus} ({formatAed(account.minusCents / 100)})
+                  −{account.minus} ({formatMoney(account.minusCents / 100, account.currency)})
                 </span>
               </span>
             </span>

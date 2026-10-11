@@ -423,6 +423,19 @@ class FinancialAccount(models.Model):
         return self.name
 
 
+class ExchangeRateSnapshot(models.Model):
+    fetched_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Fetched at"))
+    rates_date = models.DateField(verbose_name=_("Rates date"))
+    rates = models.JSONField(verbose_name=_("Rates"))
+
+    class Meta:
+        verbose_name = _("Exchange rate snapshot")
+        verbose_name_plural = _("Exchange rate snapshots")
+
+    def __str__(self) -> str:
+        return str(self.rates_date)
+
+
 class FinancialTransaction(models.Model):
     KIND_INCOME = "income"
     KIND_EXPENSE = "expense"

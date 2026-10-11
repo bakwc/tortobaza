@@ -433,6 +433,7 @@ export const FinanceTransactionSchema = z.object({
     .object({
       id: z.number(),
       name: z.string(),
+      currency: z.string(),
     })
     .nullable(),
   matched_transaction: z
@@ -443,6 +444,7 @@ export const FinanceTransactionSchema = z.object({
       account: z.object({
         id: z.number(),
         name: z.string(),
+        currency: z.string(),
       }),
       counterparty_name: z.string(),
       description: z.string(),
@@ -456,6 +458,11 @@ export const FinanceTransactionsResponseSchema = z.object({
   date: z.string().nullable(),
   month: z.string().nullable(),
   transactions: z.array(FinanceTransactionSchema),
+});
+
+export const ExchangeRatesSchema = z.object({
+  date: z.string(),
+  rates: z.record(z.string(), z.string()),
 });
 
 export const ResolveYandexAddressResponseSchema = z.object({
@@ -527,6 +534,7 @@ export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
 export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
+export type ExchangeRates = z.infer<typeof ExchangeRatesSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;
 

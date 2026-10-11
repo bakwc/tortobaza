@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed } from "@/lib/format";
+import { formatAed, toGel } from "@/lib/format";
 import type { FinancePeriodMode } from "@/hooks/useFinancePeriod";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
@@ -29,8 +29,8 @@ function monthDays(yyyyMm: string): string[] {
   return days;
 }
 
-function magnitude(amount: string): number {
-  return Math.abs(Number.parseFloat(amount));
+function magnitude(tx: FinanceTransaction, rates: Record<string, string>): number {
+  return Math.abs(toGel(tx.amount, tx.account.currency, rates));
 }
 
 export function FinanceBreakdown({
@@ -38,11 +38,13 @@ export function FinanceBreakdown({
   mode,
   month,
   typeField,
+  rates,
 }: {
   transactions: FinanceTransaction[];
   mode: FinancePeriodMode;
   month: string;
   typeField: "income_type" | "expense_type";
+  rates: Record<string, string>;
 }) {
   const t = useTranslations("finance");
 
@@ -54,18 +56,18 @@ export function FinanceBreakdown({
     );
   }
 
-  const total = transactions.reduce((sum, tx) => sum + magnitude(tx.amount), 0);
-  const byAccount = group(transactions, (tx) => String(tx.account.id)).map((row) => ({
+  const total = transactions.reduce((sum, tx) => sum + magnitude(tx, rates), 0);
+  const byAccount = group(transactions, (tx) => String(tx.account.id), rates).map((row) => ({
     key: row.key,
     label: transactions.find((tx) => String(tx.account.id) === row.key)?.account.name ?? row.key,
     amount: row.amount,
   }));
-  const byType = group(transactions, (tx) => tx[typeField] || "unspecified").map((row) => ({
+  const byType = group(transactions, (tx) => tx[typeField] || "unspecified", rates).map((row) => ({
     key: row.key,
     label: typeLabel(typeField, row.key, t),
     amount: row.amount,
   }));
-  const counterparties = group(transactions, (tx) => tx.counterparty_name || "unspecified");
+  const counterparties = group(transactions, (tx) => tx.counterparty_name || "unspecified", rates);
   const otherAmount = counterparties.slice(20).reduce((sum, row) => sum + row.amount, 0);
   const byCounterparty = counterparties.slice(0, 20).map((row) => ({
     key: row.key,
@@ -85,7 +87,7 @@ export function FinanceBreakdown({
           date: day,
           amount: transactions
             .filter((tx) => tx.date === day)
-            .reduce((sum, tx) => sum + magnitude(tx.amount), 0),
+            .reduce((sum, tx) => sum + magnitude(tx, rates), 0),
         }))
       : [];
 
@@ -168,11 +170,12 @@ function DayColumns({ days }: { days: { date: string; amount: number }[] }) {
 function group(
   transactions: FinanceTransaction[],
   keyOf: (tx: FinanceTransaction) => string,
+  rates: Record<string, string>,
 ): { key: string; amount: number }[] {
   const totals = new Map<string, number>();
   for (const tx of transactions) {
     const key = keyOf(tx);
-    totals.set(key, (totals.get(key) ?? 0) + magnitude(tx.amount));
+    totals.set(key, (totals.get(key) ?? 0) + magnitude(tx, rates));
   }
   return [...totals.entries()]
     .map(([key, amount]) => ({ key, amount }))

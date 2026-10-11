@@ -6,14 +6,38 @@ function intlLocaleTag(locale: string): string {
   return "en-GB";
 }
 
-export function formatAed(amount: string | number): string {
+const MONEY_SYMBOLS: Record<string, string> = {
+  GEL: "₾",
+  USD: "$",
+};
+
+export function formatMoney(amount: string | number, currency: string): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
-  if (Number.isNaN(value)) return "0.00 ₾";
+  const symbol = MONEY_SYMBOLS[currency] ?? currency;
+  if (Number.isNaN(value)) return `0.00 ${symbol}`;
   const [intPart, fracPart] = value.toFixed(2).split(".");
   const sign = intPart.startsWith("-") ? "-" : "";
   const digits = sign ? intPart.slice(1) : intPart;
   const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  return `${sign}${grouped}.${fracPart} ₾`;
+  return `${sign}${grouped}.${fracPart} ${symbol}`;
+}
+
+export function formatAed(amount: string | number): string {
+  return formatMoney(amount, "GEL");
+}
+
+export function toGel(
+  amount: string | number,
+  currency: string,
+  rates: Record<string, string>,
+): number {
+  const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (currency === "GEL") return value;
+  const rate = rates[currency];
+  if (rate === undefined) {
+    throw new Error(`Missing exchange rate for ${currency}`);
+  }
+  return value * Number.parseFloat(rate);
 }
 
 export function formatAedWhole(amount: string | number): string {

@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { Link } from "@/i18n/navigation";
+import { useExchangeRates } from "@/hooks/useExchangeRates";
 import {
   shiftFinanceDate,
   shiftFinanceMonth,
@@ -32,7 +33,11 @@ export function FinanceBoard({
   children,
 }: {
   section: FinanceSection;
-  children: (transactions: FinanceTransaction[], period: FinancePeriod) => ReactNode;
+  children: (
+    transactions: FinanceTransaction[],
+    period: FinancePeriod,
+    rates: Record<string, string>,
+  ) => ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
@@ -56,12 +61,17 @@ function FinanceBoardContent({
   children,
 }: {
   section: FinanceSection;
-  children: (transactions: FinanceTransaction[], period: FinancePeriod) => ReactNode;
+  children: (
+    transactions: FinanceTransaction[],
+    period: FinancePeriod,
+    rates: Record<string, string>,
+  ) => ReactNode;
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
   const period = useFinancePeriod();
   const query = useFinanceTransactions(period);
+  const ratesQuery = useExchangeRates();
   const today = getTbilisiTodayIsoDate();
   const isToday = period.date === today;
   const isCurrentMonth = period.month === today.slice(0, 7);
@@ -181,14 +191,14 @@ function FinanceBoardContent({
         )}
       </div>
 
-      {query.isError ? (
+      {query.isError || ratesQuery.isError ? (
         <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>
-      ) : !query.data ? (
+      ) : !query.data || !ratesQuery.data ? (
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner className="h-6 w-6 text-[var(--brand)]" />
         </div>
       ) : (
-        children(query.data.transactions, period)
+        children(query.data.transactions, period, ratesQuery.data.rates)
       )}
     </div>
   );

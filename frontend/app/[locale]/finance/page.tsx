@@ -6,7 +6,9 @@ import { FinanceTransactionList } from "@/components/finance/FinanceTransactionL
 export default function FinanceOperationsPage() {
   return (
     <FinanceBoard section="operations">
-      {(transactions) => <FinanceTransactionList transactions={transactions} />}
+      {(transactions, _period, rates) => (
+        <FinanceTransactionList transactions={transactions} rates={rates} />
+      )}
     </FinanceBoard>
   );
 }

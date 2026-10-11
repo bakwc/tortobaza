@@ -159,7 +159,7 @@ class FinanceTransactionsApiTests(TestCase):
                 "id": other.pk,
                 "date": "2026-06-15",
                 "amount": "15.00",
-                "account": {"id": self.account.pk, "name": "Liberty"},
+                "account": {"id": self.account.pk, "name": "Liberty", "currency": "GEL"},
                 "counterparty_name": "TBC",
                 "description": "Incoming",
             },
@@ -245,10 +245,13 @@ class FinanceTransactionsApiTests(TestCase):
         response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
         self.assertEqual(response.status_code, 200)
         rows = {row["id"]: row for row in response.json()["transactions"]}
-        self.assertEqual(rows[outgoing.pk]["matched_account"], {"id": bog.pk, "name": "BOG"})
+        self.assertEqual(
+            rows[outgoing.pk]["matched_account"],
+            {"id": bog.pk, "name": "BOG", "currency": "GEL"},
+        )
         self.assertEqual(
             rows[incoming.pk]["matched_account"],
-            {"id": self.account.pk, "name": "Liberty"},
+            {"id": self.account.pk, "name": "Liberty", "currency": "GEL"},
         )
 
     def test_default_today_tbilisi(self):

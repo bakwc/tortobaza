@@ -515,6 +515,7 @@ class FinanceTransactionsQuerySerializer(serializers.Serializer):
 class FinanceTransactionAccountSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    currency = serializers.CharField()
 
 
 class FinanceTransactionAccountDetailSerializer(serializers.Serializer):
@@ -580,3 +581,8 @@ class FinanceTransactionsResponseSerializer(serializers.Serializer):
     date = serializers.DateField(allow_null=True)
     month = serializers.CharField(allow_null=True)
     transactions = FinanceTransactionSerializer(many=True)
+
+
+class ExchangeRatesSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    rates = serializers.DictField(child=serializers.CharField())
