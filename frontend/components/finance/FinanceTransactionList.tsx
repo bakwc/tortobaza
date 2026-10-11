@@ -128,15 +128,30 @@ function escapeWildcardChar(char: string): string {
   return char;
 }
 
+function containsPattern(pattern: string): string {
+  if (pattern.startsWith("*") && pattern.endsWith("*")) return pattern;
+  if (pattern.startsWith("*")) return `${pattern}*`;
+  if (pattern.endsWith("*")) return `*${pattern}`;
+  return `*${pattern}*`;
+}
+
 function wildcardMatches(pattern: string, value: string): boolean {
   if (pattern === "") return true;
+  const expression = containsPattern(pattern);
   let source = "";
-  for (const char of pattern) {
+  for (const char of expression) {
     if (char === "*") source += ".*";
     else if (char === "?") source += ".";
     else source += escapeWildcardChar(char);
   }
   return new RegExp(`^${source}$`, "iu").test(value);
+}
+
+function counterpartyMatches(pattern: string, name: string, iban: string): boolean {
+  return (
+    wildcardMatches(pattern, name) ||
+    wildcardMatches(pattern.replaceAll(" ", ""), iban.replaceAll(" ", ""))
+  );
 }
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
@@ -365,7 +380,7 @@ export function FinanceTransactionList({
       (tx.kind !== "expense" ||
         expenseTypeFilters.length === 0 ||
         expenseTypeFilters.includes(tx.expense_type)) &&
-      wildcardMatches(counterpartyInput, tx.counterparty_name),
+      counterpartyMatches(counterpartyInput, tx.counterparty_name, tx.counterparty_iban),
   );
   const transfersOnly = kindFilters.length === 1 && kindFilters[0] === "transfer";
   const counted =
