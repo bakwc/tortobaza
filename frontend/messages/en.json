@@ -483,6 +483,8 @@
     "filterKind": "Type",
     "filterIncomeType": "Income type",
     "filterExpenseType": "Expense type",
+    "filterCounterparty": "Counterparty",
+    "filterCounterpartyPlaceholder": "*name*",
     "filterAll": "All",
     "transferIncoming": "Incoming transfer",
     "transferOutgoing": "Outgoing transfer",

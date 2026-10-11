@@ -483,6 +483,8 @@
     "filterKind": "ტიპი",
     "filterIncomeType": "შემოსავლის ტიპი",
     "filterExpenseType": "ხარჯის ტიპი",
+    "filterCounterparty": "კონტრაგენტი",
+    "filterCounterpartyPlaceholder": "*name*",
     "filterAll": "ყველა",
     "transferIncoming": "შემომავალი გადარიცხვა",
     "transferOutgoing": "გამავალი გადარიცხვა",

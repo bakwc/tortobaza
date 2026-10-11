@@ -483,6 +483,8 @@
     "filterKind": "Тип",
     "filterIncomeType": "Тип дохода",
     "filterExpenseType": "Тип расхода",
+    "filterCounterparty": "Контрагент",
+    "filterCounterpartyPlaceholder": "*name*",
     "filterAll": "Все",
     "transferIncoming": "Входящий перевод",
     "transferOutgoing": "Исходящий перевод",

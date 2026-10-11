@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import {
@@ -120,6 +121,22 @@ function hrefWithParams(
   }
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
+}
+
+function escapeWildcardChar(char: string): string {
+  if (/[\\^$.*+?()[\]{}|]/.test(char)) return `\\${char}`;
+  return char;
+}
+
+function wildcardMatches(pattern: string, value: string): boolean {
+  if (pattern === "") return true;
+  let source = "";
+  for (const char of pattern) {
+    if (char === "*") source += ".*";
+    else if (char === "?") source += ".";
+    else source += escapeWildcardChar(char);
+  }
+  return new RegExp(`^${source}$`, "iu").test(value);
 }
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
@@ -253,6 +270,36 @@ export function FinanceTransactionList({
   const expenseTypeFilters = kindFilters.includes("expense") ? searchParams.getAll("expense_type") : [];
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
+  const [counterpartyInput, setCounterpartyInput] = useState(searchParams.get("counterparty") ?? "");
+  const skipCounterpartySync = useRef(false);
+
+  useEffect(() => {
+    if (skipCounterpartySync.current) {
+      skipCounterpartySync.current = false;
+      return;
+    }
+    const urlValue = searchParams.get("counterparty") ?? "";
+    if (urlValue === counterpartyInput) return;
+    router.replace(
+      hrefWithParams(pathname, searchParams.toString(), [
+        { key: "counterparty", values: counterpartyInput === "" ? [] : [counterpartyInput] },
+      ]),
+      { scroll: false },
+    );
+  }, [counterpartyInput, pathname, router, searchParams]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const value = new URLSearchParams(window.location.search).get("counterparty") ?? "";
+      setCounterpartyInput((current) => {
+        if (current === value) return current;
+        skipCounterpartySync.current = true;
+        return value;
+      });
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   function replaceFilters(next: {
     account: number[];
@@ -266,6 +313,7 @@ export function FinanceTransactionList({
         { key: "kind", values: next.kind },
         { key: "income_type", values: next.kind.includes("income") ? next.incomeType : [] },
         { key: "expense_type", values: next.kind.includes("expense") ? next.expenseType : [] },
+        { key: "counterparty", values: counterpartyInput === "" ? [] : [counterpartyInput] },
       ]),
       { scroll: false },
     );
@@ -316,7 +364,8 @@ export function FinanceTransactionList({
         incomeTypeFilters.includes(tx.income_type)) &&
       (tx.kind !== "expense" ||
         expenseTypeFilters.length === 0 ||
-        expenseTypeFilters.includes(tx.expense_type)),
+        expenseTypeFilters.includes(tx.expense_type)) &&
+      wildcardMatches(counterpartyInput, tx.counterparty_name),
   );
   const transfersOnly = kindFilters.length === 1 && kindFilters[0] === "transfer";
   const counted =
@@ -397,6 +446,14 @@ export function FinanceTransactionList({
               {t(`kinds.${kind}`)}
             </FilterPill>
           ))}
+        </FilterRow>
+        <FilterRow label={t("filterCounterparty")}>
+          <Input
+            value={counterpartyInput}
+            placeholder={t("filterCounterpartyPlaceholder")}
+            onChange={(event) => setCounterpartyInput(event.target.value)}
+            className="h-7 w-56 px-3 text-xs"
+          />
         </FilterRow>
         {kindFilters.includes("income") ? (
           <FilterRow label={t("filterIncomeType")}>
