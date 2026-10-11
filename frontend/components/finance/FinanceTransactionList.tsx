@@ -21,7 +21,7 @@ import {
   formatCrmCompactDate,
   formatCrmDate,
   formatCrmDateTime,
-  formatMoney,
+  formatMoneyWithGel,
   toGel,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -295,7 +295,13 @@ export function FinanceTransactionList({
             {groupFlowwow(day.items).map((row) => {
               if (row.type === "single") {
                 return (
-                  <TransactionRow key={row.tx.id} tx={row.tx} onSelect={() => setSelected(row.tx)} t={t} />
+                  <TransactionRow
+                    key={row.tx.id}
+                    tx={row.tx}
+                    rates={rates}
+                    onSelect={() => setSelected(row.tx)}
+                    t={t}
+                  />
                 );
               }
               const open = openGroups.has(row.orderNumber);
@@ -315,7 +321,7 @@ export function FinanceTransactionList({
           </section>
         );
       })}
-      <TransactionDetailPanel tx={selected} onClose={() => setSelected(null)} t={t} />
+      <TransactionDetailPanel tx={selected} rates={rates} onClose={() => setSelected(null)} t={t} />
     </div>
   );
 }
@@ -449,10 +455,12 @@ function Chip({ className, children }: { className: string; children: ReactNode 
 
 function TransactionRow({
   tx,
+  rates,
   onSelect,
   t,
 }: {
   tx: FinanceTransaction;
+  rates: Record<string, string>;
   onSelect: () => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
@@ -464,7 +472,7 @@ function TransactionRow({
       icon={<TxIcon tx={tx} />}
       title={tx.counterparty_name || t(`kinds.${tx.kind}`)}
       subtitle={tx.description}
-      amount={formatMoney(tx.amount, tx.account.currency)}
+      amount={formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
       chips={
         <>
           <Chip className={tone.chip}>
@@ -564,7 +572,7 @@ function FlowwowGroupRow({
                   {tx.description || t(`kinds.${tx.kind}`)}
                 </span>
                 <span className={cn("shrink-0 font-semibold", childTone.amount)}>
-                  {formatMoney(tx.amount, tx.account.currency)}
+                  {formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
                 </span>
               </button>
             );
@@ -599,17 +607,19 @@ function CrmOrderChips({ orders }: { orders: CrmOrderLink[] }) {
 
 function TransactionDetailPanel({
   tx,
+  rates,
   onClose,
   t,
 }: {
   tx: FinanceTransaction | null;
+  rates: Record<string, string>;
   onClose: () => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   return (
     <Dialog open={tx !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
       <DialogContent className="w-[min(560px,calc(100vw-1.5rem))] overflow-y-auto">
-        {tx ? <TransactionDetail tx={tx} t={t} /> : null}
+        {tx ? <TransactionDetail tx={tx} rates={rates} t={t} /> : null}
       </DialogContent>
     </Dialog>
   );
@@ -617,9 +627,11 @@ function TransactionDetailPanel({
 
 function TransactionDetail({
   tx,
+  rates,
   t,
 }: {
   tx: FinanceTransaction;
+  rates: Record<string, string>;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   const locale = useLocale();
@@ -649,7 +661,7 @@ function TransactionDetail({
           {formatCrmDate(tx.date, locale)}
         </DialogDescription>
         <span className={cn("text-2xl font-bold", tone.amount)}>
-          {formatMoney(tx.amount, tx.account.currency)}
+          {formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
         </span>
       </div>
 
@@ -657,7 +669,7 @@ function TransactionDetail({
         <DetailField label={t("detail.date")} value={formatCrmDate(tx.date, locale)} variant="text" />
         <DetailField
           label={t("detail.amount")}
-          value={formatMoney(tx.amount, tx.account.currency)}
+          value={formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
           variant="text"
         />
         <DetailField label={t("detail.kind")} value={kindLabel} variant="text" />
@@ -712,7 +724,7 @@ function TransactionDetail({
                 <span
                   className={cn("shrink-0 font-bold", amountTone(Number.parseFloat(matched.amount)).amount)}
                 >
-                  {formatMoney(matched.amount, matched.account.currency)}
+                  {formatMoneyWithGel(matched.amount, matched.account.currency, rates)}
                 </span>
               </div>
               <span className="text-xs text-[var(--muted-2)]">

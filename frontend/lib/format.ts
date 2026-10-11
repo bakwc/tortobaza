@@ -40,6 +40,16 @@ export function toGel(
   return value * Number.parseFloat(rate);
 }
 
+export function formatMoneyWithGel(
+  amount: string | number,
+  currency: string,
+  rates: Record<string, string>,
+): string {
+  const native = formatMoney(amount, currency);
+  if (currency === "GEL") return native;
+  return `${native} (${formatAed(toGel(amount, currency, rates))})`;
+}
+
 export function formatAedWhole(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(value)) return "0 ₾";
