@@ -4,43 +4,36 @@ import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight, WalletCards } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatMoneyWithGel } from "@/lib/format";
+import { formatAed, toGel } from "@/lib/format";
 
 type AccountSummary = {
   id: number;
   name: string;
-  currency: string;
-  total: number;
-  plus: number;
   plusCents: number;
-  minus: number;
   minusCents: number;
   deltaCents: number;
 };
 
-function summarize(transactions: FinanceTransaction[]): AccountSummary[] {
+function gelCents(tx: FinanceTransaction, rates: Record<string, string>): number {
+  return Math.round(toGel(tx.amount, tx.account.currency, rates) * 100);
+}
+
+function summarize(transactions: FinanceTransaction[], rates: Record<string, string>): AccountSummary[] {
   const byId = new Map<number, AccountSummary>();
   for (const tx of transactions) {
-    const cents = Math.round(Number.parseFloat(tx.amount) * 100);
+    const cents = gelCents(tx, rates);
     const existing = byId.get(tx.account.id);
     const row = existing ?? {
       id: tx.account.id,
       name: tx.account.name,
-      currency: tx.account.currency,
-      total: 0,
-      plus: 0,
       plusCents: 0,
-      minus: 0,
       minusCents: 0,
       deltaCents: 0,
     };
-    row.total += 1;
     if (cents > 0) {
-      row.plus += 1;
       row.plusCents += cents;
     }
     if (cents < 0) {
-      row.minus += 1;
       row.minusCents += cents;
     }
     row.deltaCents += cents;
@@ -69,7 +62,7 @@ export function FinanceAccountList({
     );
   }
 
-  const accounts = summarize(transactions).sort((a, b) => a.name.localeCompare(b.name, locale));
+  const accounts = summarize(transactions, rates).sort((a, b) => a.name.localeCompare(b.name, locale));
 
   return (
     <div className="grid gap-2">
@@ -77,7 +70,7 @@ export function FinanceAccountList({
         const delta = account.deltaCents / 100;
         const deltaClass =
           delta > 0 ? "text-emerald-700" : delta < 0 ? "text-rose-700" : "text-[var(--ink)]";
-        const formatted = formatMoneyWithGel(delta, account.currency, rates);
+        const formatted = formatAed(delta);
         const deltaLabel = delta > 0 ? `+${formatted}` : formatted;
         return (
           <Link
@@ -93,17 +86,20 @@ export function FinanceAccountList({
                 <span className="truncate text-sm font-semibold text-[var(--ink)]">{account.name}</span>
                 <span className={`shrink-0 text-sm font-bold ${deltaClass}`}>{deltaLabel}</span>
               </span>
-              <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                <span className="rounded-full bg-[var(--cream)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted-2)]">
-                  {t("operationCount", { count: account.total })}
+              {account.plusCents !== 0 || account.minusCents !== 0 ? (
+                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                  {account.plusCents !== 0 ? (
+                    <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                      +{formatAed(account.plusCents / 100)}
+                    </span>
+                  ) : null}
+                  {account.minusCents !== 0 ? (
+                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">
+                      {formatAed(account.minusCents / 100)}
+                    </span>
+                  ) : null}
                 </span>
-                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
-                  +{account.plus} (+{formatMoneyWithGel(account.plusCents / 100, account.currency, rates)})
-                </span>
-                <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">
-                  −{account.minus} ({formatMoneyWithGel(account.minusCents / 100, account.currency, rates)})
-                </span>
-              </span>
+              ) : null}
             </span>
             <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted-2)]" />
           </Link>
