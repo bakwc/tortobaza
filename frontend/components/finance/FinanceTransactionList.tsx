@@ -83,31 +83,39 @@ const KIND_ORDER: FinanceTransaction["kind"][] = [
   "other",
 ];
 
-function readAccountId(value: string | null): number | null {
-  if (value === null) return null;
-  const id = Number(value);
-  if (!Number.isInteger(id)) return null;
-  return id;
+function readAccountIds(values: string[]): number[] {
+  const ids: number[] = [];
+  for (const value of values) {
+    const id = Number(value);
+    if (Number.isInteger(id)) ids.push(id);
+  }
+  return ids;
 }
 
-function readKind(value: string | null): FinanceTransaction["kind"] | null {
-  if (value === null) return null;
-  const kind = KIND_ORDER.find((item) => item === value);
-  if (kind === undefined) return null;
-  return kind;
+function readKinds(values: string[]): FinanceTransaction["kind"][] {
+  const kinds: FinanceTransaction["kind"][] = [];
+  for (const value of values) {
+    const kind = KIND_ORDER.find((item) => item === value);
+    if (kind !== undefined) kinds.push(kind);
+  }
+  return kinds;
+}
+
+function toggleValue<T>(current: readonly T[], value: T): T[] {
+  if (current.includes(value)) return current.filter((item) => item !== value);
+  return [...current, value];
 }
 
 function hrefWithParams(
   pathname: string,
   current: string,
-  updates: { key: string; value: string | null }[],
+  updates: { key: string; values: string[] }[],
 ): string {
   const params = new URLSearchParams(current);
   for (const update of updates) {
-    if (update.value === null) {
-      params.delete(update.key);
-    } else {
-      params.set(update.key, update.value);
+    params.delete(update.key);
+    for (const value of update.values) {
+      params.append(update.key, value);
     }
   }
   const query = params.toString();
@@ -239,25 +247,25 @@ export function FinanceTransactionList({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const accountFilter = readAccountId(searchParams.get("account"));
-  const kindFilter = readKind(searchParams.get("kind"));
-  const incomeTypeFilter = kindFilter === "income" ? searchParams.get("income_type") : null;
-  const expenseTypeFilter = kindFilter === "expense" ? searchParams.get("expense_type") : null;
+  const accountFilters = readAccountIds(searchParams.getAll("account"));
+  const kindFilters = readKinds(searchParams.getAll("kind"));
+  const incomeTypeFilters = kindFilters.includes("income") ? searchParams.getAll("income_type") : [];
+  const expenseTypeFilters = kindFilters.includes("expense") ? searchParams.getAll("expense_type") : [];
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
 
   function replaceFilters(next: {
-    account: number | null;
-    kind: FinanceTransaction["kind"] | null;
-    incomeType: string | null;
-    expenseType: string | null;
+    account: number[];
+    kind: FinanceTransaction["kind"][];
+    incomeType: string[];
+    expenseType: string[];
   }) {
     router.replace(
       hrefWithParams(pathname, searchParams.toString(), [
-        { key: "account", value: next.account === null ? null : String(next.account) },
-        { key: "kind", value: next.kind },
-        { key: "income_type", value: next.kind === "income" ? next.incomeType : null },
-        { key: "expense_type", value: next.kind === "expense" ? next.expenseType : null },
+        { key: "account", values: next.account.map(String) },
+        { key: "kind", values: next.kind },
+        { key: "income_type", values: next.kind.includes("income") ? next.incomeType : [] },
+        { key: "expense_type", values: next.kind.includes("expense") ? next.expenseType : [] },
       ]),
       { scroll: false },
     );
@@ -301,15 +309,18 @@ export function FinanceTransactionList({
   );
   const visible = transactions.filter(
     (tx) =>
-      (accountFilter === null || tx.account.id === accountFilter) &&
-      (kindFilter === null || tx.kind === kindFilter) &&
-      (incomeTypeFilter === null ||
-        (tx.kind === "income" && tx.income_type === incomeTypeFilter)) &&
-      (expenseTypeFilter === null ||
-        (tx.kind === "expense" && tx.expense_type === expenseTypeFilter)),
+      (accountFilters.length === 0 || accountFilters.includes(tx.account.id)) &&
+      (kindFilters.length === 0 || kindFilters.includes(tx.kind)) &&
+      (tx.kind !== "income" ||
+        incomeTypeFilters.length === 0 ||
+        incomeTypeFilters.includes(tx.income_type)) &&
+      (tx.kind !== "expense" ||
+        expenseTypeFilters.length === 0 ||
+        expenseTypeFilters.includes(tx.expense_type)),
   );
+  const transfersOnly = kindFilters.length === 1 && kindFilters[0] === "transfer";
   const counted =
-    accountFilter === null && kindFilter !== "transfer"
+    accountFilters.length === 0 && !transfersOnly
       ? visible.filter((tx) => tx.kind !== "transfer")
       : visible;
   const flow = cashflowCents(counted, rates);
@@ -317,28 +328,19 @@ export function FinanceTransactionList({
   const outflow = flow.minusCents / 100;
   const net = (flow.plusCents + flow.minusCents) / 100;
 
-  function selectKind(kind: FinanceTransaction["kind"] | null) {
-    replaceFilters({
-      account: accountFilter,
-      kind,
-      incomeType: kind === "income" ? incomeTypeFilter : null,
-      expenseType: kind === "expense" ? expenseTypeFilter : null,
-    });
-  }
-
   return (
     <div className="grid gap-6">
       <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
           <FilterPill
-            active={accountFilter === null}
+            active={accountFilters.length === 0}
             activeClass={NEUTRAL_ACTIVE}
             onClick={() =>
               replaceFilters({
-                account: null,
-                kind: kindFilter,
-                incomeType: incomeTypeFilter,
-                expenseType: expenseTypeFilter,
+                account: [],
+                kind: kindFilters,
+                incomeType: incomeTypeFilters,
+                expenseType: expenseTypeFilters,
               })
             }
           >
@@ -347,14 +349,14 @@ export function FinanceTransactionList({
           {accounts.map(([id, name]) => (
             <FilterPill
               key={id}
-              active={accountFilter === id}
+              active={accountFilters.includes(id)}
               activeClass={NEUTRAL_ACTIVE}
               onClick={() =>
                 replaceFilters({
-                  account: id,
-                  kind: kindFilter,
-                  incomeType: incomeTypeFilter,
-                  expenseType: expenseTypeFilter,
+                  account: toggleValue(accountFilters, id),
+                  kind: kindFilters,
+                  incomeType: incomeTypeFilters,
+                  expenseType: expenseTypeFilters,
                 })
               }
             >
@@ -363,32 +365,50 @@ export function FinanceTransactionList({
           ))}
         </FilterRow>
         <FilterRow label={t("filterKind")}>
-          <FilterPill active={kindFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => selectKind(null)}>
+          <FilterPill
+            active={kindFilters.length === 0}
+            activeClass={NEUTRAL_ACTIVE}
+            onClick={() =>
+              replaceFilters({
+                account: accountFilters,
+                kind: [],
+                incomeType: [],
+                expenseType: [],
+              })
+            }
+          >
             {t("filterAll")}
           </FilterPill>
           {kinds.map((kind) => (
             <FilterPill
               key={kind}
-              active={kindFilter === kind}
+              active={kindFilters.includes(kind)}
               activeClass={kindTone(kind) === NEUTRAL_TONE ? NEUTRAL_ACTIVE : kindTone(kind).chip}
-              onClick={() => selectKind(kind)}
+              onClick={() =>
+                replaceFilters({
+                  account: accountFilters,
+                  kind: toggleValue(kindFilters, kind),
+                  incomeType: incomeTypeFilters,
+                  expenseType: expenseTypeFilters,
+                })
+              }
             >
               <KindIcon kind={kind} />
               {t(`kinds.${kind}`)}
             </FilterPill>
           ))}
         </FilterRow>
-        {kindFilter === "income" ? (
+        {kindFilters.includes("income") ? (
           <FilterRow label={t("filterIncomeType")}>
             <FilterPill
-              active={incomeTypeFilter === null}
+              active={incomeTypeFilters.length === 0}
               activeClass={NEUTRAL_ACTIVE}
               onClick={() =>
                 replaceFilters({
-                  account: accountFilter,
-                  kind: kindFilter,
-                  incomeType: null,
-                  expenseType: null,
+                  account: accountFilters,
+                  kind: kindFilters,
+                  incomeType: [],
+                  expenseType: expenseTypeFilters,
                 })
               }
             >
@@ -397,14 +417,14 @@ export function FinanceTransactionList({
             {incomeTypes.map((type) => (
               <FilterPill
                 key={type}
-                active={incomeTypeFilter === type}
+                active={incomeTypeFilters.includes(type)}
                 activeClass={INCOME_TONE.chip}
                 onClick={() =>
                   replaceFilters({
-                    account: accountFilter,
-                    kind: kindFilter,
-                    incomeType: type,
-                    expenseType: null,
+                    account: accountFilters,
+                    kind: kindFilters,
+                    incomeType: toggleValue(incomeTypeFilters, type),
+                    expenseType: expenseTypeFilters,
                   })
                 }
               >
@@ -413,14 +433,14 @@ export function FinanceTransactionList({
             ))}
             {hasUnspecifiedIncome ? (
               <FilterPill
-                active={incomeTypeFilter === ""}
+                active={incomeTypeFilters.includes("")}
                 activeClass={INCOME_TONE.chip}
                 onClick={() =>
                   replaceFilters({
-                    account: accountFilter,
-                    kind: kindFilter,
-                    incomeType: "",
-                    expenseType: null,
+                    account: accountFilters,
+                    kind: kindFilters,
+                    incomeType: toggleValue(incomeTypeFilters, ""),
+                    expenseType: expenseTypeFilters,
                   })
                 }
               >
@@ -429,17 +449,17 @@ export function FinanceTransactionList({
             ) : null}
           </FilterRow>
         ) : null}
-        {kindFilter === "expense" ? (
+        {kindFilters.includes("expense") ? (
           <FilterRow label={t("filterExpenseType")}>
             <FilterPill
-              active={expenseTypeFilter === null}
+              active={expenseTypeFilters.length === 0}
               activeClass={NEUTRAL_ACTIVE}
               onClick={() =>
                 replaceFilters({
-                  account: accountFilter,
-                  kind: kindFilter,
-                  incomeType: null,
-                  expenseType: null,
+                  account: accountFilters,
+                  kind: kindFilters,
+                  incomeType: incomeTypeFilters,
+                  expenseType: [],
                 })
               }
             >
@@ -448,14 +468,14 @@ export function FinanceTransactionList({
             {expenseTypes.map((type) => (
               <FilterPill
                 key={type}
-                active={expenseTypeFilter === type}
+                active={expenseTypeFilters.includes(type)}
                 activeClass={EXPENSE_TONE.chip}
                 onClick={() =>
                   replaceFilters({
-                    account: accountFilter,
-                    kind: kindFilter,
-                    incomeType: null,
-                    expenseType: type,
+                    account: accountFilters,
+                    kind: kindFilters,
+                    incomeType: incomeTypeFilters,
+                    expenseType: toggleValue(expenseTypeFilters, type),
                   })
                 }
               >
@@ -464,14 +484,14 @@ export function FinanceTransactionList({
             ))}
             {hasUnspecifiedExpense ? (
               <FilterPill
-                active={expenseTypeFilter === ""}
+                active={expenseTypeFilters.includes("")}
                 activeClass={EXPENSE_TONE.chip}
                 onClick={() =>
                   replaceFilters({
-                    account: accountFilter,
-                    kind: kindFilter,
-                    incomeType: null,
-                    expenseType: "",
+                    account: accountFilters,
+                    kind: kindFilters,
+                    incomeType: incomeTypeFilters,
+                    expenseType: toggleValue(expenseTypeFilters, ""),
                   })
                 }
               >

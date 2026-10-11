@@ -22,24 +22,30 @@ function isExpenseType(value: string): value is (typeof EXPENSE_TYPES)[number] {
   return EXPENSE_TYPES.some((item) => item === value);
 }
 
-function readAccountId(value: string | null): number | null {
-  if (value === null) return null;
-  const id = Number(value);
-  if (!Number.isInteger(id)) return null;
-  return id;
+function readAccountIds(values: string[]): number[] {
+  const ids: number[] = [];
+  for (const value of values) {
+    const id = Number(value);
+    if (Number.isInteger(id)) ids.push(id);
+  }
+  return ids;
+}
+
+function toggleValue<T>(current: readonly T[], value: T): T[] {
+  if (current.includes(value)) return current.filter((item) => item !== value);
+  return [...current, value];
 }
 
 function hrefWithParams(
   pathname: string,
   current: string,
-  updates: { key: string; value: string | null }[],
+  updates: { key: string; values: string[] }[],
 ): string {
   const params = new URLSearchParams(current);
   for (const update of updates) {
-    if (update.value === null) {
-      params.delete(update.key);
-    } else {
-      params.set(update.key, update.value);
+    params.delete(update.key);
+    for (const value of update.values) {
+      params.append(update.key, value);
     }
   }
   const query = params.toString();
@@ -78,15 +84,15 @@ export function FinanceBreakdown({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const typeParam = typeField === "income_type" ? "income_type" : "expense_type";
-  const accountFilter = readAccountId(searchParams.get("account"));
-  const typeFilter = searchParams.get(typeParam);
+  const accountFilters = readAccountIds(searchParams.getAll("account"));
+  const typeFilters = searchParams.getAll(typeParam);
   const typeActiveClass = typeField === "income_type" ? INCOME_ACTIVE : EXPENSE_ACTIVE;
 
-  function replaceFilters(next: { account: number | null; type: string | null }) {
+  function replaceFilters(next: { account: number[]; type: string[] }) {
     router.replace(
       hrefWithParams(pathname, searchParams.toString(), [
-        { key: "account", value: next.account === null ? null : String(next.account) },
-        { key: typeParam, value: next.type },
+        { key: "account", values: next.account.map(String) },
+        { key: typeParam, values: next.type },
       ]),
       { scroll: false },
     );
@@ -108,8 +114,8 @@ export function FinanceBreakdown({
   const hasUnspecified = transactions.some((tx) => tx[typeField] === "");
   const visible = transactions.filter(
     (tx) =>
-      (accountFilter === null || tx.account.id === accountFilter) &&
-      (typeFilter === null || tx[typeField] === typeFilter),
+      (accountFilters.length === 0 || accountFilters.includes(tx.account.id)) &&
+      (typeFilters.length === 0 || typeFilters.includes(tx[typeField])),
   );
 
   const total = visible.reduce((sum, tx) => sum + magnitude(tx, rates), 0);
@@ -149,18 +155,18 @@ export function FinanceBreakdown({
       <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
           <FilterPill
-            active={accountFilter === null}
+            active={accountFilters.length === 0}
             activeClass={NEUTRAL_ACTIVE}
-            onClick={() => replaceFilters({ account: null, type: typeFilter })}
+            onClick={() => replaceFilters({ account: [], type: typeFilters })}
           >
             {t("filterAll")}
           </FilterPill>
           {accounts.map(([id, name]) => (
             <FilterPill
               key={id}
-              active={accountFilter === id}
+              active={accountFilters.includes(id)}
               activeClass={NEUTRAL_ACTIVE}
-              onClick={() => replaceFilters({ account: id, type: typeFilter })}
+              onClick={() => replaceFilters({ account: toggleValue(accountFilters, id), type: typeFilters })}
             >
               {name}
             </FilterPill>
@@ -168,27 +174,27 @@ export function FinanceBreakdown({
         </FilterRow>
         <FilterRow label={t(typeField === "income_type" ? "filterIncomeType" : "filterExpenseType")}>
           <FilterPill
-            active={typeFilter === null}
+            active={typeFilters.length === 0}
             activeClass={NEUTRAL_ACTIVE}
-            onClick={() => replaceFilters({ account: accountFilter, type: null })}
+            onClick={() => replaceFilters({ account: accountFilters, type: [] })}
           >
             {t("filterAll")}
           </FilterPill>
           {types.map((type) => (
             <FilterPill
               key={type}
-              active={typeFilter === type}
+              active={typeFilters.includes(type)}
               activeClass={typeActiveClass}
-              onClick={() => replaceFilters({ account: accountFilter, type })}
+              onClick={() => replaceFilters({ account: accountFilters, type: toggleValue(typeFilters, type) })}
             >
               {typeField === "income_type" ? t(`incomeTypes.${type}`) : t(`expenseTypes.${type}`)}
             </FilterPill>
           ))}
           {hasUnspecified ? (
             <FilterPill
-              active={typeFilter === ""}
+              active={typeFilters.includes("")}
               activeClass={typeActiveClass}
-              onClick={() => replaceFilters({ account: accountFilter, type: "" })}
+              onClick={() => replaceFilters({ account: accountFilters, type: toggleValue(typeFilters, "") })}
             >
               {t("unspecified")}
             </FilterPill>
