@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed, toGel } from "@/lib/format";
@@ -314,20 +313,25 @@ function BarList({
         const active = selectedKeys.includes(row.key);
         const content = (
           <>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="flex min-w-0 items-center gap-2">
-                {active ? (
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-white">
-                    <Check className="h-3 w-3" />
-                  </span>
-                ) : null}
-                <span className="min-w-0 truncate font-medium text-[var(--ink)]">{row.label}</span>
+            <div className="flex items-baseline justify-between gap-3 text-sm">
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  active ? "font-semibold text-[var(--brand)]" : "text-[var(--ink)]",
+                )}
+              >
+                {row.label}
               </span>
-              <span className="shrink-0 font-semibold tabular-nums text-[var(--ink)]">
+              <span
+                className={cn(
+                  "shrink-0 font-medium tabular-nums",
+                  active ? "text-[var(--brand)]" : "text-[var(--ink)]",
+                )}
+              >
                 {formatAed(row.amount)}
               </span>
             </div>
-            <div className={cn("mt-2 h-2 rounded-full", active ? "bg-[var(--brand)]/20" : "bg-[var(--line)]")}>
+            <div className={cn("mt-1 h-2 rounded-full", active ? "bg-[var(--brand)]/20" : "bg-[var(--line)]")}>
               <div
                 className={cn(
                   "h-2 rounded-full transition-[width,background-color]",
@@ -345,22 +349,13 @@ function BarList({
               type="button"
               aria-pressed={active}
               onClick={() => onSelect(row.key)}
-              className={cn(
-                "rounded-2xl border px-3 py-2.5 text-left transition",
-                active
-                  ? "border-[var(--brand)] bg-[var(--brand)]/5 shadow-sm"
-                  : "border-transparent hover:border-[var(--line)] hover:bg-[var(--cream-soft)]",
-              )}
+              className="w-full rounded text-left transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
             >
               {content}
             </button>
           );
         }
-        return (
-          <div key={row.key} className="px-3 py-2.5">
-            {content}
-          </div>
-        );
+        return <div key={row.key}>{content}</div>;
       })}
     </div>
   );
