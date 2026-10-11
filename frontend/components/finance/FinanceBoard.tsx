@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,9 @@ function FinanceBoardContent({
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
+  const searchParams = useSearchParams();
   const period = useFinancePeriod();
+  const currentQuery = searchParams.toString();
   const query = useFinanceTransactions(period);
   const ratesQuery = useExchangeRates();
   const today = getTbilisiTodayIsoDate();
@@ -82,7 +85,11 @@ function FinanceBoardContent({
         <nav className="flex flex-wrap gap-2">
           {SECTIONS.map((item) => (
             <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
-              <Link href={`${item.href}?${period.query}`}>{t(item.label)}</Link>
+              <Link
+                href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
+              >
+                {t(item.label)}
+              </Link>
             </Button>
           ))}
         </nav>

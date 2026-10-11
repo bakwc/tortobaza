@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import {
   formatAed,
@@ -82,6 +82,37 @@ const KIND_ORDER: FinanceTransaction["kind"][] = [
   "correction",
   "other",
 ];
+
+function readAccountId(value: string | null): number | null {
+  if (value === null) return null;
+  const id = Number(value);
+  if (!Number.isInteger(id)) return null;
+  return id;
+}
+
+function readKind(value: string | null): FinanceTransaction["kind"] | null {
+  if (value === null) return null;
+  const kind = KIND_ORDER.find((item) => item === value);
+  if (kind === undefined) return null;
+  return kind;
+}
+
+function hrefWithParams(
+  pathname: string,
+  current: string,
+  updates: { key: string; value: string | null }[],
+): string {
+  const params = new URLSearchParams(current);
+  for (const update of updates) {
+    if (update.value === null) {
+      params.delete(update.key);
+    } else {
+      params.set(update.key, update.value);
+    }
+  }
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);
@@ -191,15 +222,29 @@ export function FinanceTransactionList({
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const accountParam = searchParams.get("account");
+  const accountFilter = readAccountId(searchParams.get("account"));
+  const kindFilter = readKind(searchParams.get("kind"));
+  const expenseTypeFilter = kindFilter === "expense" ? searchParams.get("expense_type") : null;
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
-  const [accountFilter, setAccountFilter] = useState<number | null>(
-    accountParam === null ? null : Number(accountParam),
-  );
-  const [kindFilter, setKindFilter] = useState<FinanceTransaction["kind"] | null>(null);
-  const [expenseTypeFilter, setExpenseTypeFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
+
+  function replaceFilters(next: {
+    account: number | null;
+    kind: FinanceTransaction["kind"] | null;
+    expenseType: string | null;
+  }) {
+    router.replace(
+      hrefWithParams(pathname, searchParams.toString(), [
+        { key: "account", value: next.account === null ? null : String(next.account) },
+        { key: "kind", value: next.kind },
+        { key: "expense_type", value: next.kind === "expense" ? next.expenseType : null },
+      ]),
+      { scroll: false },
+    );
+  }
 
   if (transactions.length === 0) {
     return (
@@ -240,17 +285,22 @@ export function FinanceTransactionList({
   );
 
   function selectKind(kind: FinanceTransaction["kind"] | null) {
-    setKindFilter(kind);
-    if (kind !== "expense") {
-      setExpenseTypeFilter(null);
-    }
+    replaceFilters({
+      account: accountFilter,
+      kind,
+      expenseType: kind === "expense" ? expenseTypeFilter : null,
+    });
   }
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
-          <FilterPill active={accountFilter === null} activeClass={NEUTRAL_ACTIVE} onClick={() => setAccountFilter(null)}>
+          <FilterPill
+            active={accountFilter === null}
+            activeClass={NEUTRAL_ACTIVE}
+            onClick={() => replaceFilters({ account: null, kind: kindFilter, expenseType: expenseTypeFilter })}
+          >
             {t("filterAll")}
           </FilterPill>
           {accounts.map(([id, name]) => (
@@ -258,7 +308,7 @@ export function FinanceTransactionList({
               key={id}
               active={accountFilter === id}
               activeClass={NEUTRAL_ACTIVE}
-              onClick={() => setAccountFilter(id)}
+              onClick={() => replaceFilters({ account: id, kind: kindFilter, expenseType: expenseTypeFilter })}
             >
               {name}
             </FilterPill>
@@ -285,7 +335,7 @@ export function FinanceTransactionList({
             <FilterPill
               active={expenseTypeFilter === null}
               activeClass={NEUTRAL_ACTIVE}
-              onClick={() => setExpenseTypeFilter(null)}
+              onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: null })}
             >
               {t("filterAll")}
             </FilterPill>
@@ -294,7 +344,7 @@ export function FinanceTransactionList({
                 key={type}
                 active={expenseTypeFilter === type}
                 activeClass={EXPENSE_TONE.chip}
-                onClick={() => setExpenseTypeFilter(type)}
+                onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: type })}
               >
                 {t(`expenseTypes.${type}`)}
               </FilterPill>
@@ -303,7 +353,7 @@ export function FinanceTransactionList({
               <FilterPill
                 active={expenseTypeFilter === ""}
                 activeClass={EXPENSE_TONE.chip}
-                onClick={() => setExpenseTypeFilter("")}
+                onClick={() => replaceFilters({ account: accountFilter, kind: kindFilter, expenseType: "" })}
               >
                 {t("unspecified")}
               </FilterPill>

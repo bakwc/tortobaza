@@ -39,6 +39,21 @@ export function shiftFinanceMonth(yyyyMm: string, delta: number): string {
   return `${nextYear}-${nextMonth}`;
 }
 
+function searchWithPeriod(current: string, date: string | null, month: string | null): string {
+  const params = new URLSearchParams(current);
+  if (date === null) {
+    params.delete("date");
+  } else {
+    params.set("date", date);
+  }
+  if (month === null) {
+    params.delete("month");
+  } else {
+    params.set("month", month);
+  }
+  return params.toString();
+}
+
 export function useFinancePeriod(): FinancePeriod {
   const router = useRouter();
   const pathname = usePathname();
@@ -53,20 +68,20 @@ export function useFinancePeriod(): FinancePeriod {
   const month = monthParam ?? date.slice(0, 7);
 
   const setDate = (next: string) => {
-    router.replace(`${pathname}?date=${next}`);
+    router.replace(`${pathname}?${searchWithPeriod(searchParams.toString(), next, null)}`);
   };
 
   const setMonth = (next: string) => {
-    router.replace(`${pathname}?month=${next}`);
+    router.replace(`${pathname}?${searchWithPeriod(searchParams.toString(), null, next)}`);
   };
 
   const setMode = (next: FinancePeriodMode) => {
     if (next === "month") {
-      router.replace(`${pathname}?month=${date.slice(0, 7)}`);
+      router.replace(`${pathname}?${searchWithPeriod(searchParams.toString(), null, date.slice(0, 7))}`);
       return;
     }
     const day = month === today.slice(0, 7) ? today : `${month}-01`;
-    router.replace(`${pathname}?date=${day}`);
+    router.replace(`${pathname}?${searchWithPeriod(searchParams.toString(), day, null)}`);
   };
 
   const query = mode === "month" ? `month=${month}` : `date=${date}`;
