@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Check } from "lucide-react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed, toGel } from "@/lib/format";
@@ -124,7 +125,7 @@ export function FinanceBreakdown({
     label: visible.find((tx) => String(tx.account.id) === row.key)?.account.name ?? row.key,
     amount: row.amount,
   }));
-  const byType = group(visible, (tx) => tx[typeField] || "unspecified", rates).map((row) => ({
+  const byType = group(visible, (tx) => tx[typeField], rates).map((row) => ({
     key: row.key,
     label: typeLabel(typeField, row.key, t),
     amount: row.amount,
@@ -214,13 +215,31 @@ export function FinanceBreakdown({
             <p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{formatAed(total)}</p>
           </section>
           <ChartCard title={t("byAccount")}>
-            <BarList rows={byAccount} />
+            <BarList
+              rows={byAccount}
+              selectedKeys={accountFilters.map(String)}
+              onSelect={(key) =>
+                replaceFilters({
+                  account: accountFilters.includes(Number(key)) ? [] : [Number(key)],
+                  type: typeFilters,
+                })
+              }
+            />
           </ChartCard>
           <ChartCard title={t("byType")}>
-            <BarList rows={byType} />
+            <BarList
+              rows={byType}
+              selectedKeys={typeFilters}
+              onSelect={(key) =>
+                replaceFilters({
+                  account: accountFilters,
+                  type: typeFilters.includes(key) ? [] : [key],
+                })
+              }
+            />
           </ChartCard>
           <ChartCard title={t("byCounterparty")}>
-            <BarList rows={byCounterparty} />
+            <BarList rows={byCounterparty} selectedKeys={[]} onSelect={null} />
           </ChartCard>
           <ChartCard title={t("byDay")}>
             <DayColumns days={byDay} />
@@ -279,24 +298,70 @@ function ChartCard({ title, children }: { title: string; children: ReactNode }) 
   );
 }
 
-function BarList({ rows }: { rows: { key: string; label: string; amount: number }[] }) {
+function BarList({
+  rows,
+  selectedKeys,
+  onSelect,
+}: {
+  rows: { key: string; label: string; amount: number }[];
+  selectedKeys: string[];
+  onSelect: ((key: string) => void) | null;
+}) {
   const max = Math.max(...rows.map((row) => row.amount));
   return (
     <div className="grid gap-3">
-      {rows.map((row) => (
-        <div key={row.key}>
-          <div className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="min-w-0 truncate text-[var(--ink)]">{row.label}</span>
-            <span className="shrink-0 font-medium text-[var(--ink)]">{formatAed(row.amount)}</span>
+      {rows.map((row) => {
+        const active = selectedKeys.includes(row.key);
+        const content = (
+          <>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="flex min-w-0 items-center gap-2">
+                {active ? (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-white">
+                    <Check className="h-3 w-3" />
+                  </span>
+                ) : null}
+                <span className="min-w-0 truncate font-medium text-[var(--ink)]">{row.label}</span>
+              </span>
+              <span className="shrink-0 font-semibold tabular-nums text-[var(--ink)]">
+                {formatAed(row.amount)}
+              </span>
+            </div>
+            <div className={cn("mt-2 h-2 rounded-full", active ? "bg-[var(--brand)]/20" : "bg-[var(--line)]")}>
+              <div
+                className={cn(
+                  "h-2 rounded-full transition-[width,background-color]",
+                  active ? "bg-[var(--brand)]" : "bg-[var(--brand)]/70",
+                )}
+                style={{ width: max === 0 ? "0%" : `${(row.amount / max) * 100}%` }}
+              />
+            </div>
+          </>
+        );
+        if (onSelect) {
+          return (
+            <button
+              key={row.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(row.key)}
+              className={cn(
+                "rounded-2xl border px-3 py-2.5 text-left transition",
+                active
+                  ? "border-[var(--brand)] bg-[var(--brand)]/5 shadow-sm"
+                  : "border-transparent hover:border-[var(--line)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {content}
+            </button>
+          );
+        }
+        return (
+          <div key={row.key} className="px-3 py-2.5">
+            {content}
           </div>
-          <div className="mt-1 h-2 rounded-full bg-[var(--line)]">
-            <div
-              className="h-2 rounded-full bg-[var(--brand)]"
-              style={{ width: max === 0 ? "0%" : `${(row.amount / max) * 100}%` }}
-            />
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -340,7 +405,7 @@ function typeLabel(
   value: string,
   t: ReturnType<typeof useTranslations<"finance">>,
 ): string {
-  if (value === "unspecified") {
+  if (value === "") {
     return t("unspecified");
   }
   if (typeField === "income_type" && isIncomeType(value)) {
