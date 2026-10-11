@@ -9,7 +9,6 @@ export default function FinanceIncomePage() {
       {(transactions, period, rates) => (
         <FinanceBreakdown
           transactions={transactions.filter((tx) => tx.kind === "income")}
-          mode={period.mode}
           month={period.month}
           typeField="income_type"
           rates={rates}

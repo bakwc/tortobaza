@@ -4,8 +4,6 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed, toGel } from "@/lib/format";
-import type { FinancePeriodMode } from "@/hooks/useFinancePeriod";
-
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
 const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing"] as const;
 
@@ -35,13 +33,11 @@ function magnitude(tx: FinanceTransaction, rates: Record<string, string>): numbe
 
 export function FinanceBreakdown({
   transactions,
-  mode,
   month,
   typeField,
   rates,
 }: {
   transactions: FinanceTransaction[];
-  mode: FinancePeriodMode;
   month: string;
   typeField: "income_type" | "expense_type";
   rates: Record<string, string>;
@@ -81,15 +77,12 @@ export function FinanceBreakdown({
       amount: otherAmount,
     });
   }
-  const byDay =
-    mode === "month"
-      ? monthDays(month).map((day) => ({
-          date: day,
-          amount: transactions
-            .filter((tx) => tx.date === day)
-            .reduce((sum, tx) => sum + magnitude(tx, rates), 0),
-        }))
-      : [];
+  const byDay = monthDays(month).map((day) => ({
+    date: day,
+    amount: transactions
+      .filter((tx) => tx.date === day)
+      .reduce((sum, tx) => sum + magnitude(tx, rates), 0),
+  }));
 
   return (
     <div className="grid gap-4">
@@ -108,11 +101,9 @@ export function FinanceBreakdown({
       <ChartCard title={t("byCounterparty")}>
         <BarList rows={byCounterparty} />
       </ChartCard>
-      {mode === "month" ? (
-        <ChartCard title={t("byDay")}>
-          <DayColumns days={byDay} />
-        </ChartCard>
-      ) : null}
+      <ChartCard title={t("byDay")}>
+        <DayColumns days={byDay} />
+      </ChartCard>
     </div>
   );
 }

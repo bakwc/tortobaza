@@ -6,12 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { Link } from "@/i18n/navigation";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
 import {
-  shiftFinanceDate,
   shiftFinanceMonth,
   useFinancePeriod,
   type FinancePeriod,
@@ -76,126 +74,65 @@ function FinanceBoardContent({
   const query = useFinanceTransactions(period);
   const ratesQuery = useExchangeRates();
   const today = getTbilisiTodayIsoDate();
-  const isToday = period.date === today;
   const isCurrentMonth = period.month === today.slice(0, 7);
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav className="flex flex-wrap gap-2">
-          {SECTIONS.map((item) => (
-            <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
-              <Link
-                href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
-              >
-                {t(item.label)}
-              </Link>
-            </Button>
-          ))}
-        </nav>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant={period.mode === "day" ? "primary" : "outline"}
-            onClick={() => period.setMode("day")}
-          >
-            {t("day")}
+      <nav className="flex flex-wrap gap-2">
+        {SECTIONS.map((item) => (
+          <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
+            <Link
+              href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
+            >
+              {t(item.label)}
+            </Link>
           </Button>
-          <Button
-            type="button"
-            variant={period.mode === "month" ? "primary" : "outline"}
-            onClick={() => period.setMode("month")}
-          >
-            {t("month")}
-          </Button>
-        </div>
-      </div>
+        ))}
+      </nav>
 
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
-        {period.mode === "day" ? (
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => period.setDate(shiftFinanceDate(period.date, -1))}
-              className="flex items-center gap-1.5"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>{t("previousDay")}</span>
-            </Button>
-            <div className="flex w-full max-w-md flex-col items-center gap-1 text-center">
-              <MondayDatePicker value={period.date} onChange={period.setDate} />
-              <div className="flex items-center gap-2">
-                {isToday ? (
-                  <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
-                    {t("today")}
-                  </span>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => period.setDate(today)}
-                    className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
-                  >
-                    {t("jumpToToday")}
-                  </Button>
-                )}
-              </div>
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => period.setMonth(shiftFinanceMonth(period.month, -1))}
+            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("prevMonth")}</span>
+          </Button>
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-2 text-base font-semibold text-[var(--ink)] md:text-lg">
+              <Calendar className="h-4 w-4 shrink-0 text-[var(--brand)] md:h-5 md:w-5" />
+              <span className="truncate">{formatCrmMonth(period.month, locale)}</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => period.setDate(shiftFinanceDate(period.date, 1))}
-              className="flex items-center gap-1.5"
-            >
-              <span>{t("nextDay")}</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => period.setMonth(shiftFinanceMonth(period.month, -1))}
-              className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("prevMonth")}</span>
-            </Button>
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
-              <div className="flex items-center gap-2 text-base font-semibold text-[var(--ink)] md:text-lg">
-                <Calendar className="h-4 w-4 shrink-0 text-[var(--brand)] md:h-5 md:w-5" />
-                <span className="truncate">{formatCrmMonth(period.month, locale)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {isCurrentMonth ? (
-                  <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
-                    {t("thisMonth")}
-                  </span>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => period.setMonth(today.slice(0, 7))}
-                    className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
-                  >
-                    {t("jumpToThisMonth")}
-                  </Button>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              {isCurrentMonth ? (
+                <span className="rounded-full bg-[var(--brand)]/15 px-2.5 py-0.5 text-xs font-semibold text-[var(--brand)]">
+                  {t("thisMonth")}
+                </span>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => period.setMonth(today.slice(0, 7))}
+                  className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
+                >
+                  {t("jumpToThisMonth")}
+                </Button>
+              )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => period.setMonth(shiftFinanceMonth(period.month, 1))}
-              className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
-            >
-              <span className="hidden sm:inline">{t("nextMonth")}</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => period.setMonth(shiftFinanceMonth(period.month, 1))}
+            className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
+          >
+            <span className="hidden sm:inline">{t("nextMonth")}</span>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {query.isError || ratesQuery.isError ? (

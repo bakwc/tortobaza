@@ -9,7 +9,6 @@ export default function FinanceExpensesPage() {
       {(transactions, period, rates) => (
         <FinanceBreakdown
           transactions={transactions.filter((tx) => tx.kind === "expense")}
-          mode={period.mode}
           month={period.month}
           typeField="expense_type"
           rates={rates}

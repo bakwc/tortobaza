@@ -7,14 +7,8 @@ import type { FinancePeriod } from "@/hooks/useFinancePeriod";
 
 export function useFinanceTransactions(period: FinancePeriod) {
   return useQuery<FinanceTransactionsResponse>({
-    queryKey:
-      period.mode === "month"
-        ? (["finance-transactions", "month", period.month] as const)
-        : (["finance-transactions", "date", period.date] as const),
-    queryFn: () =>
-      period.mode === "month"
-        ? api.getFinanceTransactionsByMonth(period.month)
-        : api.getFinanceTransactions(period.date),
+    queryKey: ["finance-transactions", "month", period.month] as const,
+    queryFn: () => api.getFinanceTransactionsByMonth(period.month),
     staleTime: 0,
   });
 }
