@@ -1,11 +1,18 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed, toGel } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
 const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing"] as const;
+const NEUTRAL_ACTIVE = "bg-[var(--ink)] text-white";
+const INCOME_ACTIVE = "bg-emerald-600 text-white";
+const EXPENSE_ACTIVE = "bg-rose-600 text-white";
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);
@@ -13,6 +20,30 @@ function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
 
 function isExpenseType(value: string): value is (typeof EXPENSE_TYPES)[number] {
   return EXPENSE_TYPES.some((item) => item === value);
+}
+
+function readAccountId(value: string | null): number | null {
+  if (value === null) return null;
+  const id = Number(value);
+  if (!Number.isInteger(id)) return null;
+  return id;
+}
+
+function hrefWithParams(
+  pathname: string,
+  current: string,
+  updates: { key: string; value: string | null }[],
+): string {
+  const params = new URLSearchParams(current);
+  for (const update of updates) {
+    if (update.value === null) {
+      params.delete(update.key);
+    } else {
+      params.set(update.key, update.value);
+    }
+  }
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function monthDays(yyyyMm: string): string[] {
@@ -43,6 +74,23 @@ export function FinanceBreakdown({
   rates: Record<string, string>;
 }) {
   const t = useTranslations("finance");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const typeParam = typeField === "income_type" ? "income_type" : "expense_type";
+  const accountFilter = readAccountId(searchParams.get("account"));
+  const typeFilter = searchParams.get(typeParam);
+  const typeActiveClass = typeField === "income_type" ? INCOME_ACTIVE : EXPENSE_ACTIVE;
+
+  function replaceFilters(next: { account: number | null; type: string | null }) {
+    router.replace(
+      hrefWithParams(pathname, searchParams.toString(), [
+        { key: "account", value: next.account === null ? null : String(next.account) },
+        { key: typeParam, value: next.type },
+      ]),
+      { scroll: false },
+    );
+  }
 
   if (transactions.length === 0) {
     return (
@@ -52,18 +100,30 @@ export function FinanceBreakdown({
     );
   }
 
-  const total = transactions.reduce((sum, tx) => sum + magnitude(tx, rates), 0);
-  const byAccount = group(transactions, (tx) => String(tx.account.id), rates).map((row) => ({
+  const knownTypes = typeField === "income_type" ? INCOME_TYPES : EXPENSE_TYPES;
+  const accounts = [
+    ...new Map(transactions.map((tx) => [tx.account.id, tx.account.name])).entries(),
+  ].sort((left, right) => left[1].localeCompare(right[1]));
+  const types = knownTypes.filter((type) => transactions.some((tx) => tx[typeField] === type));
+  const hasUnspecified = transactions.some((tx) => tx[typeField] === "");
+  const visible = transactions.filter(
+    (tx) =>
+      (accountFilter === null || tx.account.id === accountFilter) &&
+      (typeFilter === null || tx[typeField] === typeFilter),
+  );
+
+  const total = visible.reduce((sum, tx) => sum + magnitude(tx, rates), 0);
+  const byAccount = group(visible, (tx) => String(tx.account.id), rates).map((row) => ({
     key: row.key,
-    label: transactions.find((tx) => String(tx.account.id) === row.key)?.account.name ?? row.key,
+    label: visible.find((tx) => String(tx.account.id) === row.key)?.account.name ?? row.key,
     amount: row.amount,
   }));
-  const byType = group(transactions, (tx) => tx[typeField] || "unspecified", rates).map((row) => ({
+  const byType = group(visible, (tx) => tx[typeField] || "unspecified", rates).map((row) => ({
     key: row.key,
     label: typeLabel(typeField, row.key, t),
     amount: row.amount,
   }));
-  const counterparties = group(transactions, (tx) => tx.counterparty_name || "unspecified", rates);
+  const counterparties = group(visible, (tx) => tx.counterparty_name || "unspecified", rates);
   const otherAmount = counterparties.slice(20).reduce((sum, row) => sum + row.amount, 0);
   const byCounterparty = counterparties.slice(0, 20).map((row) => ({
     key: row.key,
@@ -79,32 +139,128 @@ export function FinanceBreakdown({
   }
   const byDay = monthDays(month).map((day) => ({
     date: day,
-    amount: transactions
+    amount: visible
       .filter((tx) => tx.date === day)
       .reduce((sum, tx) => sum + magnitude(tx, rates), 0),
   }));
 
   return (
     <div className="grid gap-4">
-      <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
-          {t("total")}
-        </h2>
-        <p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{formatAed(total)}</p>
-      </section>
-      <ChartCard title={t("byAccount")}>
-        <BarList rows={byAccount} />
-      </ChartCard>
-      <ChartCard title={t("byType")}>
-        <BarList rows={byType} />
-      </ChartCard>
-      <ChartCard title={t("byCounterparty")}>
-        <BarList rows={byCounterparty} />
-      </ChartCard>
-      <ChartCard title={t("byDay")}>
-        <DayColumns days={byDay} />
-      </ChartCard>
+      <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
+        <FilterRow label={t("filterAccount")}>
+          <FilterPill
+            active={accountFilter === null}
+            activeClass={NEUTRAL_ACTIVE}
+            onClick={() => replaceFilters({ account: null, type: typeFilter })}
+          >
+            {t("filterAll")}
+          </FilterPill>
+          {accounts.map(([id, name]) => (
+            <FilterPill
+              key={id}
+              active={accountFilter === id}
+              activeClass={NEUTRAL_ACTIVE}
+              onClick={() => replaceFilters({ account: id, type: typeFilter })}
+            >
+              {name}
+            </FilterPill>
+          ))}
+        </FilterRow>
+        <FilterRow label={t(typeField === "income_type" ? "filterIncomeType" : "filterExpenseType")}>
+          <FilterPill
+            active={typeFilter === null}
+            activeClass={NEUTRAL_ACTIVE}
+            onClick={() => replaceFilters({ account: accountFilter, type: null })}
+          >
+            {t("filterAll")}
+          </FilterPill>
+          {types.map((type) => (
+            <FilterPill
+              key={type}
+              active={typeFilter === type}
+              activeClass={typeActiveClass}
+              onClick={() => replaceFilters({ account: accountFilter, type })}
+            >
+              {typeField === "income_type" ? t(`incomeTypes.${type}`) : t(`expenseTypes.${type}`)}
+            </FilterPill>
+          ))}
+          {hasUnspecified ? (
+            <FilterPill
+              active={typeFilter === ""}
+              activeClass={typeActiveClass}
+              onClick={() => replaceFilters({ account: accountFilter, type: "" })}
+            >
+              {t("unspecified")}
+            </FilterPill>
+          ) : null}
+        </FilterRow>
+      </div>
+      {visible.length === 0 ? (
+        <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
+          {t("empty")}
+        </div>
+      ) : (
+        <>
+          <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
+              {t("total")}
+            </h2>
+            <p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{formatAed(total)}</p>
+          </section>
+          <ChartCard title={t("byAccount")}>
+            <BarList rows={byAccount} />
+          </ChartCard>
+          <ChartCard title={t("byType")}>
+            <BarList rows={byType} />
+          </ChartCard>
+          <ChartCard title={t("byCounterparty")}>
+            <BarList rows={byCounterparty} />
+          </ChartCard>
+          <ChartCard title={t("byDay")}>
+            <DayColumns days={byDay} />
+          </ChartCard>
+        </>
+      )}
     </div>
+  );
+}
+
+function FilterRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <span className="mr-1 w-28 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function FilterPill({
+  active,
+  activeClass,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  activeClass: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors [&_svg]:h-3 [&_svg]:w-3",
+        active
+          ? cn("border-transparent", activeClass)
+          : "border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
