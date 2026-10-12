@@ -54,34 +54,34 @@ export function CrmPaymentTypeDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] p-6">
-        <DialogTitle className="pr-10 text-lg font-semibold text-[var(--ink)]">
+      <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] flex-col p-4 sm:p-6">
+        <DialogTitle className="shrink-0 pr-10 text-lg font-semibold text-[var(--ink)]">
           {t("paymentMethod")}
         </DialogTitle>
         <RadioGroup
           value={selected}
           onValueChange={(value) => setSelected(value as CrmOrderPaymentType)}
-          className="mt-4 grid grid-cols-1 gap-2"
+          className="-mx-1 mt-4 grid min-h-0 flex-1 grid-cols-2 content-start gap-2 overflow-y-auto overscroll-contain px-1 py-1"
         >
           {PAYMENT_TYPES.map((type) => (
             <label
               key={type}
               className={cn(
-                "flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-3 text-sm",
+                "flex min-w-0 cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-sm",
                 selected === type
                   ? "border-[var(--brand)] bg-[var(--cream)]"
                   : "border-[var(--line)]",
               )}
             >
               <RadioGroupItem value={type} />
-              <span className="flex-1 font-medium text-[var(--ink)]">
+              <span className="min-w-0 flex-1 break-words leading-tight font-medium text-[var(--ink)]">
                 {t(PAYMENT_TYPE_MESSAGE_KEYS[type])}
               </span>
-              {selected === type ? <Check className="h-4 w-4 text-[var(--brand)]" /> : null}
+              {selected === type ? <Check className="h-4 w-4 shrink-0 text-[var(--brand)]" /> : null}
             </label>
           ))}
         </RadioGroup>
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-4 flex shrink-0 justify-end gap-2 sm:mt-6">
           <Button
             type="button"
             variant="outline"
