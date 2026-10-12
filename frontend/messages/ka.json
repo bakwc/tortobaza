@@ -336,6 +336,8 @@
     "deliveredBy": "მიაწოდა",
     "deliveredByFemale": "მიაწოდა",
     "statusMenu": "სტატუსის შეცვლა",
+    "collapseOrder": "შეკვეთის ჩაკეცვა",
+    "expandOrder": "შეკვეთის გაშლა",
     "nextStepNew": "დადასტურება",
     "nextStepReady": "მზადაა",
     "nextStepClientApproved": "კლიენტმა დაამტკიცა",

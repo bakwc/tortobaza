@@ -336,6 +336,8 @@
     "deliveredBy": "delivered",
     "deliveredByFemale": "delivered",
     "statusMenu": "Change status",
+    "collapseOrder": "Collapse order",
+    "expandOrder": "Expand order",
     "nextStepNew": "Confirm",
     "nextStepReady": "Ready",
     "nextStepClientApproved": "Client approved",

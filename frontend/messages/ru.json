@@ -336,6 +336,8 @@
     "deliveredBy": "доставил",
     "deliveredByFemale": "доставила",
     "statusMenu": "Изменить статус",
+    "collapseOrder": "Свернуть заказ",
+    "expandOrder": "Развернуть заказ",
     "nextStepNew": "Подтвердить",
     "nextStepReady": "Готов",
     "nextStepClientApproved": "Клиент одобрил",

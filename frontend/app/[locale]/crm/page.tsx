@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
@@ -434,6 +434,21 @@ function CrmOrderCard({
   const [resolvingTarget, setResolvingTarget] = useState<"address" | "yandex" | "google" | null>(
     null,
   );
+  const [collapsed, setCollapsed] = useState(order.status === "delivered");
+  const expandedByUser = useRef(false);
+  const previousStatus = useRef(order.status);
+
+  useEffect(() => {
+    const previous = previousStatus.current;
+    previousStatus.current = order.status;
+    if (order.status !== "delivered") {
+      expandedByUser.current = false;
+      return;
+    }
+    if (previous !== "delivered" && !expandedByUser.current) {
+      setCollapsed(true);
+    }
+  }, [order.status]);
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
@@ -462,15 +477,95 @@ function CrmOrderCard({
     setIsPaymentOpen(true);
   };
 
+  const toggleCollapsed = () => {
+    setCollapsed((current) => {
+      const next = !current;
+      if (order.status === "delivered") {
+        expandedByUser.current = !next;
+      }
+      return next;
+    });
+  };
+
+  const collapseButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={toggleCollapsed}
+      aria-label={collapsed ? t("expandOrder") : t("collapseOrder")}
+      aria-expanded={!collapsed}
+      className="h-8 w-8 shrink-0 px-0"
+    >
+      <ChevronDown className={cn("h-4 w-4 transition-transform", !collapsed && "rotate-180")} />
+    </Button>
+  );
+
   return (
     <div
       id={`crm-order-${order.id}`}
       className={cn(
-        "rounded-2xl border p-3 shadow-sm transition-colors sm:p-4 md:rounded-3xl md:p-8",
+        "rounded-2xl border shadow-sm transition-colors md:rounded-3xl",
+        collapsed ? "p-3" : "p-3 sm:p-4 md:p-8",
         tone.card,
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
     >
+      {collapsed ? (
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <CrmOrderTimeSlot
+              timeStart={order.time_start}
+              timeEnd={order.time_end}
+              whenReady={order.when_ready}
+              deliveryDurationSeconds={order.delivery_duration_seconds}
+              layout="day"
+            />
+            <span
+              className={cn(
+                "flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
+                order.fulfillment_type === "delivery"
+                  ? "bg-amber-100 text-amber-900"
+                  : "bg-blue-100 text-blue-900",
+              )}
+            >
+              {order.fulfillment_type === "delivery" ? (
+                <>
+                  <Truck className="h-3.5 w-3.5" />
+                  <span>{t("delivery")}</span>
+                </>
+              ) : (
+                <>
+                  <Store className="h-3.5 w-3.5" />
+                  <span>{t("pickup")}</span>
+                </>
+              )}
+            </span>
+            <Link
+              href={`/crm?date=${order.date}&order=${order.id}`}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-medium text-[var(--ink)] underline-offset-2 hover:underline",
+                tone.media,
+              )}
+            >
+              #{order.id}
+            </Link>
+            <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)]">
+              {order.contact}
+            </p>
+            <span
+              className={cn(
+                "flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                tone.chip,
+              )}
+            >
+              {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
+            </span>
+          </div>
+          {collapseButton}
+        </div>
+      ) : null}
+      {collapsed ? null : (
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-2 lg:col-span-5 lg:gap-3">
           <div
@@ -647,6 +742,7 @@ function CrmOrderCard({
                       : null
                   }
                 />
+                {collapseButton}
               </div>
             </div>
 
@@ -1067,6 +1163,7 @@ function CrmOrderCard({
           </div>
         </div>
       </div>
+      )}
       {isPaymentOpen ? (
         <CrmPaymentTypeDialog
           open={isPaymentOpen}
