@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import type {
   CrmExpensesDay,
   CrmExpensesMonth,
+  CrmSalaries,
   CrmMapOrderRange,
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
@@ -38,6 +39,8 @@ export const crmExpensesQueryKey = (date?: string) =>
 
 export const crmMonthlyExpensesQueryKey = (month: string) =>
   ["crm-expenses", "month", month] as const;
+
+export const crmSalariesQueryKey = (month: string) => ["crm-salaries", month] as const;
 
 export const crmOrderQueryKey = (id: number) => ["crm-order", id] as const;
 
@@ -101,6 +104,16 @@ export function useCrmExpensesByMonth(month: string, enabled: boolean) {
     queryKey: crmMonthlyExpensesQueryKey(month),
     queryFn: () => api.getCrmExpensesByMonth(month),
     enabled,
+    staleTime: 0,
+    refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmSalaries(month: string) {
+  return useQuery<CrmSalaries>({
+    queryKey: crmSalariesQueryKey(month),
+    queryFn: () => api.getCrmSalaries(month),
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,

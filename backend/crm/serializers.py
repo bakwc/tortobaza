@@ -502,6 +502,32 @@ class CrmExpensesMonthSerializer(serializers.Serializer):
     by_date = serializers.DictField(child=CrmExpensesBreakdownSerializer())
 
 
+class CrmSalariesQuerySerializer(serializers.Serializer):
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+
+
+class CrmSalaryEmployeeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    money = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class CrmSalaryPeriodSerializer(serializers.Serializer):
+    start = serializers.DateField()
+    end = serializers.DateField()
+    employees = CrmSalaryEmployeeSerializer(many=True)
+    total_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class CrmSalariesSerializer(serializers.Serializer):
+    month = serializers.CharField()
+    periods = CrmSalaryPeriodSerializer(many=True)
+    total_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class FinanceTransactionsQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)

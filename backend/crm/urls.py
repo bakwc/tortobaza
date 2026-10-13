@@ -2,6 +2,7 @@ from django.urls import path
 
 from crm.views import (
     CrmExpensesView,
+    CrmSalariesView,
     CrmOrderClientMapView,
     CrmOrderClientView,
     CrmOrderDetailView,
@@ -18,6 +19,7 @@ from crm.views import (
 urlpatterns = [
     path("webhooks/flowwow/", FlowwowWebhookView.as_view(), name="flowwow-webhook"),
     path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
+    path("crm/salaries/", CrmSalariesView.as_view(), name="crm-salaries"),
     path(
         "crm/finance/transactions/",
         FinanceTransactionsView.as_view(),

@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from zoneinfo import ZoneInfo
@@ -5,7 +6,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from accounts.models import UserProfile
+from accounts.models import UserProfile, chef_identity
 from attendance.models import AttendanceEvent
 
 User = get_user_model()
@@ -134,4 +135,94 @@ def compute_all_salaries(start_date: date, end_date: date) -> dict:
     return {
         "total_money": total_money,
         "by_date": by_date,
+    }
+
+
+def _period_totals(employees: list[dict]) -> tuple[Decimal, Decimal]:
+    hours = Decimal("0.00")
+    money = Decimal("0.00")
+    for employee in employees:
+        hours += employee["hours"]
+        money += employee["money"]
+    return hours, money
+
+
+def compute_month_salaries(year: int, month: int) -> dict:
+    last_day = monthrange(year, month)[1]
+    start_date = date(year, month, 1)
+    end_date = date(year, month, last_day)
+    first_end = date(year, month, 14)
+    second_start = date(year, month, 15)
+    start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
+    end_dt = timezone.make_aware(
+        datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
+        _TB,
+    )
+    user_ids = (
+        AttendanceEvent.objects.filter(
+            timestamp__gte=start_dt,
+            timestamp__lt=end_dt,
+        )
+        .values_list("user_id", flat=True)
+        .distinct()
+    )
+    users = User.objects.filter(id__in=user_ids)
+    first_employees: list[dict] = []
+    second_employees: list[dict] = []
+    for user in users:
+        result = compute_salary(user, start_date, end_date)
+        name = chef_identity(user)[0]
+        first_hours = Decimal("0.00")
+        first_money = Decimal("0.00")
+        second_hours = Decimal("0.00")
+        second_money = Decimal("0.00")
+        for row in result["rows"]:
+            if row["date"] <= first_end:
+                first_hours += row["hours"]
+                first_money += row["money"]
+            else:
+                second_hours += row["hours"]
+                second_money += row["money"]
+        if first_hours > 0:
+            first_employees.append(
+                {
+                    "id": user.id,
+                    "name": name,
+                    "hours": first_hours,
+                    "money": first_money,
+                }
+            )
+        if second_hours > 0:
+            second_employees.append(
+                {
+                    "id": user.id,
+                    "name": name,
+                    "hours": second_hours,
+                    "money": second_money,
+                }
+            )
+    first_employees.sort(key=lambda row: (row["name"].casefold(), row["id"]))
+    second_employees.sort(key=lambda row: (row["name"].casefold(), row["id"]))
+    first_total_hours, first_total_money = _period_totals(first_employees)
+    second_total_hours, second_total_money = _period_totals(second_employees)
+    return {
+        "month": f"{year:04d}-{month:02d}",
+        "periods": [
+            {
+                "start": start_date,
+                "end": first_end,
+                "employees": first_employees,
+                "total_hours": first_total_hours,
+                "total_money": first_total_money,
+            },
+            {
+                "start": second_start,
+                "end": end_date,
+                "employees": second_employees,
+                "total_hours": second_total_hours,
+                "total_money": second_total_money,
+            },
+        ],
+        "total_hours": first_total_hours + second_total_hours,
+        "total_money": first_total_money + second_total_money,
     }

@@ -390,6 +390,28 @@ export const CrmExpensesMonthSchema = z.object({
   ),
 });
 
+export const CrmSalaryEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  hours: z.string(),
+  money: z.string(),
+});
+
+export const CrmSalaryPeriodSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  employees: z.array(CrmSalaryEmployeeSchema),
+  total_hours: z.string(),
+  total_money: z.string(),
+});
+
+export const CrmSalariesSchema = z.object({
+  month: z.string(),
+  periods: z.array(CrmSalaryPeriodSchema),
+  total_hours: z.string(),
+  total_money: z.string(),
+});
+
 export const FinanceTransactionSchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -532,6 +554,9 @@ export type CrmMapOrder = z.infer<typeof CrmMapOrderSchema>;
 export type CrmMapOrdersResponse = z.infer<typeof CrmMapOrdersResponseSchema>;
 export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
 export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
+export type CrmSalaryEmployee = z.infer<typeof CrmSalaryEmployeeSchema>;
+export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
+export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
 export type ExchangeRates = z.infer<typeof ExchangeRatesSchema>;

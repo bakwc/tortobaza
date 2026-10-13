@@ -20,7 +20,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from attendance.salary import compute_all_salaries
+from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
 from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
@@ -45,6 +45,8 @@ from crm.serializers import (
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
     CrmOrderWriteSerializer,
+    CrmSalariesQuerySerializer,
+    CrmSalariesSerializer,
     ExchangeRatesSerializer,
     FinanceTransactionsQuerySerializer,
     FinanceTransactionsResponseSerializer,
@@ -408,6 +410,26 @@ class CrmExpensesView(APIView):
             }
         )
         return Response(serializer.data)
+
+
+class CrmSalariesView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        query_serializer = CrmSalariesQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        month = query_serializer.validated_data.get("month")
+        if month:
+            year_str, month_str = month.split("-")
+            year = int(year_str)
+            month_num = int(month_str)
+        else:
+            today = timezone.now().astimezone(_TB).date()
+            year = today.year
+            month_num = today.month
+        result = compute_month_salaries(year, month_num)
+        return Response(CrmSalariesSerializer(result).data)
 
 
 class FinanceTransactionsView(APIView):
