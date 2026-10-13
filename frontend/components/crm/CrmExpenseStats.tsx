@@ -19,7 +19,7 @@ export function CrmExpenseStats({
   detailed: boolean;
 }) {
   const currentUser = useCurrentUser();
-  if (!currentUser.data?.is_staff) {
+  if (!currentUser.data?.is_finance_admin) {
     return null;
   }
   if (salary === undefined || rent === undefined) {

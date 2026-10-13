@@ -14,7 +14,7 @@ class UserProfileInline(admin.StackedInline):
 
 class UserAdmin(BaseUserAdmin):
     inlines = [UserProfileInline]
-    list_display = BaseUserAdmin.list_display + ("get_hourly_rate",)
+    list_display = BaseUserAdmin.list_display + ("get_hourly_rate", "get_is_finance_admin")
 
     @admin.display(description=_("Hourly rate"))
     def get_hourly_rate(self, obj):
@@ -22,6 +22,13 @@ class UserAdmin(BaseUserAdmin):
         if profile is None:
             return None
         return profile.hourly_rate
+
+    @admin.display(description=_("Finance admin"), boolean=True)
+    def get_is_finance_admin(self, obj):
+        profile = UserProfile.objects.filter(user=obj).first()
+        if profile is None:
+            return False
+        return profile.is_finance_admin
 
 
 admin.site.unregister(User)

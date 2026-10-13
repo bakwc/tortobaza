@@ -106,7 +106,7 @@ function CrmMonthBoard() {
   const ordersQuery = useCrmOrdersByMonth(selectedMonth);
   const expensesQuery = useCrmExpensesByMonth(
     selectedMonth,
-    Boolean(currentUser.data?.is_staff),
+    Boolean(currentUser.data?.is_finance_admin),
   );
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isCurrentMonth = selectedMonth === currentMonth;

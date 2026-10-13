@@ -17,7 +17,7 @@ export function CrmIncomeStats({
   detailed: boolean;
 }) {
   const currentUser = useCurrentUser();
-  if (!currentUser.data?.is_staff) {
+  if (!currentUser.data?.is_finance_admin) {
     return null;
   }
 

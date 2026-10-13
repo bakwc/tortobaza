@@ -2,11 +2,21 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
+from accounts.models import UserProfile
+
 
 class UserSerializer(serializers.ModelSerializer):
+    is_finance_admin = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "is_staff"]
+        fields = ["id", "username", "first_name", "last_name", "is_staff", "is_finance_admin"]
+
+    def get_is_finance_admin(self, user: User) -> bool:
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is None:
+            return False
+        return profile.is_finance_admin
 
 
 class LoginSerializer(serializers.Serializer):

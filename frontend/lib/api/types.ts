@@ -240,6 +240,7 @@ export const SessionUserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   is_staff: z.boolean(),
+  is_finance_admin: z.boolean(),
 });
 
 export const AttendanceEventSchema = z.object({

@@ -9,7 +9,7 @@ function FinanceStaffOnly({ children }: { children: ReactNode }) {
   const t = useTranslations("finance");
   const currentUser = useCurrentUser();
 
-  if (!currentUser.data?.is_staff) {
+  if (!currentUser.data?.is_finance_admin) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">
         {t("staffOnly")}

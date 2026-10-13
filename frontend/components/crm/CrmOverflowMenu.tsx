@@ -20,8 +20,8 @@ export function CrmOverflowMenu() {
   const month = monthParam ?? (dateParam ? dateParam.slice(0, 7) : null);
   const salariesHref = month ? `/crm/salaries?month=${month}` : "/crm/salaries";
   const financeHref = month ? `/finance?month=${month}` : "/finance";
-  const showStaffLinks = Boolean(currentUser.data?.is_staff);
-  const showSalaries = showStaffLinks && pathname !== "/crm/salaries";
+  const showFinanceLinks = Boolean(currentUser.data?.is_finance_admin);
+  const showSalaries = showFinanceLinks && pathname !== "/crm/salaries";
 
   return (
     <div className="relative">
@@ -47,7 +47,7 @@ export function CrmOverflowMenu() {
               {t("salaries")}
             </Link>
           ) : null}
-          {showStaffLinks ? (
+          {showFinanceLinks ? (
             <Link
               href={financeHref}
               className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"

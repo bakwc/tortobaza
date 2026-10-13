@@ -31,6 +31,8 @@ class CrmSalariesApiTests(TestCase):
         self.other = User.objects.create_user(username="other", password="password")
         self.idle = User.objects.create_user(username="idle", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
+        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
         UserProfile.objects.create(
             user=self.worker,
             hourly_rate=Decimal("10.00"),
@@ -53,6 +55,11 @@ class CrmSalariesApiTests(TestCase):
 
     def test_non_staff_access_denied(self):
         self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/crm/salaries/", {"month": "2026-06"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_staff_without_finance_admin_denied(self):
+        self.client.force_authenticate(user=self.staff)
         response = self.client.get("/api/crm/salaries/", {"month": "2026-06"})
         self.assertEqual(response.status_code, 403)
 

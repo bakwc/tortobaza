@@ -33,6 +33,7 @@ class UserProfile(models.Model):
         default=GENDER_FEMALE,
         verbose_name=_("Gender"),
     )
+    is_finance_admin = models.BooleanField(default=False, verbose_name=_("Finance admin"))
 
     class Meta:
         verbose_name = _("Profile")

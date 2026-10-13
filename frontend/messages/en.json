@@ -404,7 +404,7 @@
     "salaryMonthTotal": "Month total",
     "salaryLoadError": "Could not load salaries. Please try again.",
     "salaryEmpty": "No shifts in this period",
-    "staffOnly": "This section is for staff only.",
+    "staffOnly": "This section is for finance admins only.",
     "deleteOrder": "Delete",
     "deleteConfirmTitle": "Delete this order?",
     "deleteConfirmBody": "The order will be hidden from the board.",
@@ -460,7 +460,7 @@
     "historyNo": "No"
   },
   "finance": {
-    "staffOnly": "This section is for staff only.",
+    "staffOnly": "This section is for finance admins only.",
     "operations": "Operations",
     "income": "Income",
     "expenses": "Expenses",

@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -41,6 +42,8 @@ class FinanceTransactionsApiTests(TestCase):
         self.client = APIClient()
         self.worker = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
+        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
         self.account = FinancialAccount.objects.create(name="Liberty", kind=FinancialAccount.KIND_BANK)
         self.day = date(2026, 6, 15)
 
@@ -50,6 +53,11 @@ class FinanceTransactionsApiTests(TestCase):
 
     def test_non_staff_access_denied(self):
         self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/crm/finance/transactions/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_staff_without_finance_admin_denied(self):
+        self.client.force_authenticate(user=self.staff)
         response = self.client.get("/api/crm/finance/transactions/")
         self.assertEqual(response.status_code, 403)
 

@@ -131,7 +131,7 @@ function CrmBoard() {
   };
 
   const ordersQuery = useCrmOrders(selectedDate);
-  const expensesQuery = useCrmExpenses(selectedDate, Boolean(currentUser.data?.is_staff));
+  const expensesQuery = useCrmExpenses(selectedDate, Boolean(currentUser.data?.is_finance_admin));
   const patchMutation = usePatchCrmOrder();
 
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);

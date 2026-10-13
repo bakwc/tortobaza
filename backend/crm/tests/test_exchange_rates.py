@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from crm.exchange_rates import NBG_CURRENCIES_URL, current_exchange_rates
 from crm.models import ExchangeRateSnapshot
 
@@ -72,6 +73,7 @@ class ExchangeRatesApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
 
     def test_returns_latest_snapshot(self):
         _snapshot(1)
