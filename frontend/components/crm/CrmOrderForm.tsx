@@ -179,6 +179,20 @@ export function CrmOrderForm(
     setFields((prev) => ({ ...prev, [key]: value }));
   };
 
+  const clearTimeFlags = () => {
+    setTimeRangeError(null);
+    setFields((prev) => {
+      if (!prev.when_ready && prev.time_start !== null) {
+        return prev;
+      }
+      return {
+        ...prev,
+        time_start: prev.time_start ?? "",
+        when_ready: false,
+      };
+    });
+  };
+
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!fields.when_ready && fields.time_start !== null) {
@@ -256,9 +270,17 @@ export function CrmOrderForm(
             <Input
               type="time"
               required={fields.time_start !== null && !fields.when_ready}
-              disabled={fields.time_start === null || fields.when_ready}
               value={fields.time_start ?? ""}
-              onChange={(event) => setField("time_start", event.target.value)}
+              onPointerDown={clearTimeFlags}
+              onFocus={clearTimeFlags}
+              onChange={(event) => {
+                setTimeRangeError(null);
+                setFields((prev) => ({
+                  ...prev,
+                  time_start: event.target.value,
+                  when_ready: false,
+                }));
+              }}
               className="rounded-2xl"
             />
           </label>
@@ -268,11 +290,19 @@ export function CrmOrderForm(
             </span>
             <Input
               type="time"
-              disabled={fields.time_start === null || fields.when_ready}
               value={fields.time_end ?? ""}
-              onChange={(event) =>
-                setField("time_end", event.target.value === "" ? null : event.target.value)
-              }
+              onPointerDown={clearTimeFlags}
+              onFocus={clearTimeFlags}
+              onChange={(event) => {
+                setTimeRangeError(null);
+                const value = event.target.value === "" ? null : event.target.value;
+                setFields((prev) => ({
+                  ...prev,
+                  time_start: prev.time_start ?? "",
+                  time_end: value,
+                  when_ready: false,
+                }));
+              }}
               className="rounded-2xl"
             />
           </label>
