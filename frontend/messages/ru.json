@@ -527,7 +527,8 @@
       "fees": "Комиссии",
       "taxi": "Такси",
       "gasoline": "Бензин",
-      "marketing": "Маркетинг"
+      "marketing": "Маркетинг",
+      "training": "Обучение"
     },
     "accountKinds": {
       "bank": "Банк",

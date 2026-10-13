@@ -797,6 +797,9 @@ msgstr "Бензин"
 msgid "Marketing"
 msgstr "Маркетинг"
 
+msgid "Training"
+msgstr "Обучение"
+
 msgid "Online"
 msgstr "Онлайн"
 

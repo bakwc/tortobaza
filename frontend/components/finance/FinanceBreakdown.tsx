@@ -9,7 +9,7 @@ import { formatAed, toGel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const INCOME_TYPES = ["online", "terminal", "cash", "transfer"] as const;
-const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing"] as const;
+const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment", "fees", "taxi", "gasoline", "marketing", "training"] as const;
 const NEUTRAL_ACTIVE = "bg-[var(--ink)] text-white";
 const INCOME_ACTIVE = "bg-emerald-600 text-white";
 const EXPENSE_ACTIVE = "bg-rose-600 text-white";

@@ -44,6 +44,7 @@ const EXPENSE_TYPES = [
   "taxi",
   "gasoline",
   "marketing",
+  "training",
 ] as const;
 
 const PAIR_MODES = ["none", "link", "create"] as const;

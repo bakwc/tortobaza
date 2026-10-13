@@ -527,7 +527,8 @@
       "fees": "Fees",
       "taxi": "Taxi",
       "gasoline": "Gasoline",
-      "marketing": "Marketing"
+      "marketing": "Marketing",
+      "training": "Training"
     },
     "accountKinds": {
       "bank": "Bank",
