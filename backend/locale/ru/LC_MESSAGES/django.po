@@ -329,6 +329,9 @@ msgstr "Импортировано %(created)s, пропущено дублик�
 msgid "Upload Bank of Georgia statement"
 msgstr "Загрузить выписку Банка Грузии"
 
+msgid "Upload Bank of Georgia personal statement"
+msgstr "Загрузить личную выписку Банка Грузии"
+
 msgid "Upload Liberty statement"
 msgstr "Загрузить выписку Liberty"
 
@@ -490,6 +493,32 @@ msgstr "Несколько номеров счетов: %(numbers)s"
 
 msgid "Account No not found"
 msgstr "Номер счёта не найден"
+
+msgid "Sheet 'Details' not found"
+msgstr "Лист «Details» не найден"
+
+msgid "Sheet 'Transactions' not found"
+msgstr "Лист «Transactions» не найден"
+
+#, python-format
+msgid "Row %(row_number)s: duplicate external id"
+msgstr "Строка %(row_number)s: повторяющийся внешний id"
+
+#, python-format
+msgid "Row %(row_number)s: missing Details"
+msgstr "Строка %(row_number)s: нет Details"
+
+#, python-format
+msgid "Row %(row_number)s: missing amount"
+msgstr "Строка %(row_number)s: нет суммы"
+
+#, python-format
+msgid "Row %(row_number)s: multiple currencies"
+msgstr "Строка %(row_number)s: несколько валют"
+
+#, python-format
+msgid "Row %(row_number)s: amount is zero"
+msgstr "Строка %(row_number)s: сумма равна нулю"
 
 msgid "Monthly rent"
 msgstr "Месячная аренда"
