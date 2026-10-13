@@ -561,6 +561,36 @@
       "externalId": "External ID",
       "createdAt": "Created",
       "updatedAt": "Updated"
+    },
+    "add": "Add",
+    "edit": "Edit",
+    "form": {
+      "createTitle": "New operation",
+      "editTitle": "Edit operation",
+      "date": "Date",
+      "account": "Account",
+      "chooseAccount": "Choose an account",
+      "amount": "Amount",
+      "kind": "Kind",
+      "incomeType": "Income type",
+      "expenseType": "Expense type",
+      "counterparty": "Counterparty",
+      "counterpartyIban": "Counterparty IBAN",
+      "description": "Description",
+      "pair": "Transfer pair",
+      "pairModes": {
+        "none": "No pair",
+        "link": "Link an existing one",
+        "create": "Create the other side"
+      },
+      "pairSearch": "Search",
+      "pairSearchPlaceholder": "Counterparty, description, or ID",
+      "chooseMatch": "Choose an operation to link",
+      "noSearchResults": "Nothing found",
+      "counterpartAccount": "Other account",
+      "counterpartDate": "Other date",
+      "counterpartAmount": "Other amount",
+      "save": "Save"
     }
   }
 }

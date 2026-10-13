@@ -6,10 +6,12 @@ from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.flowwow_statement import ACCOUNT_NAME as FLOWWOW_ACCOUNT_NAME
 from crm.google_maps import cached_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
+from crm.manual_transactions import PAIR_CREATE, PAIR_LINK, PAIR_NONE
 from crm.models import (
     CrmOrder,
     CrmOrderEvent,
     CrmOrderImage,
+    FinancialAccount,
     FinancialTransaction,
     ResolvedTelegramPhone,
 )
@@ -607,6 +609,111 @@ class FinanceTransactionsResponseSerializer(serializers.Serializer):
     date = serializers.DateField(allow_null=True)
     month = serializers.CharField(allow_null=True)
     transactions = FinanceTransactionSerializer(many=True)
+
+
+class FinanceTransactionSearchQuerySerializer(serializers.Serializer):
+    q = serializers.CharField(allow_blank=True)
+
+
+class FinanceTransactionSearchSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    account = FinanceTransactionAccountSerializer()
+    counterparty_name = serializers.CharField()
+    description = serializers.CharField()
+
+
+class FinanceTransactionCounterpartSerializer(serializers.Serializer):
+    account_id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def validate_account_id(self, value: int) -> int:
+        if not FinancialAccount.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Unknown account.")
+        return value
+
+
+class FinanceTransactionWriteSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    account_id = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    kind = serializers.ChoiceField(choices=FinancialTransaction.KIND_CHOICES)
+    income_type = serializers.ChoiceField(
+        choices=FinancialTransaction.INCOME_TYPE_CHOICES,
+        allow_blank=True,
+    )
+    expense_type = serializers.ChoiceField(
+        choices=FinancialTransaction.EXPENSE_TYPE_CHOICES,
+        allow_blank=True,
+    )
+    counterparty_name = serializers.CharField(allow_blank=True, max_length=255)
+    counterparty_iban = serializers.CharField(allow_blank=True, max_length=34)
+    description = serializers.CharField(allow_blank=True)
+    transfer_pair = serializers.ChoiceField(
+        choices=[(PAIR_NONE, PAIR_NONE), (PAIR_LINK, PAIR_LINK), (PAIR_CREATE, PAIR_CREATE)]
+    )
+    matched_transaction_id = serializers.IntegerField(allow_null=True)
+    counterpart = FinanceTransactionCounterpartSerializer(allow_null=True)
+
+    def validate_account_id(self, value: int) -> int:
+        if not FinancialAccount.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Unknown account.")
+        return value
+
+    def validate(self, attrs):
+        kind = attrs["kind"]
+        income_type = attrs["income_type"]
+        expense_type = attrs["expense_type"]
+        if kind == FinancialTransaction.KIND_INCOME:
+            if expense_type != "":
+                raise serializers.ValidationError(
+                    {"expense_type": "Expense type is only allowed for expenses."}
+                )
+        elif kind == FinancialTransaction.KIND_EXPENSE:
+            if income_type != "":
+                raise serializers.ValidationError(
+                    {"income_type": "Income type is only allowed for income."}
+                )
+        elif income_type != "" or expense_type != "":
+            raise serializers.ValidationError(
+                {"kind": "Income and expense types are only allowed for income and expense."}
+            )
+        pair = attrs["transfer_pair"]
+        matched_id = attrs["matched_transaction_id"]
+        counterpart = attrs["counterpart"]
+        if kind != FinancialTransaction.KIND_TRANSFER:
+            if pair != PAIR_NONE or matched_id is not None or counterpart is not None:
+                raise serializers.ValidationError(
+                    {"transfer_pair": "A pair is only allowed for transfers."}
+                )
+            return attrs
+        if pair == PAIR_NONE:
+            if matched_id is not None or counterpart is not None:
+                raise serializers.ValidationError(
+                    {"transfer_pair": "A transfer without a pair must not include a counterpart."}
+                )
+            return attrs
+        if pair == PAIR_LINK:
+            if counterpart is not None or matched_id is None:
+                raise serializers.ValidationError(
+                    {"matched_transaction_id": "Choose a transaction to link."}
+                )
+            if not FinancialTransaction.objects.filter(pk=matched_id).exists():
+                raise serializers.ValidationError({"matched_transaction_id": "Unknown transaction."})
+            if "transaction_id" in self.context and matched_id == self.context["transaction_id"]:
+                raise serializers.ValidationError(
+                    {"matched_transaction_id": "A transaction cannot be linked to itself."}
+                )
+            return attrs
+        if matched_id is not None or counterpart is None:
+            raise serializers.ValidationError({"counterpart": "Create the other side of the transfer."})
+        if counterpart["account_id"] == attrs["account_id"]:
+            raise serializers.ValidationError(
+                {"counterpart": "The other side must use a different account."}
+            )
+        return attrs
 
 
 class ExchangeRatesSerializer(serializers.Serializer):

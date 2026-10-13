@@ -561,6 +561,36 @@
       "externalId": "გარე ID",
       "createdAt": "შექმნილია",
       "updatedAt": "განახლებულია"
+    },
+    "add": "დამატება",
+    "edit": "რედაქტირება",
+    "form": {
+      "createTitle": "ახალი ოპერაცია",
+      "editTitle": "ოპერაციის რედაქტირება",
+      "date": "თარიღი",
+      "account": "ანგარიში",
+      "chooseAccount": "აირჩიეთ ანგარიში",
+      "amount": "თანხა",
+      "kind": "სახე",
+      "incomeType": "შემოსავლის ტიპი",
+      "expenseType": "ხარჯის ტიპი",
+      "counterparty": "კონტრაგენტი",
+      "counterpartyIban": "კონტრაგენტის IBAN",
+      "description": "აღწერა",
+      "pair": "გადარიცხვის წყვილი",
+      "pairModes": {
+        "none": "წყვილის გარეშე",
+        "link": "არსებულის მიბმა",
+        "create": "მეორე მხარის შექმნა"
+      },
+      "pairSearch": "ძიება",
+      "pairSearchPlaceholder": "კონტრაგენტი, აღწერა ან ID",
+      "chooseMatch": "აირჩიეთ ოპერაცია წყვილისთვის",
+      "noSearchResults": "ვერაფერი მოიძებნა",
+      "counterpartAccount": "მეორე ოპერაციის ანგარიში",
+      "counterpartDate": "მეორე ოპერაციის თარიღი",
+      "counterpartAmount": "მეორე ოპერაციის თანხა",
+      "save": "შენახვა"
     }
   }
 }

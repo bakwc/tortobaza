@@ -10,6 +10,9 @@ import {
   CrmExpensesMonthSchema,
   CrmSalariesSchema,
   ExchangeRatesSchema,
+  FinanceAccountSchema,
+  FinanceTransactionSchema,
+  FinanceTransactionSearchResultSchema,
   FinanceTransactionsResponseSchema,
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
@@ -42,6 +45,10 @@ import {
   type CrmExpensesMonth,
   type CrmSalaries,
   type ExchangeRates,
+  type FinanceAccount,
+  type FinanceTransaction,
+  type FinanceTransactionSearchResult,
+  type FinanceTransactionWriteBody,
   type FinanceTransactionsResponse,
   type CrmMapOrderRange,
   type CrmMapOrdersResponse,
@@ -276,6 +283,37 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(FinanceTransactionsResponseSchema, raw);
+    },
+
+    async getFinanceAccounts(): Promise<FinanceAccount[]> {
+      const raw = await fetcher<unknown>("/api/crm/finance/accounts/");
+      return parse(z.array(FinanceAccountSchema), raw);
+    },
+
+    async searchFinanceTransactions(q: string): Promise<FinanceTransactionSearchResult[]> {
+      const raw = await fetcher<unknown>("/api/crm/finance/transactions/search/", {
+        searchParams: { q },
+      });
+      return parse(z.array(FinanceTransactionSearchResultSchema), raw);
+    },
+
+    async createFinanceTransaction(body: FinanceTransactionWriteBody): Promise<FinanceTransaction> {
+      const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(FinanceTransactionSchema, raw);
+    },
+
+    async updateFinanceTransaction(
+      id: number,
+      body: FinanceTransactionWriteBody,
+    ): Promise<FinanceTransaction> {
+      const raw = await fetcher<unknown>(`/api/crm/finance/transactions/${id}/`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      return parse(FinanceTransactionSchema, raw);
     },
 
     async getExchangeRates(): Promise<ExchangeRates> {

@@ -482,6 +482,28 @@ export const FinanceTransactionsResponseSchema = z.object({
   transactions: z.array(FinanceTransactionSchema),
 });
 
+export const FinanceAccountSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  kind: z.string(),
+  bank_name: z.string(),
+  iban: z.string(),
+  currency: z.string(),
+});
+
+export const FinanceTransactionSearchResultSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  account: z.object({
+    id: z.number(),
+    name: z.string(),
+    currency: z.string(),
+  }),
+  counterparty_name: z.string(),
+  description: z.string(),
+});
+
 export const ExchangeRatesSchema = z.object({
   date: z.string(),
   rates: z.record(z.string(), z.string()),
@@ -559,6 +581,27 @@ export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
 export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
+export type FinanceAccount = z.infer<typeof FinanceAccountSchema>;
+export type FinanceTransactionSearchResult = z.infer<typeof FinanceTransactionSearchResultSchema>;
+
+export type FinanceTransactionWriteBody = {
+  date: string;
+  account_id: number;
+  amount: string;
+  kind: FinanceTransaction["kind"];
+  income_type: string;
+  expense_type: string;
+  counterparty_name: string;
+  counterparty_iban: string;
+  description: string;
+  transfer_pair: "none" | "link" | "create";
+  matched_transaction_id: number | null;
+  counterpart: {
+    account_id: number;
+    date: string;
+    amount: string;
+  } | null;
+};
 export type ExchangeRates = z.infer<typeof ExchangeRatesSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;

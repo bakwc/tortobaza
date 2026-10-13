@@ -12,6 +12,7 @@ import {
   Flower,
   Package,
 } from "lucide-react";
+import { FinanceTransactionForm } from "@/components/finance/FinanceTransactionForm";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -285,6 +286,10 @@ export function FinanceTransactionList({
   const expenseTypeFilters = kindFilters.includes("expense") ? searchParams.getAll("expense_type") : [];
   const [openGroups, setOpenGroups] = useState<ReadonlySet<number>>(new Set());
   const [selected, setSelected] = useState<FinanceTransaction | null>(null);
+  const [editor, setEditor] = useState<
+    { mode: "create" } | { mode: "edit"; tx: FinanceTransaction } | null
+  >(null);
+  const [editorSession, setEditorSession] = useState(0);
   const [counterpartyInput, setCounterpartyInput] = useState(searchParams.get("counterparty") ?? "");
   const skipCounterpartySync = useRef(false);
 
@@ -334,10 +339,34 @@ export function FinanceTransactionList({
     );
   }
 
+  const editorTransaction = editor !== null && editor.mode === "edit" ? editor.tx : null;
+  const editorForm = (
+    <FinanceTransactionForm
+      key={editorSession}
+      open={editor !== null}
+      transaction={editorTransaction}
+      onClose={() => setEditor(null)}
+    />
+  );
+
   if (transactions.length === 0) {
     return (
-      <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
-        {t("empty")}
+      <div className="grid gap-6">
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={() => {
+              setEditorSession((current) => current + 1);
+              setEditor({ mode: "create" });
+            }}
+          >
+            {t("add")}
+          </Button>
+        </div>
+        <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
+          {t("empty")}
+        </div>
+        {editorForm}
       </div>
     );
   }
@@ -394,6 +423,17 @@ export function FinanceTransactionList({
 
   return (
     <div className="grid gap-6">
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={() => {
+            setEditorSession((current) => current + 1);
+            setEditor({ mode: "create" });
+          }}
+        >
+          {t("add")}
+        </Button>
+      </div>
       <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
           <FilterPill
@@ -646,7 +686,19 @@ export function FinanceTransactionList({
           </section>
         );
       })}
-      <TransactionDetailPanel tx={selected} rates={rates} onClose={() => setSelected(null)} t={t} />
+      <TransactionDetailPanel
+        tx={selected}
+        rates={rates}
+        onClose={() => setSelected(null)}
+        onEdit={() => {
+          if (selected === null) return;
+          setEditorSession((current) => current + 1);
+          setEditor({ mode: "edit", tx: selected });
+          setSelected(null);
+        }}
+        t={t}
+      />
+      {editorForm}
     </div>
   );
 }
@@ -948,17 +1000,19 @@ function TransactionDetailPanel({
   tx,
   rates,
   onClose,
+  onEdit,
   t,
 }: {
   tx: FinanceTransaction | null;
   rates: Record<string, string>;
   onClose: () => void;
+  onEdit: () => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   return (
     <Dialog open={tx !== null} onOpenChange={(open) => (open ? undefined : onClose())}>
       <DialogContent className="w-[min(560px,calc(100vw-1.5rem))] overflow-y-auto">
-        {tx ? <TransactionDetail tx={tx} rates={rates} t={t} /> : null}
+        {tx ? <TransactionDetail tx={tx} rates={rates} onEdit={onEdit} t={t} /> : null}
       </DialogContent>
     </Dialog>
   );
@@ -967,10 +1021,12 @@ function TransactionDetailPanel({
 function TransactionDetail({
   tx,
   rates,
+  onEdit,
   t,
 }: {
   tx: FinanceTransaction;
   rates: Record<string, string>;
+  onEdit: () => void;
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   const locale = useLocale();
@@ -1002,6 +1058,11 @@ function TransactionDetail({
         <span className={cn("text-2xl font-bold", tone.amount)}>
           {formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
         </span>
+        <div className="flex justify-end">
+          <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+            {t("edit")}
+          </Button>
+        </div>
       </div>
 
       <DetailSection title={t("detail.sectionMain")}>

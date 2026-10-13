@@ -561,6 +561,36 @@
       "externalId": "Внешний ID",
       "createdAt": "Создано",
       "updatedAt": "Обновлено"
+    },
+    "add": "Добавить",
+    "edit": "Редактировать",
+    "form": {
+      "createTitle": "Новая операция",
+      "editTitle": "Редактирование операции",
+      "date": "Дата",
+      "account": "Счёт",
+      "chooseAccount": "Выберите счёт",
+      "amount": "Сумма",
+      "kind": "Вид",
+      "incomeType": "Тип дохода",
+      "expenseType": "Тип расхода",
+      "counterparty": "Контрагент",
+      "counterpartyIban": "IBAN контрагента",
+      "description": "Описание",
+      "pair": "Пара перевода",
+      "pairModes": {
+        "none": "Без пары",
+        "link": "Привязать существующую",
+        "create": "Создать вторую"
+      },
+      "pairSearch": "Найти",
+      "pairSearchPlaceholder": "Контрагент, описание или ID",
+      "chooseMatch": "Выберите операцию для пары",
+      "noSearchResults": "Ничего не найдено",
+      "counterpartAccount": "Счёт второй операции",
+      "counterpartDate": "Дата второй операции",
+      "counterpartAmount": "Сумма второй операции",
+      "save": "Сохранить"
     }
   }
 }

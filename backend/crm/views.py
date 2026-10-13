@@ -4,6 +4,8 @@ from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -26,9 +28,11 @@ from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
+from crm.manual_transactions import create_manual_transaction, update_manual_transaction
 from crm.models import (
     CrmOrder,
     CrmOrderEvent,
+    FinancialAccount,
     FinancialTransaction,
     FlowwowWebhookEvent,
     ResolvedGoogleAddress,
@@ -48,8 +52,13 @@ from crm.serializers import (
     CrmSalariesQuerySerializer,
     CrmSalariesSerializer,
     ExchangeRatesSerializer,
+    FinanceTransactionAccountDetailSerializer,
+    FinanceTransactionSearchQuerySerializer,
+    FinanceTransactionSearchSerializer,
+    FinanceTransactionSerializer,
     FinanceTransactionsQuerySerializer,
     FinanceTransactionsResponseSerializer,
+    FinanceTransactionWriteSerializer,
     ResolveGoogleAddressSerializer,
     ResolveYandexAddressSerializer,
 )
@@ -457,6 +466,74 @@ class FinanceTransactionsView(APIView):
             transactions = transactions.filter(date=target_date)
             payload = {"date": target_date, "month": None, "transactions": transactions}
         return Response(FinanceTransactionsResponseSerializer(payload).data)
+
+    def post(self, request):
+        serializer = FinanceTransactionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            tx = create_manual_transaction(serializer.validated_data)
+        return Response(
+            FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class FinanceTransactionDetailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def put(self, request, pk: int):
+        tx = get_object_or_404(FinancialTransaction, pk=pk)
+        serializer = FinanceTransactionWriteSerializer(
+            data=request.data,
+            context={"transaction_id": tx.pk},
+        )
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            tx = update_manual_transaction(tx, serializer.validated_data)
+        return Response(FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data)
+
+
+class FinanceTransactionSearchView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        query_serializer = FinanceTransactionSearchQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        q = query_serializer.validated_data["q"].strip()
+        if q == "":
+            return Response([])
+        transactions = FinancialTransaction.objects.select_related("account")
+        if q.isdigit():
+            transactions = transactions.filter(
+                Q(pk=int(q)) | Q(counterparty_name__icontains=q) | Q(description__icontains=q)
+            )
+        else:
+            transactions = transactions.filter(
+                Q(counterparty_name__icontains=q) | Q(description__icontains=q)
+            )
+        transactions = transactions.order_by("-date", "-id")[:20]
+        return Response(FinanceTransactionSearchSerializer(transactions, many=True).data)
+
+
+class FinanceAccountsView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        accounts = FinancialAccount.objects.order_by("name", "id")
+        return Response(FinanceTransactionAccountDetailSerializer(accounts, many=True).data)
+
+
+def _finance_transaction_for_response(pk: int) -> FinancialTransaction:
+    return get_object_or_404(
+        FinancialTransaction.objects.select_related(
+            "account",
+            "matched_transaction__account",
+        ).prefetch_related("crm_orders"),
+        pk=pk,
+    )
 
 
 class ExchangeRatesView(APIView):
