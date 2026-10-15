@@ -634,6 +634,8 @@
     "avgCost": "Средняя цена",
     "categories": "Категории ингредиентов",
     "newCategory": "Новая категория",
+    "techCardCategories": "Категории тех. карт",
+    "noCategory": "Без категории",
     "newIngredient": "Новый ингредиент",
     "isActive": "Активен",
     "ingredient": "Ингредиент",

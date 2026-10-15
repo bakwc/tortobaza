@@ -634,6 +634,8 @@
     "avgCost": "საშუალო ფასი",
     "categories": "ინგრედიენტების კატეგორიები",
     "newCategory": "ახალი კატეგორია",
+    "techCardCategories": "ტექ. ბარათების კატეგორიები",
+    "noCategory": "კატეგორიის გარეშე",
     "newIngredient": "ახალი ინგრედიენტი",
     "isActive": "აქტიური",
     "ingredient": "ინგრედიენტი",

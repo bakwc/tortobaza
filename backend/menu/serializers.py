@@ -12,6 +12,7 @@ from menu.models import (
     SemiProduct,
     SemiProductLine,
     TechCard,
+    TechCardCategory,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -293,14 +294,31 @@ class TechCardModifierLineInputSerializer(RecipeLineSerializer):
     scales_by_weight = serializers.BooleanField()
 
 
+class TechCardCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TechCardCategory
+        fields = ["id", "name", "position"]
+
+
 class TechCardSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
     lines = RecipeLineSerializer(many=True, write_only=True)
     modifier_groups = TechCardGroupInputSerializer(many=True, write_only=True)
     modifier_lines = TechCardModifierLineInputSerializer(many=True, write_only=True)
 
     class Meta:
         model = TechCard
-        fields = ["id", "name", "kind", "is_active", "lines", "modifier_groups", "modifier_lines"]
+        fields = [
+            "id",
+            "name",
+            "category",
+            "category_name",
+            "kind",
+            "is_active",
+            "lines",
+            "modifier_groups",
+            "modifier_lines",
+        ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

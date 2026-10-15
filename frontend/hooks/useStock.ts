@@ -47,6 +47,10 @@ export function useModifierGroups() {
   return useResource(["menu", "modifier-groups"], api.menuModifierGroups);
 }
 
+export function useTechCardCategories() {
+  return useResource(["menu", "tech-card-categories"], api.menuTechCardCategories);
+}
+
 export function useTechCards() {
   return useResource(["menu", "tech-cards"], api.menuTechCards);
 }

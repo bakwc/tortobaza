@@ -1290,6 +1290,12 @@ msgstr "Тех. карта"
 msgid "Tech cards"
 msgstr "Тех. карты"
 
+msgid "Tech card category"
+msgstr "Категория тех. карт"
+
+msgid "Tech card categories"
+msgstr "Категории тех. карт"
+
 msgid "Tech card line"
 msgstr "Строка тех. карты"
 

@@ -209,6 +209,19 @@ class Modifier(models.Model):
         return f"{self.group.name}: {self.name}"
 
 
+class TechCardCategory(models.Model):
+    name = models.CharField(max_length=120, unique=True, verbose_name=_("Name"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "name"]
+        verbose_name = _("Tech card category")
+        verbose_name_plural = _("Tech card categories")
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class TechCard(models.Model):
     KIND_WEIGHTED = "weighted"
     KIND_PIECE = "piece"
@@ -218,6 +231,14 @@ class TechCard(models.Model):
     ]
 
     name = models.CharField(max_length=200, unique=True, verbose_name=_("Name"))
+    category = models.ForeignKey(
+        TechCardCategory,
+        related_name="tech_cards",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Category"),
+    )
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, verbose_name=_("Kind"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))

@@ -17,6 +17,7 @@ import {
   Card,
   CardTitle,
   CheckboxField,
+  ErrorText,
   Field,
   NativeSelect,
   QueryState,
@@ -28,6 +29,7 @@ import {
   useMissingModifierLines,
   useModifierGroups,
   useSemiProducts,
+  useTechCardCategories,
   useTechCards,
 } from "@/hooks/useStock";
 import type { TechCard } from "@/lib/api/types";
@@ -39,6 +41,7 @@ type ModifierComposition = { scales_by_weight: boolean; lines: ComponentLineDraf
 
 type TechCardDraft = {
   name: string;
+  category: number | null;
   kind: "weighted" | "piece";
   is_active: boolean;
   lines: ComponentLineDraft[];
@@ -48,7 +51,15 @@ type TechCardDraft = {
 
 function draftFrom(row: TechCard | null): TechCardDraft {
   if (row === null) {
-    return { name: "", kind: "weighted", is_active: true, lines: [], groups: [], compositions: {} };
+    return {
+      name: "",
+      category: null,
+      kind: "weighted",
+      is_active: true,
+      lines: [],
+      groups: [],
+      compositions: {},
+    };
   }
   const compositions: Record<number, ModifierComposition> = {};
   for (const line of row.modifier_lines) {
@@ -58,6 +69,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   }
   return {
     name: row.name,
+    category: row.category,
     kind: row.kind,
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
@@ -79,6 +91,7 @@ function parseRequired(value: string): boolean | null {
 export function TechCardsPanel() {
   const t = useTranslations("stock");
   const techCards = useTechCards();
+  const categories = useTechCardCategories();
   const groups = useModifierGroups();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
@@ -88,6 +101,7 @@ export function TechCardsPanel() {
   const [editing, setEditing] = useState<TechCard | null>(null);
   const [draft, setDraft] = useState<TechCardDraft | null>(null);
   const [groupToAdd, setGroupToAdd] = useState("");
+  const [newCategory, setNewCategory] = useState("");
 
   const open = (row: TechCard | null) => {
     techCards.save.reset();
@@ -136,6 +150,7 @@ export function TechCardsPanel() {
         id: editing ? editing.id : null,
         body: {
           name: draft.name,
+          category: draft.category,
           kind: draft.kind,
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
@@ -178,6 +193,7 @@ export function TechCardsPanel() {
             <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
               <tr>
                 <th className="py-2">{t("name")}</th>
+                <th className="py-2">{t("category")}</th>
                 <th className="py-2">{t("kind")}</th>
                 <th className="py-2">{t("linkedProducts")}</th>
                 {isFinanceAdmin ? <th className="py-2 text-right">{t("baseCost")}</th> : null}
@@ -198,6 +214,7 @@ export function TechCardsPanel() {
                       ) : null}
                     </span>
                   </td>
+                  <td className="py-2">{row.category_name ?? "—"}</td>
                   <td className="py-2">{row.kind === "weighted" ? t("kindWeighted") : t("kindPiece")}</td>
                   <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
                   {isFinanceAdmin ? (
@@ -210,6 +227,54 @@ export function TechCardsPanel() {
             </tbody>
           </table>
         </QueryState>
+      </Card>
+
+      <Card>
+        <CardTitle>{t("techCardCategories")}</CardTitle>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(categories.list.data ?? []).map((row) => (
+            <span
+              key={row.id}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1 text-sm"
+            >
+              {row.name}
+              <button
+                type="button"
+                aria-label={t("delete")}
+                onClick={() => categories.remove.mutate(row.id)}
+                className="text-[var(--muted-2)] hover:text-[var(--danger)]"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <form
+          className="mt-4 flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            categories.save.mutate(
+              {
+                id: null,
+                body: { name: newCategory, position: (categories.list.data ?? []).length },
+              },
+              { onSuccess: () => setNewCategory("") },
+            );
+          }}
+        >
+          <Input
+            required
+            value={newCategory}
+            placeholder={t("newCategory")}
+            onChange={(event) => setNewCategory(event.target.value)}
+          />
+          <Button type="submit" disabled={categories.save.isPending}>
+            {t("add")}
+          </Button>
+        </form>
+        <div className="mt-2">
+          <ErrorText error={categories.save.error ?? categories.remove.error} />
+        </div>
       </Card>
 
       {draft ? (
@@ -227,6 +292,21 @@ export function TechCardsPanel() {
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">
               <Input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+            </Field>
+            <Field label={t("category")}>
+              <NativeSelect
+                value={draft.category ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...draft, category: event.target.value === "" ? null : Number(event.target.value) })
+                }
+              >
+                <option value="">—</option>
+                {(categories.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </Field>
             <Field label={t("kind")}>
               <NativeSelect

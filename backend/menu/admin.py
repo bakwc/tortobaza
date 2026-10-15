@@ -8,6 +8,7 @@ from menu.models import (
     SemiProduct,
     SemiProductLine,
     TechCard,
+    TechCardCategory,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -86,9 +87,16 @@ class TechCardModifierLineInline(admin.TabularInline):
     autocomplete_fields = ["modifier", "ingredient", "semi_product"]
 
 
+@admin.register(TechCardCategory)
+class TechCardCategoryAdmin(admin.ModelAdmin):
+    list_display = ["name", "position"]
+    list_editable = ["position"]
+    search_fields = ["name"]
+
+
 @admin.register(TechCard)
 class TechCardAdmin(admin.ModelAdmin):
-    list_display = ["name", "kind", "is_active", "created_at"]
-    list_filter = ["kind", "is_active"]
+    list_display = ["name", "category", "kind", "is_active", "created_at"]
+    list_filter = ["category", "kind", "is_active"]
     search_fields = ["name"]
     inlines = [TechCardLineInline, TechCardModifierGroupInline, TechCardModifierLineInline]

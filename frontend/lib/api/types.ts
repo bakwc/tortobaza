@@ -815,9 +815,17 @@ export const TechCardModifierLineSchema = RecipeLineSchema.extend({
   scales_by_weight: z.boolean(),
 });
 
+export const TechCardCategorySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.number(),
+});
+
 export const TechCardSchema = z.object({
   id: z.number(),
   name: z.string(),
+  category: z.number().nullable(),
+  category_name: z.string().nullable(),
   kind: z.enum(["weighted", "piece"]),
   is_active: z.boolean(),
   lines: z.array(RecipeLineSchema),
@@ -853,6 +861,7 @@ export type Modifier = z.infer<typeof ModifierSchema>;
 export type ModifierGroup = z.infer<typeof ModifierGroupSchema>;
 export type TechCardGroup = z.infer<typeof TechCardGroupSchema>;
 export type TechCardModifierLine = z.infer<typeof TechCardModifierLineSchema>;
+export type TechCardCategory = z.infer<typeof TechCardCategorySchema>;
 export type TechCard = z.infer<typeof TechCardSchema>;
 export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
 export type CatalogOption = z.infer<typeof CatalogOptionSchema>;
@@ -900,8 +909,11 @@ export type ModifierGroupBody = {
   }[];
 };
 
+export type TechCardCategoryBody = { name: string; position: number };
+
 export type TechCardBody = {
   name: string;
+  category: number | null;
   kind: "weighted" | "piece";
   is_active: boolean;
   lines: RecipeLineBody[];

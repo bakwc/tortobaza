@@ -16,6 +16,7 @@ from menu.models import (
     ModifierGroup,
     SemiProduct,
     TechCard,
+    TechCardCategory,
 )
 from menu.recipes import missing_modifier_compositions, tech_card_cost
 from menu.serializers import (
@@ -25,6 +26,7 @@ from menu.serializers import (
     MissingModifierLineSerializer,
     ModifierGroupSerializer,
     SemiProductSerializer,
+    TechCardCategorySerializer,
     TechCardCostQuerySerializer,
     TechCardSerializer,
 )
@@ -161,18 +163,32 @@ class ModifierGroupDetailView(MenuDetailView):
         return ModifierGroup.objects.all()
 
 
+class TechCardCategoryListView(MenuListView):
+    serializer_class = TechCardCategorySerializer
+
+    def get_queryset(self):
+        return TechCardCategory.objects.all()
+
+
+class TechCardCategoryDetailView(MenuDetailView):
+    serializer_class = TechCardCategorySerializer
+
+    def get_queryset(self):
+        return TechCardCategory.objects.all()
+
+
 class TechCardListView(MenuListView):
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
-        return TechCard.objects.all()
+        return TechCard.objects.select_related("category")
 
 
 class TechCardDetailView(MenuDetailView):
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
-        return TechCard.objects.all()
+        return TechCard.objects.select_related("category")
 
 
 class TechCardCostView(APIView):

@@ -634,6 +634,8 @@
     "avgCost": "Average cost",
     "categories": "Ingredient categories",
     "newCategory": "New category",
+    "techCardCategories": "Tech card categories",
+    "noCategory": "No category",
     "newIngredient": "New ingredient",
     "isActive": "Active",
     "ingredient": "Ingredient",
