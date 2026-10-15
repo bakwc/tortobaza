@@ -271,6 +271,41 @@ export const CrmOrderImageSchema = z.object({
   position: z.number(),
 });
 
+export const MenuUnitSchema = z.enum(["g", "ml", "pcs"]);
+
+export const CrmOrderItemModifierSchema = z.object({
+  id: z.number(),
+  modifier: z.number(),
+  modifier_name: z.string(),
+  group: z.number(),
+  quantity: z.number(),
+});
+
+export const CrmOrderItemLineSchema = z.object({
+  id: z.number(),
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  quantity: z.string(),
+});
+
+export const CrmOrderItemSchema = z.object({
+  id: z.number(),
+  tech_card: z.number().nullable(),
+  tech_card_name: z.string().nullable(),
+  tech_card_kind: z.enum(["weighted", "piece"]).nullable(),
+  name: z.string(),
+  quantity: z.number(),
+  weight_kg: z.string().nullable(),
+  price: z.string().nullable(),
+  comment: z.string(),
+  needs_review: z.boolean(),
+  position: z.number(),
+  modifiers: z.array(CrmOrderItemModifierSchema),
+  lines: z.array(CrmOrderItemLineSchema),
+});
+
 export const CrmPhoneSchema = z.object({
   e164: z.string(),
   tel: z.string().nullable(),
@@ -315,6 +350,8 @@ export const CrmOrderSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   images: z.array(CrmOrderImageSchema),
+  items: z.array(CrmOrderItemSchema),
+  food_cost: z.string().optional(),
 });
 
 export const CrmOrderEventChangeSchema = z.object({
@@ -700,4 +737,364 @@ export type StartPaymentResponse = {
 export type PreviewOrderBody = {
   fulfillment_type: FulfillmentType;
   promo_code?: string;
+};
+
+export type CrmOrderItem = z.infer<typeof CrmOrderItemSchema>;
+export type MenuUnit = z.infer<typeof MenuUnitSchema>;
+
+export const IngredientCategorySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.number(),
+});
+
+export const IngredientSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  category: z.number().nullable(),
+  category_name: z.string().nullable(),
+  unit: MenuUnitSchema,
+  avg_cost: z.string().optional(),
+  is_active: z.boolean(),
+});
+
+export const RecipeLineSchema = z.object({
+  id: z.number(),
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  quantity: z.string(),
+  loss_percent: z.string(),
+});
+
+export const SemiProductSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  yield_quantity: z.string(),
+  is_produced: z.boolean(),
+  avg_cost: z.string().optional(),
+  is_active: z.boolean(),
+  lines: z.array(RecipeLineSchema),
+});
+
+export const ModifierSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  catalog_option: z.number().nullable(),
+  catalog_option_label: z.string().nullable(),
+  is_active: z.boolean(),
+});
+
+export const ModifierGroupSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  selection_type: z.enum(["single", "multi"]),
+  is_required: z.boolean(),
+  min_selections: z.number(),
+  max_selections: z.number().nullable(),
+  position: z.number(),
+  modifiers: z.array(ModifierSchema),
+});
+
+export const TechCardGroupSchema = z.object({
+  id: z.number(),
+  group: z.number(),
+  group_name: z.string(),
+  selection_type: z.enum(["single", "multi"]),
+  is_required: z.boolean().nullable(),
+  effective_is_required: z.boolean(),
+  min_selections: z.number(),
+  max_selections: z.number().nullable(),
+  modifiers: z.array(z.object({ id: z.number(), name: z.string() })),
+});
+
+export const TechCardModifierLineSchema = RecipeLineSchema.extend({
+  modifier: z.number(),
+  scales_by_weight: z.boolean(),
+});
+
+export const TechCardSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  kind: z.enum(["weighted", "piece"]),
+  is_active: z.boolean(),
+  lines: z.array(RecipeLineSchema),
+  modifier_groups: z.array(TechCardGroupSchema),
+  modifier_lines: z.array(TechCardModifierLineSchema),
+  missing_modifiers: z.array(z.number()),
+  products: z.array(z.object({ id: z.number(), name: z.string() })),
+  base_cost: z.string().optional(),
+});
+
+export const TechCardCostSchema = z.object({ cost: z.string() });
+
+export const MissingModifierLineSchema = z.object({
+  tech_card: z.number(),
+  tech_card_name: z.string(),
+  modifier: z.number(),
+  modifier_name: z.string(),
+  group_name: z.string(),
+});
+
+export const CatalogOptionSchema = z.object({
+  id: z.number(),
+  label: z.string(),
+  weight_kg: z.string().nullable(),
+  modifier: z.number().nullable(),
+});
+
+export type IngredientCategory = z.infer<typeof IngredientCategorySchema>;
+export type Ingredient = z.infer<typeof IngredientSchema>;
+export type RecipeLine = z.infer<typeof RecipeLineSchema>;
+export type SemiProduct = z.infer<typeof SemiProductSchema>;
+export type Modifier = z.infer<typeof ModifierSchema>;
+export type ModifierGroup = z.infer<typeof ModifierGroupSchema>;
+export type TechCardGroup = z.infer<typeof TechCardGroupSchema>;
+export type TechCardModifierLine = z.infer<typeof TechCardModifierLineSchema>;
+export type TechCard = z.infer<typeof TechCardSchema>;
+export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
+export type CatalogOption = z.infer<typeof CatalogOptionSchema>;
+
+export type ComponentRefBody = {
+  ingredient: number | null;
+  semi_product: number | null;
+};
+
+export type RecipeLineBody = ComponentRefBody & {
+  quantity: string;
+  loss_percent: string;
+};
+
+export type IngredientCategoryBody = { name: string; position: number };
+
+export type IngredientBody = {
+  name: string;
+  category: number | null;
+  unit: MenuUnit;
+  is_active: boolean;
+};
+
+export type SemiProductBody = {
+  name: string;
+  unit: MenuUnit;
+  yield_quantity: string;
+  is_produced: boolean;
+  is_active: boolean;
+  lines: RecipeLineBody[];
+};
+
+export type ModifierGroupBody = {
+  name: string;
+  selection_type: "single" | "multi";
+  is_required: boolean;
+  min_selections: number;
+  max_selections: number | null;
+  position: number;
+  modifiers: {
+    id: number | null;
+    name: string;
+    catalog_option: number | null;
+    is_active: boolean;
+  }[];
+};
+
+export type TechCardBody = {
+  name: string;
+  kind: "weighted" | "piece";
+  is_active: boolean;
+  lines: RecipeLineBody[];
+  modifier_groups: { group: number; is_required: boolean | null }[];
+  modifier_lines: (RecipeLineBody & { modifier: number; scales_by_weight: boolean })[];
+};
+
+export type CrmOrderItemBody = {
+  tech_card: number | null;
+  name: string;
+  quantity: number;
+  weight_kg: string | null;
+  price: string | null;
+  comment: string;
+  needs_review: boolean;
+  modifiers: { modifier: number; quantity: number }[];
+  lines: (ComponentRefBody & { quantity: string })[];
+};
+
+export const InventoryComponentLineSchema = z.object({
+  id: z.number(),
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  quantity: z.string(),
+});
+
+export const SupplierSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  phone: z.string(),
+  comment: z.string(),
+});
+
+export const WriteOffReasonSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
+export const SupplyTransactionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  counterparty_name: z.string(),
+  description: z.string(),
+  account_name: z.string(),
+});
+
+export const SupplySchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  supplier: z.number().nullable(),
+  supplier_name: z.string().nullable(),
+  financial_transaction: SupplyTransactionSchema.nullable(),
+  comment: z.string(),
+  created_at: z.string(),
+  total: z.string(),
+  lines: z.array(
+    z.object({
+      id: z.number(),
+      ingredient: z.number(),
+      name: z.string(),
+      unit: MenuUnitSchema,
+      quantity: z.string(),
+      total: z.string(),
+    }),
+  ),
+});
+
+export const StockMovementKindSchema = z.enum([
+  "supply",
+  "production_in",
+  "production_out",
+  "order",
+  "write_off",
+  "inventory",
+]);
+
+export const StockMovementSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  kind: StockMovementKindSchema,
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  quantity: z.string(),
+  document: z.object({
+    type: z.enum(["supply", "production", "crm_order", "write_off", "inventory_count"]),
+    id: z.number(),
+  }),
+  unit_cost: z.string().optional(),
+});
+
+export const ProductionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  semi_product: z.number(),
+  semi_product_name: z.string(),
+  unit: MenuUnitSchema,
+  quantity: z.string(),
+  comment: z.string(),
+  created_at: z.string(),
+  created_by_name: z.string().nullable(),
+  consumed: z.array(StockMovementSchema),
+  unit_cost: z.string().nullable().optional(),
+});
+
+export const WriteOffSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  reason: z.number(),
+  reason_name: z.string(),
+  comment: z.string(),
+  created_at: z.string(),
+  created_by_name: z.string().nullable(),
+  lines: z.array(InventoryComponentLineSchema),
+  total_cost: z.string().optional(),
+});
+
+export const InventoryCountSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  status: z.enum(["draft", "closed"]),
+  comment: z.string(),
+  created_at: z.string(),
+  closed_at: z.string().nullable(),
+  created_by_name: z.string().nullable(),
+  lines: z.array(
+    z.object({
+      id: z.number(),
+      ingredient: z.number().nullable(),
+      semi_product: z.number().nullable(),
+      name: z.string(),
+      unit: MenuUnitSchema,
+      actual_quantity: z.string(),
+      expected_quantity: z.string().nullable(),
+      unit_cost: z.string().nullable().optional(),
+    }),
+  ),
+});
+
+export const StockRowSchema = z.object({
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+  category_name: z.string().nullable(),
+  is_active: z.boolean(),
+  quantity: z.string(),
+  avg_cost: z.string().optional(),
+  value: z.string().optional(),
+});
+
+export type Supplier = z.infer<typeof SupplierSchema>;
+export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
+export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
+export type Supply = z.infer<typeof SupplySchema>;
+export type StockMovementKind = z.infer<typeof StockMovementKindSchema>;
+export type StockMovement = z.infer<typeof StockMovementSchema>;
+export type Production = z.infer<typeof ProductionSchema>;
+export type WriteOff = z.infer<typeof WriteOffSchema>;
+export type InventoryCount = z.infer<typeof InventoryCountSchema>;
+export type StockRow = z.infer<typeof StockRowSchema>;
+
+export type SupplierBody = { name: string; phone: string; comment: string };
+export type WriteOffReasonBody = { name: string };
+
+export type SupplyBody = {
+  date: string;
+  supplier: number | null;
+  financial_transaction: number | null;
+  comment: string;
+  lines: { ingredient: number; quantity: string; total: string }[];
+};
+
+export type ProductionBody = {
+  date: string;
+  semi_product: number;
+  quantity: string;
+  comment: string;
+};
+
+export type WriteOffBody = {
+  date: string;
+  reason: number;
+  comment: string;
+  lines: (ComponentRefBody & { quantity: string })[];
+};
+
+export type InventoryCountBody = {
+  date: string;
+  comment: string;
+  lines: (ComponentRefBody & { actual_quantity: string; unit_cost: string | null })[];
 };

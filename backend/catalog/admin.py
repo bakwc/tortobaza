@@ -16,7 +16,7 @@ from catalog.models import (
 class OptionInline(admin.TabularInline):
     model = Option
     extra = 1
-    fields = ["name", "image", "price_delta", "position", "is_active"]
+    fields = ["name", "image", "price_delta", "weight_kg", "position", "is_active"]
 
 
 @admin.register(OptionGroup)
@@ -110,11 +110,13 @@ class ProductAdmin(TranslationAdmin):
         "category",
         "delivery_schedule_tier",
         "base_price",
+        "tech_card",
         "position",
         "is_active",
         "created_at",
     ]
     list_filter = ["category", "delivery_schedule_tier", "is_active"]
+    autocomplete_fields = ["tech_card"]
     list_editable = ["position", "is_active"]
     search_fields = ["name", "slug", "description"]
     prepopulated_fields = {"slug": ("name",)}

@@ -1,0 +1,64 @@
+"use client";
+
+import type { FormEvent, ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
+import { ErrorText } from "@/components/menu/ui";
+
+export function EditorDialog({
+  open,
+  onOpenChange,
+  title,
+  pending,
+  error,
+  onSubmit,
+  onDelete,
+  deletePending,
+  submitLabel,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  pending: boolean;
+  error: unknown;
+  onSubmit: () => void;
+  onDelete: (() => void) | null;
+  deletePending: boolean;
+  submitLabel: string | null;
+  children: ReactNode;
+}) {
+  const t = useTranslations("stock");
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit();
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
+        <DialogTitle className="pr-10 text-lg font-semibold text-[var(--ink)]">{title}</DialogTitle>
+        <DialogDescription className="hidden">{title}</DialogDescription>
+        <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
+          {children}
+          <ErrorText error={error} />
+          <div className="flex flex-wrap justify-between gap-3">
+            {onDelete ? (
+              <Button type="button" variant="outline" onClick={onDelete} disabled={deletePending}>
+                {deletePending ? <Spinner className="h-4 w-4" /> : t("delete")}
+              </Button>
+            ) : (
+              <span />
+            )}
+            {submitLabel !== null ? (
+              <Button type="submit" disabled={pending}>
+                {pending ? <Spinner className="h-4 w-4" /> : submitLabel}
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

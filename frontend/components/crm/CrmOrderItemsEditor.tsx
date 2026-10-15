@@ -1,0 +1,277 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ComponentLinesEditor, componentOptions } from "@/components/menu/ComponentLinesEditor";
+import { Field, NativeSelect } from "@/components/menu/ui";
+import { useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
+import type { TechCard, TechCardGroup } from "@/lib/api/types";
+import { emptyCrmItem, type CrmItemDraft, type CrmItemModifierDraft } from "@/lib/crmItems";
+import { cn } from "@/lib/utils";
+
+function GroupPicker({
+  group,
+  selected,
+  onChange,
+}: {
+  group: TechCardGroup;
+  selected: CrmItemModifierDraft[];
+  onChange: (rows: CrmItemModifierDraft[]) => void;
+}) {
+  const t = useTranslations("crm.items");
+  const ids = new Set(group.modifiers.map((modifier) => modifier.id));
+  const inGroup = selected.filter((row) => ids.has(row.modifier));
+  const others = selected.filter((row) => !ids.has(row.modifier));
+  const setQuantity = (modifier: number, quantity: string) =>
+    onChange([...others, ...inGroup.map((row) => (row.modifier === modifier ? { ...row, quantity } : row))]);
+
+  const label = `${group.group_name}${group.effective_is_required ? " *" : ""}`;
+
+  if (group.selection_type === "single") {
+    const current = inGroup[0];
+    return (
+      <Field label={label}>
+        <div className="flex gap-2">
+          <NativeSelect
+            value={current ? String(current.modifier) : ""}
+            onChange={(event) =>
+              onChange(
+                event.target.value === ""
+                  ? others
+                  : [...others, { modifier: Number(event.target.value), quantity: current?.quantity ?? "1" }],
+              )
+            }
+          >
+            <option value="">{t("notSelected")}</option>
+            {group.modifiers.map((modifier) => (
+              <option key={modifier.id} value={modifier.id}>
+                {modifier.name}
+              </option>
+            ))}
+          </NativeSelect>
+          {current ? (
+            <Input
+              inputMode="numeric"
+              aria-label={t("modifierQuantity")}
+              value={current.quantity}
+              onChange={(event) => setQuantity(current.modifier, event.target.value)}
+              className="w-20"
+            />
+          ) : null}
+        </div>
+      </Field>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {group.modifiers.map((modifier) => {
+          const row = inGroup.find((item) => item.modifier === modifier.id);
+          return (
+            <div
+              key={modifier.id}
+              className={cn(
+                "flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm",
+                row ? "border-[var(--brand)] bg-[var(--cream)]" : "border-[var(--line)]",
+              )}
+            >
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={row !== undefined}
+                  onChange={(event) =>
+                    onChange(
+                      event.target.checked
+                        ? [...selected, { modifier: modifier.id, quantity: "1" }]
+                        : selected.filter((item) => item.modifier !== modifier.id),
+                    )
+                  }
+                  className="h-4 w-4 accent-[var(--brand)]"
+                />
+                {modifier.name}
+              </label>
+              {row ? (
+                <input
+                  inputMode="numeric"
+                  aria-label={t("modifierQuantity")}
+                  value={row.quantity}
+                  onChange={(event) => setQuantity(modifier.id, event.target.value)}
+                  className="h-7 w-12 rounded-full border border-[var(--line)] px-2 text-center text-sm"
+                />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ItemEditor({
+  item,
+  techCards,
+  onChange,
+  onRemove,
+}: {
+  item: CrmItemDraft;
+  techCards: TechCard[];
+  onChange: (item: CrmItemDraft) => void;
+  onRemove: () => void;
+}) {
+  const t = useTranslations("crm.items");
+  const tStock = useTranslations("stock");
+  const ingredients = useIngredients();
+  const semiProducts = useSemiProducts();
+  const card = item.tech_card === null ? undefined : techCards.find((row) => row.id === item.tech_card);
+  const update = (patch: Partial<CrmItemDraft>) => onChange({ ...item, ...patch, needs_review: false });
+  const options = componentOptions(
+    ingredients.list.data ?? [],
+    semiProducts.list.data ?? [],
+    "all",
+    tStock("ingredient"),
+    tStock("semiProduct"),
+  );
+
+  return (
+    <div
+      className={cn(
+        "grid gap-4 rounded-2xl border p-4",
+        item.needs_review ? "border-amber-300 bg-amber-50" : "border-[var(--line)]",
+      )}
+    >
+      {item.needs_review ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-amber-900">
+          <span className="inline-flex items-center gap-1.5">
+            <TriangleAlert className="h-4 w-4" />
+            {t("needsReview")}
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={() => update({})}>
+            {t("markReviewed")}
+          </Button>
+        </div>
+      ) : null}
+      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+        <Field label={t("techCard")}>
+          <NativeSelect
+            value={item.tech_card ?? ""}
+            onChange={(event) =>
+              update({
+                tech_card: event.target.value === "" ? null : Number(event.target.value),
+                modifiers: [],
+              })
+            }
+          >
+            <option value="">{t("freeItem")}</option>
+            {techCards
+              .filter((row) => row.is_active || row.id === item.tech_card)
+              .map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name}
+                </option>
+              ))}
+          </NativeSelect>
+        </Field>
+        <Field label={card ? t("nameOptional") : t("name")}>
+          <Input
+            required={!card}
+            value={item.name}
+            placeholder={card?.name ?? ""}
+            onChange={(event) => update({ name: event.target.value })}
+          />
+        </Field>
+        <div className="flex items-end">
+          <Button type="button" variant="ghost" size="icon" aria-label={t("removeItem")} onClick={onRemove}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {card?.kind === "weighted" ? (
+          <Field label={t("weightKg")}>
+            <Input
+              required
+              inputMode="decimal"
+              value={item.weight_kg}
+              onChange={(event) => update({ weight_kg: event.target.value })}
+            />
+          </Field>
+        ) : null}
+        <Field label={t("quantity")}>
+          <Input
+            required
+            inputMode="numeric"
+            value={item.quantity}
+            onChange={(event) => update({ quantity: event.target.value })}
+          />
+        </Field>
+        <Field label={t("price")}>
+          <Input inputMode="decimal" value={item.price} onChange={(event) => update({ price: event.target.value })} />
+        </Field>
+      </div>
+      {card && card.modifier_groups.length > 0 ? (
+        <div className="grid gap-4">
+          {card.modifier_groups.map((group) => (
+            <GroupPicker
+              key={group.id}
+              group={group}
+              selected={item.modifiers}
+              onChange={(modifiers) => update({ modifiers })}
+            />
+          ))}
+        </div>
+      ) : null}
+      <div className="grid gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+          {card ? t("extraIngredients") : t("ingredients")}
+        </span>
+        <ComponentLinesEditor
+          lines={item.lines}
+          onChange={(lines) => update({ lines })}
+          options={options}
+          extraColumn={null}
+          quantityLabel={t("quantity")}
+        />
+      </div>
+      <Field label={t("comment")}>
+        <Input value={item.comment} onChange={(event) => update({ comment: event.target.value })} />
+      </Field>
+    </div>
+  );
+}
+
+export function CrmOrderItemsEditor({
+  items,
+  onChange,
+}: {
+  items: CrmItemDraft[];
+  onChange: (items: CrmItemDraft[]) => void;
+}) {
+  const t = useTranslations("crm.items");
+  const techCards = useTechCards();
+  const cards = techCards.list.data ?? [];
+
+  return (
+    <div className="grid gap-3">
+      <p className="text-xs text-[var(--muted-2)]">{t("hint")}</p>
+      {items.map((item) => (
+        <ItemEditor
+          key={item.key}
+          item={item}
+          techCards={cards}
+          onChange={(next) => onChange(items.map((row) => (row.key === item.key ? next : row)))}
+          onRemove={() => onChange(items.filter((row) => row.key !== item.key))}
+        />
+      ))}
+      <div>
+        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...items, emptyCrmItem()])}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t("addItem")}
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Banknote, LogOut, MoreHorizontal, Wallet } from "lucide-react";
+import { Banknote, BookOpen, LogOut, MoreHorizontal, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -57,6 +57,22 @@ export function CrmOverflowMenu() {
               {t("finance")}
             </Link>
           ) : null}
+          <Link
+            href="/menu"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
+            onClick={() => setOpen(false)}
+          >
+            <BookOpen className="h-4 w-4" />
+            {t("menuSection")}
+          </Link>
+          <Link
+            href="/inventory"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
+            onClick={() => setOpen(false)}
+          >
+            <Warehouse className="h-4 w-4" />
+            {t("inventorySection")}
+          </Link>
           <button
             type="button"
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"

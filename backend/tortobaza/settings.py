@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     "orders",
     "attendance",
     "crm",
+    "menu",
+    "inventory",
     "tortobaza",
 ]
 

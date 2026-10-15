@@ -17,6 +17,7 @@ from django.utils import timezone
 from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 from crm.telegram import schedule_crm_order_telegram_sync
+from inventory.services import sync_order_write_off
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +303,7 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
             crm_order.status = mapped_status
             update_fields.append("status")
         crm_order.save(update_fields=update_fields)
+        sync_order_write_off(crm_order)
         action = CrmOrderEvent.ACTION_UPDATED
         logger.info("flowwow order id=%s updated crm_id=%s", item["id"], crm_order.pk)
         print(f"flowwow order id={item['id']} updated crm_id={crm_order.pk}", flush=True)

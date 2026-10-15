@@ -65,18 +65,23 @@ from crm.serializers import (
 from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
+from inventory.services import sync_order_write_off
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
+def is_finance_admin(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    profile = UserProfile.objects.filter(user=user).first()
+    if profile is None:
+        return False
+    return profile.is_finance_admin
+
+
 class IsFinanceAdmin(BasePermission):
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        profile = UserProfile.objects.filter(user=request.user).first()
-        if profile is None:
-            return False
-        return profile.is_finance_admin
+        return is_finance_admin(request.user)
 
 
 class CrmOrderWritePermission(BasePermission):
@@ -94,6 +99,20 @@ def live_orders():
     return CrmOrder.objects.filter(deleted=False).select_related(
         "taken_by", "created_by", "delivered_by"
     )
+
+
+def with_order_relations(orders):
+    return orders.prefetch_related(
+        "images",
+        "items__tech_card",
+        "items__modifiers__modifier",
+        "items__lines__ingredient",
+        "items__lines__semi_product",
+    )
+
+
+def order_detail_context(request) -> dict:
+    return {"request": request, "show_food_cost": is_finance_admin(request.user)}
 
 
 def _tbilisi_now() -> datetime:
@@ -190,18 +209,18 @@ class CrmOrderListView(APIView):
         query_serializer.is_valid(raise_exception=True)
         order_status = query_serializer.validated_data.get("status")
         if order_status == CrmOrder.STATUS_UNCONFIRMED:
-            orders = live_orders().filter(
+            orders = with_order_relations(live_orders().filter(
                 status=CrmOrder.STATUS_UNCONFIRMED,
-            ).prefetch_related("images")
+            ))
             serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
             return Response({"orders": serializer.data})
         month = query_serializer.validated_data.get("month")
         if month:
             year_str, month_str = month.split("-")
-            orders = live_orders().filter(
+            orders = with_order_relations(live_orders().filter(
                 date__year=int(year_str),
                 date__month=int(month_str),
-            ).prefetch_related("images")
+            ))
             serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
             return Response(
                 {
@@ -210,7 +229,7 @@ class CrmOrderListView(APIView):
                 }
             )
         target_date = query_serializer.validated_data.get("date") or timezone.now().astimezone(_TB).date()
-        orders = live_orders().filter(date=target_date).prefetch_related("images")
+        orders = with_order_relations(live_orders().filter(date=target_date))
         serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
         return Response(
             {
@@ -226,10 +245,11 @@ class CrmOrderListView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
+        sync_order_write_off(order)
         schedule_crm_order_telegram_sync(order.pk)
-        order = live_orders().prefetch_related("images").get(pk=order.pk)
+        order = with_order_relations(live_orders()).get(pk=order.pk)
         return Response(
-            CrmOrderSerializer(order, context={"request": request}).data,
+            CrmOrderSerializer(order, context=order_detail_context(request)).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -257,11 +277,11 @@ class CrmOrderDetailView(APIView):
     permission_classes = [IsAuthenticated, CrmOrderWritePermission]
 
     def get(self, request, pk: int):
-        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
-        return Response(CrmOrderSerializer(order, context={"request": request}).data)
+        order = get_object_or_404(with_order_relations(live_orders()), pk=pk)
+        return Response(CrmOrderSerializer(order, context=order_detail_context(request)).data)
 
     def put(self, request, pk: int):
-        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
+        order = get_object_or_404(with_order_relations(live_orders()), pk=pk)
         serializer = CrmOrderWriteSerializer(
             order,
             data=crm_order_write_payload(request),
@@ -269,13 +289,14 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        sync_order_write_off(order)
         sync_website_order_status_from_crm(order)
         schedule_crm_order_telegram_sync(order.pk)
-        order = live_orders().prefetch_related("images").get(pk=order.pk)
-        return Response(CrmOrderSerializer(order, context={"request": request}).data)
+        order = with_order_relations(live_orders()).get(pk=order.pk)
+        return Response(CrmOrderSerializer(order, context=order_detail_context(request)).data)
 
     def patch(self, request, pk: int):
-        order = get_object_or_404(live_orders().prefetch_related("images"), pk=pk)
+        order = get_object_or_404(live_orders(), pk=pk)
         serializer = CrmOrderUpdateSerializer(
             order,
             data=request.data,
@@ -284,15 +305,18 @@ class CrmOrderDetailView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        sync_order_write_off(order)
         sync_website_order_status_from_crm(order)
         schedule_crm_order_telegram_sync(order.pk)
-        return Response(CrmOrderSerializer(order, context={"request": request}).data)
+        order = with_order_relations(live_orders()).get(pk=order.pk)
+        return Response(CrmOrderSerializer(order, context=order_detail_context(request)).data)
 
     def delete(self, request, pk: int):
         order = get_object_or_404(live_orders(), pk=pk)
         before = snapshot_crm_order(order)
         order.deleted = True
         order.save(update_fields=["deleted", "updated_at"])
+        sync_order_write_off(order)
         record_crm_order_event(
             order,
             CrmOrderEvent.ACTION_DELETED,

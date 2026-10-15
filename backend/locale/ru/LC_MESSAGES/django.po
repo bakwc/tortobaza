@@ -1214,3 +1214,268 @@ msgstr "Этот заказ уже оплачен."
 #~ msgid "Must be empty when using express scheduling."
 #~ msgstr "При экспресс-доставке это поле должно быть пустым."
 
+
+msgid "Gram"
+msgstr "Грамм"
+
+msgid "Milliliter"
+msgstr "Миллилитр"
+
+msgid "Piece"
+msgstr "Штука"
+
+msgid "Ingredient category"
+msgstr "Категория ингредиентов"
+
+msgid "Ingredient categories"
+msgstr "Категории ингредиентов"
+
+msgid "Unit"
+msgstr "Единица"
+
+msgid "Average cost"
+msgstr "Средняя цена"
+
+msgid "Ingredient"
+msgstr "Ингредиент"
+
+msgid "Ingredients"
+msgstr "Ингредиенты"
+
+msgid "Yield quantity"
+msgstr "Выход"
+
+msgid "Produced in advance"
+msgstr "Производится заранее"
+
+msgid "Semi-product"
+msgstr "Полуфабрикат"
+
+msgid "Semi-products"
+msgstr "Полуфабрикаты"
+
+msgid "Loss percent"
+msgstr "Потери, %"
+
+msgid "Semi-product line"
+msgstr "Строка полуфабриката"
+
+msgid "Semi-product lines"
+msgstr "Строки полуфабриката"
+
+msgid "Modifier group"
+msgstr "Группа модификаторов"
+
+msgid "Modifier groups"
+msgstr "Группы модификаторов"
+
+msgid "Website option"
+msgstr "Опция сайта"
+
+msgid "Modifier"
+msgstr "Модификатор"
+
+msgid "Modifiers"
+msgstr "Модификаторы"
+
+msgid "Per kilogram"
+msgstr "На 1 кг"
+
+msgid "Per piece"
+msgstr "На штуку"
+
+msgid "Tech card"
+msgstr "Тех. карта"
+
+msgid "Tech cards"
+msgstr "Тех. карты"
+
+msgid "Tech card line"
+msgstr "Строка тех. карты"
+
+msgid "Tech card lines"
+msgstr "Строки тех. карты"
+
+msgid "Tech card modifier group"
+msgstr "Группа модификаторов тех. карты"
+
+msgid "Tech card modifier groups"
+msgstr "Группы модификаторов тех. карты"
+
+msgid "Scales by weight"
+msgstr "Зависит от веса"
+
+msgid "Tech card modifier line"
+msgstr "Состав модификатора в тех. карте"
+
+msgid "Tech card modifier lines"
+msgstr "Состав модификаторов в тех. карте"
+
+msgid "Menu"
+msgstr "Меню"
+
+#, python-format
+msgid "Semi-product %(name)s contains itself."
+msgstr "Полуфабрикат %(name)s содержит сам себя."
+
+msgid "An item without a tech card cannot have modifiers."
+msgstr "У позиции без тех. карты не может быть модификаторов."
+
+#, python-format
+msgid "Tech card %(name)s is per kilogram, weight is required."
+msgstr "Тех. карта %(name)s описана на 1 кг, укажите вес."
+
+msgid "Modifier quantity must be at least 1."
+msgstr "Количество модификатора должно быть не меньше 1."
+
+#, python-format
+msgid "Modifier %(name)s is selected twice."
+msgstr "Модификатор %(name)s выбран дважды."
+
+#, python-format
+msgid "Modifier %(name)s is not available for tech card %(card)s."
+msgstr "Модификатор %(name)s не подключён к тех. карте %(card)s."
+
+#, python-format
+msgid "Choose at least %(count)s in group %(group)s."
+msgstr "Выберите не меньше %(count)s в группе %(group)s."
+
+#, python-format
+msgid "Choose at most %(count)s in group %(group)s."
+msgstr "Выберите не больше %(count)s в группе %(group)s."
+
+msgid "Supply quantity must be positive."
+msgstr "Количество в поставке должно быть больше нуля."
+
+#, python-format
+msgid "Semi-product %(name)s is not produced in advance."
+msgstr "Полуфабрикат %(name)s не производится заранее."
+
+msgid "Production quantity must be positive."
+msgstr "Количество производства должно быть больше нуля."
+
+msgid "Write-off quantity must be positive."
+msgstr "Количество списания должно быть больше нуля."
+
+msgid "Inventory count is already closed."
+msgstr "Инвентаризация уже проведена."
+
+msgid "Phone"
+msgstr "Телефон"
+
+msgid "Supplier"
+msgstr "Поставщик"
+
+msgid "Suppliers"
+msgstr "Поставщики"
+
+msgid "Bank transaction"
+msgstr "Банковская операция"
+
+msgid "Supply"
+msgstr "Поставка"
+
+msgid "Supplies"
+msgstr "Поставки"
+
+msgid "Supply line"
+msgstr "Строка поставки"
+
+msgid "Supply lines"
+msgstr "Строки поставки"
+
+msgid "Productions"
+msgstr "Производство"
+
+msgid "Write-off reason"
+msgstr "Причина списания"
+
+msgid "Write-off reasons"
+msgstr "Причины списания"
+
+msgid "Reason"
+msgstr "Причина"
+
+msgid "Write-off"
+msgstr "Списание"
+
+msgid "Write-offs"
+msgstr "Списания"
+
+msgid "Write-off line"
+msgstr "Строка списания"
+
+msgid "Write-off lines"
+msgstr "Строки списания"
+
+msgid "Draft"
+msgstr "Черновик"
+
+msgid "Closed"
+msgstr "Проведена"
+
+msgid "Closed at"
+msgstr "Проведена"
+
+msgid "Inventory count"
+msgstr "Инвентаризация"
+
+msgid "Inventory counts"
+msgstr "Инвентаризации"
+
+msgid "Actual quantity"
+msgstr "Фактическое количество"
+
+msgid "Unit cost"
+msgstr "Цена за единицу"
+
+msgid "Expected quantity"
+msgstr "Ожидаемое количество"
+
+msgid "Inventory count line"
+msgstr "Строка инвентаризации"
+
+msgid "Inventory count lines"
+msgstr "Строки инвентаризации"
+
+msgid "Production output"
+msgstr "Выпуск производства"
+
+msgid "Production consumption"
+msgstr "Расход на производство"
+
+msgid "Stock movement"
+msgstr "Движение по складу"
+
+msgid "Stock movements"
+msgstr "Движения по складу"
+
+msgid "Inventory"
+msgstr "Склад"
+
+msgid "Weight, kg"
+msgstr "Вес, кг"
+
+msgid "Price"
+msgstr "Цена"
+
+msgid "Needs review"
+msgstr "Проверить"
+
+msgid "CRM order item"
+msgstr "Позиция заказа CRM"
+
+msgid "CRM order items"
+msgstr "Позиции заказа CRM"
+
+msgid "CRM order item modifier"
+msgstr "Модификатор позиции заказа CRM"
+
+msgid "CRM order item modifiers"
+msgstr "Модификаторы позиции заказа CRM"
+
+msgid "CRM order item line"
+msgstr "Строка состава позиции заказа CRM"
+
+msgid "CRM order item lines"
+msgstr "Строки состава позиции заказа CRM"

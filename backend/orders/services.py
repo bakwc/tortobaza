@@ -159,6 +159,7 @@ def create_order_from_cart(cart: Cart, payload: dict, environment: str) -> Order
         for co in cart_item.options.all():
             OrderItemOption.objects.create(
                 order_item=order_item,
+                option=co.option,
                 group_name=co.option.group.name,
                 option_name=co.option.name,
                 price_delta=co.option.price_delta,

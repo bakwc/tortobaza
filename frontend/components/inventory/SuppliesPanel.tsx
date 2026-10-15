@@ -1,0 +1,317 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
+import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
+import { EditorDialog } from "@/components/menu/EditorDialog";
+import {
+  Card,
+  CardTitle,
+  ErrorText,
+  Field,
+  NativeSelect,
+  QueryState,
+  formatMoney,
+  formatQuantity,
+} from "@/components/menu/ui";
+import { useIngredients, useSuppliers, useSupplies, useSupplyTransactions } from "@/hooks/useStock";
+import type { Supply } from "@/lib/api/types";
+import { getTbilisiTodayIsoDate } from "@/lib/format";
+
+type SupplyLineDraft = { key: string; ingredient: string; quantity: string; total: string };
+
+type SupplyDraft = {
+  date: string;
+  supplier: number | null;
+  financial_transaction: number | null;
+  comment: string;
+  lines: SupplyLineDraft[];
+};
+
+function draftFrom(row: Supply | null): SupplyDraft {
+  if (row === null) {
+    return { date: getTbilisiTodayIsoDate(), supplier: null, financial_transaction: null, comment: "", lines: [] };
+  }
+  return {
+    date: row.date,
+    supplier: row.supplier,
+    financial_transaction: row.financial_transaction?.id ?? null,
+    comment: row.comment,
+    lines: row.lines.map((line) => ({
+      key: newDraftKey(),
+      ingredient: String(line.ingredient),
+      quantity: line.quantity,
+      total: line.total,
+    })),
+  };
+}
+
+function decimal(value: string): string {
+  return value.replace(",", ".");
+}
+
+function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () => void }) {
+  const t = useTranslations("stock");
+  const units = useTranslations("stock.units");
+  const supplies = useSupplies();
+  const suppliers = useSuppliers();
+  const ingredients = useIngredients();
+  const transactions = useSupplyTransactions(supply ? supply.id : null);
+  const [draft, setDraft] = useState<SupplyDraft>(() => draftFrom(supply));
+  const [newSupplier, setNewSupplier] = useState("");
+
+  const updateLine = (key: string, patch: Partial<SupplyLineDraft>) =>
+    setDraft({ ...draft, lines: draft.lines.map((line) => (line.key === key ? { ...line, ...patch } : line)) });
+
+  const total = draft.lines.reduce((sum, line) => sum + Number(decimal(line.total) || "0"), 0);
+  const linked = (transactions.data ?? []).find((row) => row.id === draft.financial_transaction);
+  const mismatch = linked !== undefined && Math.abs(Math.abs(Number(linked.amount)) - total) >= 0.01;
+
+  return (
+    <EditorDialog
+      open
+      onOpenChange={(value) => (value ? null : onClose())}
+      title={supply === null ? t("newSupply") : `${t("inventory.supplies")} · ${supply.date}`}
+      pending={supplies.save.isPending}
+      error={supplies.save.error ?? supplies.remove.error}
+      submitLabel={t("save")}
+      onSubmit={() =>
+        supplies.save.mutate(
+          {
+            id: supply ? supply.id : null,
+            body: {
+              date: draft.date,
+              supplier: draft.supplier,
+              financial_transaction: draft.financial_transaction,
+              comment: draft.comment,
+              lines: draft.lines.map((line) => ({
+                ingredient: Number(line.ingredient),
+                quantity: decimal(line.quantity),
+                total: decimal(line.total),
+              })),
+            },
+          },
+          { onSuccess: onClose },
+        )
+      }
+      onDelete={supply === null ? null : () => supplies.remove.mutate(supply.id, { onSuccess: onClose })}
+      deletePending={supplies.remove.isPending}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={t("date")}>
+          <Input type="date" required value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} />
+        </Field>
+        <Field label={t("supplier")}>
+          <NativeSelect
+            value={draft.supplier ?? ""}
+            onChange={(event) =>
+              setDraft({ ...draft, supplier: event.target.value === "" ? null : Number(event.target.value) })
+            }
+          >
+            <option value="">—</option>
+            {(suppliers.list.data ?? []).map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <div className="flex gap-2 sm:col-span-2">
+          <Input
+            value={newSupplier}
+            placeholder={t("newSupplier")}
+            onChange={(event) => setNewSupplier(event.target.value)}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={newSupplier.trim() === "" || suppliers.save.isPending}
+            onClick={() =>
+              suppliers.save.mutate(
+                { id: null, body: { name: newSupplier.trim(), phone: "", comment: "" } },
+                {
+                  onSuccess: (created) => {
+                    setNewSupplier("");
+                    setDraft((prev) => ({ ...prev, supplier: created.id }));
+                  },
+                },
+              )
+            }
+          >
+            {t("add")}
+          </Button>
+        </div>
+        <ErrorText error={suppliers.save.error} />
+        <Field label={t("bankTransaction")} className="sm:col-span-2">
+          <NativeSelect
+            value={draft.financial_transaction ?? ""}
+            onChange={(event) =>
+              setDraft({
+                ...draft,
+                financial_transaction: event.target.value === "" ? null : Number(event.target.value),
+              })
+            }
+          >
+            <option value="">{t("noBankTransaction")}</option>
+            {(transactions.data ?? []).map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.date} · {formatMoney(row.amount)} · {row.counterparty_name || row.description} · {row.account_name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field label={t("comment")} className="sm:col-span-2">
+          <Textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
+        </Field>
+      </div>
+      <CardTitle>{t("lines")}</CardTitle>
+      <div className="grid gap-2">
+        {draft.lines.map((line) => {
+          const ingredient = (ingredients.list.data ?? []).find((row) => String(row.id) === line.ingredient);
+          return (
+            <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
+              <NativeSelect
+                required
+                value={line.ingredient}
+                onChange={(event) => updateLine(line.key, { ingredient: event.target.value })}
+                className="col-span-2 sm:col-span-1"
+              >
+                <option value="">{t("chooseComponent")}</option>
+                {(ingredients.list.data ?? [])
+                  .filter((row) => row.is_active || String(row.id) === line.ingredient)
+                  .map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                    </option>
+                  ))}
+              </NativeSelect>
+              <div className="relative">
+                <Input
+                  required
+                  inputMode="decimal"
+                  placeholder={t("quantity")}
+                  value={line.quantity}
+                  onChange={(event) => updateLine(line.key, { quantity: event.target.value })}
+                  className="pr-12"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                  {ingredient ? units(ingredient.unit) : ""}
+                </span>
+              </div>
+              <Input
+                required
+                inputMode="decimal"
+                placeholder={t("lineTotal")}
+                value={line.total}
+                onChange={(event) => updateLine(line.key, { total: event.target.value })}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={t("removeLine")}
+                onClick={() => setDraft({ ...draft, lines: draft.lines.filter((row) => row.key !== line.key) })}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        })}
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setDraft({
+                ...draft,
+                lines: [...draft.lines, { key: newDraftKey(), ingredient: "", quantity: "", total: "" }],
+              })
+            }
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            {t("addLine")}
+          </Button>
+        </div>
+      </div>
+      <p className={mismatch ? "text-sm font-semibold text-amber-700" : "text-sm text-[var(--ink)]"}>
+        {t("total")}: {formatMoney(String(total))}
+        {mismatch && linked ? ` · ${t("bankAmountDiffers", { amount: formatMoney(linked.amount) })}` : ""}
+      </p>
+    </EditorDialog>
+  );
+}
+
+function SuppliesList() {
+  const t = useTranslations("stock");
+  const units = useTranslations("stock.units");
+  const supplies = useSupplies();
+  const [editing, setEditing] = useState<Supply | null | "new">(null);
+
+  return (
+    <div className="grid gap-6">
+      <Card>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle>{t("inventory.supplies")}</CardTitle>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              supplies.save.reset();
+              setEditing("new");
+            }}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            {t("add")}
+          </Button>
+        </div>
+        <QueryState isLoading={supplies.list.isLoading} isError={supplies.list.isError}>
+          <div className="mt-4 grid gap-2">
+            {(supplies.list.data ?? []).map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                onClick={() => {
+                  supplies.save.reset();
+                  setEditing(row);
+                }}
+                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left hover:bg-[var(--cream)]"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-[var(--ink)]">
+                    {row.date} · {row.supplier_name ?? "—"}
+                  </span>
+                  <span className="text-sm font-semibold">{formatMoney(row.total)}</span>
+                </div>
+                <p className="mt-1 text-sm text-[var(--muted-2)]">
+                  {row.lines.map((line) => `${line.name} ${formatQuantity(line.quantity)} ${units(line.unit)}`).join(", ")}
+                </p>
+                {row.financial_transaction ? (
+                  <p className="mt-1 text-xs text-emerald-700">
+                    {t("bankTransaction")}: {row.financial_transaction.date} · {formatMoney(row.financial_transaction.amount)}
+                  </p>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </QueryState>
+      </Card>
+      {editing !== null ? (
+        <SupplyEditor supply={editing === "new" ? null : editing} onClose={() => setEditing(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+export function SuppliesPanel() {
+  return (
+    <FinanceAuthGate>
+      <SuppliesList />
+    </FinanceAuthGate>
+  );
+}
