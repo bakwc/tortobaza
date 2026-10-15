@@ -353,3 +353,393 @@ class SyncInternalTransfersTests(TestCase):
 
         with self.assertRaises(FinancialAccount.DoesNotExist):
             sync_internal_transfers()
+
+    def test_links_existing_cash_transfer_on_exact_amount(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-1000.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1000",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1000.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY,
+            Decimal("1000.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-1000",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
+        self.assertEqual(withdrawal.matched_transaction_id, counted.pk)
+        self.assertEqual(counted.matched_transaction_id, withdrawal.pk)
+        self.assertEqual(counted.amount, Decimal("1000.00"))
+        self.assertEqual(counted.description, "counted")
+        self.assertEqual(FinancialTransaction.objects.count(), 2)
+        self.assertEqual(
+            FinancialTransaction.objects.filter(kind=FinancialTransaction.KIND_EXPENSE).count(),
+            0,
+        )
+
+    def test_links_cash_within_one_percent_and_creates_fee(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-1502.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1502",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1502.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY,
+            Decimal("1500.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-1500",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        fee = FinancialTransaction.objects.get(kind=FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(withdrawal.kind, FinancialTransaction.KIND_TRANSFER)
+        self.assertEqual(withdrawal.amount, Decimal("-1502.00"))
+        self.assertEqual(withdrawal.matched_transaction_id, counted.pk)
+        self.assertEqual(counted.matched_transaction_id, withdrawal.pk)
+        self.assertEqual(counted.amount, Decimal("1500.00"))
+        self.assertEqual(counted.description, "counted")
+        self.assertEqual(fee.account_id, cash.pk)
+        self.assertEqual(fee.date, DAY)
+        self.assertEqual(fee.amount, Decimal("-2.00"))
+        self.assertEqual(fee.expense_type, FinancialTransaction.EXPENSE_FEES)
+        self.assertEqual(fee.description, "Комиссия за снятие")
+        self.assertEqual(fee.external_id, f"atm-fee:{withdrawal.pk}")
+        self.assertIsNone(fee.matched_transaction_id)
+        self.assertEqual(FinancialTransaction.objects.count(), 3)
+
+    def test_links_larger_cash_within_one_percent_without_fee(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-1500.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1500",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1500.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY,
+            Decimal("1510.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-1510",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        self.assertEqual(withdrawal.matched_transaction_id, counted.pk)
+        self.assertEqual(counted.matched_transaction_id, withdrawal.pk)
+        self.assertEqual(counted.amount, Decimal("1510.00"))
+        self.assertEqual(FinancialTransaction.objects.count(), 2)
+
+    def test_links_cash_transfer_three_days_later(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-800.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-800",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 800.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY + timedelta(days=3),
+            Decimal("800.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-800",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        self.assertEqual(withdrawal.matched_transaction_id, counted.pk)
+        self.assertEqual(counted.matched_transaction_id, withdrawal.pk)
+        self.assertEqual(FinancialTransaction.objects.count(), 2)
+
+    def test_creates_pair_when_cash_is_four_days_later(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-800.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-800",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 800.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY + timedelta(days=4),
+            Decimal("800.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-800",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        created = FinancialTransaction.objects.get(
+            account=cash,
+            external_id=withdrawal.external_id,
+        )
+        self.assertIsNone(counted.matched_transaction_id)
+        self.assertEqual(withdrawal.matched_transaction_id, created.pk)
+        self.assertEqual(created.amount, Decimal("800.00"))
+        self.assertEqual(created.date, DAY)
+
+    def test_creates_pair_when_cash_is_before_withdrawal(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-800.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-800",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 800.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY - timedelta(days=1),
+            Decimal("800.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-800",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        created = FinancialTransaction.objects.get(
+            account=cash,
+            external_id=withdrawal.external_id,
+        )
+        self.assertIsNone(counted.matched_transaction_id)
+        self.assertEqual(withdrawal.matched_transaction_id, created.pk)
+        self.assertEqual(created.amount, Decimal("800.00"))
+
+    def test_creates_pair_when_difference_exceeds_one_percent(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-1000.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1000",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1000.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY,
+            Decimal("980.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-980",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        counted.refresh_from_db()
+        created = FinancialTransaction.objects.get(
+            account=cash,
+            external_id=withdrawal.external_id,
+        )
+        self.assertIsNone(counted.matched_transaction_id)
+        self.assertEqual(withdrawal.matched_transaction_id, created.pk)
+        self.assertEqual(created.amount, Decimal("1000.00"))
+        self.assertEqual(
+            FinancialTransaction.objects.filter(kind=FinancialTransaction.KIND_EXPENSE).count(),
+            0,
+        )
+
+    def test_ignores_paired_cash_transfer_and_non_transfer(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        other = _tx(
+            tbc,
+            DAY,
+            Decimal("-1000.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "manual-out",
+            "manual",
+        )
+        paired = _tx(
+            cash,
+            DAY,
+            Decimal("1000.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-paired",
+            "already paired",
+        )
+        paired.matched_transaction = other
+        other.matched_transaction = paired
+        paired.save(update_fields=["matched_transaction"])
+        other.save(update_fields=["matched_transaction"])
+        income = _tx(
+            cash,
+            DAY,
+            Decimal("1000.00"),
+            FinancialTransaction.KIND_INCOME,
+            "",
+            "cash-income",
+            "sale",
+        )
+        withdrawal = _tx(
+            tbc,
+            DAY,
+            Decimal("-1000.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1000",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1000.00 GEL",
+        )
+
+        sync_internal_transfers()
+
+        withdrawal.refresh_from_db()
+        paired.refresh_from_db()
+        income.refresh_from_db()
+        created = FinancialTransaction.objects.get(
+            account=cash,
+            external_id=withdrawal.external_id,
+        )
+        self.assertEqual(paired.matched_transaction_id, other.pk)
+        self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
+        self.assertIsNone(income.matched_transaction_id)
+        self.assertEqual(withdrawal.matched_transaction_id, created.pk)
+        self.assertEqual(created.amount, Decimal("1000.00"))
+
+    def test_exact_cash_match_wins_over_nearby_withdrawal(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        exact = _tx(
+            tbc,
+            DAY,
+            Decimal("-1500.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1500",
+            "ATM CASH wallet - exact, 1500.00 GEL",
+        )
+        nearby = _tx(
+            tbc,
+            DAY,
+            Decimal("-1502.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1502",
+            "ATM CASH wallet - nearby, 1502.00 GEL",
+        )
+        counted = _tx(
+            cash,
+            DAY,
+            Decimal("1500.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-1500",
+            "counted",
+        )
+
+        sync_internal_transfers()
+
+        exact.refresh_from_db()
+        nearby.refresh_from_db()
+        counted.refresh_from_db()
+        created = FinancialTransaction.objects.get(
+            account=cash,
+            external_id=nearby.external_id,
+        )
+        self.assertEqual(exact.matched_transaction_id, counted.pk)
+        self.assertEqual(counted.matched_transaction_id, exact.pk)
+        self.assertEqual(counted.amount, Decimal("1500.00"))
+        self.assertEqual(nearby.matched_transaction_id, created.pk)
+        self.assertEqual(created.amount, Decimal("1502.00"))
+        self.assertEqual(
+            FinancialTransaction.objects.filter(kind=FinancialTransaction.KIND_EXPENSE).count(),
+            0,
+        )
+
+    def test_second_sync_does_not_duplicate_atm_fee(self):
+        tbc = _account("TBC Daria", TBC_IBAN, "GEL", "TBC")
+        cash = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        _tx(
+            tbc,
+            DAY,
+            Decimal("-1502.00"),
+            FinancialTransaction.KIND_EXPENSE,
+            FOREIGN_IBAN,
+            "atm-1502",
+            "ATM CASH wallet - ATM TBC-1075 (RECAN), 1502.00 GEL",
+        )
+        _tx(
+            cash,
+            DAY,
+            Decimal("1500.00"),
+            FinancialTransaction.KIND_TRANSFER,
+            "",
+            "cash-1500",
+            "counted",
+        )
+
+        sync_internal_transfers()
+        sync_internal_transfers()
+
+        self.assertEqual(FinancialTransaction.objects.count(), 3)
+        self.assertEqual(
+            FinancialTransaction.objects.filter(
+                kind=FinancialTransaction.KIND_EXPENSE,
+                expense_type=FinancialTransaction.EXPENSE_FEES,
+            ).count(),
+            1,
+        )

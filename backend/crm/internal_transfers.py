@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 
 from crm.models import FinancialAccount, FinancialTransaction
@@ -5,6 +7,7 @@ from crm.models import FinancialAccount, FinancialTransaction
 BOG_BANK_NAME = "Bank Of Georgia"
 TBC_BANK_NAME = "TBC"
 ATM_CASH_PREFIX = "ATM CASH"
+ATM_FEE_DESCRIPTION = "Комиссия за снятие"
 WINDOW_DAYS = 3
 
 
@@ -155,6 +158,24 @@ def pair_tbc_atm_withdrawals() -> None:
     )
     if not withdrawals:
         return
+    cash_transfers = list(
+        FinancialTransaction.objects.filter(
+            account__kind=FinancialAccount.KIND_CASH,
+            kind=FinancialTransaction.KIND_TRANSFER,
+            matched_transaction__isnull=True,
+            amount__gt=0,
+        ).select_related("account")
+    )
+    assigned = assign_atm_cash(withdrawals, cash_transfers)
+    pending = [tx for tx in withdrawals if tx.pk not in assigned]
+    for tx in withdrawals:
+        incoming = assigned.get(tx.pk)
+        if incoming is None:
+            continue
+        link_atm_withdrawal(tx, incoming)
+        create_atm_withdrawal_fee(tx, incoming)
+    if not pending:
+        return
     cash = (
         FinancialAccount.objects.filter(kind=FinancialAccount.KIND_CASH)
         .order_by("pk")
@@ -162,7 +183,7 @@ def pair_tbc_atm_withdrawals() -> None:
     )
     if cash is None:
         raise FinancialAccount.DoesNotExist
-    for tx in withdrawals:
+    for tx in pending:
         incoming = FinancialTransaction.objects.create(
             account=cash,
             date=tx.date,
@@ -171,8 +192,64 @@ def pair_tbc_atm_withdrawals() -> None:
             description=tx.description,
             external_id=tx.external_id,
         )
-        tx.kind = FinancialTransaction.KIND_TRANSFER
-        tx.matched_transaction = incoming
-        incoming.matched_transaction = tx
-        tx.save(update_fields=["kind", "matched_transaction", "updated_at"])
-        incoming.save(update_fields=["matched_transaction", "updated_at"])
+        link_atm_withdrawal(tx, incoming)
+
+
+def link_atm_withdrawal(
+    withdrawal: FinancialTransaction,
+    incoming: FinancialTransaction,
+) -> None:
+    withdrawal.kind = FinancialTransaction.KIND_TRANSFER
+    withdrawal.matched_transaction = incoming
+    incoming.matched_transaction = withdrawal
+    withdrawal.save(update_fields=["kind", "matched_transaction", "updated_at"])
+    incoming.save(update_fields=["matched_transaction", "updated_at"])
+
+
+def assign_atm_cash(
+    withdrawals: list[FinancialTransaction],
+    cash_transfers: list[FinancialTransaction],
+) -> dict[int, FinancialTransaction]:
+    cash_by_id = {tx.pk: tx for tx in cash_transfers}
+    candidates: list[tuple[Decimal, int, int, int]] = []
+    for withdrawal in withdrawals:
+        bank_amount = -withdrawal.amount
+        for cash_tx in cash_transfers:
+            if cash_tx.account.currency != withdrawal.account.currency:
+                continue
+            delay = (cash_tx.date - withdrawal.date).days
+            if delay < 0 or delay > WINDOW_DAYS:
+                continue
+            diff = abs(bank_amount - cash_tx.amount)
+            if diff * 100 > bank_amount:
+                continue
+            candidates.append((diff, delay, cash_tx.pk, withdrawal.pk))
+    candidates.sort()
+    used_cash: set[int] = set()
+    used_withdrawals: set[int] = set()
+    assigned: dict[int, FinancialTransaction] = {}
+    for _diff, _delay, cash_pk, withdrawal_pk in candidates:
+        if cash_pk in used_cash or withdrawal_pk in used_withdrawals:
+            continue
+        used_cash.add(cash_pk)
+        used_withdrawals.add(withdrawal_pk)
+        assigned[withdrawal_pk] = cash_by_id[cash_pk]
+    return assigned
+
+
+def create_atm_withdrawal_fee(
+    withdrawal: FinancialTransaction,
+    incoming: FinancialTransaction,
+) -> None:
+    fee_amount = incoming.amount + withdrawal.amount
+    if fee_amount >= 0:
+        return
+    FinancialTransaction.objects.create(
+        account=incoming.account,
+        date=withdrawal.date,
+        amount=fee_amount,
+        kind=FinancialTransaction.KIND_EXPENSE,
+        expense_type=FinancialTransaction.EXPENSE_FEES,
+        description=ATM_FEE_DESCRIPTION,
+        external_id=f"atm-fee:{withdrawal.pk}",
+    )
