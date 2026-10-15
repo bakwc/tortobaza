@@ -14,33 +14,35 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { CrmOrderItemsEditor } from "@/components/crm/CrmOrderItemsEditor";
 import { ImageBatchUploader } from "@/components/crm/ImageBatchUploader";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
+import { apiErrorMessage } from "@/components/menu/ui";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCreateCrmOrder, useUpdateCrmOrder } from "@/hooks/useCrmOrders";
+import { useTechCards } from "@/hooks/useStock";
 import { ApiError } from "@/lib/api/client";
-import type { CrmOrder, CrmOrderPaymentType, CrmOrderStatus, CrmOrderWriteFields } from "@/lib/api/types";
+import type {
+  CrmOrder,
+  CrmOrderItemBody,
+  CrmOrderPaymentType,
+  CrmOrderStatus,
+  CrmOrderWriteFields,
+} from "@/lib/api/types";
+import {
+  crmItemBody,
+  crmItemDraftFromItem,
+  crmItemsFillingText,
+  crmItemsPriceSum,
+  crmItemsWeightText,
+  type CrmItemDraft,
+} from "@/lib/crmItems";
 import {
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
   crmOrderSelectableStatuses,
 } from "@/lib/crmStatus";
 import { cn } from "@/lib/utils";
-
-function extractDetail(error: ApiError, fallback: string): string {
-  const parsed = error.parsed<Record<string, unknown>>();
-  if (parsed && typeof parsed === "object") {
-    const nonField = parsed["non_field_errors"];
-    if (Array.isArray(nonField) && typeof nonField[0] === "string") {
-      return nonField[0];
-    }
-    const detail = parsed["detail"];
-    if (typeof detail === "string") {
-      return detail;
-    }
-  }
-  return fallback;
-}
 
 function sliceTime(value: string): string {
   return value.slice(0, 5);
@@ -55,8 +57,10 @@ function buildCrmOrderFormData(
   fields: CrmOrderWriteFields,
   images: File[],
   deleteImageIds: number[],
+  items: CrmOrderItemBody[],
 ): FormData {
   const form = new FormData();
+  form.append("items", JSON.stringify(items));
   form.append("date", fields.date);
   form.append("time_start", fields.time_start ?? "");
   form.append("time_end", fields.time_end ?? "");
@@ -151,6 +155,29 @@ export function CrmOrderForm(
   );
   const [deleteImageIds, setDeleteImageIds] = useState<number[]>([]);
   const [newFiles, setNewFiles] = useState<File[]>([]);
+  const [items, setItems] = useState<CrmItemDraft[]>(() =>
+    props.mode === "edit" ? props.order.items.map(crmItemDraftFromItem) : [],
+  );
+  const [weightTouched, setWeightTouched] = useState(props.mode === "edit" && props.order.weight !== "");
+  const [fillingTouched, setFillingTouched] = useState(props.mode === "edit" && props.order.filling !== "");
+  const techCards = useTechCards();
+  const cards = techCards.list.data ?? [];
+  const itemsPriceSum = crmItemsPriceSum(items);
+  const priceMismatch =
+    itemsPriceSum !== null && Math.abs(itemsPriceSum - Number(fields.cake_price.replace(",", ".") || "0")) >= 0.01;
+  const foodCost = props.mode === "edit" ? props.order.food_cost : undefined;
+
+  const onItemsChange = (next: CrmItemDraft[]) => {
+    setItems(next);
+    if (next.length === 0) return;
+    const weightText = crmItemsWeightText(next, cards, { kg: t("items.kg"), pcs: t("items.pcs") });
+    const fillingText = crmItemsFillingText(next, cards);
+    setFields((prev) => ({
+      ...prev,
+      weight: !weightTouched && weightText !== "" ? weightText : prev.weight,
+      filling: !fillingTouched && fillingText !== "" ? fillingText : prev.filling,
+    }));
+  };
   const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
     null,
   );
@@ -164,7 +191,7 @@ export function CrmOrderForm(
   const mutationError = createMutation.error ?? updateMutation.error;
   const errorMessage =
     mutationError instanceof ApiError
-      ? extractDetail(mutationError, t("saveError"))
+      ? apiErrorMessage(mutationError, t("saveError"))
       : mutationError
         ? t("genericError")
         : null;
@@ -205,7 +232,12 @@ export function CrmOrderForm(
         return;
       }
     }
-    const body = buildCrmOrderFormData(fields, newFiles, deleteImageIds);
+    const body = buildCrmOrderFormData(
+      fields,
+      newFiles,
+      deleteImageIds,
+      items.map((item) => crmItemBody(item, cards)),
+    );
     if (props.mode === "create") {
       createMutation.mutate(body, {
         onSuccess: (order) => {
@@ -439,6 +471,22 @@ export function CrmOrderForm(
       </section>
 
       <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/50">
+            {t("items.section")}
+          </h2>
+          {foodCost !== undefined ? (
+            <span className="text-sm font-medium text-[var(--ink)]">
+              {t("items.foodCost", { value: Number(foodCost).toFixed(2) })}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-4">
+          <CrmOrderItemsEditor items={items} onChange={onItemsChange} />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/50">
           {t("cakeSection")}
         </h2>
@@ -450,7 +498,10 @@ export function CrmOrderForm(
             <Input
               required
               value={fields.weight}
-              onChange={(event) => setField("weight", event.target.value)}
+              onChange={(event) => {
+                setWeightTouched(true);
+                setField("weight", event.target.value);
+              }}
             />
           </label>
           <label className="flex flex-col gap-1.5">
@@ -460,7 +511,10 @@ export function CrmOrderForm(
             <Input
               required
               value={fields.filling}
-              onChange={(event) => setField("filling", event.target.value)}
+              onChange={(event) => {
+                setFillingTouched(true);
+                setField("filling", event.target.value);
+              }}
             />
           </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
@@ -499,6 +553,16 @@ export function CrmOrderForm(
               value={fields.cake_price}
               onChange={(event) => setField("cake_price", event.target.value)}
             />
+            {itemsPriceSum !== null ? (
+              <span
+                className={cn(
+                  "text-xs",
+                  priceMismatch ? "font-semibold text-amber-700" : "text-[var(--muted-2)]",
+                )}
+              >
+                {t("items.priceSum", { value: itemsPriceSum.toFixed(2) })}
+              </span>
+            ) : null}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">

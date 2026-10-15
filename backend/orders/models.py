@@ -4,7 +4,7 @@ import uuid
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from catalog.models import Product
+from catalog.models import Option, Product
 
 
 class PromoCode(models.Model):
@@ -248,6 +248,14 @@ class OrderItemOption(models.Model):
         related_name="options",
         on_delete=models.CASCADE,
         verbose_name=_("Order item"),
+    )
+    option = models.ForeignKey(
+        Option,
+        related_name="+",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Option"),
     )
     group_name = models.CharField(max_length=120, verbose_name=_("Group name"))
     option_name = models.CharField(max_length=120, verbose_name=_("Option name"))

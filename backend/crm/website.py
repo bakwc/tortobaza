@@ -6,8 +6,10 @@ from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from crm.history import record_crm_order_event, snapshot_crm_order
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, CrmOrderItem, CrmOrderItemModifier
 from crm.telegram import schedule_crm_order_telegram_sync
+from menu.models import Modifier, TechCard
+from menu.recipes import order_item_errors
 from orders.models import Order, OrderItem
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -61,6 +63,7 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
         website_order=order,
     )
     _copy_product_images(order, crm_order)
+    _create_crm_items(order, crm_order)
     record_crm_order_event(
         crm_order,
         CrmOrderEvent.ACTION_CREATED,
@@ -161,6 +164,53 @@ def _build_description(order: Order) -> str:
     if order.comment:
         lines.append(order.comment)
     return "\n".join(lines)
+
+
+def _create_crm_items(order: Order, crm_order: CrmOrder) -> None:
+    items = list(order.items.select_related("product__tech_card").prefetch_related("options__option"))
+    option_ids = [opt.option_id for item in items for opt in item.options.all() if opt.option_id is not None]
+    modifiers_by_option = {
+        modifier.catalog_option_id: modifier
+        for modifier in Modifier.objects.filter(catalog_option_id__in=option_ids)
+    }
+    for position, item in enumerate(items):
+        tech_card = item.product.tech_card if item.product is not None else None
+        needs_review = tech_card is None
+        weight_kg = None
+        modifiers: list[tuple[Modifier, int]] = []
+        for opt in item.options.all():
+            option = opt.option
+            if option is None:
+                needs_review = True
+                continue
+            if option.weight_kg is not None:
+                weight_kg = option.weight_kg
+                continue
+            if option.pk not in modifiers_by_option:
+                needs_review = True
+                continue
+            modifiers.append((modifiers_by_option[option.pk], 1))
+        if tech_card is None:
+            modifiers = []
+        elif tech_card.kind == TechCard.KIND_WEIGHTED and weight_kg is None:
+            tech_card = None
+            modifiers = []
+            needs_review = True
+        elif order_item_errors(tech_card, weight_kg, modifiers):
+            needs_review = True
+        crm_item = CrmOrderItem.objects.create(
+            order=crm_order,
+            tech_card=tech_card,
+            name=item.product_name,
+            quantity=item.quantity,
+            weight_kg=weight_kg,
+            price=item.line_total,
+            comment=item.comment,
+            needs_review=needs_review,
+            position=position,
+        )
+        for modifier, quantity in modifiers:
+            CrmOrderItemModifier.objects.create(item=crm_item, modifier=modifier, quantity=quantity)
 
 
 def _copy_product_images(order: Order, crm_order: CrmOrder) -> None:

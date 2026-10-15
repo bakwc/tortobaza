@@ -198,6 +198,13 @@ class Option(models.Model):
         default=0,
         verbose_name=_("Price delta"),
     )
+    weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Weight, kg"),
+    )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
@@ -234,6 +241,14 @@ class Product(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Delivery schedule tier"),
+    )
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="products",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
     )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))

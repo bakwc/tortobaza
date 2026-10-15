@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from accounts.models import chef_identity
@@ -11,11 +13,16 @@ from crm.models import (
     CrmOrder,
     CrmOrderEvent,
     CrmOrderImage,
+    CrmOrderItem,
+    CrmOrderItemLine,
+    CrmOrderItemModifier,
     FinancialAccount,
     FinancialTransaction,
     ResolvedTelegramPhone,
 )
 from crm.phone import links_for_stored
+from menu.models import Ingredient, Modifier, SemiProduct, TechCard
+from menu.recipes import order_cost, order_item_errors
 from orders.email import schedule_order_confirmed_email
 
 
@@ -52,8 +59,123 @@ class CrmOrderImageSerializer(serializers.ModelSerializer):
         return detail_image(obj.image.name, public_base_url)
 
 
+class CrmOrderItemModifierSerializer(serializers.ModelSerializer):
+    modifier_name = serializers.CharField(source="modifier.name", read_only=True)
+    group = serializers.IntegerField(source="modifier.group_id", read_only=True)
+
+    class Meta:
+        model = CrmOrderItemModifier
+        fields = ["id", "modifier", "modifier_name", "group", "quantity"]
+
+
+class CrmOrderItemLineSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    unit = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CrmOrderItemLine
+        fields = ["id", "ingredient", "semi_product", "name", "unit", "quantity"]
+
+    def get_name(self, obj: CrmOrderItemLine) -> str:
+        return obj.component.name
+
+    def get_unit(self, obj: CrmOrderItemLine) -> str:
+        return obj.component.unit
+
+
+class CrmOrderItemSerializer(serializers.ModelSerializer):
+    tech_card_name = serializers.CharField(source="tech_card.name", read_only=True, allow_null=True)
+    tech_card_kind = serializers.CharField(source="tech_card.kind", read_only=True, allow_null=True)
+    modifiers = CrmOrderItemModifierSerializer(many=True, read_only=True)
+    lines = CrmOrderItemLineSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CrmOrderItem
+        fields = [
+            "id",
+            "tech_card",
+            "tech_card_name",
+            "tech_card_kind",
+            "name",
+            "quantity",
+            "weight_kg",
+            "price",
+            "comment",
+            "needs_review",
+            "position",
+            "modifiers",
+            "lines",
+        ]
+
+
+class CrmOrderItemModifierInputSerializer(serializers.Serializer):
+    modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.select_related("group"))
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class CrmOrderItemLineInputSerializer(serializers.Serializer):
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
+    semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+
+    def validate(self, attrs):
+        if (attrs["ingredient"] is None) == (attrs["semi_product"] is None):
+            raise serializers.ValidationError("Pass either ingredient or semi_product.")
+        return attrs
+
+
+class CrmOrderItemInputSerializer(serializers.Serializer):
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
+    name = serializers.CharField(max_length=255, allow_blank=True)
+    quantity = serializers.IntegerField(min_value=1)
+    weight_kg = serializers.DecimalField(max_digits=6, decimal_places=3, allow_null=True)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
+    comment = serializers.CharField(allow_blank=True)
+    needs_review = serializers.BooleanField()
+    modifiers = CrmOrderItemModifierInputSerializer(many=True)
+    lines = CrmOrderItemLineInputSerializer(many=True)
+
+    def validate(self, attrs):
+        if attrs["tech_card"] is None and not attrs["name"].strip():
+            raise serializers.ValidationError("Item without a tech card needs a name.")
+        errors = order_item_errors(
+            attrs["tech_card"],
+            attrs["weight_kg"],
+            [(row["modifier"], row["quantity"]) for row in attrs["modifiers"]],
+        )
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
+
+def replace_crm_order_items(order: CrmOrder, items: list[dict]) -> None:
+    order.items.all().delete()
+    for position, item in enumerate(items):
+        crm_item = CrmOrderItem.objects.create(
+            order=order,
+            tech_card=item["tech_card"],
+            name=item["name"],
+            quantity=item["quantity"],
+            weight_kg=item["weight_kg"],
+            price=item["price"],
+            comment=item["comment"],
+            needs_review=item["needs_review"],
+            position=position,
+        )
+        for row in item["modifiers"]:
+            CrmOrderItemModifier.objects.create(item=crm_item, modifier=row["modifier"], quantity=row["quantity"])
+        for row in item["lines"]:
+            CrmOrderItemLine.objects.create(
+                item=crm_item,
+                ingredient=row["ingredient"],
+                semi_product=row["semi_product"],
+                quantity=row["quantity"],
+            )
+
+
 class CrmOrderSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
+    items = CrmOrderItemSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
     phones = serializers.SerializerMethodField()
@@ -105,10 +227,13 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "images",
+            "items",
         ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        if self.context.get("show_food_cost"):
+            data["food_cost"] = str(order_cost(instance))
         if instance.taken_by_id:
             name, url, _nick, gender = chef_identity(instance.taken_by)
             data["taken_by_name"] = name
@@ -331,6 +456,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False,
     )
+    items = serializers.JSONField(binary=True, write_only=True, required=False)
 
     class Meta:
         model = CrmOrder
@@ -355,7 +481,13 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             "payment_date",
             "images",
             "delete_image_ids",
+            "items",
         ]
+
+    def validate_items(self, value) -> list[dict]:
+        serializer = CrmOrderItemInputSerializer(data=value, many=True)
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
 
     def validate_delete_image_ids(self, value: list[int]) -> list[int]:
         if not self.instance:
@@ -381,9 +513,12 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         images = validated_data.pop("images", [])
         validated_data.pop("delete_image_ids", None)
+        items = validated_data.pop("items", None)
         validated_data["created_by"] = self.context["request"].user
         order = CrmOrder.objects.create(**validated_data)
         self._apply_images(order, images, [])
+        if items is not None:
+            replace_crm_order_items(order, items)
         record_crm_order_event(
             order,
             CrmOrderEvent.ACTION_CREATED,
@@ -398,6 +533,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         previous_status = instance.status
         images = validated_data.pop("images", [])
         delete_image_ids = validated_data.pop("delete_image_ids", [])
+        items = validated_data.pop("items", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if (
@@ -409,6 +545,8 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
+        if items is not None:
+            replace_crm_order_items(instance, items)
         record_crm_order_event(
             instance,
             CrmOrderEvent.ACTION_UPDATED,

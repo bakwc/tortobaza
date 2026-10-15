@@ -75,6 +75,51 @@ import {
   type StartPaymentResponse,
   type UpdateCartItemBody,
   type UpdateCrmOrderBody,
+  CatalogOptionSchema,
+  IngredientCategorySchema,
+  IngredientSchema,
+  InventoryCountSchema,
+  MissingModifierLineSchema,
+  ModifierGroupSchema,
+  ProductionSchema,
+  SemiProductSchema,
+  StockMovementSchema,
+  StockRowSchema,
+  SupplierSchema,
+  SupplySchema,
+  SupplyTransactionSchema,
+  TechCardCostSchema,
+  TechCardSchema,
+  WriteOffReasonSchema,
+  WriteOffSchema,
+  type CatalogOption,
+  type ComponentRefBody,
+  type Ingredient,
+  type IngredientBody,
+  type IngredientCategory,
+  type IngredientCategoryBody,
+  type InventoryCount,
+  type InventoryCountBody,
+  type MissingModifierLine,
+  type ModifierGroup,
+  type ModifierGroupBody,
+  type Production,
+  type ProductionBody,
+  type SemiProduct,
+  type SemiProductBody,
+  type StockMovement,
+  type StockRow,
+  type Supplier,
+  type SupplierBody,
+  type Supply,
+  type SupplyBody,
+  type SupplyTransaction,
+  type TechCard,
+  type TechCardBody,
+  type WriteOff,
+  type WriteOffBody,
+  type WriteOffReason,
+  type WriteOffReasonBody,
 } from "./types";
 import { z } from "zod";
 
@@ -94,8 +139,116 @@ function parse<T>(schema: z.ZodType<T>, raw: unknown): T {
   return schema.parse(raw);
 }
 
+function resource<T, B>(fetcher: Fetcher, path: string, schema: z.ZodType<T>) {
+  return {
+    async list(): Promise<T[]> {
+      const raw = await fetcher<unknown>(path);
+      return parse(z.array(schema), raw);
+    },
+    async get(id: number): Promise<T> {
+      const raw = await fetcher<unknown>(`${path}${id}/`);
+      return parse(schema, raw);
+    },
+    async create(body: B): Promise<T> {
+      const raw = await fetcher<unknown>(path, { method: "POST", body: JSON.stringify(body) });
+      return parse(schema, raw);
+    },
+    async update(id: number, body: B): Promise<T> {
+      const raw = await fetcher<unknown>(`${path}${id}/`, { method: "PUT", body: JSON.stringify(body) });
+      return parse(schema, raw);
+    },
+    async remove(id: number): Promise<void> {
+      await fetcher<void>(`${path}${id}/`, { method: "DELETE" });
+    },
+  };
+}
+
+export type Resource<T, B> = ReturnType<typeof resource<T, B>>;
+
 export function endpoints(fetcher: Fetcher) {
   return {
+    menuIngredientCategories: resource<IngredientCategory, IngredientCategoryBody>(
+      fetcher,
+      "/api/menu/ingredient-categories/",
+      IngredientCategorySchema,
+    ),
+    menuIngredients: resource<Ingredient, IngredientBody>(fetcher, "/api/menu/ingredients/", IngredientSchema),
+    menuSemiProducts: resource<SemiProduct, SemiProductBody>(
+      fetcher,
+      "/api/menu/semi-products/",
+      SemiProductSchema,
+    ),
+    menuModifierGroups: resource<ModifierGroup, ModifierGroupBody>(
+      fetcher,
+      "/api/menu/modifier-groups/",
+      ModifierGroupSchema,
+    ),
+    menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    inventorySuppliers: resource<Supplier, SupplierBody>(fetcher, "/api/inventory/suppliers/", SupplierSchema),
+    inventorySupplies: resource<Supply, SupplyBody>(fetcher, "/api/inventory/supplies/", SupplySchema),
+    inventoryProductions: resource<Production, ProductionBody>(
+      fetcher,
+      "/api/inventory/productions/",
+      ProductionSchema,
+    ),
+    inventoryWriteOffReasons: resource<WriteOffReason, WriteOffReasonBody>(
+      fetcher,
+      "/api/inventory/write-off-reasons/",
+      WriteOffReasonSchema,
+    ),
+    inventoryWriteOffs: resource<WriteOff, WriteOffBody>(fetcher, "/api/inventory/write-offs/", WriteOffSchema),
+    inventoryCounts: resource<InventoryCount, InventoryCountBody>(
+      fetcher,
+      "/api/inventory/inventory-counts/",
+      InventoryCountSchema,
+    ),
+
+    async getTechCardCost(
+      id: number,
+      weightKg: string | null,
+      modifiers: { modifier: number; quantity: number }[],
+    ): Promise<string> {
+      const raw = await fetcher<unknown>(`/api/menu/tech-cards/${id}/cost/`, {
+        searchParams: {
+          weight_kg: weightKg,
+          modifiers: modifiers.map((row) => `${row.modifier}:${row.quantity}`).join(","),
+        },
+      });
+      return parse(TechCardCostSchema, raw).cost;
+    },
+
+    async getMissingModifierLines(): Promise<MissingModifierLine[]> {
+      const raw = await fetcher<unknown>("/api/menu/missing-modifier-lines/");
+      return parse(z.array(MissingModifierLineSchema), raw);
+    },
+
+    async getCatalogOptions(): Promise<CatalogOption[]> {
+      const raw = await fetcher<unknown>("/api/menu/catalog-options/");
+      return parse(z.array(CatalogOptionSchema), raw);
+    },
+
+    async getStock(date: string | null): Promise<StockRow[]> {
+      const raw = await fetcher<unknown>("/api/inventory/stock/", { searchParams: { date } });
+      return parse(z.array(StockRowSchema), raw);
+    },
+
+    async getStockMovements(component: ComponentRefBody): Promise<StockMovement[]> {
+      const raw = await fetcher<unknown>("/api/inventory/movements/", { searchParams: component });
+      return parse(z.array(StockMovementSchema), raw);
+    },
+
+    async getSupplyTransactions(supplyId: number | null): Promise<SupplyTransaction[]> {
+      const raw = await fetcher<unknown>("/api/inventory/supply-transactions/", {
+        searchParams: { supply: supplyId },
+      });
+      return parse(z.array(SupplyTransactionSchema), raw);
+    },
+
+    async closeInventoryCount(id: number): Promise<InventoryCount> {
+      const raw = await fetcher<unknown>(`/api/inventory/inventory-counts/${id}/close/`, { method: "POST" });
+      return parse(InventoryCountSchema, raw);
+    },
+
     async getCategories(): Promise<Category[]> {
       const raw = await fetcher<unknown>("/api/categories/");
       return parse(z.array(CategorySchema), raw);

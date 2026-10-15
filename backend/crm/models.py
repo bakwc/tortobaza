@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
 from crm.phone import phones_from_fields
+from menu.models import ComponentRef
 
 
 def generate_crm_client_token() -> str:
@@ -390,6 +391,83 @@ class CrmOrderImage(models.Model):
 
     def __str__(self) -> str:
         return f"Image #{self.pk} for CrmOrder #{self.order_id}"
+
+
+class CrmOrderItem(models.Model):
+    order = models.ForeignKey(CrmOrder, related_name="items", on_delete=models.CASCADE, verbose_name=_("Order"))
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="crm_order_items",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
+    )
+    name = models.CharField(max_length=255, blank=True, verbose_name=_("Name"))
+    quantity = models.PositiveIntegerField(default=1, verbose_name=_("Quantity"))
+    weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Weight, kg"),
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Price"),
+    )
+    comment = models.TextField(blank=True, verbose_name=_("Comment"))
+    needs_review = models.BooleanField(default=False, verbose_name=_("Needs review"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("CRM order item")
+        verbose_name_plural = _("CRM order items")
+
+    def __str__(self) -> str:
+        if self.tech_card_id is not None and not self.name:
+            return self.tech_card.name
+        return self.name
+
+
+class CrmOrderItemModifier(models.Model):
+    item = models.ForeignKey(
+        CrmOrderItem,
+        related_name="modifiers",
+        on_delete=models.CASCADE,
+        verbose_name=_("Order item"),
+    )
+    modifier = models.ForeignKey(
+        "menu.Modifier",
+        related_name="crm_order_items",
+        on_delete=models.PROTECT,
+        verbose_name=_("Modifier"),
+    )
+    quantity = models.PositiveIntegerField(default=1, verbose_name=_("Quantity"))
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = _("CRM order item modifier")
+        verbose_name_plural = _("CRM order item modifiers")
+
+
+class CrmOrderItemLine(ComponentRef):
+    item = models.ForeignKey(
+        CrmOrderItem,
+        related_name="lines",
+        on_delete=models.CASCADE,
+        verbose_name=_("Order item"),
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
+
+    class Meta(ComponentRef.Meta):
+        ordering = ["id"]
+        verbose_name = _("CRM order item line")
+        verbose_name_plural = _("CRM order item lines")
 
 
 class FlowwowWebhookEvent(models.Model):

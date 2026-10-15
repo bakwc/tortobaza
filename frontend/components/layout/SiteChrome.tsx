@@ -17,7 +17,11 @@ export function SiteChrome({
     pathname === "/crm" ||
     pathname.startsWith("/crm/") ||
     pathname === "/finance" ||
-    pathname.startsWith("/finance/");
+    pathname.startsWith("/finance/") ||
+    pathname === "/menu" ||
+    pathname.startsWith("/menu/") ||
+    pathname === "/inventory" ||
+    pathname.startsWith("/inventory/");
 
   return (
     <>
