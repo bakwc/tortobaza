@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Banknote, BookOpen, LogOut, MoreHorizontal, Wallet, Warehouse } from "lucide-react";
+import { Banknote, BookOpen, ClipboardList, LogOut, MoreHorizontal, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { Link, usePathname } from "@/i18n/navigation";
+
+type MenuItem = {
+  key: string;
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  active: boolean;
+};
+
+function isUnder(pathname: string, base: string): boolean {
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
 
 export function CrmOverflowMenu() {
   const t = useTranslations("crm");
@@ -20,8 +32,44 @@ export function CrmOverflowMenu() {
   const month = monthParam ?? (dateParam ? dateParam.slice(0, 7) : null);
   const salariesHref = month ? `/crm/salaries?month=${month}` : "/crm/salaries";
   const financeHref = month ? `/finance?month=${month}` : "/finance";
-  const showFinanceLinks = Boolean(currentUser.data?.is_finance_admin);
-  const showSalaries = showFinanceLinks && pathname !== "/crm/salaries";
+  const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
+  const isSalaries = isUnder(pathname, "/crm/salaries");
+
+  const items: MenuItem[] = [
+    {
+      key: "orders",
+      href: "/crm",
+      label: t("ordersSection"),
+      icon: ClipboardList,
+      active: isUnder(pathname, "/crm") && !isSalaries,
+    },
+    ...(isFinanceAdmin
+      ? [
+          {
+            key: "finance",
+            href: financeHref,
+            label: t("finance"),
+            icon: Wallet,
+            active: isUnder(pathname, "/finance"),
+          },
+          {
+            key: "salaries",
+            href: salariesHref,
+            label: t("salaries"),
+            icon: Banknote,
+            active: isSalaries,
+          },
+        ]
+      : []),
+    { key: "menu", href: "/menu", label: t("menuSection"), icon: BookOpen, active: isUnder(pathname, "/menu") },
+    {
+      key: "inventory",
+      href: "/inventory",
+      label: t("inventorySection"),
+      icon: Warehouse,
+      active: isUnder(pathname, "/inventory"),
+    },
+  ];
 
   return (
     <div className="relative">
@@ -37,42 +85,24 @@ export function CrmOverflowMenu() {
       </Button>
       {open ? (
         <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-          {showSalaries ? (
-            <Link
-              href={salariesHref}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
-              onClick={() => setOpen(false)}
-            >
-              <Banknote className="h-4 w-4" />
-              {t("salaries")}
-            </Link>
-          ) : null}
-          {showFinanceLinks ? (
-            <Link
-              href={financeHref}
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
-              onClick={() => setOpen(false)}
-            >
-              <Wallet className="h-4 w-4" />
-              {t("finance")}
-            </Link>
-          ) : null}
-          <Link
-            href="/menu"
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
-            onClick={() => setOpen(false)}
-          >
-            <BookOpen className="h-4 w-4" />
-            {t("menuSection")}
-          </Link>
-          <Link
-            href="/inventory"
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)]"
-            onClick={() => setOpen(false)}
-          >
-            <Warehouse className="h-4 w-4" />
-            {t("inventorySection")}
-          </Link>
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                aria-current={item.active ? "page" : undefined}
+                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
+                  item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+          <div className="my-1 border-t border-[var(--line)]" />
           <button
             type="button"
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"

@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { Link } from "@/i18n/navigation";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
@@ -78,6 +79,9 @@ function FinanceBoardContent({
 
   return (
     <div className="grid gap-6">
+      <div className="flex flex-wrap justify-end gap-2">
+        <CrmOverflowMenu />
+      </div>
       <nav className="flex flex-wrap gap-2">
         {SECTIONS.map((item) => (
           <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
