@@ -689,6 +689,7 @@
     "newSupply": "New supply",
     "supplier": "Supplier",
     "newSupplier": "New supplier",
+    "phone": "Phone",
     "bankTransaction": "Bank transaction",
     "noBankTransaction": "Not linked",
     "comment": "Comment",
@@ -741,6 +742,7 @@
       "title": "Inventory",
       "stock": "Stock",
       "supplies": "Supplies",
+      "suppliers": "Suppliers",
       "productions": "Production",
       "writeOffs": "Write-offs",
       "inventoryCounts": "Inventory counts"

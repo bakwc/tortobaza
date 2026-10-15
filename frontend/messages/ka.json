@@ -689,6 +689,7 @@
     "newSupply": "ახალი მიწოდება",
     "supplier": "მომწოდებელი",
     "newSupplier": "ახალი მომწოდებელი",
+    "phone": "ტელეფონი",
     "bankTransaction": "საბანკო ოპერაცია",
     "noBankTransaction": "არ არის მიბმული",
     "comment": "კომენტარი",
@@ -741,6 +742,7 @@
       "title": "საწყობი",
       "stock": "ნაშთები",
       "supplies": "მიწოდებები",
+      "suppliers": "მომწოდებლები",
       "productions": "წარმოება",
       "writeOffs": "ჩამოწერები",
       "inventoryCounts": "ინვენტარიზაციები"

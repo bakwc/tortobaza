@@ -689,6 +689,7 @@
     "newSupply": "Новая поставка",
     "supplier": "Поставщик",
     "newSupplier": "Новый поставщик",
+    "phone": "Телефон",
     "bankTransaction": "Банковская операция",
     "noBankTransaction": "Не привязана",
     "comment": "Комментарий",
@@ -741,6 +742,7 @@
       "title": "Склад",
       "stock": "Остатки",
       "supplies": "Поставки",
+      "suppliers": "Поставщики",
       "productions": "Производство",
       "writeOffs": "Списания",
       "inventoryCounts": "Инвентаризации"
