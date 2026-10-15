@@ -26,6 +26,14 @@ INCOME_OPERATION = "Private transfer within TBC"
 INCOME_ADDITIONAL = "ავთანდილ გორგაძე, TBCBGE22, GE29TB7649345064300130"
 EXPENSE_OPERATION = "POS - Vip Pay*YANDEX.GO, 4.70 GEL, Sep 1 2026 8:26PM"
 EXPENSE_ADDITIONAL = "TBCBank merchant, TBCBGE22, GE35TB0002511341111111"
+ALT_HEADERS = [
+    "Дата",
+    "Назначение",
+    "Дополнительная информация",
+    "Расход, GEL",
+    "Приход, GEL",
+    "Остаток, GEL",
+]
 INCOME_EXTERNAL_ID = (
     "2026-09-02|Private transfer within TBC|"
     "ავთანდილ გორგაძე, TBCBGE22, GE29TB7649345064300130|90.00"
@@ -45,6 +53,22 @@ def _statement(rows: list[dict]) -> BytesIO:
     for offset, row in enumerate(rows):
         excel_row = 2 + offset
         for index, header in enumerate(HEADERS, start=1):
+            worksheet.cell(excel_row, index, row[header])
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def _statement_with_headers(headers: list[str], rows: list[dict]) -> BytesIO:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Операции"
+    for index, header in enumerate(headers, start=1):
+        worksheet.cell(1, index, header)
+    for offset, row in enumerate(rows):
+        excel_row = 2 + offset
+        for index, header in enumerate(headers, start=1):
             worksheet.cell(excel_row, index, row[header])
     buffer = BytesIO()
     workbook.save(buffer)
@@ -227,3 +251,44 @@ class TbcStatementImportTests(TestCase):
         self.assertEqual(result.error, "Row 2: missing IBAN")
         self.assertEqual(result.created, 0)
         self.assertEqual(FinancialTransaction.objects.count(), 0)
+
+    def test_alternate_column_names(self):
+        _account("TBC card", "TBC")
+        income_additional = "შპს ქიფზ.მი, 405618915, TBCBGE22, GE82TB7753436020100010"
+        expense_additional = "პოპოვიჩ ანდრიი, UA,GM493432, CBASGE22, GE17BS0000097608945002"
+        expense_operation = "POS - LTD KEEPZ.ME*YANDEX GO, 4.80 GEL, Oct 4 2026 4:06PM"
+        result = import_tbc_statement(
+            _statement_with_headers(
+                ALT_HEADERS,
+                [
+                    {
+                        "Дата": datetime(2026, 10, 1),
+                        "Назначение": "COST OF SERVICES",
+                        "Дополнительная информация": income_additional,
+                        "Расход, GEL": None,
+                        "Приход, GEL": 75,
+                        "Остаток, GEL": 2633.8,
+                    },
+                    {
+                        "Дата": datetime(2026, 10, 5),
+                        "Назначение": expense_operation,
+                        "Дополнительная информация": expense_additional,
+                        "Расход, GEL": 4.8,
+                        "Приход, GEL": None,
+                        "Остаток, GEL": 1373.98,
+                    },
+                ],
+            )
+        )
+        self.assertEqual(result.error, "")
+        self.assertEqual(result.created, 2)
+        income = FinancialTransaction.objects.get(kind=FinancialTransaction.KIND_INCOME)
+        self.assertEqual(income.amount, Decimal("75.00"))
+        self.assertEqual(income.counterparty_name, "შპს ქიფზ.მი")
+        self.assertEqual(income.counterparty_iban, "GE82TB7753436020100010")
+        self.assertEqual(income.description, f"COST OF SERVICES | {income_additional}")
+        expense = FinancialTransaction.objects.get(kind=FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.amount, Decimal("-4.80"))
+        self.assertEqual(expense.counterparty_name, "POS - LTD KEEPZ.ME*YANDEX GO")
+        self.assertEqual(expense.counterparty_iban, "GE17BS0000097608945002")
+        self.assertEqual(expense.description, f"{expense_operation} | {expense_additional}")

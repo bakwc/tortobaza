@@ -12,15 +12,19 @@ from crm.transaction_rules import assign_expense_types
 
 SHEET_NAME = "Операции"
 BANK_NAME = "TBC"
-REQUIRED_COLUMNS = (
-    "Дата",
-    "Описание операции",
-    "Дополнительная информация",
-    "Списание, GEL",
-    "Поступление, GEL",
-    "Остаток, GEL",
-    "Стр. PDF",
+COLUMN_GROUPS = (
+    ("Дата",),
+    ("Описание операции", "Назначение"),
+    ("Дополнительная информация",),
+    ("Списание, GEL", "Расход, GEL"),
+    ("Поступление, GEL", "Приход, GEL"),
+    ("Остаток, GEL",),
 )
+DATE_COLUMN = COLUMN_GROUPS[0][0]
+OPERATION_COLUMN = COLUMN_GROUPS[1][0]
+ADDITIONAL_COLUMN = COLUMN_GROUPS[2][0]
+DEBIT_COLUMN = COLUMN_GROUPS[3][0]
+CREDIT_COLUMN = COLUMN_GROUPS[4][0]
 
 
 @dataclass
@@ -116,11 +120,11 @@ def parse_tbc_statement(file) -> tuple[list[ParsedTbcRow], str]:
             for index, value in enumerate(values):
                 if isinstance(value, str) and value.strip():
                     names[value.strip()] = index
-            if "Дата" in names and "Поступление, GEL" in names:
-                missing_columns = [name for name in REQUIRED_COLUMNS if name not in names]
+            resolved = resolve_header(names)
+            if resolved is not None:
+                header_map, missing_columns = resolved
                 if missing_columns:
                     return [], _("Missing columns: %(columns)s") % {"columns": ", ".join(missing_columns)}
-                header_map = names
             continue
         if not any(is_filled(value) for value in values):
             continue
@@ -134,44 +138,61 @@ def parse_tbc_statement(file) -> tuple[list[ParsedTbcRow], str]:
     return rows, ""
 
 
+def resolve_header(names: dict[str, int]) -> tuple[dict[str, int], list[str]] | None:
+    if DATE_COLUMN not in names:
+        return None
+    credit_names = COLUMN_GROUPS[4]
+    if not any(name in names for name in credit_names):
+        return None
+    header_map: dict[str, int] = {}
+    missing: list[str] = []
+    for aliases in COLUMN_GROUPS:
+        index = next((names[alias] for alias in aliases if alias in names), None)
+        if index is None:
+            missing.append(aliases[0])
+        else:
+            header_map[aliases[0]] = index
+    return header_map, missing
+
+
 def parse_tbc_row(
     values: list,
     header_map: dict[str, int],
     row_number: int,
 ) -> tuple[ParsedTbcRow | None, str]:
-    operation = text_value(column_value(values, header_map, "Описание операции"))
+    operation = text_value(column_value(values, header_map, OPERATION_COLUMN))
     if operation == "":
         return None, _("Row %(row_number)s: missing operation description") % {"row_number": row_number}
-    additional = text_value(column_value(values, header_map, "Дополнительная информация"))
+    additional = text_value(column_value(values, header_map, ADDITIONAL_COLUMN))
     if additional == "":
         return None, _("Row %(row_number)s: missing additional information") % {"row_number": row_number}
     parts = [part.strip() for part in additional.split(",")]
-    if len(parts) != 3:
+    if len(parts) < 3:
         return None, _("Row %(row_number)s: additional information must have three parts") % {
             "row_number": row_number
         }
-    counterparty_iban = parts[2]
+    counterparty_iban = parts[-1]
     if counterparty_iban == "":
         return None, _("Row %(row_number)s: missing IBAN") % {"row_number": row_number}
-    has_debit = is_filled(column_value(values, header_map, "Списание, GEL"))
-    has_credit = is_filled(column_value(values, header_map, "Поступление, GEL"))
+    has_debit = is_filled(column_value(values, header_map, DEBIT_COLUMN))
+    has_credit = is_filled(column_value(values, header_map, CREDIT_COLUMN))
     if has_debit and has_credit:
         return None, _("Row %(row_number)s: both debit and credit are set") % {"row_number": row_number}
     if not has_debit and not has_credit:
         return None, _("Row %(row_number)s: debit and credit are empty") % {"row_number": row_number}
     if has_credit:
-        amount = decimal_amount(column_value(values, header_map, "Поступление, GEL"))
+        amount = decimal_amount(column_value(values, header_map, CREDIT_COLUMN))
         if amount <= 0:
             return None, _("Row %(row_number)s: amount sign does not match credit") % {"row_number": row_number}
         kind = FinancialTransaction.KIND_INCOME
         income_type = FinancialTransaction.INCOME_TRANSFER
     else:
-        amount = -decimal_amount(column_value(values, header_map, "Списание, GEL"))
+        amount = -decimal_amount(column_value(values, header_map, DEBIT_COLUMN))
         if amount >= 0:
             return None, _("Row %(row_number)s: amount sign does not match debit") % {"row_number": row_number}
         kind = FinancialTransaction.KIND_EXPENSE
         income_type = ""
-    parsed_date = parse_date(column_value(values, header_map, "Дата"))
+    parsed_date = parse_date(column_value(values, header_map, DATE_COLUMN))
     if parsed_date is None:
         return None, _("Row %(row_number)s: invalid date") % {"row_number": row_number}
     description = f"{operation} | {additional}"
