@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useCrmSalaries } from "@/hooks/useCrmOrders";
 import type { CrmSalaryPeriod } from "@/lib/api/types";
@@ -80,9 +80,6 @@ function CrmSalariesBoard() {
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap justify-end gap-2">
-        <Button asChild variant="outline">
-          <Link href="/crm">{t("dailyBoard")}</Link>
-        </Button>
         <CrmOverflowMenu />
       </div>
       <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
