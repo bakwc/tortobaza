@@ -10,7 +10,6 @@ export function MenuShell({ section, children }: { section: MenuSection; childre
   const t = useTranslations("stock.menu");
   return (
     <SectionShell
-      title={t("title")}
       active={section}
       tabs={[
         { key: "tech-cards", href: "/menu", label: t("techCards") },
