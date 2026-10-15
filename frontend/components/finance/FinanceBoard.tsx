@@ -79,20 +79,22 @@ function FinanceBoardContent({
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap justify-end gap-2">
-        <CrmOverflowMenu />
+      <div className="flex items-start justify-between gap-2">
+        <nav className="flex min-w-0 flex-1 flex-wrap gap-2">
+          {SECTIONS.map((item) => (
+            <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
+              <Link
+                href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
+              >
+                {t(item.label)}
+              </Link>
+            </Button>
+          ))}
+        </nav>
+        <div className="shrink-0">
+          <CrmOverflowMenu />
+        </div>
       </div>
-      <nav className="flex flex-wrap gap-2">
-        {SECTIONS.map((item) => (
-          <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
-            <Link
-              href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
-            >
-              {t(item.label)}
-            </Link>
-          </Button>
-        ))}
-      </nav>
 
       <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between gap-2">
