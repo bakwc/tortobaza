@@ -405,6 +405,7 @@
     "salaryLoadError": "Could not load salaries. Please try again.",
     "salaryEmpty": "No shifts in this period",
     "staffOnly": "This section is for finance admins only.",
+    "adminOnly": "This section is for admins only.",
     "deleteOrder": "Delete",
     "deleteConfirmTitle": "Delete this order?",
     "deleteConfirmBody": "The order will be hidden from the board.",

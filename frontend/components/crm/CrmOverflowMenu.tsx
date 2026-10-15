@@ -33,6 +33,7 @@ export function CrmOverflowMenu() {
   const salariesHref = month ? `/crm/salaries?month=${month}` : "/crm/salaries";
   const financeHref = month ? `/finance?month=${month}` : "/finance";
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
+  const isStaff = Boolean(currentUser.data?.is_staff);
   const isSalaries = isUnder(pathname, "/crm/salaries");
 
   const items: MenuItem[] = [
@@ -61,14 +62,24 @@ export function CrmOverflowMenu() {
           },
         ]
       : []),
-    { key: "menu", href: "/menu", label: t("menuSection"), icon: BookOpen, active: isUnder(pathname, "/menu") },
-    {
-      key: "inventory",
-      href: "/inventory",
-      label: t("inventorySection"),
-      icon: Warehouse,
-      active: isUnder(pathname, "/inventory"),
-    },
+    ...(isStaff
+      ? [
+          {
+            key: "menu",
+            href: "/menu",
+            label: t("menuSection"),
+            icon: BookOpen,
+            active: isUnder(pathname, "/menu"),
+          },
+          {
+            key: "inventory",
+            href: "/inventory",
+            label: t("inventorySection"),
+            icon: Warehouse,
+            active: isUnder(pathname, "/inventory"),
+          },
+        ]
+      : []),
   ];
 
   return (
