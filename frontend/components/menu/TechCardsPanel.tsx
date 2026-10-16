@@ -586,6 +586,7 @@ export function TechCardsPanel() {
               sections={current.sections}
               method={current.method}
               onEdit={openEdit}
+              printHref={`/menu/${current.id}/print`}
             >
               {current.products.length > 0 ? (
                 <p className="text-sm text-[var(--muted-2)]">

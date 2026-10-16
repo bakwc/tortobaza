@@ -174,6 +174,7 @@ export function SemiProductsPanel() {
               sections={[]}
               method={current.method}
               onEdit={openEdit}
+              printHref={null}
             >
               {null}
             </RecipeView>

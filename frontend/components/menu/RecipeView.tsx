@@ -2,11 +2,12 @@
 
 import { Fragment, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Pencil, TriangleAlert } from "lucide-react";
+import { Pencil, Printer, TriangleAlert } from "lucide-react";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
 import { formatQuantity } from "@/components/menu/ui";
+import { Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +99,7 @@ export function RecipeView({
   sections,
   method,
   onEdit,
+  printHref,
   children,
 }: {
   title: string;
@@ -109,6 +111,7 @@ export function RecipeView({
   sections: { name: string; method: string; lines: RecipeLine[] }[];
   method: string;
   onEdit: () => void;
+  printHref: string | null;
   children: ReactNode;
 }) {
   const t = useTranslations("stock");
@@ -140,10 +143,20 @@ export function RecipeView({
             </dl>
           ) : null}
         </div>
-        <Button type="button" size="sm" variant="outline" onClick={onEdit}>
-          <Pencil className="mr-1 h-4 w-4" />
-          {t("edit")}
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {printHref !== null ? (
+            <Button size="sm" variant="outline" asChild>
+              <Link href={printHref}>
+                <Printer className="mr-1 h-4 w-4" />
+                {t("print")}
+              </Link>
+            </Button>
+          ) : null}
+          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+            <Pencil className="mr-1 h-4 w-4" />
+            {t("edit")}
+          </Button>
+        </div>
       </div>
 
       {image ? (
