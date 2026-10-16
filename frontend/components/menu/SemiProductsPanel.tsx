@@ -158,13 +158,16 @@ export function SemiProductsPanel() {
             <RecipeView
               title={current.name}
               badges={[
-                `${formatQuantity(current.yield_quantity)} ${units(current.unit)}`,
                 current.is_produced ? t("producedInAdvance") : "",
                 current.is_active ? "" : t("inactive"),
-                current.avg_cost !== undefined && current.is_produced
-                  ? `${t("avgCost")}: ${formatMoney(current.avg_cost)}`
-                  : "",
               ].filter((badge) => badge !== "")}
+              stats={[
+                { label: t("yield"), value: `${formatQuantity(current.yield_quantity)} ${units(current.unit)}` },
+                { label: t("componentsLabel"), value: String(current.lines.length) },
+                ...(current.avg_cost !== undefined && current.is_produced
+                  ? [{ label: t("avgCost"), value: formatMoney(current.avg_cost) }]
+                  : []),
+              ]}
               images={current.images}
               compositionTitle={t("composition")}
               lines={current.lines}

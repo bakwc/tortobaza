@@ -1,11 +1,25 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChefHat,
+  Hash,
+  Layers,
+  Package,
+  Plus,
+  Scale,
+  Search,
+  ShoppingBag,
+  SlidersHorizontal,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
-import { RecipeView } from "@/components/menu/RecipeView";
+import { PanelChip, RecipePanel, RecipeRow, RecipeView } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -42,6 +56,7 @@ import {
   useTechCards,
 } from "@/hooks/useStock";
 import type { ModifierGroup, TechCard } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
 
@@ -139,6 +154,107 @@ function parseRequired(value: string): boolean | null {
   return value === "yes";
 }
 
+function componentsTotal(row: TechCard): number {
+  return row.lines.length + row.sections.reduce((sum, section) => sum + section.lines.length, 0);
+}
+
+function TechCardTile({
+  row,
+  basis,
+  missing,
+  isFinanceAdmin,
+  onOpen,
+}: {
+  row: TechCard;
+  basis: string;
+  missing: number;
+  isFinanceAdmin: boolean;
+  onOpen: () => void;
+}) {
+  const t = useTranslations("stock");
+  const cover = row.images[0];
+  const KindIcon = row.kind === "weighted" ? Scale : Hash;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        "group flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--brand)]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30",
+        !row.is_active && "opacity-60",
+      )}
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--cream)]">
+        {cover ? (
+          <img
+            src={cover.image.src}
+            srcSet={cover.image.srcset}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            alt=""
+            loading="lazy"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105",
+              !row.is_active && "grayscale",
+            )}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <ChefHat className="h-10 w-10 text-[var(--muted)]" />
+          </div>
+        )}
+        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-[var(--ink)] shadow-sm">
+          <KindIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
+          {basis}
+        </span>
+        {missing > 0 ? (
+          <span
+            title={t("missingCompositionsTitle")}
+            className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 shadow-sm"
+          >
+            <TriangleAlert className="h-3.5 w-3.5" />
+            {missing}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className={cn("line-clamp-2 font-semibold text-[var(--ink)]", !row.is_active && "line-through")}>
+            {row.name}
+          </p>
+          {row.is_active ? null : (
+            <span className="shrink-0 rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
+              {t("inactive")}
+            </span>
+          )}
+        </div>
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted-2)]">
+          <span className="flex items-center gap-1">
+            <Layers className="h-3.5 w-3.5" />
+            {t("componentsCount", { count: componentsTotal(row) })}
+          </span>
+          {row.sections.length > 0 ? (
+            <span className="flex items-center gap-1">
+              <BookOpen className="h-3.5 w-3.5" />
+              {t("sectionsCount", { count: row.sections.length })}
+            </span>
+          ) : null}
+          {row.modifier_groups.length > 0 ? (
+            <span className="flex items-center gap-1">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              {t("groupsCount", { count: row.modifier_groups.length })}
+            </span>
+          ) : null}
+        </div>
+        {isFinanceAdmin && row.base_cost !== undefined ? (
+          <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
+            <span className="text-xs text-[var(--muted-2)]">{t("baseCost")}</span>
+            <span className="text-sm font-bold tabular-nums text-[var(--brand)]">{formatMoney(row.base_cost)}</span>
+          </div>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
 export function TechCardsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
@@ -156,6 +272,8 @@ export function TechCardsPanel() {
   const [draft, setDraft] = useState<TechCardDraft | null>(null);
   const [groupToAdd, setGroupToAdd] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const current =
     viewing === null ? null : (techCards.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
 
@@ -205,7 +323,8 @@ export function TechCardsPanel() {
     missingByCard.set(row.tech_card, (missingByCard.get(row.tech_card) ?? 0) + 1);
   }
   const cards = techCards.list.data ?? [];
-  const cardGroups = [
+  const query = search.trim().toLowerCase();
+  const allCardGroups = [
     ...(categories.list.data ?? []).map((category) => ({
       key: String(category.id),
       label: category.name,
@@ -213,7 +332,17 @@ export function TechCardsPanel() {
     })),
     { key: "none", label: t("noCategory"), cards: cards.filter((row) => row.category === null) },
   ].filter((group) => group.cards.length > 0);
-  const columnCount = isFinanceAdmin ? 3 : 2;
+  const cardGroups = allCardGroups
+    .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
+    .map((group) => ({ ...group, cards: group.cards.filter((row) => row.name.toLowerCase().includes(query)) }))
+    .filter((group) => group.cards.length > 0);
+  const activeCount = cards.filter((row) => row.is_active).length;
+  const basisLabel = (row: TechCard) =>
+    row.kind === "weighted" && row.basis_weight_kg !== null
+      ? t("basisKg", { weight: row.basis_weight_kg })
+      : row.basis_quantity !== null
+        ? t("basisPieces", { count: row.basis_quantity })
+        : t("kindPiece");
 
   const setComposition = (modifierId: number, patch: Partial<ModifierComposition>) => {
     if (!draft) return;
@@ -269,67 +398,108 @@ export function TechCardsPanel() {
   return (
     <div className="grid gap-6">
       <Card>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle>{t("menu.techCards")}</CardTitle>
-          <Button type="button" size="sm" onClick={openNew}>
-            <Plus className="mr-1 h-4 w-4" />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.techCards")}</h2>
+          <Button type="button" onClick={openNew}>
+            <Plus className="mr-1.5 h-4 w-4" />
             {t("add")}
           </Button>
         </div>
-        <QueryState isLoading={techCards.list.isLoading} isError={techCards.list.isError}>
-          <table className="mt-4 w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-              <tr>
-                <th className="py-2">{t("name")}</th>
-                <th className="py-2">{t("kind")}</th>
-                {isFinanceAdmin ? <th className="py-2 text-right">{t("baseCost")}</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {cardGroups.map((group) => (
-                <Fragment key={group.key}>
-                  <tr>
-                    <td
-                      colSpan={columnCount}
-                      className="border-t border-[var(--line)] bg-[var(--cream)] px-2 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/70"
-                    >
-                      {group.label}
-                    </td>
-                  </tr>
-                  {group.cards.map((row) => (
-                    <tr
-                      key={row.id}
-                      onClick={() => openView(row)}
-                      className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
-                    >
-                      <td className={row.is_active ? "py-2" : "py-2 text-[var(--muted-2)] line-through"}>
-                        <span className="inline-flex items-center gap-1.5">
-                          {row.name}
-                          {missingByCard.has(row.id) ? (
-                            <TriangleAlert className="h-3.5 w-3.5 text-amber-600" aria-label={t("missingCompositionsTitle")} />
-                          ) : null}
-                        </span>
-                      </td>
-                      <td className="py-2">
-                        {row.kind === "weighted" && row.basis_weight_kg !== null
-                          ? t("basisKg", { weight: row.basis_weight_kg })
-                          : row.basis_quantity !== null
-                            ? t("basisPieces", { count: row.basis_quantity })
-                            : t("kindPiece")}
-                      </td>
-                      {isFinanceAdmin ? (
-                        <td className="py-2 text-right">
-                          {row.base_cost !== undefined ? formatMoney(row.base_cost) : "—"}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </QueryState>
+        <div className="relative mt-5">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
+          <Input
+            value={search}
+            placeholder={t("searchTechCards")}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-11"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[{ key: "all", label: t("allCategories"), count: cards.length }, ...allCardGroups.map((group) => ({
+            key: group.key,
+            label: group.label,
+            count: group.cards.length,
+          }))].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setCategoryFilter(chip.key)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                categoryFilter === chip.key
+                  ? "bg-[var(--brand)] text-white"
+                  : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {chip.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px]",
+                  categoryFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
+                )}
+              >
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--line)] pt-4 text-xs sm:gap-6 sm:text-sm">
+          <div className="flex items-center gap-1.5 text-[var(--ink)]">
+            <Package className="h-4 w-4 text-[var(--muted-2)]" />
+            <span>{t("total")}</span>
+            <span className="font-bold">{cards.length}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-emerald-700">
+            <Check className="h-4 w-4" />
+            <span>{t("activeCount")}</span>
+            <span className="font-bold">
+              {activeCount} / {cards.length}
+            </span>
+          </div>
+          {missingByCard.size > 0 ? (
+            <div className="flex items-center gap-1.5 text-amber-700">
+              <TriangleAlert className="h-4 w-4" />
+              <span>{t("missingCompositionsTitle")}</span>
+              <span className="font-bold">{missingByCard.size}</span>
+            </div>
+          ) : null}
+        </div>
       </Card>
+
+      <QueryState isLoading={techCards.list.isLoading} isError={techCards.list.isError}>
+        {cardGroups.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-white p-12 text-center">
+            <ChefHat className="h-12 w-12 text-[var(--muted)]" />
+            <p className="mt-4 text-base font-semibold text-[var(--ink)]">{t("nothingFound")}</p>
+          </div>
+        ) : (
+          <div className="grid gap-8">
+            {cardGroups.map((group) => (
+              <section key={group.key} className="grid gap-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">{group.label}</h3>
+                  <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+                    {group.cards.length}
+                  </span>
+                  <div className="h-px flex-1 bg-[var(--line)]" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.cards.map((row) => (
+                    <TechCardTile
+                      key={row.id}
+                      row={row}
+                      basis={basisLabel(row)}
+                      missing={missingByCard.get(row.id) ?? 0}
+                      isFinanceAdmin={isFinanceAdmin}
+                      onOpen={() => openView(row)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </QueryState>
 
       <Card>
         <CardTitle>{t("techCardCategories")}</CardTitle>
@@ -381,24 +551,31 @@ export function TechCardsPanel() {
 
       {mode === "view" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>
-          <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
+          <DialogContent className="w-[min(960px,calc(100vw-1.5rem))] overflow-y-auto p-5 sm:p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
             <RecipeView
               title={current.name}
-              badges={[
-                current.category_name ?? "",
-                current.kind === "weighted" && current.basis_weight_kg !== null
-                  ? t("basisKg", { weight: current.basis_weight_kg })
-                  : current.basis_quantity !== null
-                    ? t("basisPieces", { count: current.basis_quantity })
-                    : t("kindPiece"),
-                current.is_active ? "" : t("inactive"),
-                isFinanceAdmin && current.base_cost !== undefined
-                  ? current.kind === "weighted"
-                    ? `${t("costPerKg", { weight: current.basis_weight_kg ?? "" })}: ${formatMoney(current.base_cost)}`
-                    : `${t("costPerPiece", { count: current.basis_quantity ?? 0 })}: ${formatMoney(current.base_cost)}`
-                  : "",
-              ].filter((badge) => badge !== "")}
+              badges={[current.category_name ?? "", current.is_active ? "" : t("inactive")].filter(
+                (badge) => badge !== "",
+              )}
+              stats={[
+                {
+                  label: t("kind"),
+                  value: `${current.kind === "weighted" ? t("kindWeighted") : t("kindPiece")} · ${basisLabel(current)}`,
+                },
+                { label: t("componentsLabel"), value: String(componentsTotal(current)) },
+                ...(isFinanceAdmin && current.base_cost !== undefined
+                  ? [
+                      {
+                        label:
+                          current.kind === "weighted"
+                            ? t("costPerKg", { weight: current.basis_weight_kg ?? "" })
+                            : t("costPerPiece", { count: current.basis_quantity ?? 0 }),
+                        value: formatMoney(current.base_cost),
+                      },
+                    ]
+                  : []),
+              ]}
               images={current.images}
               compositionTitle={
                 current.kind === "weighted"
@@ -411,73 +588,75 @@ export function TechCardsPanel() {
               onEdit={openEdit}
             >
               {current.products.length > 0 ? (
-                <p className="text-sm text-[var(--muted-2)]">
-                  {t("linkedProducts")}: {current.products.map((product) => product.name).join(", ")}
-                </p>
-              ) : null}
-              {current.modifier_groups.length > 0 ? (
-                <div className="grid gap-3">
-                  <CardTitle>{t("modifiers")}</CardTitle>
-                  {current.modifier_groups.map((link) => (
-                    <div key={link.id} className="grid gap-1">
-                      <p className="text-sm font-semibold text-[var(--ink)]">
-                        {link.group_name}
-                        {link.effective_is_required ? null : (
-                          <span className="font-normal text-[var(--muted-2)]"> ({t("optional")})</span>
-                        )}
-                      </p>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-                            <tr>
-                              <th className="py-2 pr-3 font-medium">{t("name")}</th>
-                              <th className="py-2 pr-3 text-right font-medium">{t("quantity")}</th>
-                              <th className="py-2 text-right font-medium">{t("lossPercent")}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {link.modifiers.map((modifier) => {
-                              const composition = current.modifier_lines.filter(
-                                (line) => line.modifier === modifier.id,
-                              );
-                              if (composition.length === 0) {
-                                return (
-                                  <tr key={modifier.id} className="border-t border-[var(--line)]">
-                                    <td className="py-2 pr-3">
-                                      <span className="inline-flex items-center gap-1.5">
-                                        {modifier.name}
-                                        <TriangleAlert
-                                          className="h-3.5 w-3.5 text-amber-600"
-                                          aria-label={t("missingCompositionsTitle")}
-                                        />
-                                      </span>
-                                    </td>
-                                    <td className="py-2 pr-3 text-right">—</td>
-                                    <td className="py-2 text-right">—</td>
-                                  </tr>
-                                );
-                              }
-                              return composition.map((line) => (
-                                <tr key={line.id} className="border-t border-[var(--line)]">
-                                  <td className="py-2 pr-3">
-                                    {line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`}
-                                  </td>
-                                  <td className="py-2 pr-3 text-right tabular-nums">
-                                    {formatQuantity(line.quantity)} {units(line.unit)}
-                                  </td>
-                                  <td className="py-2 text-right tabular-nums">
-                                    {formatQuantity(line.loss_percent)}%
-                                  </td>
-                                </tr>
-                              ));
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  <ShoppingBag className="h-4 w-4 text-[var(--brand)]" />
+                  <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
+                    {t("linkedProducts")}
+                  </span>
+                  {current.products.map((product) => (
+                    <span
+                      key={product.id}
+                      className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900"
+                    >
+                      {product.name}
+                    </span>
                   ))}
                 </div>
               ) : null}
+              {current.modifier_groups.map((link) => (
+                <RecipePanel
+                  key={link.id}
+                  marker={<SlidersHorizontal className="h-4 w-4" />}
+                  title={link.group_name}
+                  aside={
+                    <>
+                      <PanelChip>
+                        {link.selection_type === "single" ? t("selectionSingle") : t("selectionMulti")}
+                      </PanelChip>
+                      <PanelChip
+                        className={
+                          link.effective_is_required
+                            ? "bg-[var(--brand)]/15 text-[var(--brand)]"
+                            : "bg-white text-[var(--muted-2)]"
+                        }
+                      >
+                        {link.effective_is_required ? t("required") : t("optional")}
+                      </PanelChip>
+                    </>
+                  }
+                >
+                  <div className="divide-y divide-[var(--line)]">
+                    {link.modifiers.map((modifier) => {
+                      const composition = current.modifier_lines.filter((line) => line.modifier === modifier.id);
+                      if (composition.length === 0) {
+                        return (
+                          <RecipeRow
+                            key={modifier.id}
+                            name={modifier.name}
+                            tag={null}
+                            amount="—"
+                            loss={null}
+                            warning
+                          />
+                        );
+                      }
+                      return composition.map((line) => {
+                        const loss = formatQuantity(line.loss_percent);
+                        return (
+                          <RecipeRow
+                            key={line.id}
+                            name={line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`}
+                            tag={null}
+                            amount={`${formatQuantity(line.quantity)} ${units(line.unit)}`}
+                            loss={loss === "0" ? null : loss}
+                            warning={false}
+                          />
+                        );
+                      });
+                    })}
+                  </div>
+                </RecipePanel>
+              ))}
             </RecipeView>
           </DialogContent>
         </Dialog>
