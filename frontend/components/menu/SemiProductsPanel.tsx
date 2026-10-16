@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
+import { MenuImages } from "@/components/menu/MenuImages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ComponentLinesEditor,
   componentOptions,
@@ -23,7 +25,7 @@ import {
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
-import { useIngredients, useSemiProducts } from "@/hooks/useStock";
+import { useIngredients, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import type { MenuUnit, SemiProduct } from "@/lib/api/types";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
@@ -34,12 +36,13 @@ type SemiDraft = {
   yield_quantity: string;
   is_produced: boolean;
   is_active: boolean;
+  method: string;
   lines: ComponentLineDraft[];
 };
 
 function draftFrom(row: SemiProduct | null): SemiDraft {
   if (row === null) {
-    return { name: "", unit: "g", yield_quantity: "", is_produced: false, is_active: true, lines: [] };
+    return { name: "", unit: "g", yield_quantity: "", is_produced: false, is_active: true, method: "", lines: [] };
   }
   return {
     name: row.name,
@@ -47,6 +50,7 @@ function draftFrom(row: SemiProduct | null): SemiDraft {
     yield_quantity: row.yield_quantity,
     is_produced: row.is_produced,
     is_active: row.is_active,
+    method: row.method,
     lines: row.lines.map(draftFromLine),
   };
 }
@@ -55,6 +59,7 @@ export function SemiProductsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
   const semiProducts = useSemiProducts();
+  const images = useSemiProductImages();
   const ingredients = useIngredients();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<SemiDraft | null>(null);
@@ -137,6 +142,7 @@ export function SemiProductsPanel() {
                   yield_quantity: draft.yield_quantity.replace(",", "."),
                   is_produced: draft.is_produced,
                   is_active: draft.is_active,
+                  method: draft.method,
                   lines: linesToBody(draft.lines),
                 },
               },
@@ -184,6 +190,17 @@ export function SemiProductsPanel() {
             </div>
           </div>
           <p className="text-xs text-[var(--muted-2)]">{t("producedInAdvanceHint")}</p>
+          <Field label={t("method")}>
+            <Textarea value={draft.method} onChange={(event) => setDraft({ ...draft, method: event.target.value })} />
+          </Field>
+          {editingId !== null ? (
+            <MenuImages
+              images={(semiProducts.list.data ?? []).find((row) => row.id === editingId)?.images ?? []}
+              pending={images.upload.isPending || images.remove.isPending}
+              onUpload={(file) => images.upload.mutate({ id: editingId, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: editingId, imageId })}
+            />
+          ) : null}
           <CardTitle>{t("composition")}</CardTitle>
           <ComponentLinesEditor
             lines={draft.lines}

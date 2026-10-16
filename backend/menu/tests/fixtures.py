@@ -62,7 +62,11 @@ class MenuFixture:
         self.extras = ModifierGroup.objects.create(name="Extras", selection_type=ModifierGroup.SELECTION_MULTI)
         self.balloon = Modifier.objects.create(group=self.extras, name="Balloon")
 
-        self.cake = TechCard.objects.create(name="Cake", kind=TechCard.KIND_WEIGHTED)
+        self.cake = TechCard.objects.create(
+            name="Cake",
+            kind=TechCard.KIND_WEIGHTED,
+            basis_weight_kg=Decimal("1"),
+        )
         TechCardLine.objects.create(tech_card=self.cake, semi_product=self.sponge, quantity=Decimal("500"))
         TechCardLine.objects.create(tech_card=self.cake, ingredient=self.cream, quantity=Decimal("300"))
         TechCardModifierGroup.objects.create(tech_card=self.cake, group=self.filling, position=0)

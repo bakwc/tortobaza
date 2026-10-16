@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from catalog.models import Option
+from catalog.responsive_urls import detail_image
 from menu.models import (
     Ingredient,
     IngredientCategory,
@@ -90,13 +91,40 @@ def recipe_line_payload(line) -> dict:
     return payload
 
 
+def menu_image_rows(rows, request) -> list[dict]:
+    public_base_url = request.build_absolute_uri("/").rstrip("/")
+    return [
+        {
+            "id": row.pk,
+            "image": detail_image(row.image.name, public_base_url),
+            "position": row.position,
+        }
+        for row in rows
+    ]
+
+
+class MenuImageUploadSerializer(serializers.Serializer):
+    image = serializers.ImageField()
+
+
 class SemiProductSerializer(serializers.ModelSerializer):
     lines = RecipeLineSerializer(many=True, write_only=True)
 
     class Meta:
         model = SemiProduct
-        fields = ["id", "name", "unit", "yield_quantity", "is_produced", "avg_cost", "is_active", "lines"]
+        fields = [
+            "id",
+            "name",
+            "unit",
+            "yield_quantity",
+            "is_produced",
+            "avg_cost",
+            "is_active",
+            "method",
+            "lines",
+        ]
         read_only_fields = ["avg_cost"]
+        extra_kwargs = {"method": {"required": True, "allow_blank": True}}
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -104,6 +132,7 @@ class SemiProductSerializer(serializers.ModelSerializer):
             recipe_line_payload(line)
             for line in instance.lines.select_related("ingredient", "semi_product")
         ]
+        data["images"] = menu_image_rows(instance.images.all(), self.context["request"])
         return drop_costs(data, self.context, ["avg_cost"])
 
     @transaction.atomic
@@ -314,11 +343,17 @@ class TechCardSerializer(serializers.ModelSerializer):
             "category",
             "category_name",
             "kind",
+            "basis_weight_kg",
+            "method",
             "is_active",
             "lines",
             "modifier_groups",
             "modifier_lines",
         ]
+        extra_kwargs = {
+            "basis_weight_kg": {"required": True, "allow_null": True},
+            "method": {"required": True, "allow_blank": True},
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -355,12 +390,21 @@ class TechCardSerializer(serializers.ModelSerializer):
             {"id": product.pk, "name": product.name}
             for product in instance.products.order_by("name")
         ]
+        data["images"] = menu_image_rows(instance.images.all(), self.context["request"])
         if show_costs(self.context):
-            weight = Decimal("1") if instance.kind == TechCard.KIND_WEIGHTED else None
+            weight = instance.basis_weight_kg if instance.kind == TechCard.KIND_WEIGHTED else None
             data["base_cost"] = str(tech_card_cost(instance, [], weight))
         return data
 
     def validate(self, attrs):
+        kind = attrs["kind"]
+        basis = attrs["basis_weight_kg"]
+        if kind == TechCard.KIND_WEIGHTED and basis is None:
+            raise serializers.ValidationError(
+                {"basis_weight_kg": "Basis weight is required for a weighted tech card."}
+            )
+        if kind == TechCard.KIND_PIECE and basis is not None:
+            raise serializers.ValidationError({"basis_weight_kg": "A piece tech card has no basis weight."})
         group_ids = [row["group"].pk for row in attrs["modifier_groups"]]
         if len(group_ids) != len(set(group_ids)):
             raise serializers.ValidationError("A modifier group is linked twice.")

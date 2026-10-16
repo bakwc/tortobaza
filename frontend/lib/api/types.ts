@@ -768,6 +768,12 @@ export const RecipeLineSchema = z.object({
   loss_percent: z.string(),
 });
 
+export const MenuImageSchema = z.object({
+  id: z.number(),
+  image: ResponsiveImageSchema,
+  position: z.number(),
+});
+
 export const SemiProductSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -776,6 +782,8 @@ export const SemiProductSchema = z.object({
   is_produced: z.boolean(),
   avg_cost: z.string().optional(),
   is_active: z.boolean(),
+  method: z.string(),
+  images: z.array(MenuImageSchema),
   lines: z.array(RecipeLineSchema),
 });
 
@@ -827,12 +835,15 @@ export const TechCardSchema = z.object({
   category: z.number().nullable(),
   category_name: z.string().nullable(),
   kind: z.enum(["weighted", "piece"]),
+  basis_weight_kg: z.string().nullable(),
+  method: z.string(),
   is_active: z.boolean(),
   lines: z.array(RecipeLineSchema),
   modifier_groups: z.array(TechCardGroupSchema),
   modifier_lines: z.array(TechCardModifierLineSchema),
   missing_modifiers: z.array(z.number()),
   products: z.array(z.object({ id: z.number(), name: z.string() })),
+  images: z.array(MenuImageSchema),
   base_cost: z.string().optional(),
 });
 
@@ -856,6 +867,7 @@ export const CatalogOptionSchema = z.object({
 export type IngredientCategory = z.infer<typeof IngredientCategorySchema>;
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeLine = z.infer<typeof RecipeLineSchema>;
+export type MenuImage = z.infer<typeof MenuImageSchema>;
 export type SemiProduct = z.infer<typeof SemiProductSchema>;
 export type Modifier = z.infer<typeof ModifierSchema>;
 export type ModifierGroup = z.infer<typeof ModifierGroupSchema>;
@@ -891,6 +903,7 @@ export type SemiProductBody = {
   yield_quantity: string;
   is_produced: boolean;
   is_active: boolean;
+  method: string;
   lines: RecipeLineBody[];
 };
 
@@ -915,6 +928,8 @@ export type TechCardBody = {
   name: string;
   category: number | null;
   kind: "weighted" | "piece";
+  basis_weight_kg: string | null;
+  method: string;
   is_active: boolean;
   lines: RecipeLineBody[];
   modifier_groups: { group: number; is_required: boolean | null }[];

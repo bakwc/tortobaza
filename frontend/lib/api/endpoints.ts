@@ -79,6 +79,7 @@ import {
   IngredientCategorySchema,
   IngredientSchema,
   InventoryCountSchema,
+  MenuImageSchema,
   MissingModifierLineSchema,
   ModifierGroupSchema,
   ProductionSchema,
@@ -101,6 +102,7 @@ import {
   type IngredientCategoryBody,
   type InventoryCount,
   type InventoryCountBody,
+  type MenuImage,
   type MissingModifierLine,
   type ModifierGroup,
   type ModifierGroupBody,
@@ -223,6 +225,28 @@ export function endpoints(fetcher: Fetcher) {
         },
       });
       return parse(TechCardCostSchema, raw).cost;
+    },
+
+    async uploadTechCardImage(id: number, file: File): Promise<MenuImage> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>(`/api/menu/tech-cards/${id}/images/`, { method: "POST", body });
+      return parse(MenuImageSchema, raw);
+    },
+
+    async deleteTechCardImage(id: number, imageId: number): Promise<void> {
+      await fetcher<void>(`/api/menu/tech-cards/${id}/images/${imageId}/`, { method: "DELETE" });
+    },
+
+    async uploadSemiProductImage(id: number, file: File): Promise<MenuImage> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>(`/api/menu/semi-products/${id}/images/`, { method: "POST", body });
+      return parse(MenuImageSchema, raw);
+    },
+
+    async deleteSemiProductImage(id: number, imageId: number): Promise<void> {
+      await fetcher<void>(`/api/menu/semi-products/${id}/images/${imageId}/`, { method: "DELETE" });
     },
 
     async getMissingModifierLines(): Promise<MissingModifierLine[]> {

@@ -155,7 +155,9 @@ def expand_order_item(
     needs: Needs = {}
     item_quantity = Decimal(quantity)
     if tech_card is not None:
-        weight_factor = weight_kg if tech_card.kind == TechCard.KIND_WEIGHTED else _ONE
+        weight_factor = (
+            weight_kg / tech_card.basis_weight_kg if tech_card.kind == TechCard.KIND_WEIGHTED else _ONE
+        )
         for line in tech_card.lines.select_related("ingredient", "semi_product"):
             _explode(
                 line.component,

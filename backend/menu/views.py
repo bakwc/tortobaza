@@ -15,8 +15,10 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductImage,
     TechCard,
     TechCardCategory,
+    TechCardImage,
 )
 from menu.recipes import missing_modifier_compositions, tech_card_cost
 from menu.serializers import (
@@ -24,8 +26,10 @@ from menu.serializers import (
     IngredientCategorySerializer,
     IngredientSerializer,
     MissingModifierLineSerializer,
+    MenuImageUploadSerializer,
     ModifierGroupSerializer,
     SemiProductSerializer,
+    menu_image_rows,
     TechCardCategorySerializer,
     TechCardCostQuerySerializer,
     TechCardSerializer,
@@ -139,14 +143,14 @@ class SemiProductListView(MenuListView):
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
-        return SemiProduct.objects.all()
+        return SemiProduct.objects.prefetch_related("images")
 
 
 class SemiProductDetailView(MenuDetailView):
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
-        return SemiProduct.objects.all()
+        return SemiProduct.objects.prefetch_related("images")
 
 
 class ModifierGroupListView(MenuListView):
@@ -181,14 +185,14 @@ class TechCardListView(MenuListView):
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
-        return TechCard.objects.select_related("category")
+        return TechCard.objects.select_related("category").prefetch_related("images")
 
 
 class TechCardDetailView(MenuDetailView):
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
-        return TechCard.objects.select_related("category")
+        return TechCard.objects.select_related("category").prefetch_related("images")
 
 
 class TechCardCostView(APIView):
@@ -227,6 +231,59 @@ class MissingModifierLinesView(APIView):
                     }
                 )
         return Response(MissingModifierLineSerializer(rows, many=True).data)
+
+
+class MenuImageCreateView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    parent_model = None
+    image_model = None
+    parent_attr = ""
+
+    def post(self, request, pk: int):
+        parent = get_object_or_404(self.parent_model, pk=pk)
+        serializer = MenuImageUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        position = self.image_model.objects.filter(**{self.parent_attr: parent}).count()
+        row = self.image_model.objects.create(
+            **{self.parent_attr: parent, "image": serializer.validated_data["image"], "position": position}
+        )
+        return Response(menu_image_rows([row], request)[0], status=status.HTTP_201_CREATED)
+
+
+class MenuImageDeleteView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+    image_model = None
+    parent_attr = ""
+
+    def delete(self, request, pk: int, image_pk: int):
+        row = get_object_or_404(self.image_model, pk=image_pk, **{f"{self.parent_attr}_id": pk})
+        row.image.delete(save=False)
+        row.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SemiProductImageCreateView(MenuImageCreateView):
+    parent_model = SemiProduct
+    image_model = SemiProductImage
+    parent_attr = "semi_product"
+
+
+class SemiProductImageDeleteView(MenuImageDeleteView):
+    image_model = SemiProductImage
+    parent_attr = "semi_product"
+
+
+class TechCardImageCreateView(MenuImageCreateView):
+    parent_model = TechCard
+    image_model = TechCardImage
+    parent_attr = "tech_card"
+
+
+class TechCardImageDeleteView(MenuImageDeleteView):
+    image_model = TechCardImage
+    parent_attr = "tech_card"
 
 
 class CatalogOptionListView(APIView):

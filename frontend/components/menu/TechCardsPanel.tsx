@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import { MenuImages } from "@/components/menu/MenuImages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ComponentLinesEditor,
   componentOptions,
@@ -30,6 +32,7 @@ import {
   useModifierGroups,
   useSemiProducts,
   useTechCardCategories,
+  useTechCardImages,
   useTechCards,
 } from "@/hooks/useStock";
 import type { TechCard } from "@/lib/api/types";
@@ -43,6 +46,8 @@ type TechCardDraft = {
   name: string;
   category: number | null;
   kind: "weighted" | "piece";
+  basis_weight_kg: string;
+  method: string;
   is_active: boolean;
   lines: ComponentLineDraft[];
   groups: GroupLinkDraft[];
@@ -55,6 +60,8 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       name: "",
       category: null,
       kind: "weighted",
+      basis_weight_kg: "1",
+      method: "",
       is_active: true,
       lines: [],
       groups: [],
@@ -71,6 +78,8 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     name: row.name,
     category: row.category,
     kind: row.kind,
+    basis_weight_kg: row.basis_weight_kg ?? "",
+    method: row.method,
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
     groups: row.modifier_groups.map((link) => ({ group: link.group, is_required: link.is_required })),
@@ -96,6 +105,7 @@ export function TechCardsPanel() {
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
   const missing = useMissingModifierLines();
+  const images = useTechCardImages();
   const currentUser = useCurrentUser();
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
   const [editing, setEditing] = useState<TechCard | null>(null);
@@ -152,6 +162,8 @@ export function TechCardsPanel() {
           name: draft.name,
           category: draft.category,
           kind: draft.kind,
+          basis_weight_kg: draft.kind === "weighted" ? draft.basis_weight_kg.replace(",", ".") : null,
+          method: draft.method,
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
           modifier_groups: draft.groups,
@@ -215,7 +227,9 @@ export function TechCardsPanel() {
                     </span>
                   </td>
                   <td className="py-2">{row.category_name ?? "—"}</td>
-                  <td className="py-2">{row.kind === "weighted" ? t("kindWeighted") : t("kindPiece")}</td>
+                  <td className="py-2">
+                    {row.kind === "weighted" ? t("basisKg", { weight: row.basis_weight_kg }) : t("kindPiece")}
+                  </td>
                   <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
                   {isFinanceAdmin ? (
                     <td className="py-2 text-right">
@@ -311,12 +325,29 @@ export function TechCardsPanel() {
             <Field label={t("kind")}>
               <NativeSelect
                 value={draft.kind}
-                onChange={(event) => setDraft({ ...draft, kind: event.target.value as "weighted" | "piece" })}
+                onChange={(event) => {
+                  const kind = event.target.value as "weighted" | "piece";
+                  setDraft({
+                    ...draft,
+                    kind,
+                    basis_weight_kg: kind === "weighted" && draft.basis_weight_kg === "" ? "1" : draft.basis_weight_kg,
+                  });
+                }}
               >
                 <option value="weighted">{t("kindWeighted")}</option>
                 <option value="piece">{t("kindPiece")}</option>
               </NativeSelect>
             </Field>
+            {draft.kind === "weighted" ? (
+              <Field label={t("basisWeight")} className="sm:col-span-3">
+                <Input
+                  required
+                  inputMode="decimal"
+                  value={draft.basis_weight_kg}
+                  onChange={(event) => setDraft({ ...draft, basis_weight_kg: event.target.value })}
+                />
+              </Field>
+            ) : null}
             <div className="flex items-end pb-3">
               <CheckboxField
                 label={t("isActive")}
@@ -333,11 +364,31 @@ export function TechCardsPanel() {
           ) : null}
           {editing && isFinanceAdmin && editing.base_cost !== undefined ? (
             <p className="text-sm text-[var(--ink)]">
-              {draft.kind === "weighted" ? t("costPerKg") : t("costPerPiece")}: {formatMoney(editing.base_cost)}
+              {draft.kind === "weighted"
+                ? t("costPerKg", { weight: draft.basis_weight_kg })
+                : t("costPerPiece")}
+              : {formatMoney(editing.base_cost)}
             </p>
           ) : null}
 
-          <CardTitle>{draft.kind === "weighted" ? t("baseCompositionPerKg") : t("baseCompositionPerPiece")}</CardTitle>
+          <Field label={t("method")}>
+            <Textarea value={draft.method} onChange={(event) => setDraft({ ...draft, method: event.target.value })} />
+          </Field>
+
+          {editing ? (
+            <MenuImages
+              images={(techCards.list.data ?? []).find((row) => row.id === editing.id)?.images ?? editing.images}
+              pending={images.upload.isPending || images.remove.isPending}
+              onUpload={(file) => images.upload.mutate({ id: editing.id, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: editing.id, imageId })}
+            />
+          ) : null}
+
+          <CardTitle>
+            {draft.kind === "weighted"
+              ? t("baseCompositionPerKg", { weight: draft.basis_weight_kg })
+              : t("baseCompositionPerPiece")}
+          </CardTitle>
           <ComponentLinesEditor
             lines={draft.lines}
             onChange={(lines) => setDraft({ ...draft, lines })}

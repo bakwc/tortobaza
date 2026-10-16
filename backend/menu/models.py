@@ -72,6 +72,7 @@ class SemiProduct(models.Model):
         verbose_name=_("Average cost"),
     )
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
+    method = models.TextField(blank=True, default="", verbose_name=_("Method"))
 
     class Meta:
         ordering = ["name"]
@@ -80,6 +81,25 @@ class SemiProduct(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class SemiProductImage(models.Model):
+    semi_product = models.ForeignKey(
+        SemiProduct,
+        related_name="images",
+        on_delete=models.CASCADE,
+        verbose_name=_("Semi-product"),
+    )
+    image = models.ImageField(upload_to="semi_products/", verbose_name=_("Image"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("Semi-product image")
+        verbose_name_plural = _("Semi-product images")
+
+    def __str__(self) -> str:
+        return f"Image #{self.pk} for {self.semi_product_id}"
 
 
 class ComponentRef(models.Model):
@@ -240,6 +260,15 @@ class TechCard(models.Model):
         verbose_name=_("Category"),
     )
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, verbose_name=_("Kind"))
+    basis_weight_kg = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.001"))],
+        verbose_name=_("Basis weight, kg"),
+    )
+    method = models.TextField(blank=True, default="", verbose_name=_("Method"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
 
@@ -250,6 +279,25 @@ class TechCard(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class TechCardImage(models.Model):
+    tech_card = models.ForeignKey(
+        TechCard,
+        related_name="images",
+        on_delete=models.CASCADE,
+        verbose_name=_("Tech card"),
+    )
+    image = models.ImageField(upload_to="tech_cards/", verbose_name=_("Image"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("Tech card image")
+        verbose_name_plural = _("Tech card images")
+
+    def __str__(self) -> str:
+        return f"Image #{self.pk} for {self.tech_card_id}"
 
 
 class TechCardLine(ComponentRef):

@@ -48,6 +48,27 @@ class ExpandOrderItemTests(TestCase):
         needs = expand_order_item(self.menu.bento, None, 1, [], [])
         self.assertEqual(needs, {self.menu.flour: Decimal("125")})
 
+    def test_weighted_card_scales_from_its_basis_weight(self):
+        menu = self.menu
+        menu.cake.basis_weight_kg = Decimal("1.5")
+        menu.cake.save(update_fields=["basis_weight_kg"])
+        needs = expand_order_item(
+            menu.cake,
+            Decimal("3"),
+            1,
+            [(menu.raspberry_filling, 1)],
+            [],
+        )
+        self.assertEqual(
+            needs,
+            {
+                menu.flour: Decimal("600"),
+                menu.sugar: Decimal("400"),
+                menu.cream: Decimal("600"),
+                menu.raspberry: Decimal("200"),
+            },
+        )
+
     def test_piece_card_multiplies_by_item_quantity(self):
         needs = expand_order_item(self.menu.bento, None, 3, [], [])
         self.assertEqual(needs, {self.menu.flour: Decimal("300")})

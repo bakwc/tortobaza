@@ -6,9 +6,11 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductImage,
     SemiProductLine,
     TechCard,
     TechCardCategory,
+    TechCardImage,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -30,6 +32,12 @@ class IngredientAdmin(admin.ModelAdmin):
     readonly_fields = ["avg_cost"]
 
 
+class SemiProductImageInline(admin.TabularInline):
+    model = SemiProductImage
+    extra = 0
+    fields = ["image", "position"]
+
+
 class SemiProductLineInline(admin.TabularInline):
     model = SemiProductLine
     fk_name = "parent"
@@ -44,7 +52,7 @@ class SemiProductAdmin(admin.ModelAdmin):
     list_filter = ["is_produced", "is_active"]
     search_fields = ["name"]
     readonly_fields = ["avg_cost"]
-    inlines = [SemiProductLineInline]
+    inlines = [SemiProductImageInline, SemiProductLineInline]
 
 
 class ModifierInline(admin.TabularInline):
@@ -65,6 +73,12 @@ class ModifierAdmin(admin.ModelAdmin):
     list_display = ["name", "group", "catalog_option", "is_active"]
     list_filter = ["group", "is_active"]
     search_fields = ["name", "group__name"]
+
+
+class TechCardImageInline(admin.TabularInline):
+    model = TechCardImage
+    extra = 0
+    fields = ["image", "position"]
 
 
 class TechCardLineInline(admin.TabularInline):
@@ -96,7 +110,7 @@ class TechCardCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(TechCard)
 class TechCardAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "kind", "is_active", "created_at"]
+    list_display = ["name", "category", "kind", "basis_weight_kg", "is_active", "created_at"]
     list_filter = ["category", "kind", "is_active"]
     search_fields = ["name"]
-    inlines = [TechCardLineInline, TechCardModifierGroupInline, TechCardModifierLineInline]
+    inlines = [TechCardImageInline, TechCardLineInline, TechCardModifierGroupInline, TechCardModifierLineInline]

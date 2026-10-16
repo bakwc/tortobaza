@@ -55,6 +55,32 @@ export function useTechCards() {
   return useResource(["menu", "tech-cards"], api.menuTechCards);
 }
 
+export function useTechCardImages() {
+  const invalidate = useInvalidateStock();
+  const upload = useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => api.uploadTechCardImage(id, file),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: ({ id, imageId }: { id: number; imageId: number }) => api.deleteTechCardImage(id, imageId),
+    onSuccess: invalidate,
+  });
+  return { upload, remove };
+}
+
+export function useSemiProductImages() {
+  const invalidate = useInvalidateStock();
+  const upload = useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => api.uploadSemiProductImage(id, file),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: ({ id, imageId }: { id: number; imageId: number }) => api.deleteSemiProductImage(id, imageId),
+    onSuccess: invalidate,
+  });
+  return { upload, remove };
+}
+
 export function useSuppliers() {
   return useResource(["inventory", "suppliers"], api.inventorySuppliers);
 }
