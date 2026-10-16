@@ -1038,6 +1038,86 @@ def pdf_text(path: Path) -> str:
     return text
 
 
+def blank_section(name: str) -> dict:
+    return {"name": name, "lines": [], "chunks": [], "steps": [], "bullets": []}
+
+
+def find_section(sections: list[dict], name: str) -> dict:
+    folded = name.casefold()
+    for section in sections:
+        if section["name"].casefold() == folded:
+            return section
+    section = blank_section(name)
+    sections.append(section)
+    return section
+
+
+def flush_section(section: dict) -> None:
+    if section["bullets"]:
+        section["chunks"].append("\n".join(f"- {item}" for item in section["bullets"]))
+        section["bullets"] = []
+    if section["steps"]:
+        section["chunks"].append("\n".join(f"{index}. {step}" for index, step in enumerate(section["steps"], 1)))
+        section["steps"] = []
+
+
+def section_payload(sections: list[dict]) -> list[dict]:
+    payload = []
+    for section in sections:
+        flush_section(section)
+        method = "\n\n".join(chunk for chunk in section["chunks"] if chunk.strip())
+        if not method and not section["lines"]:
+            continue
+        payload.append({"name": section["name"], "method": method, "lines": section["lines"]})
+    return payload
+
+
+def quantity_lines(name: str, raw: str) -> tuple[list[dict], list[str]]:
+    text = raw.strip()
+    if "предварительн" in name.casefold():
+        return [], [f"Вода бланширования не входит в состав: {name} — {text}"]
+    if re.fullmatch(r"≈?\s*\d+(?:[.,]\d+)?\s*л\b", text, re.IGNORECASE):
+        return [], [f"Без строки состава: {name} — {text}"]
+    if "порция" in text.casefold() or re.search(r"ч\.\s*л|по вкусу", text, re.IGNORECASE):
+        return [], [f"Без строки состава: {name} — {text}"]
+    embedded = re.search(r"(.+?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)\s*г\b", text, re.IGNORECASE)
+    if embedded and not re.match(r"^[≈\d]", text):
+        return quantity_lines(embedded.group(1), f"{embedded.group(2)} г")
+    gelatin = re.fullmatch(
+        r"(\d+(?:[.,]\d+)?)\s*г\s*\+\s*(\d+(?:[.,]\d+)?)\s*г(?:\s+\w+)*",
+        text,
+        re.IGNORECASE,
+    )
+    if gelatin and "вод" in text.casefold():
+        parsed, notes = parse_amount(name, f"{gelatin.group(1)} г")
+        lines = [component_line(ingredient, quantity, unit) for ingredient, quantity, unit in parsed]
+        lines.append(component_line("Вода", dec(gelatin.group(2)), "g"))
+        notes.append(f"Желатин: {text}")
+        return lines, notes
+    if "шт" in text.casefold():
+        match = NUMBER_RE.search(text)
+        if match is None:
+            raise RuntimeError(f"piece count missing: {name} / {text}")
+        ingredient = canon(name)
+        if ingredient not in {"Яйцо", "Желток", "Ксантановая камедь", "Хвостик мандарина"}:
+            return [], [f"Без строки состава: {name} — {text}"]
+        if ingredient in {"Яйцо", "Желток", "Ксантановая камедь"}:
+            parsed, notes = parse_amount(name, text)
+            return [component_line(ingredient_name, quantity, unit) for ingredient_name, quantity, unit in parsed], notes
+        return [component_line(ingredient, dec(match.group(0)), "pcs")], []
+    parsed, notes = parse_amount(name, text)
+    return [component_line(ingredient, quantity, unit) for ingredient, quantity, unit in parsed], notes
+
+
+def piece_count(text: str, path: Path) -> int:
+    match = re.search(r"на\s+(\d+)\s+пирож", text, re.IGNORECASE)
+    if match is None:
+        match = re.search(r"выход\s*(\d+)\s*шт", text, re.IGNORECASE)
+    if match is None:
+        raise RuntimeError(f"pastry piece count missing in {path.name}")
+    return int(match.group(1))
+
+
 def docx_text(path: Path) -> str:
     archive = zipfile.ZipFile(path)
     root = ElementTree.fromstring(archive.read("word/document.xml"))
@@ -1051,6 +1131,263 @@ def docx_text(path: Path) -> str:
         if line:
             lines.append(line)
     return "\n".join(lines)
+
+
+def docx_runs(element, word: str) -> str:
+    text = "".join(node.text or "" for node in element.iter(f"{word}t"))
+    return re.sub(r"([а-яё])([А-ЯЁ])", r"\1 \2", text).strip()
+
+
+def plain_section_title(text: str) -> str:
+    match = re.fullmatch(r"\d+\.\s+(.+)", text)
+    if match is None:
+        return ""
+    title = match.group(1).strip()
+    if re.search(r"[.!?]", title) or len(title) > 80:
+        return ""
+    return title
+
+
+def docx_pastry_card(title: str, path: Path) -> dict:
+    word = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    archive = zipfile.ZipFile(path)
+    root = ElementTree.fromstring(archive.read("word/document.xml"))
+    body = root.find(f"{word}body")
+    sections: list[dict] = []
+    notes: list[str] = []
+    inventory: list[str] = []
+    quality: list[str] = []
+    mode = ""
+    current: dict | None = None
+
+    def take_rows(rows: list[list[str]], section: dict | None) -> None:
+        target = section
+        for cells in rows[1:]:
+            name = cells[0].strip() if cells else ""
+            amount = cells[1].strip() if len(cells) > 1 else ""
+            if not name or name.casefold() in {"ингредиент", "количество"}:
+                continue
+            if not amount:
+                target = find_section(sections, name)
+                continue
+            if target is None:
+                notes.append(f"Без строки состава: {name} — {amount}")
+                continue
+            lines, row_notes = quantity_lines(name, amount)
+            notes.extend(row_notes)
+            target["lines"].extend(lines)
+
+    for element in list(body):
+        tag = element.tag.replace(word, "")
+        if tag == "tbl":
+            rows = []
+            for row in element.findall(f"{word}tr"):
+                rows.append([docx_runs(cell, word) for cell in row.findall(f"{word}tc")])
+            if len(rows) == 1 and len(rows[0]) == 1 and rows[0][0]:
+                quote = rows[0][0]
+                if current is not None:
+                    flush_section(current)
+                    current["chunks"].append(f"> {quote}")
+                else:
+                    notes.append(quote)
+                continue
+            header = " ".join(rows[0]).casefold() if rows else ""
+            if "ингредиент" in header and "количество" in header:
+                take_rows(rows, current if mode == "section" else None)
+                continue
+            items = [cell.lstrip("• ").strip() for row in rows for cell in row if cell.strip()]
+            if mode == "inventory":
+                inventory.extend(items)
+            elif mode == "quality":
+                quality.extend(item.lstrip("• ").strip() for item in items)
+            continue
+        if tag != "p":
+            continue
+        style = element.find(f"{word}pPr/{word}pStyle")
+        style_name = style.get(f"{word}val") if style is not None else ""
+        text = docx_runs(element, word)
+        if not text or style_name == "TitleCustom":
+            continue
+        folded = text.casefold()
+        if style_name == "H1Custom" and folded == "состав" or folded in {"состав", "состав изделия"}:
+            if current is not None:
+                flush_section(current)
+            current = None
+            mode = "composition"
+            continue
+        if style_name == "H1Custom" and folded == "инвентарь" or folded == "инвентарь":
+            if current is not None:
+                flush_section(current)
+            current = None
+            mode = "inventory"
+            continue
+        if style_name == "H1Custom" and folded == "контроль качества" or folded == "контроль качества":
+            if current is not None:
+                flush_section(current)
+            current = None
+            mode = "quality"
+            continue
+        titled = text if style_name == "H1Custom" else plain_section_title(text)
+        if titled and style_name != "ListBullet":
+            if current is not None:
+                flush_section(current)
+            current = find_section(sections, titled)
+            mode = "section"
+            continue
+        if mode == "inventory" and (style_name == "ListBullet" or text[:1] in {"•", ""}):
+            inventory.append(text.lstrip("• ").strip())
+            continue
+        if mode == "quality":
+            quality.append(text.lstrip("• ").strip())
+            continue
+        if mode != "section" or current is None:
+            notes.append(text)
+            continue
+        numbered = re.match(r"^\d+\.\s*(.*)", text)
+        if style_name == "ListBullet" or text[:1] in {"•", ""}:
+            flush_section(current)
+            current["bullets"].append(text.lstrip("• ").strip())
+            continue
+        if numbered:
+            if current["bullets"]:
+                flush_section(current)
+            current["steps"].append(numbered.group(1))
+            continue
+        if current["steps"] and text[:1].islower():
+            current["steps"][-1] = f"{current['steps'][-1]} {text}"
+            continue
+        flush_section(current)
+        current["chunks"].append(text)
+    if current is not None:
+        flush_section(current)
+    card_chunks = []
+    if inventory:
+        card_chunks.append("## Инвентарь\n\n" + "\n".join(f"- {item}" for item in inventory))
+    if quality:
+        card_chunks.append("## Контроль качества\n\n" + "\n".join(f"- {item}" for item in quality))
+    return {
+        "name": title,
+        "kind": "piece",
+        "basis_weight_kg": None,
+        "basis_quantity": piece_count(docx_text(path), path),
+        "category": "Пирожные",
+        "method": add_notes("\n\n".join(card_chunks), notes).strip(),
+        "images": [],
+        "lines": [],
+        "sections": card_sections(section_payload(sections)),
+    }
+
+
+def pdf_lines(path: Path) -> list[str]:
+    lines = []
+    for raw in pdf_text(path).splitlines():
+        line = re.sub(r"\s+", " ", raw).strip()
+        if line and not line.startswith("Технологическая карта"):
+            lines.append(line)
+    return lines
+
+
+def pdf_qty_split(line: str) -> tuple[str, str]:
+    match = re.search(
+        r"\s(\d+(?:[.,]\d+)?\s*г(?:\s*\+\s*\d+(?:[.,]\d+)?\s*г(?:\s+\w+)*)?|\d+\s*шт\.?|по необходимости)$",
+        line,
+        re.IGNORECASE,
+    )
+    if match is None:
+        return "", ""
+    return line[: match.start()].strip(), match.group(1).strip()
+
+
+def pdf_pastry_card(title: str, path: Path) -> dict:
+    lines = pdf_lines(path)
+    inventory_at = lines.index("Инвентарь")
+    composition_at = lines.index("Состав", inventory_at)
+    sections: list[dict] = []
+    notes: list[str] = []
+    current: dict | None = None
+    index = composition_at + 1
+    if index < len(lines) and lines[index].casefold().startswith("ингредиент"):
+        index += 1
+    while index < len(lines) and not re.match(r"^\d+\.\s", lines[index]):
+        name, amount = pdf_qty_split(lines[index])
+        if name and amount:
+            if current is None:
+                raise RuntimeError(f"ingredient before a section in {path.name}: {lines[index]}")
+            parsed, row_notes = quantity_lines(name, amount)
+            notes.extend(row_notes)
+            current["lines"].extend(parsed)
+        elif lines[index][:1].isupper() and not re.search(r"[.!?]", lines[index]) and len(lines[index]) < 80:
+            current = find_section(sections, lines[index])
+        else:
+            notes.append(lines[index])
+        index += 1
+    while index < len(lines):
+        line = lines[index]
+        if line.casefold() == "контроль качества":
+            index += 1
+            break
+        name, _amount = pdf_qty_split(line)
+        if (
+            current is not None
+            and line[:1].islower()
+            and not re.match(r"^\d+\.\s", line)
+            and not line.startswith("Хранение")
+        ):
+            if current["steps"]:
+                current["steps"][-1] = f"{current['steps'][-1]} {line}"
+            else:
+                notes.append(line)
+            index += 1
+            continue
+        if line.startswith("Хранение"):
+            if current is None:
+                raise RuntimeError(f"storage note before a section in {path.name}")
+            flush_section(current)
+            current["chunks"].append(f"> {line}")
+            index += 1
+            continue
+        numbered = re.match(r"^\d+\.\s*(.*)", line)
+        if numbered:
+            if current is None:
+                raise RuntimeError(f"step before a section in {path.name}")
+            if current["bullets"]:
+                flush_section(current)
+            current["steps"].append(numbered.group(1))
+            index += 1
+            continue
+        if line[:1].isupper() and not re.search(r"[.!?]", line) and len(line) < 80 and not name:
+            if current is not None:
+                flush_section(current)
+            current = find_section(sections, line)
+            index += 1
+            continue
+        if current is not None and current["steps"]:
+            current["steps"][-1] = f"{current['steps'][-1]} {line}"
+            index += 1
+            continue
+        notes.append(line)
+        index += 1
+    quality = [line.lstrip("• ").strip() for line in lines[index:] if line.strip()]
+    inventory = [line.lstrip("• ").strip() for line in lines[inventory_at + 1 : composition_at]]
+    card_chunks = []
+    if inventory:
+        card_chunks.append("## Инвентарь\n\n" + "\n".join(f"- {item}" for item in inventory))
+    if quality:
+        card_chunks.append("## Контроль качества\n\n" + "\n".join(f"- {item}" for item in quality))
+    for line in lines[:inventory_at]:
+        if line.startswith("Расчёт") or line.startswith("Вес") or line.startswith("Ориентировочный"):
+            notes.append(line)
+    return {
+        "name": title,
+        "kind": "piece",
+        "basis_weight_kg": None,
+        "basis_quantity": piece_count(pdf_text(path), path),
+        "category": "Пирожные",
+        "method": add_notes("\n\n".join(card_chunks), notes).strip(),
+        "images": [],
+        "lines": [],
+        "sections": card_sections(section_payload(sections)),
+    }
 
 
 def docx_method(path: Path) -> str:
@@ -1699,9 +2036,10 @@ def build() -> None:
                 title = candidate_title
         if not title:
             continue
-        text = docx_text(filename) if filename.suffix == ".docx" else pdf_text(filename)
-        method = docx_method(filename) if filename.suffix == ".docx" else pdf_pastry_method(filename)
-        cards.append(pastry_card(title, text, method))
+        if filename.suffix == ".docx":
+            cards.append(docx_pastry_card(title, filename))
+        else:
+            cards.append(pdf_pastry_card(title, filename))
     pdfs = {nfc(path.name): path for path in SOURCE.glob("*.pdf")}
     jars = {
         "Дубай.pdf": (
