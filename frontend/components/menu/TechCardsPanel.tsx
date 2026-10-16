@@ -47,6 +47,7 @@ type TechCardDraft = {
   category: number | null;
   kind: "weighted" | "piece";
   basis_weight_kg: string;
+  basis_quantity: string;
   method: string;
   is_active: boolean;
   lines: ComponentLineDraft[];
@@ -61,6 +62,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       category: null,
       kind: "weighted",
       basis_weight_kg: "1",
+      basis_quantity: "1",
       method: "",
       is_active: true,
       lines: [],
@@ -79,6 +81,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     category: row.category,
     kind: row.kind,
     basis_weight_kg: row.basis_weight_kg ?? "",
+    basis_quantity: row.basis_quantity === null ? "" : String(row.basis_quantity),
     method: row.method,
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
@@ -163,6 +166,7 @@ export function TechCardsPanel() {
           category: draft.category,
           kind: draft.kind,
           basis_weight_kg: draft.kind === "weighted" ? draft.basis_weight_kg.replace(",", ".") : null,
+          basis_quantity: draft.kind === "piece" ? Number(draft.basis_quantity) : null,
           method: draft.method,
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
@@ -230,7 +234,9 @@ export function TechCardsPanel() {
                   <td className="py-2">
                     {row.kind === "weighted" && row.basis_weight_kg !== null
                       ? t("basisKg", { weight: row.basis_weight_kg })
-                      : t("kindPiece")}
+                      : row.basis_quantity !== null
+                        ? t("basisPieces", { count: row.basis_quantity })
+                        : t("kindPiece")}
                   </td>
                   <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
                   {isFinanceAdmin ? (
@@ -333,6 +339,7 @@ export function TechCardsPanel() {
                     ...draft,
                     kind,
                     basis_weight_kg: kind === "weighted" && draft.basis_weight_kg === "" ? "1" : draft.basis_weight_kg,
+                    basis_quantity: kind === "piece" && draft.basis_quantity === "" ? "1" : draft.basis_quantity,
                   });
                 }}
               >
@@ -349,7 +356,16 @@ export function TechCardsPanel() {
                   onChange={(event) => setDraft({ ...draft, basis_weight_kg: event.target.value })}
                 />
               </Field>
-            ) : null}
+            ) : (
+              <Field label={t("basisQuantity")} className="sm:col-span-3">
+                <Input
+                  required
+                  inputMode="numeric"
+                  value={draft.basis_quantity}
+                  onChange={(event) => setDraft({ ...draft, basis_quantity: event.target.value })}
+                />
+              </Field>
+            )}
             <div className="flex items-end pb-3">
               <CheckboxField
                 label={t("isActive")}
@@ -368,7 +384,7 @@ export function TechCardsPanel() {
             <p className="text-sm text-[var(--ink)]">
               {draft.kind === "weighted"
                 ? t("costPerKg", { weight: draft.basis_weight_kg })
-                : t("costPerPiece")}
+                : t("costPerPiece", { count: draft.basis_quantity })}
               : {formatMoney(editing.base_cost)}
             </p>
           ) : null}
@@ -389,7 +405,7 @@ export function TechCardsPanel() {
           <CardTitle>
             {draft.kind === "weighted"
               ? t("baseCompositionPerKg", { weight: draft.basis_weight_kg })
-              : t("baseCompositionPerPiece")}
+              : t("baseCompositionPerPiece", { count: draft.basis_quantity })}
           </CardTitle>
           <ComponentLinesEditor
             lines={draft.lines}

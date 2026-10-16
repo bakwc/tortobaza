@@ -97,18 +97,21 @@ class Command(BaseCommand):
     ) -> None:
         for row in rows:
             basis = row["basis_weight_kg"]
+            pieces = row["basis_quantity"]
             category_name = row["category"]
             card, _created = TechCard.objects.get_or_create(
                 name=row["name"],
                 defaults={
                     "kind": row["kind"],
                     "basis_weight_kg": None if basis is None else Decimal(basis),
+                    "basis_quantity": None if pieces is None else int(pieces),
                     "method": row["method"],
                     "category": None if category_name is None else categories[category_name],
                 },
             )
             card.kind = row["kind"]
             card.basis_weight_kg = None if basis is None else Decimal(basis)
+            card.basis_quantity = None if pieces is None else int(pieces)
             card.method = row["method"]
             card.category = None if category_name is None else categories[category_name]
             card.save()

@@ -268,6 +268,12 @@ class TechCard(models.Model):
         validators=[MinValueValidator(Decimal("0.001"))],
         verbose_name=_("Basis weight, kg"),
     )
+    basis_quantity = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Basis quantity"),
+    )
     method = models.TextField(blank=True, default="", verbose_name=_("Method"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))

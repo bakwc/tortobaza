@@ -155,13 +155,16 @@ def expand_order_item(
     needs: Needs = {}
     item_quantity = Decimal(quantity)
     if tech_card is not None:
-        weight_factor = (
-            weight_kg / tech_card.basis_weight_kg if tech_card.kind == TechCard.KIND_WEIGHTED else _ONE
-        )
+        if tech_card.kind == TechCard.KIND_WEIGHTED:
+            weight_factor = weight_kg / tech_card.basis_weight_kg
+            line_factor = weight_factor * item_quantity
+        else:
+            weight_factor = _ONE
+            line_factor = item_quantity / Decimal(tech_card.basis_quantity)
         for line in tech_card.lines.select_related("ingredient", "semi_product"):
             _explode(
                 line.component,
-                gross_quantity(line.quantity, line.loss_percent) * weight_factor * item_quantity,
+                gross_quantity(line.quantity, line.loss_percent) * line_factor,
                 needs,
                 frozenset(),
             )
@@ -217,7 +220,8 @@ def tech_card_cost(
     modifiers: list[tuple[Modifier, int]],
     weight_kg: Decimal | None,
 ) -> Decimal:
-    return needs_cost(expand_order_item(tech_card, weight_kg, 1, modifiers, []))
+    count = 1 if tech_card.kind == TechCard.KIND_WEIGHTED else tech_card.basis_quantity
+    return needs_cost(expand_order_item(tech_card, weight_kg, count, modifiers, []))
 
 
 def order_cost(crm_order) -> Decimal:

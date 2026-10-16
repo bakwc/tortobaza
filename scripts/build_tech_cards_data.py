@@ -471,6 +471,7 @@ def milk_girl(filename: str, lines: list[dict], method: str, images: list[str]) 
         "name": title,
         "kind": "weighted",
         "basis_weight_kg": basis,
+        "basis_quantity": None,
         "category": "Торты",
         "method": method.strip(),
         "images": images,
@@ -502,17 +503,18 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
         notes.extend(parsed_notes)
         target = batch if phase == "batch" else cream
         for ingredient, quantity, unit in parsed:
-            amount = quantity / Decimal("10") if phase == "batch" else quantity
+            amount = quantity if phase == "batch" else quantity * Decimal("10")
             target.append(component_line(ingredient, amount, unit))
     method = (
-        "Расчёт на 1 капкейк. Тесто взято из колонки на 10 шт и разделено на 10. "
-        "Колонка на 5 шт в составе не дублируется.\n"
+        "Расчёт на 10 капкейков. Тесто взято из колонки на 10 шт. "
+        "Крем из колонки на 1 капкейк умножен на 10. Колонка на 5 шт в составе не дублируется.\n"
         + "\n".join(dict.fromkeys(notes + method_bits))
     )
     return {
         "name": "Капкейки",
         "kind": "piece",
         "basis_weight_kg": None,
+        "basis_quantity": 10,
         "category": "Пирожные",
         "method": method.strip(),
         "images": images,
@@ -644,6 +646,7 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
         "name": "Наполеон",
         "kind": "piece",
         "basis_weight_kg": None,
+        "basis_quantity": 1,
         "category": "Торты",
         "method": "\n".join(dict.fromkeys(notes)),
         "images": images,
@@ -676,6 +679,7 @@ def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], 
         "name": name,
         "kind": "piece",
         "basis_weight_kg": None,
+        "basis_quantity": 1,
         "category": category,
         "method": method.strip(),
         "images": images,
@@ -785,7 +789,7 @@ def pastry_lines(text: str) -> tuple[list[dict], str, str]:
             notes.append(f"Вода бланширования не входит в состав: {pending} — {source}")
             pending = ""
             return
-        parsed.append((canon(pending), quantity / pieces, unit))
+        parsed.append((canon(pending), quantity, unit))
         pending = ""
 
     for line in body:
@@ -800,7 +804,7 @@ def pastry_lines(text: str) -> tuple[list[dict], str, str]:
         )
         if gelatin and pending:
             take_pending(dec(gelatin.group(1)), "g", line)
-            parsed.append(("Вода", dec(gelatin.group(2)) / pieces, "g"))
+            parsed.append(("Вода", dec(gelatin.group(2)), "g"))
             notes.append(f"Желатин: {line}, на партию из {qstr(pieces)} шт")
             continue
         paired = re.fullmatch(
@@ -812,7 +816,7 @@ def pastry_lines(text: str) -> tuple[list[dict], str, str]:
             pending = paired.group(1).strip()
             take_pending(dec(paired.group(2)), "g", line)
             if paired.group(3):
-                parsed.append(("Вода", dec(paired.group(3)) / pieces, "g"))
+                parsed.append(("Вода", dec(paired.group(3)), "g"))
                 notes.append(f"Вода к желатину {paired.group(3)} г на партию")
             continue
         pieces_line = re.fullmatch(r"(.+?)\s+(\d+)\s*шт\.?", line, re.IGNORECASE)
@@ -854,17 +858,18 @@ def pastry_lines(text: str) -> tuple[list[dict], str, str]:
     header = f"Расчёт на {qstr(pieces)} шт"
     if weight:
         header += f", около {weight}"
-    header += ". Количества в составе — на 1 шт."
+    header += "."
     method = header + "\n" + "\n".join(notes + method_lines)
     return lines, method, qstr(pieces)
 
 
 def pastry_card(title: str, text: str) -> dict:
-    lines, method, _pieces = pastry_lines(text)
+    lines, method, pieces = pastry_lines(text)
     return {
         "name": title,
         "kind": "piece",
         "basis_weight_kg": None,
+        "basis_quantity": int(pieces),
         "category": "Пирожные",
         "method": method.strip(),
         "images": [],
@@ -872,31 +877,27 @@ def pastry_card(title: str, text: str) -> dict:
     }
 
 
-def scale_lines(rows: list[tuple[str, Decimal]], pieces: Decimal) -> list[dict]:
-    return [component_line(name, quantity / pieces, "g") for name, quantity in rows]
-
-
 def jar_card(name: str, rows: list[tuple[str, Decimal] | dict], method: str) -> dict:
-    pieces = Decimal("10")
     lines = []
     for row in rows:
         if isinstance(row, dict):
             lines.append(
                 {
                     "semi_product": row["semi_product"],
-                    "quantity": qstr(Decimal(row["quantity"]) / pieces),
+                    "quantity": qstr(Decimal(row["quantity"])),
                     "loss_percent": "0",
                 }
             )
         else:
             ingredient, quantity = row
-            lines.append(component_line(ingredient, quantity / pieces, "g"))
+            lines.append(component_line(ingredient, quantity, "g"))
     return {
         "name": name,
         "kind": "piece",
         "basis_weight_kg": None,
+        "basis_quantity": 10,
         "category": "Десерты",
-        "method": "Расчёт на 10 порций. Количества в составе — на 1 порцию.\n" + method.strip(),
+        "method": "Расчёт на 10 порций.\n" + method.strip(),
         "images": [],
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
     }
@@ -1200,7 +1201,8 @@ def build() -> None:
         print(f"SEMI {entity['name']} yield {entity['yield_quantity']} lines {len(entity['lines'])}")
     for entity in cards:
         basis = entity["basis_weight_kg"] or "-"
-        print(f"CARD {entity['kind']} {basis} {entity['name']} lines {len(entity['lines'])}")
+        pieces = entity["basis_quantity"] if entity["basis_quantity"] is not None else "-"
+        print(f"CARD {entity['kind']} {basis} pcs {pieces} {entity['name']} lines {len(entity['lines'])}")
 
 
 if __name__ == "__main__":

@@ -344,6 +344,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             "category_name",
             "kind",
             "basis_weight_kg",
+            "basis_quantity",
             "method",
             "is_active",
             "lines",
@@ -352,6 +353,7 @@ class TechCardSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             "basis_weight_kg": {"required": True, "allow_null": True},
+            "basis_quantity": {"required": True, "allow_null": True},
             "method": {"required": True, "allow_blank": True},
         }
 
@@ -399,9 +401,18 @@ class TechCardSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         kind = attrs["kind"]
         basis = attrs["basis_weight_kg"]
+        pieces = attrs["basis_quantity"]
         if kind == TechCard.KIND_WEIGHTED and basis is None:
             raise serializers.ValidationError(
                 {"basis_weight_kg": "Basis weight is required for a weighted tech card."}
+            )
+        if kind == TechCard.KIND_WEIGHTED and pieces is not None:
+            raise serializers.ValidationError(
+                {"basis_quantity": "A weighted tech card has no basis quantity."}
+            )
+        if kind == TechCard.KIND_PIECE and pieces is None:
+            raise serializers.ValidationError(
+                {"basis_quantity": "Basis quantity is required for a piece tech card."}
             )
         if kind == TechCard.KIND_PIECE and basis is not None:
             raise serializers.ValidationError({"basis_weight_kg": "A piece tech card has no basis weight."})

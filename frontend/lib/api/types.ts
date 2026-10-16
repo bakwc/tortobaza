@@ -836,6 +836,7 @@ export const TechCardSchema = z.object({
   category_name: z.string().nullable(),
   kind: z.enum(["weighted", "piece"]),
   basis_weight_kg: z.string().nullable(),
+  basis_quantity: z.number().int().nullable(),
   method: z.string(),
   is_active: z.boolean(),
   lines: z.array(RecipeLineSchema),
@@ -929,6 +930,7 @@ export type TechCardBody = {
   category: number | null;
   kind: "weighted" | "piece";
   basis_weight_kg: string | null;
+  basis_quantity: number | null;
   method: string;
   is_active: boolean;
   lines: RecipeLineBody[];

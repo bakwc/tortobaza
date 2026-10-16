@@ -100,10 +100,14 @@ class MenuFixture:
             scales_by_weight=True,
         )
 
-        self.bento = TechCard.objects.create(name="Bento", kind=TechCard.KIND_PIECE)
+        self.bento = TechCard.objects.create(name="Bento", kind=TechCard.KIND_PIECE, basis_quantity=1)
         TechCardLine.objects.create(tech_card=self.bento, ingredient=self.flour, quantity=Decimal("100"))
 
-        self.frozen_cake = TechCard.objects.create(name="Frozen cake", kind=TechCard.KIND_PIECE)
+        self.frozen_cake = TechCard.objects.create(
+            name="Frozen cake",
+            kind=TechCard.KIND_PIECE,
+            basis_quantity=1,
+        )
         TechCardLine.objects.create(tech_card=self.frozen_cake, semi_product=self.frozen_sponge, quantity=Decimal("400"))
 
 

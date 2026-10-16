@@ -36,6 +36,7 @@ class ImportTechCardsTests(TestCase):
                         "name": "Торт",
                         "kind": "weighted",
                         "basis_weight_kg": "1.5",
+                        "basis_quantity": None,
                         "category": "Торты",
                         "method": "Собрать.",
                         "images": ["images/card.png"],
@@ -49,6 +50,7 @@ class ImportTechCardsTests(TestCase):
             call_command("import_tech_cards", path=str(path))
             card = TechCard.objects.get(name="Торт")
             self.assertEqual(card.basis_weight_kg, Decimal("1.5"))
+            self.assertIsNone(card.basis_quantity)
             self.assertEqual(card.method, "Собрать.")
             self.assertEqual(card.lines.get().semi_product.name, "Бисквит")
             self.assertEqual(card.lines.get().quantity, Decimal("500"))

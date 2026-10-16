@@ -73,6 +73,14 @@ class ExpandOrderItemTests(TestCase):
         needs = expand_order_item(self.menu.bento, None, 3, [], [])
         self.assertEqual(needs, {self.menu.flour: Decimal("300")})
 
+    def test_piece_card_scales_from_its_basis_quantity(self):
+        menu = self.menu
+        menu.bento.basis_quantity = 8
+        menu.bento.save(update_fields=["basis_quantity"])
+        menu.bento.lines.update(quantity=Decimal("21"))
+        needs = expand_order_item(menu.bento, None, 4, [], [])
+        self.assertEqual(needs, {menu.flour: Decimal("10.5")})
+
     def test_free_item_lines_are_added_as_is(self):
         needs = expand_order_item(None, None, 2, [], [(self.menu.sugar, Decimal("50"))])
         self.assertEqual(needs, {self.menu.sugar: Decimal("50")})
