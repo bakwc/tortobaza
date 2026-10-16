@@ -38,7 +38,7 @@ class ImportTechCardsTests(TestCase):
                         "basis_weight_kg": "1.5",
                         "basis_quantity": None,
                         "category": "Торты",
-                        "method": "Собрать.",
+                        "method": "## Сборка\n\n1. Собрать слои.",
                         "images": ["images/card.png"],
                         "lines": [{"semi_product": "Бисквит", "quantity": "500", "loss_percent": "0"}],
                     }
@@ -51,7 +51,7 @@ class ImportTechCardsTests(TestCase):
             card = TechCard.objects.get(name="Торт")
             self.assertEqual(card.basis_weight_kg, Decimal("1.5"))
             self.assertIsNone(card.basis_quantity)
-            self.assertEqual(card.method, "Собрать.")
+            self.assertEqual(card.method, "## Сборка\n\n1. Собрать слои.")
             self.assertEqual(card.lines.get().semi_product.name, "Бисквит")
             self.assertEqual(card.lines.get().quantity, Decimal("500"))
             self.assertEqual(card.images.count(), 1)
@@ -59,12 +59,12 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(semi.method, "Взбить.")
             self.assertEqual(semi.lines.get().ingredient, Ingredient.objects.get(name="Мука"))
             self.assertEqual(TechCard.objects.get(name="Не трогать").method, "stay")
-            payload["tech_cards"][0]["method"] = "Обновить."
+            payload["tech_cards"][0]["method"] = "### Крем\n\n- Обновить."
             payload["tech_cards"][0]["lines"][0]["quantity"] = "250"
             path.write_text(json.dumps(payload), encoding="utf-8")
             call_command("import_tech_cards", path=str(path))
             card.refresh_from_db()
-            self.assertEqual(card.method, "Обновить.")
+            self.assertEqual(card.method, "### Крем\n\n- Обновить.")
             self.assertEqual(card.lines.get().quantity, Decimal("250"))
             self.assertEqual(card.images.count(), 1)
             self.assertEqual(TechCard.objects.filter(name="Торт").count(), 1)

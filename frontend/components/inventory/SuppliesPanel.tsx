@@ -76,6 +76,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
     <EditorDialog
       open
       onOpenChange={(value) => (value ? null : onClose())}
+      onCancel={null}
       title={supply === null ? t("newSupply") : `${t("inventory.supplies")} · ${supply.date}`}
       pending={supplies.save.isPending}
       error={supplies.save.error ?? supplies.remove.error}

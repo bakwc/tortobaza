@@ -92,6 +92,7 @@ export function ProductionsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editing === null ? t("newProduction") : `${editing.semi_product_name} · ${editing.date}`}
           pending={productions.save.isPending}
           error={productions.save.error ?? productions.remove.error}

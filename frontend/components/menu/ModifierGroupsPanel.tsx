@@ -120,6 +120,7 @@ export function ModifierGroupsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editingId === null ? t("newModifierGroup") : draft.name}
           pending={groups.save.isPending}
           error={groups.save.error ?? groups.remove.error}

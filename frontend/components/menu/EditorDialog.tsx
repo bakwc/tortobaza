@@ -14,6 +14,7 @@ export function EditorDialog({
   pending,
   error,
   onSubmit,
+  onCancel,
   onDelete,
   deletePending,
   submitLabel,
@@ -25,6 +26,7 @@ export function EditorDialog({
   pending: boolean;
   error: unknown;
   onSubmit: () => void;
+  onCancel: (() => void) | null;
   onDelete: (() => void) | null;
   deletePending: boolean;
   submitLabel: string | null;
@@ -51,11 +53,18 @@ export function EditorDialog({
             ) : (
               <span />
             )}
-            {submitLabel !== null ? (
-              <Button type="submit" disabled={pending}>
-                {pending ? <Spinner className="h-4 w-4" /> : submitLabel}
-              </Button>
-            ) : null}
+            <div className="flex gap-2">
+              {onCancel !== null ? (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  {t("cancel")}
+                </Button>
+              ) : null}
+              {submitLabel !== null ? (
+                <Button type="submit" disabled={pending}>
+                  {pending ? <Spinner className="h-4 w-4" /> : submitLabel}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </form>
       </DialogContent>

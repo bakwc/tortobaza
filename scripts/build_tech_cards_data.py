@@ -355,14 +355,164 @@ def pages_tables(path: Path) -> list[list[tuple[str, str, str]]]:
     return tables
 
 
-def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[str], Decimal | None]:
+def md_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ").strip()
+
+
+def heading_title(value: str) -> str:
+    title = value.strip().rstrip(":").strip()
+    letters = [char for char in title if char.isalpha()]
+    if letters and all(char.isupper() for char in letters):
+        return title[:1] + title[1:].lower()
+    return title
+
+
+def is_method_heading(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped or len(stripped) > 40:
+        return False
+    if stripped.casefold().rstrip(":") in {"метод приготовления", "ингредиенты", "ингридиенты"}:
+        return False
+    if stripped.endswith(":") and len(stripped.split()) <= 3 and not stripped[0].isdigit():
+        return True
+    letters = [char for char in stripped if char.isalpha()]
+    return bool(letters) and all(char.isupper() for char in letters) and len(letters) > 2
+
+
+def join_wraps(text: str) -> str:
+    out: list[str] = []
+    buf = ""
+
+    def flush() -> None:
+        nonlocal buf
+        if buf:
+            out.append(buf)
+            buf = ""
+
+    for raw in text.replace("\u2028", "\n").splitlines():
+        line = raw.strip()
+        if not line:
+            flush()
+            if out and out[-1] != "":
+                out.append("")
+            continue
+        if is_method_heading(line):
+            flush()
+            out.append(line)
+            continue
+        if not buf:
+            buf = line
+            continue
+        if buf[-1] in ",;:—-" or not line[0].isupper():
+            buf = f"{buf} {line}"
+            continue
+        flush()
+        buf = line
+    flush()
+    cleaned: list[str] = []
+    for line in out:
+        if line == "" and (not cleaned or cleaned[-1] == ""):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+def format_steps(text: str, heading_marks: str) -> str:
+    blocks: list[str] = []
+    steps: list[str] = []
+    bullets: list[str] = []
+
+    def flush() -> None:
+        if bullets:
+            blocks.append("\n".join(f"- {item}" for item in bullets))
+            bullets.clear()
+        if not steps:
+            return
+        cleaned = [re.sub(r"^\d+\.\s*", "", step).strip() for step in steps]
+        if len(cleaned) == 1:
+            blocks.append(cleaned[0])
+        else:
+            blocks.append("\n".join(f"{index}. {step}" for index, step in enumerate(cleaned, 1)))
+        steps.clear()
+
+    for line in join_wraps(text).splitlines():
+        stripped = line.strip()
+        if not stripped:
+            flush()
+            continue
+        if stripped.casefold() == "метод приготовления":
+            continue
+        if stripped.startswith("*"):
+            if steps:
+                flush()
+            bullets.append(stripped.lstrip("* ").strip())
+            continue
+        if is_method_heading(stripped):
+            flush()
+            blocks.append(f"{heading_marks} {heading_title(stripped)}")
+            continue
+        if bullets:
+            flush()
+        steps.append(stripped)
+    flush()
+    return "\n\n".join(blocks)
+
+
+def notes_md(notes: list[str]) -> str:
+    unique = list(dict.fromkeys(note.strip() for note in notes if note.strip()))
+    if not unique:
+        return ""
+    return "## Примечания\n\n" + "\n".join(f"- {note}" for note in unique)
+
+
+def portions_md(rows: list[tuple[str, str]]) -> str:
+    if not rows:
+        return ""
+    lines = ["## Отвесы", "", "| Изделие | Отвес |", "| --- | --- |"]
+    for name, amount in rows:
+        lines.append(f"| {md_cell(name)} | {md_cell(amount)} |")
+    return "\n".join(lines)
+
+
+def assemble_method(body: str, portions: list[tuple[str, str]], notes: list[str]) -> str:
+    parts = [part.strip() for part in (body, portions_md(portions), notes_md(notes)) if part.strip()]
+    return "\n\n".join(parts)
+
+
+def add_notes(method: str, extra: list[str]) -> str:
+    items = [note.strip() for note in extra if note.strip()]
+    if not items:
+        return method.strip()
+    bullets = "\n".join(f"- {note}" for note in items)
+    if "## Примечания" in method:
+        return method.rstrip() + "\n" + bullets
+    if method.strip():
+        return method.strip() + "\n\n## Примечания\n\n" + bullets
+    return "## Примечания\n\n" + bullets
+
+
+def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], str, Decimal | None]:
     lines: list[dict] = []
     notes: list[str] = []
-    methods: list[str] = []
+    portions: list[tuple[str, str]] = []
+    section_order: list[str] = []
+    section_text: dict[str, list[str]] = {}
+    loose: list[str] = []
+    current = ""
     yield_override = None
+
+    def push_method(text: str) -> None:
+        cleaned = text.strip()
+        if not cleaned or cleaned.casefold() == "метод приготовления":
+            return
+        if current:
+            section_text.setdefault(current, []).append(cleaned)
+            if current not in section_order:
+                section_order.append(current)
+            return
+        loose.append(cleaned)
+
     for name, qty, method in rows:
-        if method.strip():
-            methods.append(method.strip())
         header = name.casefold() in {"", "ингредиент", "ингридиенты"} and (
             qty.casefold().startswith("кол-во") or name.casefold() in {"ингредиент", "ингридиенты"}
         )
@@ -374,6 +524,11 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[st
             continue
         label = name.strip()
         amount = qty.strip()
+        if is_section(label) and not amount:
+            current = label.rstrip(":").strip()
+            push_method(method)
+            continue
+        push_method(method)
         if YIELD_RE.match(label) or (not label and YIELD_RE.match(amount)):
             source = label or amount
             if RANGE_RE.search(source):
@@ -387,17 +542,14 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[st
                     if "кг" in source.casefold():
                         quantity *= 1000
                     yield_override = quantity
-                    notes.append(source)
             continue
         if PORTION_RE.match(label):
-            notes.append(f"{label}: {amount}".strip(": "))
+            if label.casefold() not in {"изделие", "отвес"}:
+                portions.append((label, amount))
             continue
         if not label:
             if amount:
                 notes.append(amount)
-            continue
-        if is_section(label) and not amount:
-            notes.append(label.rstrip(":"))
             continue
         parsed, parsed_notes = parse_amount(label, amount)
         notes.extend(parsed_notes)
@@ -406,8 +558,14 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[st
             continue
         for ingredient, quantity, unit in parsed:
             lines.append({"ingredient": ingredient, "quantity": qstr(quantity), "loss_percent": "0", "unit": unit})
-    method = "\n".join(dict.fromkeys(notes + methods))
-    return lines, [method] if method else [], yield_override
+    chunks: list[str] = []
+    if loose:
+        chunks.append(format_steps("\n".join(loose), "###"))
+    for title in section_order:
+        body = format_steps("\n".join(section_text[title]), "####")
+        if body:
+            chunks.append(f"### {heading_title(title)}\n\n{body}")
+    return lines, assemble_method("\n\n".join(chunks), portions, notes), yield_override
 
 
 def component_line(name: str, quantity: Decimal, unit: str) -> dict:
@@ -466,7 +624,7 @@ def milk_girl(filename: str, lines: list[dict], method: str, images: list[str]) 
     else:
         basis = "2"
         title = "Молочная девочка 2 кг"
-    method = "Конфи клубничное — по рецепту полуфабриката, вес в этой карточке не указан.\n" + method
+    method = add_notes(method, ["Конфи клубничное — по рецепту полуфабриката, вес в этой карточке не указан."])
     return {
         "name": title,
         "kind": "weighted",
@@ -485,7 +643,7 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
     notes: list[str] = []
     phase = ""
     for name, qty, method in rows:
-        if method.strip():
+        if method.strip() and method.strip().casefold() != "метод приготовления":
             method_bits.append(method.strip())
         label = name.strip()
         if re.fullmatch(r"5\s*шт\.?", label, re.IGNORECASE):
@@ -505,10 +663,13 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
         for ingredient, quantity, unit in parsed:
             amount = quantity if phase == "batch" else quantity * Decimal("10")
             target.append(component_line(ingredient, amount, unit))
-    method = (
-        "Расчёт на 10 капкейков. Тесто взято из колонки на 10 шт. "
-        "Крем из колонки на 1 капкейк умножен на 10. Колонка на 5 шт в составе не дублируется.\n"
-        + "\n".join(dict.fromkeys(notes + method_bits))
+    method = add_notes(
+        format_steps("\n\n".join(method_bits), "###"),
+        [
+            "Расчёт на 10 капкейков. Тесто взято из колонки на 10 шт. "
+            "Крем из колонки на 1 капкейк умножен на 10. Колонка на 5 шт в составе не дублируется.",
+            *notes,
+        ],
     )
     return {
         "name": "Капкейки",
@@ -524,53 +685,85 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
 
 def cream_cheese(rows: list[tuple[str, str, str]], images: list[str]) -> dict:
     lines: list[dict] = []
-    notes: list[str] = ["В составе партия на торт 1,5 кг, выход 470 г. Остальные размеры ниже."]
+    sizes: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    method_parts: list[str] = []
     capture = False
     for name, qty, method in rows:
         label = name.strip()
         amount = qty.strip()
-        if method.strip():
-            notes.append(method.strip())
-        if label or amount:
-            notes.append(f"{label}: {amount}".strip(": "))
-        if label.casefold().startswith("торт 1,5") or label.casefold().startswith("торт 1.5"):
-            capture = True
-            lines = []
+        if method.strip() and method.strip().casefold() != "метод приготовления":
+            method_parts.append(method.strip())
+        if re.match(r"^(бенто|торт)\b", label, re.IGNORECASE) and not amount:
+            current = {"name": label, "cream": "", "butter": "", "sugar": "", "yield": ""}
+            sizes.append(current)
+            capture = label.casefold().startswith("торт 1,5") or label.casefold().startswith("торт 1.5")
+            if capture:
+                lines = []
             continue
-        if capture and (label.casefold().startswith("торт") or YIELD_RE.match(amount) or YIELD_RE.match(label)):
-            if YIELD_RE.match(amount) or YIELD_RE.match(label):
-                capture = False
+        if current is not None and not label and amount.casefold().startswith("выход"):
+            current["yield"] = re.sub(r"^выход\s*", "", amount, flags=re.IGNORECASE).strip()
+            capture = False
             continue
+        if current is not None and label:
+            folded = label.casefold()
+            if "крем" in folded:
+                current["cream"] = amount
+            elif "масло" in folded:
+                current["butter"] = amount
+            elif "пудр" in folded or "сахар" in folded:
+                current["sugar"] = amount
         if not capture or not label:
             continue
         parsed, _notes = parse_amount(label, amount)
         for ingredient, quantity, unit in parsed:
             lines.append(component_line(ingredient, quantity, unit))
+    table = [
+        "| Размер | Кремчиз | Масло | Сахарная пудра | Выход |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for size in sizes:
+        table.append(
+            "| "
+            + " | ".join(
+                md_cell(size[key]) for key in ("name", "cream", "butter", "sugar", "yield")
+            )
+            + " |"
+        )
+    method = add_notes(
+        format_steps("\n".join(method_parts), "###") + "\n\n" + "\n".join(table),
+        ["В составе партия на торт 1,5 кг, выход 470 г."],
+    )
     return {
         "name": "Кремчиз на масле",
         "unit": "g",
         "yield_quantity": "470",
-        "method": "\n".join(dict.fromkeys(notes)),
+        "method": method,
         "images": images,
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
     }
 
 
 def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
-    ganache_method = []
-    velour_method = []
-    other = []
+    ganache_intro = ""
+    ganache_steps = ""
+    velour_steps = ""
+    velour_size = ""
+    other: list[tuple[str, str, str]] = []
     for name, qty, method in rows:
         label = name.strip()
         if label.casefold().startswith("декор"):
             continue
-        block = "\n".join(part for part in (label, qty, method) if part.strip())
         if label.casefold().startswith("ганаш"):
-            ganache_method.append(block)
+            ganache_intro = label
+            ganache_steps = method.strip()
         elif label.casefold().startswith("велюр"):
-            velour_method.append(block)
+            velour_steps = method.strip()
+            size = re.match(r"^(на торт[^:]+)", qty.strip(), re.IGNORECASE)
+            if size:
+                velour_size = size.group(1).strip().capitalize()
         else:
-            other.append(block)
+            other.append((label, qty.strip(), method.strip()))
     ganache_lines = [
         component_line("Белый шоколад", Decimal("500"), "g"),
         component_line("Сливки 33%", Decimal("180"), "g"),
@@ -581,13 +774,23 @@ def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
         component_line("Белый шоколад", Decimal("100"), "g"),
         component_line("Какао-масло", Decimal("100"), "g"),
     ]
-    ganache_text = "\n".join(ganache_method + ["Другие приёмы декора:"] + other)
+    other_blocks = ["## Другие приёмы декора"]
+    for title, materials, steps in other:
+        block = f"### {title}"
+        if materials:
+            block += f"\n\n{materials}"
+        formatted = format_steps(steps, "####")
+        if formatted:
+            block += f"\n\n{formatted}"
+        other_blocks.append(block)
+    ganache_parts = [part for part in (ganache_intro, format_steps(ganache_steps, "###"), "\n\n".join(other_blocks)) if part]
+    velour_parts = [part for part in (velour_size, format_steps(velour_steps, "###")) if part]
     return [
         {
             "name": "Ганаш для торта 20 см",
             "unit": "g",
             "yield_quantity": yield_of(ganache_lines),
-            "method": ganache_text,
+            "method": "\n\n".join(ganache_parts),
             "images": images,
             "lines": [{key: value for key, value in row.items() if key != "unit"} for row in ganache_lines],
         },
@@ -595,7 +798,7 @@ def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
             "name": "Велюр",
             "unit": "g",
             "yield_quantity": yield_of(velour_lines),
-            "method": "\n".join(velour_method),
+            "method": "\n\n".join(velour_parts),
             "images": [],
             "lines": [{key: value for key, value in row.items() if key != "unit"} for row in velour_lines],
         },
@@ -606,23 +809,40 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
     phase = ""
     custard: list[dict] = []
     card: list[dict] = []
-    notes: list[str] = ["Рецепт на 1 торт, вес в файле не указан."]
+    notes: list[str] = []
+    current = ""
+    section_order: list[str] = []
+    section_text: dict[str, list[str]] = {}
+    loose: list[str] = []
+
+    def push(text: str) -> None:
+        cleaned = text.strip()
+        if not cleaned or cleaned.casefold() == "метод приготовления":
+            return
+        if current:
+            section_text.setdefault(current, []).append(cleaned)
+            if current not in section_order:
+                section_order.append(current)
+            return
+        loose.append(cleaned)
+
     for name, qty, method in rows:
-        if method.strip():
-            notes.append(method.strip())
         label = name.strip()
-        if "заварн" in label.casefold() and not qty.strip():
-            phase = "custard"
-            notes.append(label)
+        if label.casefold() in {"ингредиенты", "ингридиенты"}:
             continue
-        if "дипломат" in label.casefold():
-            phase = "diplomat"
-            notes.append(label)
+        if ("заварн" in label.casefold() and not qty.strip()) or (
+            "дипломат" in label.casefold() and not qty.strip()
+        ) or (is_section(label) and not qty.strip()):
+            current = label
+            push(method)
+            if "заварн" in label.casefold():
+                phase = "custard"
+            elif "дипломат" in label.casefold():
+                phase = "diplomat"
+            else:
+                phase = "cake"
             continue
-        if is_section(label) and not qty.strip():
-            phase = "cake"
-            notes.append(label)
-            continue
+        push(method)
         parsed, parsed_notes = parse_amount(label, qty)
         notes.extend(parsed_notes)
         if phase == "custard":
@@ -634,6 +854,13 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
             continue
         for ingredient, quantity, unit in parsed:
             card.append(component_line(ingredient, quantity, unit))
+    chunks: list[str] = []
+    if loose:
+        chunks.append(format_steps("\n".join(loose), "###"))
+    for title in section_order:
+        body = format_steps("\n".join(section_text[title]), "####")
+        if body:
+            chunks.append(f"### {heading_title(title)}\n\n{body}")
     semi = {
         "name": "Заварной крем",
         "unit": "g",
@@ -648,7 +875,7 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
         "basis_weight_kg": None,
         "basis_quantity": 1,
         "category": "Торты",
-        "method": "\n".join(dict.fromkeys(notes)),
+        "method": add_notes("\n\n".join(chunks), ["Рецепт на 1 торт, вес в файле не указан.", *notes]),
         "images": images,
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in card],
     }
@@ -656,7 +883,7 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
 
 
 def semi_from_rows(name: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
-    lines, methods, yield_override = rows_to_parts(rows)
+    lines, method, yield_override = rows_to_parts(rows)
     if not lines:
         raise RuntimeError(f"no lines in {name}")
     stored = [{key: value for key, value in row.items() if key != "unit"} for row in lines]
@@ -664,17 +891,17 @@ def semi_from_rows(name: str, rows: list[tuple[str, str, str]], images: list[str
         "name": name,
         "unit": "g",
         "yield_quantity": qstr(yield_override) if yield_override is not None else yield_of(stored),
-        "method": "\n".join(methods),
+        "method": method,
         "images": images,
         "lines": stored,
     }
 
 
 def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
-    lines, methods, _yield = rows_to_parts(rows)
+    lines, method, _yield = rows_to_parts(rows)
     if not lines:
         raise RuntimeError(f"no lines in {name}")
-    method = "Рецепт на 1 изделие, вес в файле не указан.\n" + "\n".join(methods)
+    method = add_notes(method, ["Рецепт на 1 изделие, вес в файле не указан."])
     return {
         "name": name,
         "kind": "piece",
@@ -766,15 +993,82 @@ def docx_text(path: Path) -> str:
     return "\n".join(lines)
 
 
-def pastry_lines(text: str) -> tuple[list[dict], str, str]:
+def docx_method(path: Path) -> str:
+    word = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    archive = zipfile.ZipFile(path)
+    root = ElementTree.fromstring(archive.read("word/document.xml"))
+    body = root.find(f"{word}body")
+    notes: list[str] = []
+    chunks: list[str] = []
+    bullets: list[str] = []
+    steps: list[str] = []
+    started = False
+
+    def flush() -> None:
+        if bullets:
+            chunks.append("\n".join(f"- {item}" for item in bullets))
+            bullets.clear()
+        if steps:
+            chunks.append("\n".join(f"{index}. {step}" for index, step in enumerate(steps, 1)))
+            steps.clear()
+
+    for element in list(body):
+        tag = element.tag.replace(word, "")
+        if tag == "tbl":
+            rows = element.findall(f"{word}tr")
+            cells = rows[0].findall(f"{word}tc") if rows else []
+            if len(rows) == 1 and len(cells) == 1:
+                flush()
+                text = "".join(node.text or "" for node in element.iter(f"{word}t")).strip()
+                if text:
+                    chunks.append(f"> {text}")
+            continue
+        if tag != "p":
+            continue
+        style = element.find(f"{word}pPr/{word}pStyle")
+        style_name = style.get(f"{word}val") if style is not None else ""
+        text = "".join(node.text or "" for node in element.iter(f"{word}t")).strip()
+        if not text:
+            continue
+        text = re.sub(r"([а-яё])([А-ЯЁ])", r"\1 \2", text)
+        if style_name == "TitleCustom":
+            continue
+        if style_name == "H1Custom":
+            flush()
+            started = True
+            if text.casefold() != "состав":
+                chunks.append(f"## {text}")
+            continue
+        if not started:
+            notes.append(text)
+            continue
+        if style_name == "ListBullet":
+            if steps:
+                flush()
+            bullets.append(text)
+            continue
+        numbered = re.match(r"^\d+\.\s*(.*)", text)
+        if numbered:
+            if bullets:
+                flush()
+            steps.append(numbered.group(1))
+            continue
+        if steps and text[:1].islower():
+            steps[-1] = f"{steps[-1]} {text}"
+            continue
+        flush()
+        chunks.append(text)
+    flush()
+    return add_notes("\n\n".join(chunk for chunk in chunks if chunk.strip()), notes)
+
+
+def pastry_lines(text: str) -> tuple[list[dict], list[str], str]:
     count_match = re.search(r"на\s+(\d+)\s+пирож", text, re.IGNORECASE)
     if count_match is None:
         count_match = re.search(r"Выход\s+(\d+)\s*шт", text, re.IGNORECASE)
     if count_match is None:
         raise RuntimeError("pastry piece count missing")
     pieces = Decimal(count_match.group(1))
-    weight_match = re.search(r"Вес\s+1\s*шт\.?\s*[~≈]\s*([^\n•]+)", text)
-    weight = weight_match.group(1).strip() if weight_match else ""
     raw_lines = [line.strip() for line in text.replace("\x0c", "\n").splitlines()]
     start = next(index for index, line in enumerate(raw_lines) if line.startswith("Состав"))
     body = raw_lines[start + 1 :]
@@ -855,23 +1149,18 @@ def pastry_lines(text: str) -> tuple[list[dict], str, str]:
     if not parsed:
         raise RuntimeError("pastry composition empty")
     lines = [component_line(name, quantity, unit) for name, quantity, unit in parsed]
-    header = f"Расчёт на {qstr(pieces)} шт"
-    if weight:
-        header += f", около {weight}"
-    header += "."
-    method = header + "\n" + "\n".join(notes + method_lines)
-    return lines, method, qstr(pieces)
+    return lines, notes, qstr(pieces)
 
 
-def pastry_card(title: str, text: str) -> dict:
-    lines, method, pieces = pastry_lines(text)
+def pastry_card(title: str, text: str, method: str) -> dict:
+    lines, notes, pieces = pastry_lines(text)
     return {
         "name": title,
         "kind": "piece",
         "basis_weight_kg": None,
         "basis_quantity": int(pieces),
         "category": "Пирожные",
-        "method": method.strip(),
+        "method": add_notes(method, notes),
         "images": [],
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
     }
@@ -897,29 +1186,220 @@ def jar_card(name: str, rows: list[tuple[str, Decimal] | dict], method: str) -> 
         "basis_weight_kg": None,
         "basis_quantity": 10,
         "category": "Десерты",
-        "method": "Расчёт на 10 порций.\n" + method.strip(),
+        "method": add_notes(method, ["Расчёт на 10 порций."]),
         "images": [],
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
     }
 
 
-def culinart_method(text: str, extra: str) -> str:
-    kept = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped in {"Чем выше уровень мастерства,", "тем дороже мы стоим!"}:
+def pdf_rows(path: Path) -> list[tuple[int, float, float, str]]:
+    url = Quartz.NSURL.fileURLWithPath_(str(path))
+    document = Quartz.PDFDocument.alloc().initWithURL_(url)
+    if document is None:
+        raise RuntimeError(f"empty pdf {path.name}")
+    rows: list[tuple[int, float, float, str]] = []
+    for index in range(document.pageCount()):
+        page = document.pageAtIndex_(index)
+        selection = page.selectionForRect_(page.boundsForBox_(Quartz.kPDFDisplayBoxMediaBox))
+        if selection is None:
             continue
-        if "Академия кулинарного" in line or "culinart" in line.casefold():
+        for line in selection.selectionsByLine():
+            text = (line.string() or "").replace("\u2028", " ").strip()
+            if not text:
+                continue
+            bounds = line.boundsForPage_(page)
+            rows.append((index, float(bounds.origin.y), float(bounds.origin.x), text))
+    if not rows:
+        raise RuntimeError(f"empty pdf {path.name}")
+    return rows
+
+
+def skip_culinart_line(text: str) -> bool:
+    stripped = text.strip()
+    if stripped in {"Чем выше уровень мастерства,", "тем дороже мы стоим!"}:
+        return True
+    if "Академия кулинарного" in stripped or "culinart" in stripped.casefold():
+        return True
+    if "Все права защищены" in stripped or stripped.startswith("©") or stripped.startswith("каким-либо"):
+        return True
+    if stripped.startswith("ещё без письменного") or stripped.startswith("+7"):
+        return True
+    return False
+
+
+def culinart_method(path: Path, extra: str) -> str:
+    rows = [row for row in pdf_rows(path) if not skip_culinart_line(row[3])]
+    method_header = next(row for row in rows if row[3].casefold() == "метод приготовления")
+    page, _y, header_x, _text = method_header
+    method_lines = [
+        row
+        for row in rows
+        if row[0] == page and header_x - 50 <= row[2] < header_x + 40 and row[3].casefold() != "метод приготовления"
+    ]
+    method_lines.sort(key=lambda row: row[1], reverse=True)
+    sections = []
+    qty_ys = [row[1] for row in rows if row[0] == page and 180 <= row[2] <= 280 and re.fullmatch(r"[\d.,]+", row[3])]
+    for row_page, y, x, text in rows:
+        if row_page != page or x > 160:
             continue
-        if "Все права защищены" in line or stripped.startswith("©") or stripped.startswith("каким-либо"):
+        if text.casefold() in {"ингредиенты", "кол-во/г"}:
             continue
-        if stripped.startswith("ещё без письменного"):
+        if re.search(r"\d", text):
             continue
-        kept.append(line.rstrip())
-    body = "\n".join(kept).strip()
-    if extra:
-        body += "\n" + extra
-    return body
+        if any(abs(y - qty_y) <= 3 for qty_y in qty_ys):
+            continue
+        sections.append((y, heading_title(text)))
+    sections.sort(key=lambda row: row[0], reverse=True)
+    if not sections:
+        raise RuntimeError(f"no method sections in {path.name}")
+    paragraphs: list[list[str]] = [[]]
+    for index, row in enumerate(method_lines):
+        if index and method_lines[index - 1][1] - row[1] >= 20:
+            paragraphs.append([])
+        paragraphs[-1].append(row[3])
+    while len(paragraphs) > len(sections):
+        shortest = min(range(len(paragraphs)), key=lambda item: (len(paragraphs[item]), item))
+        target = 1 if shortest == 0 else shortest - 1
+        if shortest == 0:
+            paragraphs[1] = paragraphs[0] + paragraphs[1]
+            del paragraphs[0]
+        else:
+            paragraphs[target].extend(paragraphs[shortest])
+            del paragraphs[shortest]
+    if len(paragraphs) == len(sections):
+        assigned = paragraphs
+    else:
+        assigned = [[] for _section in sections]
+        current = 0
+        for index, (_page, y, _x, text) in enumerate(method_lines):
+            previous = method_lines[index - 1][3] if index else ""
+            if index == 0 or previous[-1] in ".!?":
+                for section_index, (section_y, _title) in enumerate(sections):
+                    if section_index > current and y <= section_y + 12:
+                        current = section_index
+            assigned[current].append(text)
+    chunks = []
+    for section_index, (_y, title) in enumerate(sections):
+        body = format_steps("\n".join(assigned[section_index]), "####")
+        if body:
+            chunks.append(f"### {title}\n\n{body}")
+    assembly_lines = [row[3] for row in rows if row[0] != page and row[3].casefold() != "сборка десерта"]
+    assembly = assembly_md(assembly_lines)
+    if assembly:
+        chunks.append(assembly)
+    return add_notes("\n\n".join(chunks), [extra] if extra else [])
+
+
+def render_recipe_lines(lines: list[str]) -> str:
+    blocks: list[str] = []
+    steps: list[str] = []
+    bullets: list[str] = []
+    quote = ""
+    mode = ""
+
+    def flush_steps() -> None:
+        if steps:
+            blocks.append("\n".join(f"{index}. {step}" for index, step in enumerate(steps, 1)))
+            steps.clear()
+
+    def flush_bullets() -> None:
+        if bullets:
+            blocks.append("\n".join(f"- {item}" for item in bullets))
+            bullets.clear()
+
+    def flush_quote() -> None:
+        nonlocal quote
+        if quote:
+            blocks.append(f"> {quote}")
+            quote = ""
+
+    for line in lines:
+        if line.startswith("Хранение"):
+            flush_steps()
+            flush_bullets()
+            quote = line
+            mode = "quote"
+            continue
+        if re.match(r"^\d+\.\s", line):
+            flush_quote()
+            flush_bullets()
+            steps.append(re.sub(r"^\d+\.\s*", "", line))
+            mode = "step"
+            continue
+        if line[:1] in {"", "•", "·"}:
+            flush_steps()
+            flush_quote()
+            bullets.append(line.lstrip("•· ").strip())
+            mode = "bullet"
+            continue
+        if mode == "step" and steps and (line[:1].islower() or steps[-1][-1] not in ".!?"):
+            steps[-1] = f"{steps[-1]} {line}"
+            continue
+        if mode == "quote" and line[:1].islower():
+            quote = f"{quote} {line}"
+            continue
+        if mode == "bullet" and bullets and line[:1].islower():
+            bullets[-1] = f"{bullets[-1]} {line}"
+            continue
+        flush_steps()
+        flush_bullets()
+        flush_quote()
+        blocks.append(f"## {line}")
+        mode = "heading"
+    flush_steps()
+    flush_bullets()
+    flush_quote()
+    return "\n\n".join(blocks)
+
+
+def pdf_pastry_method(path: Path) -> str:
+    texts = [text for _page, _y, _x, text in pdf_rows(path) if not text.startswith("Технологическая карта")]
+    inventory = next(index for index, text in enumerate(texts) if text == "Инвентарь")
+    composition = next(index for index, text in enumerate(texts) if text == "Состав" and index > inventory)
+    step = next(index for index, text in enumerate(texts) if index > composition and re.match(r"^\d+\.", text))
+    method_at = step - 1 if not re.match(r"^\d+\.", texts[step - 1]) else step
+    notes = [
+        text
+        for text in texts[:inventory]
+        if text.startswith("Расчёт") or text.startswith("Вес") or text.startswith("Ориентировочный")
+    ]
+    body = "## Инвентарь\n\n" + render_recipe_lines(texts[inventory + 1 : composition])
+    body += "\n\n" + render_recipe_lines(texts[method_at:])
+    return add_notes(body, notes)
+
+
+def assembly_md(lines: list[str]) -> str:
+    blocks: list[str] = []
+    bullets: list[str] = []
+    prose: list[str] = []
+
+    def flush_bullets() -> None:
+        if bullets:
+            blocks.append("\n".join(f"- {item}" for item in bullets))
+            bullets.clear()
+
+    def flush_prose() -> None:
+        if prose:
+            formatted = format_steps("\n".join(prose), "###")
+            if formatted:
+                blocks.append(formatted)
+            prose.clear()
+
+    for line in lines:
+        if line[:1] in {"*", "", "•"} or (bullets and line[:1].islower()):
+            flush_prose()
+            if line[:1] in {"*", "", "•"}:
+                bullets.append(line.lstrip("*• ").strip())
+            else:
+                bullets[-1] = f"{bullets[-1]} {line}"
+            continue
+        flush_bullets()
+        prose.append(line)
+    flush_bullets()
+    flush_prose()
+    if not blocks:
+        return ""
+    return "## Сборка\n\n" + "\n\n".join(blocks)
 
 
 def custard_jar() -> dict:
@@ -977,13 +1457,13 @@ def build() -> None:
         if "молочная девочка" in folded:
             if "2,кг" in folded:
                 continue
-            lines, methods, _yield = rows_to_parts(rows)
+            lines, method, _yield = rows_to_parts(rows)
             title_key = filename.name
             cards.append(
                 milk_girl(
                     title_key,
                     lines,
-                    "\n".join(methods),
+                    method,
                     copy_preview(filename, pages_name(filename.name) if False else filename.stem, used_images),
                 )
             )
@@ -1016,7 +1496,8 @@ def build() -> None:
         if not title:
             continue
         text = docx_text(filename) if filename.suffix == ".docx" else pdf_text(filename)
-        cards.append(pastry_card(title, text))
+        method = docx_method(filename) if filename.suffix == ".docx" else pdf_pastry_method(filename)
+        cards.append(pastry_card(title, text, method))
     pdfs = {nfc(path.name): path for path in SOURCE.glob("*.pdf")}
     jars = {
         "Дубай.pdf": (
@@ -1168,7 +1649,7 @@ def build() -> None:
     semis.append(custard_jar())
     for filename, (title, rows, extra) in jars.items():
         path = pdfs[nfc(filename)]
-        cards.append(jar_card(title, rows, culinart_method(pdf_text(path), extra)))
+        cards.append(jar_card(title, rows, culinart_method(path, extra)))
     ingredients: dict[str, str] = {}
     for collection in (semis, cards):
         for entity in collection:

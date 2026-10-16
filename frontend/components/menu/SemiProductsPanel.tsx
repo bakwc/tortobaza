@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
+import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
+import { RecipeView } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ComponentLinesEditor,
   componentOptions,
@@ -61,20 +63,45 @@ export function SemiProductsPanel() {
   const semiProducts = useSemiProducts();
   const images = useSemiProductImages();
   const ingredients = useIngredients();
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [mode, setMode] = useState<"view" | "edit" | null>(null);
+  const [viewing, setViewing] = useState<SemiProduct | null>(null);
   const [draft, setDraft] = useState<SemiDraft | null>(null);
+  const current =
+    viewing === null ? null : (semiProducts.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
 
-  const open = (row: SemiProduct | null) => {
+  const openView = (row: SemiProduct) => {
     semiProducts.save.reset();
     semiProducts.remove.reset();
-    setEditingId(row ? row.id : null);
-    setDraft(draftFrom(row));
+    setViewing(row);
+    setDraft(null);
+    setMode("view");
   };
-  const close = () => setDraft(null);
+  const openNew = () => {
+    semiProducts.save.reset();
+    semiProducts.remove.reset();
+    setViewing(null);
+    setDraft(draftFrom(null));
+    setMode("edit");
+  };
+  const openEdit = () => {
+    if (current === null) return;
+    setDraft(draftFrom(current));
+    setMode("edit");
+  };
+  const close = () => {
+    setMode(null);
+    setDraft(null);
+    setViewing(null);
+  };
+  const cancelEdit = () => {
+    setDraft(null);
+    if (viewing === null) close();
+    else setMode("view");
+  };
 
   const options = componentOptions(
     ingredients.list.data ?? [],
-    (semiProducts.list.data ?? []).filter((row) => row.id !== editingId),
+    (semiProducts.list.data ?? []).filter((row) => viewing === null || row.id !== viewing.id),
     "all",
     t("ingredient"),
     t("semiProduct"),
@@ -85,7 +112,7 @@ export function SemiProductsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("menu.semiProducts")}</CardTitle>
-          <Button type="button" size="sm" onClick={() => open(null)}>
+          <Button type="button" size="sm" onClick={openNew}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
@@ -104,7 +131,7 @@ export function SemiProductsPanel() {
               {(semiProducts.list.data ?? []).map((row) => (
                 <tr
                   key={row.id}
-                  onClick={() => open(row)}
+                  onClick={() => openView(row)}
                   className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
                 >
                   <td className={row.is_active ? "py-2" : "py-2 text-[var(--muted-2)] line-through"}>
@@ -124,18 +151,44 @@ export function SemiProductsPanel() {
         </QueryState>
       </Card>
 
+      {mode === "view" && current ? (
+        <Dialog open onOpenChange={(value) => (value ? null : close())}>
+          <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
+            <DialogDescription className="hidden">{current.name}</DialogDescription>
+            <RecipeView
+              title={current.name}
+              badges={[
+                `${formatQuantity(current.yield_quantity)} ${units(current.unit)}`,
+                current.is_produced ? t("producedInAdvance") : "",
+                current.is_active ? "" : t("inactive"),
+                current.avg_cost !== undefined && current.is_produced
+                  ? `${t("avgCost")}: ${formatMoney(current.avg_cost)}`
+                  : "",
+              ].filter((badge) => badge !== "")}
+              images={current.images}
+              compositionTitle={t("composition")}
+              lines={current.lines}
+              method={current.method}
+              onEdit={openEdit}
+            >
+              {null}
+            </RecipeView>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
       {draft ? (
         <EditorDialog
           open
-          onOpenChange={(value) => (value ? null : close())}
-          title={editingId === null ? t("newSemiProduct") : draft.name}
+          onOpenChange={(value) => (value ? null : cancelEdit())}
+          title={viewing === null ? t("newSemiProduct") : draft.name}
           pending={semiProducts.save.isPending}
           error={semiProducts.save.error ?? semiProducts.remove.error}
           submitLabel={t("save")}
           onSubmit={() =>
             semiProducts.save.mutate(
               {
-                id: editingId,
+                id: viewing === null ? null : viewing.id,
                 body: {
                   name: draft.name,
                   unit: draft.unit,
@@ -146,10 +199,17 @@ export function SemiProductsPanel() {
                   lines: linesToBody(draft.lines),
                 },
               },
-              { onSuccess: close },
+              {
+                onSuccess: (saved) => {
+                  setViewing(saved);
+                  setDraft(null);
+                  setMode("view");
+                },
+              },
             )
           }
-          onDelete={editingId === null ? null : () => semiProducts.remove.mutate(editingId, { onSuccess: close })}
+          onCancel={cancelEdit}
+          onDelete={viewing === null ? null : () => semiProducts.remove.mutate(viewing.id, { onSuccess: close })}
           deletePending={semiProducts.remove.isPending}
         >
           <div className="grid gap-4 sm:grid-cols-3">
@@ -191,14 +251,14 @@ export function SemiProductsPanel() {
           </div>
           <p className="text-xs text-[var(--muted-2)]">{t("producedInAdvanceHint")}</p>
           <Field label={t("method")}>
-            <Textarea value={draft.method} onChange={(event) => setDraft({ ...draft, method: event.target.value })} />
+            <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
           </Field>
-          {editingId !== null ? (
+          {viewing !== null ? (
             <MenuImages
-              images={(semiProducts.list.data ?? []).find((row) => row.id === editingId)?.images ?? []}
+              images={(semiProducts.list.data ?? []).find((row) => row.id === viewing.id)?.images ?? viewing.images}
               pending={images.upload.isPending || images.remove.isPending}
-              onUpload={(file) => images.upload.mutate({ id: editingId, file })}
-              onDelete={(imageId) => images.remove.mutate({ id: editingId, imageId })}
+              onUpload={(file) => images.upload.mutate({ id: viewing.id, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: viewing.id, imageId })}
             />
           ) : null}
           <CardTitle>{t("composition")}</CardTitle>

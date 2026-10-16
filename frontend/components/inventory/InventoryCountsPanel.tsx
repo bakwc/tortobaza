@@ -184,6 +184,7 @@ export function InventoryCountsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editing === null ? t("newInventoryCount") : `${t("inventory.inventoryCounts")} · ${editing.date}`}
           pending={counts.save.isPending}
           error={counts.save.error ?? counts.remove.error ?? closeCount.error}

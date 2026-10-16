@@ -66,6 +66,7 @@ function SuppliersList() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editingId === null ? t("newSupplier") : draft.name}
           pending={suppliers.save.isPending}
           error={suppliers.save.error ?? suppliers.remove.error}

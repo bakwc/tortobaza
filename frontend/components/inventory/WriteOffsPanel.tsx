@@ -146,6 +146,7 @@ export function WriteOffsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editing === null ? t("newWriteOff") : `${editing.reason_name} · ${editing.date}`}
           pending={writeOffs.save.isPending}
           error={writeOffs.save.error ?? writeOffs.remove.error}

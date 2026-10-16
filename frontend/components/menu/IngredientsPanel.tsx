@@ -141,6 +141,7 @@ export function IngredientsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : close())}
+          onCancel={null}
           title={editingId === null ? t("newIngredient") : draft.name}
           pending={ingredients.save.isPending}
           error={ingredients.save.error ?? ingredients.remove.error}

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
+import { CompositionTable, RecipeView } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ComponentLinesEditor,
   componentOptions,
@@ -111,19 +113,46 @@ export function TechCardsPanel() {
   const images = useTechCardImages();
   const currentUser = useCurrentUser();
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
-  const [editing, setEditing] = useState<TechCard | null>(null);
+  const [mode, setMode] = useState<"view" | "edit" | null>(null);
+  const [viewing, setViewing] = useState<TechCard | null>(null);
   const [draft, setDraft] = useState<TechCardDraft | null>(null);
   const [groupToAdd, setGroupToAdd] = useState("");
   const [newCategory, setNewCategory] = useState("");
+  const current =
+    viewing === null ? null : (techCards.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
 
-  const open = (row: TechCard | null) => {
+  const openView = (row: TechCard) => {
     techCards.save.reset();
     techCards.remove.reset();
-    setEditing(row);
-    setDraft(draftFrom(row));
+    setViewing(row);
+    setDraft(null);
+    setMode("view");
     setGroupToAdd("");
   };
-  const close = () => setDraft(null);
+  const openNew = () => {
+    techCards.save.reset();
+    techCards.remove.reset();
+    setViewing(null);
+    setDraft(draftFrom(null));
+    setMode("edit");
+    setGroupToAdd("");
+  };
+  const openEdit = () => {
+    if (current === null) return;
+    setDraft(draftFrom(current));
+    setMode("edit");
+    setGroupToAdd("");
+  };
+  const close = () => {
+    setMode(null);
+    setDraft(null);
+    setViewing(null);
+  };
+  const cancelEdit = () => {
+    setDraft(null);
+    if (viewing === null) close();
+    else setMode("view");
+  };
 
   const options = componentOptions(
     ingredients.list.data ?? [],
@@ -160,7 +189,7 @@ export function TechCardsPanel() {
     }
     techCards.save.mutate(
       {
-        id: editing ? editing.id : null,
+        id: viewing ? viewing.id : null,
         body: {
           name: draft.name,
           category: draft.category,
@@ -174,7 +203,13 @@ export function TechCardsPanel() {
           modifier_lines: modifierLines,
         },
       },
-      { onSuccess: close },
+      {
+        onSuccess: (saved) => {
+          setViewing(saved);
+          setDraft(null);
+          setMode("view");
+        },
+      },
     );
   };
 
@@ -199,7 +234,7 @@ export function TechCardsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("menu.techCards")}</CardTitle>
-          <Button type="button" size="sm" onClick={() => open(null)}>
+          <Button type="button" size="sm" onClick={openNew}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
@@ -219,7 +254,7 @@ export function TechCardsPanel() {
               {(techCards.list.data ?? []).map((row) => (
                 <tr
                   key={row.id}
-                  onClick={() => open(row)}
+                  onClick={() => openView(row)}
                   className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
                 >
                   <td className={row.is_active ? "py-2" : "py-2 text-[var(--muted-2)] line-through"}>
@@ -299,16 +334,98 @@ export function TechCardsPanel() {
         </div>
       </Card>
 
+      {mode === "view" && current ? (
+        <Dialog open onOpenChange={(value) => (value ? null : close())}>
+          <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
+            <DialogDescription className="hidden">{current.name}</DialogDescription>
+            <RecipeView
+              title={current.name}
+              badges={[
+                current.category_name ?? "",
+                current.kind === "weighted" && current.basis_weight_kg !== null
+                  ? t("basisKg", { weight: current.basis_weight_kg })
+                  : current.basis_quantity !== null
+                    ? t("basisPieces", { count: current.basis_quantity })
+                    : t("kindPiece"),
+                current.is_active ? "" : t("inactive"),
+                isFinanceAdmin && current.base_cost !== undefined
+                  ? current.kind === "weighted"
+                    ? `${t("costPerKg", { weight: current.basis_weight_kg ?? "" })}: ${formatMoney(current.base_cost)}`
+                    : `${t("costPerPiece", { count: current.basis_quantity ?? 0 })}: ${formatMoney(current.base_cost)}`
+                  : "",
+              ].filter((badge) => badge !== "")}
+              images={current.images}
+              compositionTitle={
+                current.kind === "weighted"
+                  ? t("baseCompositionPerKg", { weight: current.basis_weight_kg ?? "" })
+                  : t("baseCompositionPerPiece", { count: current.basis_quantity ?? 0 })
+              }
+              lines={current.lines}
+              method={current.method}
+              onEdit={openEdit}
+            >
+              {current.products.length > 0 ? (
+                <p className="text-sm text-[var(--muted-2)]">
+                  {t("linkedProducts")}: {current.products.map((product) => product.name).join(", ")}
+                </p>
+              ) : null}
+              {current.modifier_groups.length > 0 ? (
+                <div className="grid gap-3">
+                  <CardTitle>{t("modifierCompositions")}</CardTitle>
+                  {current.modifier_groups.map((link) => (
+                    <div key={link.id} className="grid gap-3 rounded-2xl border border-[var(--line)] p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-[var(--ink)]">{link.group_name}</p>
+                        <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs text-[var(--ink)]">
+                          {link.effective_is_required ? t("required") : t("optional")}
+                        </span>
+                      </div>
+                      {link.modifiers.map((modifier) => {
+                        const composition = current.modifier_lines.filter((line) => line.modifier === modifier.id);
+                        const empty = composition.length === 0;
+                        return (
+                          <div
+                            key={modifier.id}
+                            className={cn(
+                              "grid gap-2 rounded-xl p-3",
+                              empty ? "bg-amber-50 ring-1 ring-amber-300" : "bg-[var(--cream)]/40",
+                            )}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                                {modifier.name}
+                                {empty ? <TriangleAlert className="h-3.5 w-3.5 text-amber-600" /> : null}
+                              </span>
+                              {current.kind === "weighted" && composition.length > 0 ? (
+                                <span className="text-xs text-[var(--muted-2)]">
+                                  {t("scalesByWeight")}: {composition[0].scales_by_weight ? t("yes") : t("no")}
+                                </span>
+                              ) : null}
+                            </div>
+                            <CompositionTable lines={composition} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </RecipeView>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
       {draft ? (
         <EditorDialog
           open
-          onOpenChange={(value) => (value ? null : close())}
-          title={editing === null ? t("newTechCard") : draft.name}
+          onOpenChange={(value) => (value ? null : cancelEdit())}
+          title={viewing === null ? t("newTechCard") : draft.name}
           pending={techCards.save.isPending}
           error={techCards.save.error ?? techCards.remove.error}
           submitLabel={t("save")}
           onSubmit={submit}
-          onDelete={editing === null ? null : () => techCards.remove.mutate(editing.id, { onSuccess: close })}
+          onCancel={cancelEdit}
+          onDelete={viewing === null ? null : () => techCards.remove.mutate(viewing.id, { onSuccess: close })}
           deletePending={techCards.remove.isPending}
         >
           <div className="grid gap-4 sm:grid-cols-3">
@@ -375,30 +492,30 @@ export function TechCardsPanel() {
             </div>
           </div>
 
-          {editing && editing.products.length > 0 ? (
+          {viewing && viewing.products.length > 0 ? (
             <p className="text-sm text-[var(--muted-2)]">
-              {t("linkedProducts")}: {editing.products.map((product) => product.name).join(", ")}
+              {t("linkedProducts")}: {viewing.products.map((product) => product.name).join(", ")}
             </p>
           ) : null}
-          {editing && isFinanceAdmin && editing.base_cost !== undefined ? (
+          {viewing && isFinanceAdmin && viewing.base_cost !== undefined ? (
             <p className="text-sm text-[var(--ink)]">
               {draft.kind === "weighted"
                 ? t("costPerKg", { weight: draft.basis_weight_kg })
                 : t("costPerPiece", { count: draft.basis_quantity })}
-              : {formatMoney(editing.base_cost)}
+              : {formatMoney(viewing.base_cost)}
             </p>
           ) : null}
 
           <Field label={t("method")}>
-            <Textarea value={draft.method} onChange={(event) => setDraft({ ...draft, method: event.target.value })} />
+            <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
           </Field>
 
-          {editing ? (
+          {viewing ? (
             <MenuImages
-              images={(techCards.list.data ?? []).find((row) => row.id === editing.id)?.images ?? editing.images}
+              images={(techCards.list.data ?? []).find((row) => row.id === viewing.id)?.images ?? viewing.images}
               pending={images.upload.isPending || images.remove.isPending}
-              onUpload={(file) => images.upload.mutate({ id: editing.id, file })}
-              onDelete={(imageId) => images.remove.mutate({ id: editing.id, imageId })}
+              onUpload={(file) => images.upload.mutate({ id: viewing.id, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: viewing.id, imageId })}
             />
           ) : null}
 
