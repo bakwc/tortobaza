@@ -13,14 +13,13 @@ import {
   Plus,
   Scale,
   Search,
-  ShoppingBag,
   SlidersHorizontal,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
-import { PanelChip, RecipePanel, RecipeRow, RecipeView } from "@/components/menu/RecipeView";
+import { RecipeHeading, RecipeTable, RecipeView, type RecipeTableRow } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -552,7 +551,7 @@ export function TechCardsPanel() {
 
       {mode === "view" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>
-          <DialogContent className="w-[min(960px,calc(100vw-1.5rem))] overflow-y-auto p-5 sm:p-6">
+          <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
             <RecipeView
               title={current.name}
@@ -589,75 +588,61 @@ export function TechCardsPanel() {
               onEdit={openEdit}
             >
               {current.products.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
-                  <ShoppingBag className="h-4 w-4 text-[var(--brand)]" />
-                  <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
-                    {t("linkedProducts")}
+                <p className="text-sm text-[var(--muted-2)]">
+                  {t("linkedProducts")}:{" "}
+                  <span className="text-[var(--ink)]">
+                    {current.products.map((product) => product.name).join(", ")}
                   </span>
-                  {current.products.map((product) => (
-                    <span
-                      key={product.id}
-                      className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-900"
-                    >
-                      {product.name}
-                    </span>
+                </p>
+              ) : null}
+              {current.modifier_groups.length > 0 ? (
+                <div className="grid gap-4">
+                  <RecipeHeading number={null} title={t("modifiers")} note="" />
+                  {current.modifier_groups.map((link) => (
+                    <div key={link.id} className="grid gap-1">
+                      <p className="text-sm font-semibold text-[var(--ink)]">
+                        {link.group_name}
+                        <span className="font-normal text-[var(--muted-2)]">
+                          {" · "}
+                          {link.selection_type === "single" ? t("selectionSingle") : t("selectionMulti")}
+                          {" · "}
+                          {link.effective_is_required ? t("required") : t("optional")}
+                        </span>
+                      </p>
+                      <RecipeTable
+                        rows={link.modifiers.flatMap((modifier): RecipeTableRow[] => {
+                          const composition = current.modifier_lines.filter(
+                            (line) => line.modifier === modifier.id,
+                          );
+                          if (composition.length === 0) {
+                            return [
+                              {
+                                key: `m${modifier.id}`,
+                                name: modifier.name,
+                                tag: null,
+                                amount: "—",
+                                loss: "—",
+                                warning: true,
+                              },
+                            ];
+                          }
+                          return composition.map((line) => {
+                            const loss = formatQuantity(line.loss_percent);
+                            return {
+                              key: String(line.id),
+                              name: line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`,
+                              tag: null,
+                              amount: `${formatQuantity(line.quantity)} ${units(line.unit)}`,
+                              loss: loss === "0" ? "—" : `${loss}%`,
+                              warning: false,
+                            };
+                          });
+                        })}
+                      />
+                    </div>
                   ))}
                 </div>
               ) : null}
-              {current.modifier_groups.map((link) => (
-                <RecipePanel
-                  key={link.id}
-                  marker={<SlidersHorizontal className="h-4 w-4" />}
-                  title={link.group_name}
-                  aside={
-                    <>
-                      <PanelChip>
-                        {link.selection_type === "single" ? t("selectionSingle") : t("selectionMulti")}
-                      </PanelChip>
-                      <PanelChip
-                        className={
-                          link.effective_is_required
-                            ? "bg-[var(--brand)]/15 text-[var(--brand)]"
-                            : "bg-white text-[var(--muted-2)]"
-                        }
-                      >
-                        {link.effective_is_required ? t("required") : t("optional")}
-                      </PanelChip>
-                    </>
-                  }
-                >
-                  <div className="divide-y divide-[var(--line)]">
-                    {link.modifiers.map((modifier) => {
-                      const composition = current.modifier_lines.filter((line) => line.modifier === modifier.id);
-                      if (composition.length === 0) {
-                        return (
-                          <RecipeRow
-                            key={modifier.id}
-                            name={modifier.name}
-                            tag={null}
-                            amount="—"
-                            loss={null}
-                            warning
-                          />
-                        );
-                      }
-                      return composition.map((line) => {
-                        const loss = formatQuantity(line.loss_percent);
-                        return (
-                          <RecipeRow
-                            key={line.id}
-                            name={line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`}
-                            tag={null}
-                            amount={`${formatQuantity(line.quantity)} ${units(line.unit)}`}
-                            loss={loss === "0" ? null : loss}
-                            warning={false}
-                          />
-                        );
-                      });
-                    })}
-                  </div>
-                </RecipePanel>
-              ))}
             </RecipeView>
           </DialogContent>
         </Dialog>
