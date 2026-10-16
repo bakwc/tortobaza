@@ -41,7 +41,6 @@ import {
   useTechCards,
 } from "@/hooks/useStock";
 import type { ModifierGroup, TechCard } from "@/lib/api/types";
-import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
 
@@ -634,42 +633,87 @@ export function TechCardsPanel() {
                     </Button>
                   </div>
                 </div>
-                {group.modifiers
-                  .filter((modifier) => modifier.is_active)
-                  .map((modifier) => {
-                    const composition = draft.compositions[modifier.id] ?? { scales_by_weight: true, lines: [] };
-                    const empty = composition.lines.length === 0;
-                    return (
-                      <div
-                        key={modifier.id}
-                        className={cn(
-                          "grid gap-2 rounded-xl p-3",
-                          empty ? "bg-amber-50 ring-1 ring-amber-300" : "bg-[var(--cream)]/40",
-                        )}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                            {modifier.name}
-                            {empty ? <TriangleAlert className="h-3.5 w-3.5 text-amber-600" /> : null}
-                          </span>
-                          {draft.kind === "weighted" ? (
-                            <CheckboxField
-                              label={t("scalesByWeight")}
-                              checked={composition.scales_by_weight}
-                              onChange={(value) => setComposition(modifier.id, { scales_by_weight: value })}
-                            />
-                          ) : null}
-                        </div>
-                        <ComponentLinesEditor
-                          lines={composition.lines}
-                          onChange={(lines) => setComposition(modifier.id, { lines })}
-                          options={options}
-                          extraColumn="loss"
-                          quantityLabel={t("quantity")}
-                        />
-                      </div>
-                    );
-                  })}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
+                      <tr>
+                        <th className="py-2 pr-3 font-medium">{t("name")}</th>
+                        <th className="py-2 pr-3 text-right font-medium">{t("quantity")}</th>
+                        <th className="py-2 text-right font-medium">{t("lossPercent")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.modifiers
+                        .filter((modifier) => modifier.is_active)
+                        .map((modifier) => {
+                          const composition = draft.compositions[modifier.id] ?? {
+                            scales_by_weight: true,
+                            lines: [],
+                          };
+                          const line = composition.lines[0];
+                          const unit = options.find((option) => option.value === line?.component)?.unit;
+                          return (
+                            <tr key={modifier.id} className="border-t border-[var(--line)]">
+                              <td className="py-2 pr-3">
+                                <span className="inline-flex items-center gap-1.5">
+                                  {modifier.name}
+                                  {line ? null : (
+                                    <TriangleAlert
+                                      className="h-3.5 w-3.5 text-amber-600"
+                                      aria-label={t("missingCompositionsTitle")}
+                                    />
+                                  )}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-3">
+                                {line ? (
+                                  <div className="relative ml-auto w-36">
+                                    <Input
+                                      required
+                                      inputMode="decimal"
+                                      value={line.quantity}
+                                      onChange={(event) =>
+                                        setComposition(modifier.id, {
+                                          lines: [{ ...line, quantity: event.target.value }],
+                                        })
+                                      }
+                                      className="pr-12 text-right"
+                                    />
+                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                                      {unit ? units(unit) : ""}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <p className="text-right">—</p>
+                                )}
+                              </td>
+                              <td className="py-2">
+                                {line ? (
+                                  <div className="relative ml-auto w-28">
+                                    <Input
+                                      inputMode="decimal"
+                                      value={line.loss_percent}
+                                      onChange={(event) =>
+                                        setComposition(modifier.id, {
+                                          lines: [{ ...line, loss_percent: event.target.value }],
+                                        })
+                                      }
+                                      className="pr-8 text-right"
+                                    />
+                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                                      %
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <p className="text-right">—</p>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             );
           })}
