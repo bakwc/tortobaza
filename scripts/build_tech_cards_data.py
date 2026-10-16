@@ -1421,7 +1421,7 @@ def custard_jar() -> dict:
     }
 
 
-def cake_method(diameter: str, bag: str, bento: bool, biscuits: list[tuple[str, str]]) -> str:
+def cake_method(diameter: str, bag: str, bento: bool) -> str:
     if bento:
         layers = (
             "2 коржа, 1 слой крема с начинкой. Снизу вверх:\n\n"
@@ -1447,20 +1447,9 @@ def cake_method(diameter: str, bag: str, bento: bool, biscuits: list[tuple[str, 
         )
         repeat = "Положить следующий корж и повторить пункты 4–5 два раза."
         finish = "Ацетатная пленка и под пресс."
-    if biscuits:
-        biscuit_lines = "\n".join(f"- {name}: {quantity} г" for name, quantity in biscuits)
-        biscuit_block = (
-            "Бисквит выбирается в модификаторе «Бисквит», на торт берётся один вид. "
-            "Отвес полуфабриката на этот размер:\n\n"
-            + biscuit_lines
-        )
-    else:
-        biscuit_block = "Отвеса бисквита на 3 кг в полуфабрикатах нет."
     return f"""## Бисквит
 
 Диаметр примерно {diameter}. Размер может меняться по запросу заказчика или по просьбе шеф-кондитера или старшего кондитера.
-
-{biscuit_block}
 
 ## Слои
 
@@ -1564,7 +1553,7 @@ def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
                 "basis_weight_kg": basis,
                 "basis_quantity": None,
                 "category": "Торты",
-                "method": cake_method(diameter, bag, bento, biscuits).strip(),
+                "method": cake_method(diameter, bag, bento).strip(),
                 "images": images,
                 "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
             }

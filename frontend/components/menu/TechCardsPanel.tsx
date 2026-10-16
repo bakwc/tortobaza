@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Plus, Trash2, TriangleAlert } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
-import { CompositionTable, RecipeView } from "@/components/menu/RecipeView";
+import { RecipeView } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import {
   NativeSelect,
   QueryState,
   formatMoney,
+  formatQuantity,
 } from "@/components/menu/ui";
 import { useCurrentUser } from "@/hooks/useAuth";
 import {
@@ -94,6 +95,14 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   };
 }
 
+function modifierLabel(name: string, groupName: string): string {
+  const index = name.toLocaleLowerCase().indexOf(groupName.toLocaleLowerCase());
+  if (index === -1) return name;
+  const short = `${name.slice(0, index)} ${name.slice(index + groupName.length)}`.replace(/\s+/g, " ").trim();
+  if (short === "") return name;
+  return short.charAt(0).toLocaleLowerCase() + short.slice(1);
+}
+
 function withDefaultCompositions(draft: TechCardDraft, groups: ModifierGroup[]): TechCardDraft {
   const compositions = { ...draft.compositions };
   for (const link of draft.groups) {
@@ -121,6 +130,7 @@ function parseRequired(value: string): boolean | null {
 
 export function TechCardsPanel() {
   const t = useTranslations("stock");
+  const units = useTranslations("stock.units");
   const techCards = useTechCards();
   const categories = useTechCardCategories();
   const groups = useModifierGroups();
@@ -387,43 +397,38 @@ export function TechCardsPanel() {
                 </p>
               ) : null}
               {current.modifier_groups.length > 0 ? (
-                <div className="grid gap-3">
-                  <CardTitle>{t("modifierCompositions")}</CardTitle>
+                <div className="grid gap-2">
+                  <CardTitle>{t("modifiers")}</CardTitle>
                   {current.modifier_groups.map((link) => (
-                    <div key={link.id} className="grid gap-3 rounded-2xl border border-[var(--line)] p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-[var(--ink)]">{link.group_name}</p>
-                        <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs text-[var(--ink)]">
-                          {link.effective_is_required ? t("required") : t("optional")}
-                        </span>
-                      </div>
-                      {link.modifiers.map((modifier) => {
+                    <p key={link.id} className="text-sm text-[var(--ink)]">
+                      <span className="font-semibold">{link.group_name}</span>
+                      {link.effective_is_required ? null : (
+                        <span className="text-[var(--muted-2)]"> ({t("optional")})</span>
+                      )}
+                      :{" "}
+                      {link.modifiers.map((modifier, index) => {
                         const composition = current.modifier_lines.filter((line) => line.modifier === modifier.id);
-                        const empty = composition.length === 0;
                         return (
-                          <div
-                            key={modifier.id}
-                            className={cn(
-                              "grid gap-2 rounded-xl p-3",
-                              empty ? "bg-amber-50 ring-1 ring-amber-300" : "bg-[var(--cream)]/40",
+                          <span key={modifier.id}>
+                            {index > 0 ? ", " : ""}
+                            {modifierLabel(modifier.name, link.group_name)}{" "}
+                            {composition.length === 0 ? (
+                              <TriangleAlert
+                                className="inline h-3.5 w-3.5 text-amber-600"
+                                aria-label={t("missingCompositionsTitle")}
+                              />
+                            ) : (
+                              composition
+                                .map(
+                                  (line) =>
+                                    `${line.name === modifier.name ? "" : `${line.name} `}${formatQuantity(line.quantity)} ${units(line.unit)}`,
+                                )
+                                .join(" + ")
                             )}
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                                {modifier.name}
-                                {empty ? <TriangleAlert className="h-3.5 w-3.5 text-amber-600" /> : null}
-                              </span>
-                              {current.kind === "weighted" && composition.length > 0 ? (
-                                <span className="text-xs text-[var(--muted-2)]">
-                                  {t("scalesByWeight")}: {composition[0].scales_by_weight ? t("yes") : t("no")}
-                                </span>
-                              ) : null}
-                            </div>
-                            <CompositionTable lines={composition} />
-                          </div>
+                          </span>
                         );
                       })}
-                    </div>
+                    </p>
                   ))}
                 </div>
               ) : null}
