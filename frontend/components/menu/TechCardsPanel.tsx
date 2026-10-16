@@ -6,6 +6,7 @@ import {
   BookOpen,
   Check,
   ChefHat,
+  ChevronRight,
   Hash,
   Layers,
   Package,
@@ -158,7 +159,7 @@ function componentsTotal(row: TechCard): number {
   return row.lines.length + row.sections.reduce((sum, section) => sum + section.lines.length, 0);
 }
 
-function TechCardTile({
+function TechCardRow({
   row,
   basis,
   missing,
@@ -179,54 +180,46 @@ function TechCardTile({
       type="button"
       onClick={onOpen}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-white text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--brand)]/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30",
+        "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--cream-soft)] focus-visible:bg-[var(--cream-soft)] focus-visible:outline-none",
         !row.is_active && "opacity-60",
       )}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--cream)]">
-        {cover ? (
-          <img
-            src={cover.image.src}
-            srcSet={cover.image.srcset}
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            alt=""
-            loading="lazy"
-            className={cn(
-              "h-full w-full object-cover transition-transform duration-300 group-hover:scale-105",
-              !row.is_active && "grayscale",
-            )}
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <ChefHat className="h-10 w-10 text-[var(--muted)]" />
-          </div>
-        )}
-        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-[var(--ink)] shadow-sm">
-          <KindIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
-          {basis}
+      {cover ? (
+        <img
+          src={cover.image.src}
+          srcSet={cover.image.srcset}
+          sizes="44px"
+          alt=""
+          loading="lazy"
+          className={cn(
+            "h-11 w-11 shrink-0 rounded-xl border border-[var(--line)] object-cover",
+            !row.is_active && "grayscale",
+          )}
+        />
+      ) : (
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)]/10 text-[var(--brand)]">
+          <KindIcon className="h-5 w-5" />
         </span>
-        {missing > 0 ? (
-          <span
-            title={t("missingCompositionsTitle")}
-            className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 shadow-sm"
-          >
-            <TriangleAlert className="h-3.5 w-3.5" />
-            {missing}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex flex-1 flex-col gap-2 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className={cn("line-clamp-2 font-semibold text-[var(--ink)]", !row.is_active && "line-through")}>
-            {row.name}
-          </p>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={cn("font-semibold text-[var(--ink)]", !row.is_active && "line-through")}>{row.name}</p>
           {row.is_active ? null : (
-            <span className="shrink-0 rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
+            <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
               {t("inactive")}
             </span>
           )}
+          {missing > 0 ? (
+            <span
+              title={t("missingCompositionsTitle")}
+              className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900"
+            >
+              <TriangleAlert className="h-3 w-3" />
+              {missing}
+            </span>
+          ) : null}
         </div>
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--muted-2)]">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--muted-2)]">
           <span className="flex items-center gap-1">
             <Layers className="h-3.5 w-3.5" />
             {t("componentsCount", { count: componentsTotal(row) })}
@@ -244,13 +237,17 @@ function TechCardTile({
             </span>
           ) : null}
         </div>
-        {isFinanceAdmin && row.base_cost !== undefined ? (
-          <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] pt-2">
-            <span className="text-xs text-[var(--muted-2)]">{t("baseCost")}</span>
-            <span className="text-sm font-bold tabular-nums text-[var(--brand)]">{formatMoney(row.base_cost)}</span>
-          </div>
-        ) : null}
       </div>
+      <span className="hidden shrink-0 items-center gap-1 rounded-full bg-[var(--cream)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] sm:flex">
+        <KindIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
+        {basis}
+      </span>
+      {isFinanceAdmin && row.base_cost !== undefined ? (
+        <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+          {formatMoney(row.base_cost)}
+        </span>
+      ) : null}
+      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
     </button>
   );
 }
@@ -473,19 +470,23 @@ export function TechCardsPanel() {
             <p className="mt-4 text-base font-semibold text-[var(--ink)]">{t("nothingFound")}</p>
           </div>
         ) : (
-          <div className="grid gap-8">
+          <div className="grid gap-4">
             {cardGroups.map((group) => (
-              <section key={group.key} className="grid gap-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">{group.label}</h3>
-                  <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+              <section
+                key={group.key}
+                className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-sm"
+              >
+                <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
+                    {group.label}
+                  </h3>
+                  <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
                     {group.cards.length}
                   </span>
-                  <div className="h-px flex-1 bg-[var(--line)]" />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="divide-y divide-[var(--line)]">
                   {group.cards.map((row) => (
-                    <TechCardTile
+                    <TechCardRow
                       key={row.id}
                       row={row}
                       basis={basisLabel(row)}
