@@ -1,6 +1,5 @@
 import json
 import re
-import shutil
 import unicodedata
 import zipfile
 from decimal import Decimal, ROUND_HALF_UP
@@ -16,7 +15,6 @@ from numbers_parser.model import get_storage_buffers_for_row
 
 SOURCE = Path("/Users/fippo/Documents/tech-cards")
 ROOT = Path(__file__).resolve().parents[1] / "backend" / "menu" / "data"
-IMAGES = ROOT / "images"
 EGG_GRAMS = Decimal("50")
 YOLK_GRAMS = Decimal("18")
 PIECE_NOTE = "1 шт = 50 г"
@@ -710,27 +708,6 @@ def yield_of(lines: list[dict]) -> str:
     return qstr(total)
 
 
-def slug(name: str) -> str:
-    cleaned = re.sub(r"[^\w]+", "-", nfc(name).casefold(), flags=re.UNICODE).strip("-")
-    return cleaned or "image"
-
-
-def copy_preview(path: Path, name: str, used: set[str]) -> list[str]:
-    archive = zipfile.ZipFile(path)
-    if "preview.jpg" not in archive.namelist():
-        return []
-    stem = slug(name)
-    filename = f"{stem}.jpg"
-    index = 2
-    while filename in used:
-        filename = f"{stem}-{index}.jpg"
-        index += 1
-    used.add(filename)
-    target = IMAGES / filename
-    target.write_bytes(archive.read("preview.jpg"))
-    return [f"images/{filename}"]
-
-
 def skip_pages(name: str) -> bool:
     folded = nfc(name).casefold()
     if "начинки тортов" in folded:
@@ -742,7 +719,7 @@ def skip_pages(name: str) -> bool:
     return False
 
 
-def milk_girl(filename: str, lines: list[dict], sections: list[dict], method: str, images: list[str]) -> dict:
+def milk_girl(filename: str, lines: list[dict], sections: list[dict], method: str) -> dict:
     folded = nfc(filename).casefold()
     if "1,5" in folded or "1.5" in folded:
         basis = "1.5"
@@ -761,13 +738,13 @@ def milk_girl(filename: str, lines: list[dict], sections: list[dict], method: st
         "basis_quantity": None,
         "category": "Торты",
         "method": method.strip(),
-        "images": images,
+        "images": [],
         "lines": without_unit(lines),
         "sections": card_sections(sections),
     }
 
 
-def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: list[str]) -> dict:
+def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str]) -> dict:
     batch: list[dict] = []
     cream: list[dict] = []
     notes: list[str] = []
@@ -808,13 +785,13 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
         "basis_quantity": 10,
         "category": "Пирожные",
         "method": method.strip(),
-        "images": images,
+        "images": [],
         "lines": without_unit(batch + cream),
         "sections": [],
     }
 
 
-def cream_cheese(rows: list[tuple[str, str, str]], images: list[str]) -> dict:
+def cream_cheese(rows: list[tuple[str, str, str]]) -> dict:
     lines: list[dict] = []
     sizes: list[dict[str, str]] = []
     current: dict[str, str] | None = None
@@ -870,12 +847,12 @@ def cream_cheese(rows: list[tuple[str, str, str]], images: list[str]) -> dict:
         "unit": "g",
         "yield_quantity": "470",
         "method": method,
-        "images": images,
+        "images": [],
         "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
     }
 
 
-def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
+def decor(rows: list[tuple[str, str, str]]) -> list[dict]:
     ganache_intro = ""
     ganache_steps = ""
     velour_steps = ""
@@ -922,7 +899,7 @@ def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
             "unit": "g",
             "yield_quantity": yield_of(ganache_lines),
             "method": "\n\n".join(ganache_parts),
-            "images": images,
+            "images": [],
             "lines": [{key: value for key, value in row.items() if key != "unit"} for row in ganache_lines],
         },
         {
@@ -936,7 +913,7 @@ def decor(rows: list[tuple[str, str, str]], images: list[str]) -> list[dict]:
     ]
 
 
-def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict, dict]:
+def napoleon(rows: list[tuple[str, str, str]]) -> tuple[dict, dict]:
     phase = ""
     custard: list[dict] = []
     card: list[dict] = []
@@ -1022,14 +999,14 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
         "basis_quantity": 1,
         "category": "Торты",
         "method": add_notes(loose_body, ["Рецепт на 1 торт, вес в файле не указан.", *notes]),
-        "images": images,
+        "images": [],
         "lines": without_unit(card),
         "sections": card_sections(sections),
     }
     return semi, card_body
 
 
-def semi_from_rows(name: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
+def semi_from_rows(name: str, rows: list[tuple[str, str, str]]) -> dict:
     ungrouped, sections, method, yield_override = rows_to_parts(rows)
     lines = ungrouped + [line for section in sections for line in section["lines"]]
     if not lines:
@@ -1040,12 +1017,12 @@ def semi_from_rows(name: str, rows: list[tuple[str, str, str]], images: list[str
         "unit": "g",
         "yield_quantity": qstr(yield_override) if yield_override is not None else yield_of(stored),
         "method": fold_section_methods(method, sections),
-        "images": images,
+        "images": [],
         "lines": stored,
     }
 
 
-def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
+def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]]) -> dict:
     ungrouped, sections, method, _yield = rows_to_parts(rows)
     if not ungrouped and not any(section["lines"] for section in sections):
         raise RuntimeError(f"no lines in {name}")
@@ -1057,7 +1034,7 @@ def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], 
         "basis_quantity": 1,
         "category": category,
         "method": method.strip(),
-        "images": images,
+        "images": [],
         "lines": without_unit(ungrouped),
         "sections": card_sections(sections),
     }
@@ -1998,7 +1975,7 @@ def cake_method(diameter: str, bag: str, bento: bool) -> str:
 """
 
 
-def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
+def cake_cards() -> tuple[list[dict], list[dict], list[dict]]:
     vanilla = {
         "0.6": "360",
         "1": "500",
@@ -2066,7 +2043,7 @@ def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
                 "basis_quantity": None,
                 "category": "Торты",
                 "method": cake_method(diameter, bag, bento).strip(),
-                "images": images,
+                "images": [],
                 "lines": without_unit(lines),
                 "sections": [],
             }
@@ -2075,10 +2052,6 @@ def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
 
 
 def build() -> None:
-    if IMAGES.exists():
-        shutil.rmtree(IMAGES)
-    IMAGES.mkdir(parents=True)
-    used_images: set[str] = set()
     semis: list[dict] = []
     cards: list[dict] = []
     for filename in sorted(SOURCE.iterdir()):
@@ -2090,20 +2063,16 @@ def build() -> None:
             raise RuntimeError(f"empty pages {filename.name}")
         folded = nfc(filename.name).casefold()
         if folded.startswith("декоры"):
-            semis.extend(decor(rows, []))
+            semis.extend(decor(rows))
             continue
         if "кремчиз" in folded:
-            images = copy_preview(filename, "Кремчиз на масле", used_images)
-            sheet = IMAGES / "kremchiz-sheet.png"
-            shutil.copy(SOURCE / "b0ce358c-c22e-4e69-9866-7e45530f1149.png", sheet)
-            images.append("images/kremchiz-sheet.png")
-            semis.append(cream_cheese(rows, images))
+            semis.append(cream_cheese(rows))
             continue
         if "капкейк" in folded:
-            cards.append(cupcakes(rows, [], copy_preview(filename, "Капкейки", used_images)))
+            cards.append(cupcakes(rows, []))
             continue
         if folded.startswith("наполеон"):
-            semi, card = napoleon(rows, copy_preview(filename, "Наполеон", used_images))
+            semi, card = napoleon(rows)
             semis.append(semi)
             cards.append(card)
             continue
@@ -2111,24 +2080,14 @@ def build() -> None:
             if "2,кг" in folded:
                 continue
             ungrouped, sections, method, _yield = rows_to_parts(rows)
-            title_key = filename.name
-            cards.append(
-                milk_girl(
-                    title_key,
-                    ungrouped,
-                    sections,
-                    method,
-                    copy_preview(filename, pages_name(filename.name) if False else filename.stem, used_images),
-                )
-            )
+            cards.append(milk_girl(filename.name, ungrouped, sections, method))
             continue
         title = pages_name(filename.name)
-        images = copy_preview(filename, title, used_images)
         if title in SEMI_TITLES:
-            semis.append(semi_from_rows(title, rows, images))
+            semis.append(semi_from_rows(title, rows))
         else:
             category = "Торты"
-            card = piece_from_rows(title, category, rows, images)
+            card = piece_from_rows(title, category, rows)
             attach_floating_method(card["sections"], floating_method_text(filename))
             cards.append(card)
     pastry_titles = {
@@ -2404,9 +2363,7 @@ def build() -> None:
     for filename, (title, grouped, extra) in jars.items():
         path = pdfs[nfc(filename)]
         cards.append(jar_card(title, grouped, culinart_method(path, extra)))
-    sheet = IMAGES / "kremchiz-sheet.png"
-    shutil.copy(SOURCE / "b0ce358c-c22e-4e69-9866-7e45530f1149.png", sheet)
-    cakes, modifier_groups, tech_card_modifiers = cake_cards(["images/kremchiz-sheet.png"])
+    cakes, modifier_groups, tech_card_modifiers = cake_cards()
     cards.extend(cakes)
     ingredients: dict[str, str] = {}
     for collection in (semis, cards):
