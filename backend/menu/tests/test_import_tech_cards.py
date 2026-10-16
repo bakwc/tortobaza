@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from PIL import Image
 
-from menu.models import Ingredient, SemiProduct, TechCard
+from menu.models import Ingredient, Modifier, ModifierGroup, SemiProduct, TechCard
 
 
 class ImportTechCardsTests(TestCase):
@@ -43,6 +43,31 @@ class ImportTechCardsTests(TestCase):
                         "lines": [{"semi_product": "Бисквит", "quantity": "500", "loss_percent": "0"}],
                     }
                 ],
+                "modifier_groups": [
+                    {
+                        "name": "Основа",
+                        "selection_type": "single",
+                        "is_required": True,
+                        "position": 0,
+                        "modifiers": ["Бисквит"],
+                    }
+                ],
+                "tech_card_modifiers": [
+                    {
+                        "tech_card": "Торт",
+                        "group": "Основа",
+                        "position": 0,
+                        "lines": [
+                            {
+                                "modifier": "Бисквит",
+                                "semi_product": "Бисквит",
+                                "quantity": "300",
+                                "loss_percent": "0",
+                                "scales_by_weight": True,
+                            }
+                        ],
+                    }
+                ],
             }
             path = root / "cards.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
@@ -55,6 +80,11 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(card.lines.get().semi_product.name, "Бисквит")
             self.assertEqual(card.lines.get().quantity, Decimal("500"))
             self.assertEqual(card.images.count(), 1)
+            self.assertEqual(card.modifier_groups.get().group, ModifierGroup.objects.get(name="Основа"))
+            modifier_line = card.modifier_lines.get()
+            self.assertEqual(modifier_line.modifier, Modifier.objects.get(group__name="Основа", name="Бисквит"))
+            self.assertEqual(modifier_line.semi_product.name, "Бисквит")
+            self.assertEqual(modifier_line.quantity, Decimal("300"))
             semi = SemiProduct.objects.get(name="Бисквит")
             self.assertEqual(semi.method, "Взбить.")
             self.assertEqual(semi.lines.get().ingredient, Ingredient.objects.get(name="Мука"))
@@ -67,5 +97,6 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(card.method, "### Крем\n\n- Обновить.")
             self.assertEqual(card.lines.get().quantity, Decimal("250"))
             self.assertEqual(card.images.count(), 1)
+            self.assertEqual(card.modifier_lines.count(), 1)
             self.assertEqual(TechCard.objects.filter(name="Торт").count(), 1)
             self.assertTrue(TechCard.objects.filter(name="Не трогать").exists())

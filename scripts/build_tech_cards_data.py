@@ -1450,7 +1450,8 @@ def cake_method(diameter: str, bag: str, bento: bool, biscuits: list[tuple[str, 
     if biscuits:
         biscuit_lines = "\n".join(f"- {name}: {quantity} г" for name, quantity in biscuits)
         biscuit_block = (
-            "Бисквит в составе — отвес полуфабриката на этот размер. На торт берётся один вид.\n\n"
+            "Бисквит выбирается в модификаторе «Бисквит», на торт берётся один вид. "
+            "Отвес полуфабриката на этот размер:\n\n"
             + biscuit_lines
         )
     else:
@@ -1496,7 +1497,7 @@ def cake_method(diameter: str, bag: str, bento: bool, biscuits: list[tuple[str, 
 """
 
 
-def cake_cards(images: list[str]) -> list[dict]:
+def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
     vanilla = {
         "0.6": "360",
         "1": "500",
@@ -1525,20 +1526,36 @@ def cake_cards(images: list[str]) -> list[dict]:
         ("Торт 2,5 кг", "2.5", "18 см", "755 г", False, "1000", "270", "240"),
         ("Торт 3 кг", "3", "18 см", "906 г", False, "1200", "324", "288"),
     ]
+    group = {
+        "name": "Бисквит",
+        "selection_type": "single",
+        "is_required": True,
+        "position": 0,
+        "modifiers": list(biscuit_portions),
+    }
     cards = []
+    links = []
     for name, basis, diameter, bag, bento, cream, butter, sugar in sizes:
         biscuits = [
             (biscuit, portions[basis])
             for biscuit, portions in biscuit_portions.items()
             if basis in portions
         ]
-        lines = [semi_line(biscuit, Decimal(quantity)) for biscuit, quantity in biscuits]
-        lines.extend(
-            [
-                component_line("Кремчиз", Decimal(cream), "g"),
-                component_line("Масло сливочное", Decimal(butter), "g"),
-                component_line("Сахарная пудра", Decimal(sugar), "g"),
-            ]
+        lines = [
+            component_line("Кремчиз", Decimal(cream), "g"),
+            component_line("Масло сливочное", Decimal(butter), "g"),
+            component_line("Сахарная пудра", Decimal(sugar), "g"),
+        ]
+        links.append(
+            {
+                "tech_card": name,
+                "group": group["name"],
+                "position": 0,
+                "lines": [
+                    {"modifier": biscuit, **semi_line(biscuit, Decimal(quantity)), "scales_by_weight": True}
+                    for biscuit, quantity in biscuits
+                ],
+            }
         )
         cards.append(
             {
@@ -1552,7 +1569,7 @@ def cake_cards(images: list[str]) -> list[dict]:
                 "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
             }
         )
-    return cards
+    return cards, [group], links
 
 
 def build() -> None:
@@ -1786,7 +1803,8 @@ def build() -> None:
         cards.append(jar_card(title, rows, culinart_method(path, extra)))
     sheet = IMAGES / "kremchiz-sheet.png"
     shutil.copy(SOURCE / "b0ce358c-c22e-4e69-9866-7e45530f1149.png", sheet)
-    cards.extend(cake_cards(["images/kremchiz-sheet.png"]))
+    cakes, modifier_groups, tech_card_modifiers = cake_cards(["images/kremchiz-sheet.png"])
+    cards.extend(cakes)
     ingredients: dict[str, str] = {}
     for collection in (semis, cards):
         for entity in collection:
@@ -1808,6 +1826,8 @@ def build() -> None:
         "ingredients": [{"name": name, "unit": unit} for name, unit in sorted(ingredients.items())],
         "semi_products": semis,
         "tech_cards": cards,
+        "modifier_groups": modifier_groups,
+        "tech_card_modifiers": tech_card_modifiers,
     }
     names = [row["name"] for row in semis + cards]
     if len(names) != len(set(names)):

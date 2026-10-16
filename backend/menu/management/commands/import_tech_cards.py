@@ -8,6 +8,8 @@ from django.db import transaction
 
 from menu.models import (
     Ingredient,
+    Modifier,
+    ModifierGroup,
     SemiProduct,
     SemiProductImage,
     SemiProductLine,
@@ -15,6 +17,8 @@ from menu.models import (
     TechCardCategory,
     TechCardImage,
     TechCardLine,
+    TechCardModifierGroup,
+    TechCardModifierLine,
 )
 
 DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "tech_cards.json"
@@ -36,6 +40,8 @@ class Command(BaseCommand):
         semis = self._semis(payload["semi_products"])
         self._semi_lines(payload["semi_products"], semis, ingredients)
         self._cards(payload["tech_cards"], categories, semis, ingredients)
+        modifiers = self._modifier_groups(payload["modifier_groups"])
+        self._tech_card_modifiers(payload["tech_card_modifiers"], modifiers, semis, ingredients)
         self._images(payload["semi_products"], semis, SemiProductImage, "semi_product", data_dir)
         self._images(payload["tech_cards"], self._cards_by_name(payload["tech_cards"]), TechCardImage, "tech_card", data_dir)
         self.stdout.write(
@@ -116,6 +122,64 @@ class Command(BaseCommand):
             card.category = None if category_name is None else categories[category_name]
             card.save()
             self._replace_lines(card, TechCardLine, "tech_card", row["lines"], ingredients, semis)
+
+    def _modifier_groups(self, rows: list[dict]) -> dict[tuple[str, str], Modifier]:
+        found = {}
+        for row in rows:
+            group, _created = ModifierGroup.objects.get_or_create(
+                name=row["name"],
+                defaults={
+                    "selection_type": row["selection_type"],
+                    "is_required": row["is_required"],
+                    "position": row["position"],
+                },
+            )
+            group.selection_type = row["selection_type"]
+            group.is_required = row["is_required"]
+            group.position = row["position"]
+            group.save()
+            for position, name in enumerate(row["modifiers"]):
+                modifier, _created = Modifier.objects.get_or_create(
+                    group=group,
+                    name=name,
+                    defaults={"position": position},
+                )
+                modifier.position = position
+                modifier.is_active = True
+                modifier.save()
+                found[(group.name, modifier.name)] = modifier
+        return found
+
+    def _tech_card_modifiers(
+        self,
+        rows: list[dict],
+        modifiers: dict[tuple[str, str], Modifier],
+        semis: dict[str, SemiProduct],
+        ingredients: dict[str, Ingredient],
+    ) -> None:
+        for row in rows:
+            card = TechCard.objects.get(name=row["tech_card"])
+            group = ModifierGroup.objects.get(name=row["group"])
+            TechCardModifierGroup.objects.update_or_create(
+                tech_card=card,
+                group=group,
+                defaults={"position": row["position"]},
+            )
+            card.modifier_lines.filter(modifier__group=group).delete()
+            for position, line in enumerate(row["lines"]):
+                if "ingredient" in line:
+                    component = {"ingredient": ingredients[line["ingredient"]], "semi_product": None}
+                else:
+                    component = {"ingredient": None, "semi_product": semis[line["semi_product"]]}
+                TechCardModifierLine.objects.create(
+                    tech_card=card,
+                    modifier=modifiers[(group.name, line["modifier"])],
+                    quantity=Decimal(line["quantity"]),
+                    loss_percent=Decimal(line["loss_percent"]),
+                    scales_by_weight=line["scales_by_weight"],
+                    position=position,
+                    **component,
+                )
 
     def _cards_by_name(self, rows: list[dict]) -> dict[str, TechCard]:
         return {card.name: card for card in TechCard.objects.filter(name__in=[row["name"] for row in rows])}
