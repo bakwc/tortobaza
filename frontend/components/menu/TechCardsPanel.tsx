@@ -268,22 +268,6 @@ export function TechCardsPanel() {
 
   return (
     <div className="grid gap-6">
-      {(missing.data ?? []).length > 0 ? (
-        <Card className="border-amber-300 bg-amber-50">
-          <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-            <TriangleAlert className="h-4 w-4" />
-            {t("missingCompositionsTitle")}
-          </div>
-          <ul className="mt-2 grid gap-1 text-sm text-amber-900">
-            {(missing.data ?? []).map((row) => (
-              <li key={`${row.tech_card}-${row.modifier}`}>
-                {row.tech_card_name}: {row.group_name} — {row.modifier_name}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("menu.techCards")}</CardTitle>

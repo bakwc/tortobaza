@@ -355,6 +355,81 @@ def pages_tables(path: Path) -> list[list[tuple[str, str, str]]]:
     return tables
 
 
+def floating_method_text(path: Path) -> str:
+    archive = zipfile.ZipFile(path)
+    parts: list[str] = []
+    for name in archive.namelist():
+        if not name.endswith(".iwa") or "DataList" not in name:
+            continue
+        iwa = IWAFile.from_buffer(archive.read(name), name)
+        for chunk in iwa.chunks:
+            for segment in chunk.archives:
+                for obj in segment.objects:
+                    if type(obj).__name__ != "StorageArchive":
+                        continue
+                    text = "".join(obj.text).strip()
+                    if text:
+                        parts.append(text)
+    return "\n\n".join(parts)
+
+
+def method_body(body: str) -> str:
+    groups: list[list[str]] = [[]]
+    for raw in body.splitlines():
+        line = raw.strip()
+        if not line:
+            if groups[-1]:
+                groups.append([])
+            continue
+        previous = groups[-1][-1] if groups[-1] else ""
+        continuation = bool(previous) and (
+            not line[0].isupper() or bool(re.fullmatch(r"[А-ЯЁA-Z]{3,}", line))
+        )
+        if continuation:
+            groups[-1][-1] = f"{previous} {line}"
+            continue
+        groups[-1].append(line)
+    rendered: list[str] = []
+    for group in groups:
+        if not group:
+            continue
+        if len(group) == 1:
+            rendered.append(group[0])
+        else:
+            rendered.append("\n".join(f"{index}. {step}" for index, step in enumerate(group, 1)))
+    return "\n\n".join(rendered)
+
+
+def attach_floating_method(sections: list[dict], text: str) -> None:
+    if not text.strip() or not sections or sections[0]["method"].strip():
+        return
+    normalized = text.replace("\u2028", "\n")
+    normalized = re.sub(r"[ \t]+\n", "\n", normalized)
+    normalized = re.sub(r"\.([А-ЯA-ZЁ])", r". \1", normalized)
+    chunks = [chunk.strip() for chunk in re.split(r"\n\s*\n", normalized) if chunk.strip()]
+    if len(chunks) < 2:
+        return
+    if len(sections) == 4 and len(chunks) == 2:
+        misplaced = sections[2]["method"].strip()
+        marker = "Пробить на минимуме"
+        head, tail = chunks[1].split(marker, 1)
+        sections[0]["method"] = method_body(chunks[0])
+        sections[1]["method"] = method_body(head)
+        sections[2]["method"] = method_body(marker + tail)
+        if misplaced and not sections[3]["method"].strip():
+            sections[3]["method"] = misplaced
+        return
+    if len(sections) != 3:
+        return
+    sections[0]["method"] = method_body(chunks[0])
+    sections[1]["method"] = method_body("\n\n".join(chunks[1:-1]))
+    last = chunks[-1]
+    existing = sections[2]["method"].strip()
+    if existing and existing not in last:
+        last = f"{last}\n{existing}"
+    sections[2]["method"] = method_body(last)
+
+
 def md_cell(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ").strip()
 
@@ -2053,7 +2128,9 @@ def build() -> None:
             semis.append(semi_from_rows(title, rows, images))
         else:
             category = "Торты"
-            cards.append(piece_from_rows(title, category, rows, images))
+            card = piece_from_rows(title, category, rows, images)
+            attach_floating_method(card["sections"], floating_method_text(filename))
+            cards.append(card)
     pastry_titles = {
         "Техкарта_корпусные_пирожные_Банан.docx": "Пирожное Банан",
         "Техкарта_корпусные_пирожные_Кофе.docx": "Пирожное Кофе",
