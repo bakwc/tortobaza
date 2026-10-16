@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from crm.models import CrmOrder, CrmOrderItemLine
-from menu.models import TechCardLine
+from menu.models import TechCardLine, TechCardSection
 from menu.recipes import (
     expand_order,
     expand_order_item,
@@ -153,6 +153,23 @@ class CostTests(TestCase):
 
     def test_tech_card_cost_per_kilogram(self):
         self.assertEqual(tech_card_cost(self.menu.cake, [], Decimal("1")), Decimal("10.00"))
+
+    def test_section_line_is_included_in_needs_and_cost(self):
+        section = TechCardSection.objects.create(
+            tech_card=self.menu.cake,
+            name="Syrup",
+            method="Boil.",
+            position=0,
+        )
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            section=section,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("100"),
+        )
+        needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.sugar], Decimal("300"))
+        self.assertEqual(tech_card_cost(self.menu.cake, [], Decimal("1")), Decimal("10.50"))
 
     def test_tech_card_cost_with_modifiers(self):
         cost = tech_card_cost(

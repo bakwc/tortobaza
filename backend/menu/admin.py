@@ -14,6 +14,7 @@ from menu.models import (
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
+    TechCardSection,
 )
 
 
@@ -81,10 +82,16 @@ class TechCardImageInline(admin.TabularInline):
     fields = ["image", "position"]
 
 
+class TechCardSectionInline(admin.TabularInline):
+    model = TechCardSection
+    extra = 0
+    fields = ["name", "method", "position"]
+
+
 class TechCardLineInline(admin.TabularInline):
     model = TechCardLine
     extra = 1
-    fields = ["ingredient", "semi_product", "quantity", "loss_percent", "position"]
+    fields = ["section", "ingredient", "semi_product", "quantity", "loss_percent", "position"]
     autocomplete_fields = ["ingredient", "semi_product"]
 
 
@@ -113,4 +120,10 @@ class TechCardAdmin(admin.ModelAdmin):
     list_display = ["name", "category", "kind", "basis_weight_kg", "basis_quantity", "is_active", "created_at"]
     list_filter = ["category", "kind", "is_active"]
     search_fields = ["name"]
-    inlines = [TechCardImageInline, TechCardLineInline, TechCardModifierGroupInline, TechCardModifierLineInline]
+    inlines = [
+        TechCardImageInline,
+        TechCardSectionInline,
+        TechCardLineInline,
+        TechCardModifierGroupInline,
+        TechCardModifierLineInline,
+    ]

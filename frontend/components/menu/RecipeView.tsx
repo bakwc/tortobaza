@@ -55,6 +55,7 @@ export function RecipeView({
   images,
   compositionTitle,
   lines,
+  sections,
   method,
   onEdit,
   children,
@@ -64,6 +65,7 @@ export function RecipeView({
   images: MenuImage[];
   compositionTitle: string;
   lines: RecipeLine[];
+  sections: { name: string; method: string; lines: RecipeLine[] }[];
   method: string;
   onEdit: () => void;
   children: ReactNode;
@@ -120,21 +122,33 @@ export function RecipeView({
         </div>
       ) : null}
 
-      <div className="grid gap-2">
-        <CardTitle>{compositionTitle}</CardTitle>
-        <CompositionTable lines={lines} />
-      </div>
+      {lines.length > 0 || sections.length === 0 ? (
+        <div className="grid gap-2">
+          <CardTitle>{compositionTitle}</CardTitle>
+          <CompositionTable lines={lines} />
+        </div>
+      ) : null}
+
+      {sections.map((section) => (
+        <div key={section.name} className="grid gap-2">
+          <CardTitle>{section.name}</CardTitle>
+          <CompositionTable lines={section.lines} />
+          {section.method.trim() ? <MarkdownView value={section.method} /> : null}
+        </div>
+      ))}
 
       {children}
 
-      <div className="grid gap-2">
-        <CardTitle>{t("method")}</CardTitle>
-        {method.trim() ? (
-          <MarkdownView value={method} />
-        ) : (
-          <p className="text-sm text-[var(--muted-2)]">{t("noMethod")}</p>
-        )}
-      </div>
+      {method.trim() || sections.length === 0 ? (
+        <div className="grid gap-2">
+          <CardTitle>{t("method")}</CardTitle>
+          {method.trim() ? (
+            <MarkdownView value={method} />
+          ) : (
+            <p className="text-sm text-[var(--muted-2)]">{t("noMethod")}</p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

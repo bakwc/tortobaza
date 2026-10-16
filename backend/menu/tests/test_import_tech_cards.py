@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from PIL import Image
 
-from menu.models import Ingredient, Modifier, ModifierGroup, SemiProduct, TechCard
+from menu.models import Ingredient, Modifier, ModifierGroup, SemiProduct, TechCard, TechCardSection
 
 
 class ImportTechCardsTests(TestCase):
@@ -41,6 +41,14 @@ class ImportTechCardsTests(TestCase):
                         "method": "## Сборка\n\n1. Собрать слои.",
                         "images": ["images/card.png"],
                         "lines": [{"semi_product": "Бисквит", "quantity": "500", "loss_percent": "0"}],
+                        "sections": [
+                            {
+                                "name": "Пропитка",
+                                "method": "Смешать.",
+                                "lines": [{"ingredient": "Мука", "quantity": "200", "loss_percent": "0"}],
+                            },
+                            {"name": "Сборка", "method": "Собрать слои.", "lines": []},
+                        ],
                     }
                 ],
                 "modifier_groups": [
@@ -77,8 +85,19 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(card.basis_weight_kg, Decimal("1.5"))
             self.assertIsNone(card.basis_quantity)
             self.assertEqual(card.method, "## Сборка\n\n1. Собрать слои.")
-            self.assertEqual(card.lines.get().semi_product.name, "Бисквит")
-            self.assertEqual(card.lines.get().quantity, Decimal("500"))
+            loose = card.lines.get(section__isnull=True)
+            self.assertEqual(loose.semi_product.name, "Бисквит")
+            self.assertEqual(loose.quantity, Decimal("500"))
+            syrup = card.sections.get(name="Пропитка")
+            self.assertEqual(syrup.method, "Смешать.")
+            self.assertEqual(syrup.position, 0)
+            syrup_line = syrup.lines.get()
+            self.assertEqual(syrup_line.ingredient, Ingredient.objects.get(name="Мука"))
+            self.assertEqual(syrup_line.quantity, Decimal("200"))
+            self.assertEqual(syrup_line.tech_card, card)
+            assembly = card.sections.get(name="Сборка")
+            self.assertEqual(assembly.method, "Собрать слои.")
+            self.assertEqual(assembly.lines.count(), 0)
             self.assertEqual(card.images.count(), 1)
             self.assertEqual(card.modifier_groups.get().group, ModifierGroup.objects.get(name="Основа"))
             modifier_line = card.modifier_lines.get()
@@ -94,11 +113,22 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(TechCard.objects.get(name="Не трогать").method, "stay")
             payload["tech_cards"][0]["method"] = "### Крем\n\n- Обновить."
             payload["tech_cards"][0]["lines"][0]["quantity"] = "250"
+            payload["tech_cards"][0]["sections"] = [
+                {
+                    "name": "Крем",
+                    "method": "Взбить.",
+                    "lines": [{"semi_product": "Бисквит", "quantity": "40", "loss_percent": "0"}],
+                }
+            ]
             path.write_text(json.dumps(payload), encoding="utf-8")
             call_command("import_tech_cards", path=str(path))
             card.refresh_from_db()
             self.assertEqual(card.method, "### Крем\n\n- Обновить.")
-            self.assertEqual(card.lines.get().quantity, Decimal("250"))
+            self.assertEqual(card.lines.get(section__isnull=True).quantity, Decimal("250"))
+            self.assertEqual(list(card.sections.values_list("name", flat=True)), ["Крем"])
+            cream = TechCardSection.objects.get(tech_card=card, name="Крем")
+            self.assertEqual(cream.lines.get().semi_product.name, "Бисквит")
+            self.assertEqual(cream.lines.get().quantity, Decimal("40"))
             self.assertEqual(card.images.count(), 1)
             self.assertEqual(card.modifier_lines.count(), 1)
             self.assertEqual(TechCard.objects.filter(name="Торт").count(), 1)

@@ -326,12 +326,46 @@ class TechCardImage(models.Model):
         return f"Image #{self.pk} for {self.tech_card_id}"
 
 
+class TechCardSection(models.Model):
+    tech_card = models.ForeignKey(
+        TechCard,
+        related_name="sections",
+        on_delete=models.CASCADE,
+        verbose_name=_("Tech card"),
+    )
+    name = models.CharField(max_length=200, verbose_name=_("Name"))
+    method = models.TextField(blank=True, default="", verbose_name=_("Method"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("Tech card section")
+        verbose_name_plural = _("Tech card sections")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tech_card", "name"],
+                name="uniq_menu_tech_card_section_name",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.tech_card.name}: {self.name}"
+
+
 class TechCardLine(ComponentRef):
     tech_card = models.ForeignKey(
         TechCard,
         related_name="lines",
         on_delete=models.CASCADE,
         verbose_name=_("Tech card"),
+    )
+    section = models.ForeignKey(
+        TechCardSection,
+        related_name="lines",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Section"),
     )
     quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
     loss_percent = models.DecimalField(

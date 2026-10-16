@@ -491,12 +491,43 @@ def add_notes(method: str, extra: list[str]) -> str:
     return "## Примечания\n\n" + bullets
 
 
-def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], str, Decimal | None]:
+def without_unit(rows: list[dict]) -> list[dict]:
+    return [{key: value for key, value in row.items() if key != "unit"} for row in rows]
+
+
+def fold_section_methods(method: str, sections: list[dict]) -> str:
+    chunks = [
+        f"### {section['name']}\n\n{section['method'].strip()}"
+        for section in sections
+        if section["method"].strip()
+    ]
+    if not chunks:
+        return method
+    block = "\n\n".join(chunks)
+    if not method.strip():
+        return block
+    indexes = [method.find(heading) for heading in ("## Отвесы", "## Примечания")]
+    indexes = [index for index in indexes if index != -1]
+    if not indexes:
+        return method.rstrip() + "\n\n" + block
+    marker = min(indexes)
+    return method[:marker].rstrip() + "\n\n" + block + "\n\n" + method[marker:]
+
+
+def card_sections(sections: list[dict]) -> list[dict]:
+    return [
+        {"name": section["name"], "method": section["method"], "lines": without_unit(section["lines"])}
+        for section in sections
+    ]
+
+
+def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[dict], str, Decimal | None]:
     lines: list[dict] = []
     notes: list[str] = []
     portions: list[tuple[str, str]] = []
     section_order: list[str] = []
     section_text: dict[str, list[str]] = {}
+    section_lines: dict[str, list[dict]] = {}
     loose: list[str] = []
     current = ""
     yield_override = None
@@ -526,6 +557,8 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], str, De
         amount = qty.strip()
         if is_section(label) and not amount:
             current = label.rstrip(":").strip()
+            if current not in section_order:
+                section_order.append(current)
             push_method(method)
             continue
         push_method(method)
@@ -557,15 +590,22 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], str, De
             notes.append(f"Без веса: {label}")
             continue
         for ingredient, quantity, unit in parsed:
-            lines.append({"ingredient": ingredient, "quantity": qstr(quantity), "loss_percent": "0", "unit": unit})
-    chunks: list[str] = []
-    if loose:
-        chunks.append(format_steps("\n".join(loose), "###"))
+            line = {"ingredient": ingredient, "quantity": qstr(quantity), "loss_percent": "0", "unit": unit}
+            if current:
+                section_lines.setdefault(current, []).append(line)
+                if current not in section_order:
+                    section_order.append(current)
+            else:
+                lines.append(line)
+    loose_body = format_steps("\n".join(loose), "###") if loose else ""
+    sections: list[dict] = []
     for title in section_order:
-        body = format_steps("\n".join(section_text[title]), "####")
-        if body:
-            chunks.append(f"### {heading_title(title)}\n\n{body}")
-    return lines, assemble_method("\n\n".join(chunks), portions, notes), yield_override
+        body = format_steps("\n".join(section_text.get(title, [])), "####")
+        grouped = section_lines.get(title, [])
+        if not body and not grouped:
+            continue
+        sections.append({"name": heading_title(title), "method": body, "lines": grouped})
+    return lines, sections, assemble_method(loose_body, portions, notes), yield_override
 
 
 def component_line(name: str, quantity: Decimal, unit: str) -> dict:
@@ -613,7 +653,7 @@ def skip_pages(name: str) -> bool:
     return False
 
 
-def milk_girl(filename: str, lines: list[dict], method: str, images: list[str]) -> dict:
+def milk_girl(filename: str, lines: list[dict], sections: list[dict], method: str, images: list[str]) -> dict:
     folded = nfc(filename).casefold()
     if "1,5" in folded or "1.5" in folded:
         basis = "1.5"
@@ -633,7 +673,8 @@ def milk_girl(filename: str, lines: list[dict], method: str, images: list[str]) 
         "category": "Торты",
         "method": method.strip(),
         "images": images,
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+        "lines": without_unit(lines),
+        "sections": card_sections(sections),
     }
 
 
@@ -679,7 +720,8 @@ def cupcakes(rows: list[tuple[str, str, str]], method_bits: list[str], images: l
         "category": "Пирожные",
         "method": method.strip(),
         "images": images,
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in batch + cream],
+        "lines": without_unit(batch + cream),
+        "sections": [],
     }
 
 
@@ -813,6 +855,7 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
     current = ""
     section_order: list[str] = []
     section_text: dict[str, list[str]] = {}
+    section_lines: dict[str, list[dict]] = {}
     loose: list[str] = []
 
     def push(text: str) -> None:
@@ -834,6 +877,8 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
             "дипломат" in label.casefold() and not qty.strip()
         ) or (is_section(label) and not qty.strip()):
             current = label
+            if current not in section_order:
+                section_order.append(current)
             push(method)
             if "заварн" in label.casefold():
                 phase = "custard"
@@ -850,17 +895,29 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
                 custard.append(component_line(ingredient, quantity, unit))
             continue
         if label.casefold().startswith("заварной крем"):
-            card.append(semi_line("Заварной крем", Decimal(parsed[0][1]) if parsed else Decimal(qty)))
+            line = semi_line("Заварной крем", Decimal(parsed[0][1]) if parsed else Decimal(qty))
+        else:
+            line = None
+        if line is None:
+            for ingredient, quantity, unit in parsed:
+                built = component_line(ingredient, quantity, unit)
+                if current:
+                    section_lines.setdefault(current, []).append(built)
+                else:
+                    card.append(built)
             continue
-        for ingredient, quantity, unit in parsed:
-            card.append(component_line(ingredient, quantity, unit))
-    chunks: list[str] = []
-    if loose:
-        chunks.append(format_steps("\n".join(loose), "###"))
+        if current:
+            section_lines.setdefault(current, []).append(line)
+        else:
+            card.append(line)
+    loose_body = format_steps("\n".join(loose), "###") if loose else ""
+    sections: list[dict] = []
     for title in section_order:
-        body = format_steps("\n".join(section_text[title]), "####")
-        if body:
-            chunks.append(f"### {heading_title(title)}\n\n{body}")
+        body = format_steps("\n".join(section_text.get(title, [])), "####")
+        grouped = section_lines.get(title, [])
+        if not body and not grouped:
+            continue
+        sections.append({"name": heading_title(title), "method": body, "lines": grouped})
     semi = {
         "name": "Заварной крем",
         "unit": "g",
@@ -875,31 +932,33 @@ def napoleon(rows: list[tuple[str, str, str]], images: list[str]) -> tuple[dict,
         "basis_weight_kg": None,
         "basis_quantity": 1,
         "category": "Торты",
-        "method": add_notes("\n\n".join(chunks), ["Рецепт на 1 торт, вес в файле не указан.", *notes]),
+        "method": add_notes(loose_body, ["Рецепт на 1 торт, вес в файле не указан.", *notes]),
         "images": images,
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in card],
+        "lines": without_unit(card),
+        "sections": card_sections(sections),
     }
     return semi, card_body
 
 
 def semi_from_rows(name: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
-    lines, method, yield_override = rows_to_parts(rows)
+    ungrouped, sections, method, yield_override = rows_to_parts(rows)
+    lines = ungrouped + [line for section in sections for line in section["lines"]]
     if not lines:
         raise RuntimeError(f"no lines in {name}")
-    stored = [{key: value for key, value in row.items() if key != "unit"} for row in lines]
+    stored = without_unit(lines)
     return {
         "name": name,
         "unit": "g",
         "yield_quantity": qstr(yield_override) if yield_override is not None else yield_of(stored),
-        "method": method,
+        "method": fold_section_methods(method, sections),
         "images": images,
         "lines": stored,
     }
 
 
 def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], images: list[str]) -> dict:
-    lines, method, _yield = rows_to_parts(rows)
-    if not lines:
+    ungrouped, sections, method, _yield = rows_to_parts(rows)
+    if not ungrouped and not any(section["lines"] for section in sections):
         raise RuntimeError(f"no lines in {name}")
     method = add_notes(method, ["Рецепт на 1 изделие, вес в файле не указан."])
     return {
@@ -910,7 +969,8 @@ def piece_from_rows(name: str, category: str, rows: list[tuple[str, str, str]], 
         "category": category,
         "method": method.strip(),
         "images": images,
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+        "lines": without_unit(ungrouped),
+        "sections": card_sections(sections),
     }
 
 
@@ -1162,7 +1222,8 @@ def pastry_card(title: str, text: str, method: str) -> dict:
         "category": "Пирожные",
         "method": add_notes(method, notes),
         "images": [],
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+        "lines": without_unit(lines),
+        "sections": [],
     }
 
 
@@ -1188,7 +1249,8 @@ def jar_card(name: str, rows: list[tuple[str, Decimal] | dict], method: str) -> 
         "category": "Десерты",
         "method": add_notes(method, ["Расчёт на 10 порций."]),
         "images": [],
-        "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+        "lines": without_unit(lines),
+        "sections": [],
     }
 
 
@@ -1555,7 +1617,8 @@ def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
                 "category": "Торты",
                 "method": cake_method(diameter, bag, bento).strip(),
                 "images": images,
-                "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+                "lines": without_unit(lines),
+                "sections": [],
             }
         )
     return cards, [group], links
@@ -1597,12 +1660,13 @@ def build() -> None:
         if "молочная девочка" in folded:
             if "2,кг" in folded:
                 continue
-            lines, method, _yield = rows_to_parts(rows)
+            ungrouped, sections, method, _yield = rows_to_parts(rows)
             title_key = filename.name
             cards.append(
                 milk_girl(
                     title_key,
-                    lines,
+                    ungrouped,
+                    sections,
                     method,
                     copy_preview(filename, pages_name(filename.name) if False else filename.stem, used_images),
                 )
@@ -1797,13 +1861,20 @@ def build() -> None:
     ingredients: dict[str, str] = {}
     for collection in (semis, cards):
         for entity in collection:
-            for row in entity["lines"]:
+            rows = list(entity["lines"])
+            if "sections" in entity:
+                for section in entity["sections"]:
+                    rows.extend(section["lines"])
+            for row in rows:
                 if "ingredient" not in row:
                     continue
                 unit = "g"
                 ingredients.setdefault(row["ingredient"], unit)
     for card in cards:
-        for row in card["lines"]:
+        rows = list(card["lines"])
+        for section in card["sections"]:
+            rows.extend(section["lines"])
+        for row in rows:
             if row.get("ingredient") == "Хвостик мандарина":
                 ingredients["Хвостик мандарина"] = "pcs"
     payload = {

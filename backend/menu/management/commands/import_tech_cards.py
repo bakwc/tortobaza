@@ -19,6 +19,7 @@ from menu.models import (
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
+    TechCardSection,
 )
 
 DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "tech_cards.json"
@@ -122,6 +123,7 @@ class Command(BaseCommand):
             card.category = None if category_name is None else categories[category_name]
             card.save()
             self._replace_lines(card, TechCardLine, "tech_card", row["lines"], ingredients, semis)
+            self._replace_sections(card, row["sections"], ingredients, semis)
 
     def _modifier_groups(
         self,
@@ -189,6 +191,35 @@ class Command(BaseCommand):
                     loss_percent=Decimal(line["loss_percent"]),
                     scales_by_weight=line["scales_by_weight"],
                     position=position,
+                    **component,
+                )
+
+    def _replace_sections(
+        self,
+        card: TechCard,
+        rows: list[dict],
+        ingredients: dict[str, Ingredient],
+        semis: dict[str, SemiProduct],
+    ) -> None:
+        card.sections.all().delete()
+        for position, section in enumerate(rows):
+            saved = TechCardSection.objects.create(
+                tech_card=card,
+                name=section["name"],
+                method=section["method"],
+                position=position,
+            )
+            for line_position, line in enumerate(section["lines"]):
+                if "ingredient" in line:
+                    component = {"ingredient": ingredients[line["ingredient"]], "semi_product": None}
+                else:
+                    component = {"ingredient": None, "semi_product": semis[line["semi_product"]]}
+                TechCardLine.objects.create(
+                    tech_card=card,
+                    section=saved,
+                    quantity=Decimal(line["quantity"]),
+                    loss_percent=Decimal(line["loss_percent"]),
+                    position=line_position,
                     **component,
                 )
 

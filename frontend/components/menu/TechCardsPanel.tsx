@@ -16,6 +16,7 @@ import {
   draftFromLine,
   emptyLine,
   linesToBody,
+  newDraftKey,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
@@ -46,6 +47,13 @@ type GroupLinkDraft = { group: number; is_required: boolean | null };
 
 type ModifierComposition = { scales_by_weight: boolean; lines: ComponentLineDraft[] };
 
+type SectionDraft = {
+  key: string;
+  name: string;
+  method: string;
+  lines: ComponentLineDraft[];
+};
+
 type TechCardDraft = {
   name: string;
   category: number | null;
@@ -55,9 +63,14 @@ type TechCardDraft = {
   method: string;
   is_active: boolean;
   lines: ComponentLineDraft[];
+  sections: SectionDraft[];
   groups: GroupLinkDraft[];
   compositions: Record<number, ModifierComposition>;
 };
+
+function emptySection(): SectionDraft {
+  return { key: newDraftKey(), name: "", method: "", lines: [] };
+}
 
 function draftFrom(row: TechCard | null): TechCardDraft {
   if (row === null) {
@@ -70,6 +83,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       method: "",
       is_active: true,
       lines: [],
+      sections: [],
       groups: [],
       compositions: {},
     };
@@ -89,6 +103,12 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     method: row.method,
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
+    sections: row.sections.map((section) => ({
+      key: newDraftKey(),
+      name: section.name,
+      method: section.method,
+      lines: section.lines.map(draftFromLine),
+    })),
     groups: row.modifier_groups.map((link) => ({ group: link.group, is_required: link.is_required })),
     compositions,
   };
@@ -227,6 +247,11 @@ export function TechCardsPanel() {
           method: draft.method,
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
+          sections: draft.sections.map((section) => ({
+            name: section.name,
+            method: section.method,
+            lines: linesToBody(section.lines),
+          })),
           modifier_groups: draft.groups,
           modifier_lines: modifierLines,
         },
@@ -399,6 +424,7 @@ export function TechCardsPanel() {
                   : t("baseCompositionPerPiece", { count: current.basis_quantity ?? 0 })
               }
               lines={current.lines}
+              sections={current.sections}
               method={current.method}
               onEdit={openEdit}
             >
@@ -591,6 +617,72 @@ export function TechCardsPanel() {
             extraColumn="loss"
             quantityLabel={t("quantity")}
           />
+
+          <CardTitle>{t("sections")}</CardTitle>
+          {draft.sections.map((section) => (
+            <div key={section.key} className="grid gap-3 rounded-2xl border border-[var(--line)] p-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  required
+                  value={section.name}
+                  placeholder={t("sectionName")}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      sections: draft.sections.map((row) =>
+                        row.key === section.key ? { ...row, name: event.target.value } : row,
+                      ),
+                    })
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("removeLine")}
+                  onClick={() =>
+                    setDraft({ ...draft, sections: draft.sections.filter((row) => row.key !== section.key) })
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <ComponentLinesEditor
+                lines={section.lines}
+                onChange={(lines) =>
+                  setDraft({
+                    ...draft,
+                    sections: draft.sections.map((row) => (row.key === section.key ? { ...row, lines } : row)),
+                  })
+                }
+                options={options}
+                extraColumn="loss"
+                quantityLabel={t("quantity")}
+              />
+              <Field label={t("method")}>
+                <MarkdownEditor
+                  value={section.method}
+                  onChange={(method) =>
+                    setDraft({
+                      ...draft,
+                      sections: draft.sections.map((row) => (row.key === section.key ? { ...row, method } : row)),
+                    })
+                  }
+                />
+              </Field>
+            </div>
+          ))}
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDraft({ ...draft, sections: [...draft.sections, emptySection()] })}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {t("addSection")}
+            </Button>
+          </div>
 
           <CardTitle>{t("modifiers")}</CardTitle>
           {draft.groups.map((link) => {

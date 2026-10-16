@@ -168,6 +168,7 @@ export function SemiProductsPanel() {
               images={current.images}
               compositionTitle={t("composition")}
               lines={current.lines}
+              sections={[]}
               method={current.method}
               onEdit={openEdit}
             >

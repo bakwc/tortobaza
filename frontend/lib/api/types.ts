@@ -825,6 +825,14 @@ export const TechCardModifierLineSchema = RecipeLineSchema.extend({
   scales_by_weight: z.boolean(),
 });
 
+export const TechCardSectionSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  method: z.string(),
+  position: z.number(),
+  lines: z.array(RecipeLineSchema),
+});
+
 export const TechCardCategorySchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -842,6 +850,7 @@ export const TechCardSchema = z.object({
   method: z.string(),
   is_active: z.boolean(),
   lines: z.array(RecipeLineSchema),
+  sections: z.array(TechCardSectionSchema),
   modifier_groups: z.array(TechCardGroupSchema),
   modifier_lines: z.array(TechCardModifierLineSchema),
   missing_modifiers: z.array(z.number()),
@@ -876,6 +885,7 @@ export type Modifier = z.infer<typeof ModifierSchema>;
 export type ModifierGroup = z.infer<typeof ModifierGroupSchema>;
 export type TechCardGroup = z.infer<typeof TechCardGroupSchema>;
 export type TechCardModifierLine = z.infer<typeof TechCardModifierLineSchema>;
+export type TechCardSection = z.infer<typeof TechCardSectionSchema>;
 export type TechCardCategory = z.infer<typeof TechCardCategorySchema>;
 export type TechCard = z.infer<typeof TechCardSchema>;
 export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
@@ -938,6 +948,7 @@ export type TechCardBody = {
   method: string;
   is_active: boolean;
   lines: RecipeLineBody[];
+  sections: { name: string; method: string; lines: RecipeLineBody[] }[];
   modifier_groups: { group: number; is_required: boolean | null }[];
   modifier_lines: (RecipeLineBody & { modifier: number; scales_by_weight: boolean })[];
 };

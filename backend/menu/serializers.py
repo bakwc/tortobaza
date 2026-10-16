@@ -17,6 +17,7 @@ from menu.models import (
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
+    TechCardSection,
 )
 from menu.recipes import missing_modifier_compositions, tech_card_cost
 
@@ -324,6 +325,18 @@ class CatalogOptionSerializer(serializers.ModelSerializer):
         return self.context["modifier_by_option"].get(obj.pk)
 
 
+class TechCardSectionInputSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    method = serializers.CharField(allow_blank=True, trim_whitespace=False)
+    lines = RecipeLineSerializer(many=True)
+
+    def validate_name(self, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise serializers.ValidationError("Section name is required.")
+        return name
+
+
 class TechCardGroupInputSerializer(serializers.Serializer):
     group = serializers.PrimaryKeyRelatedField(queryset=ModifierGroup.objects.all())
     is_required = serializers.BooleanField(allow_null=True)
@@ -343,6 +356,7 @@ class TechCardCategorySerializer(serializers.ModelSerializer):
 class TechCardSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
     lines = RecipeLineSerializer(many=True, write_only=True)
+    sections = TechCardSectionInputSerializer(many=True, write_only=True)
     modifier_groups = TechCardGroupInputSerializer(many=True, write_only=True)
     modifier_lines = TechCardModifierLineInputSerializer(many=True, write_only=True)
 
@@ -359,6 +373,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             "method",
             "is_active",
             "lines",
+            "sections",
             "modifier_groups",
             "modifier_lines",
         ]
@@ -372,7 +387,20 @@ class TechCardSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["lines"] = [
             recipe_line_payload(line)
-            for line in instance.lines.select_related("ingredient", "semi_product")
+            for line in instance.lines.filter(section__isnull=True).select_related("ingredient", "semi_product")
+        ]
+        data["sections"] = [
+            {
+                "id": section.pk,
+                "name": section.name,
+                "method": section.method,
+                "position": section.position,
+                "lines": [
+                    recipe_line_payload(line)
+                    for line in section.lines.select_related("ingredient", "semi_product")
+                ],
+            }
+            for section in instance.sections.all()
         ]
         data["modifier_groups"] = [
             {
@@ -427,6 +455,9 @@ class TechCardSerializer(serializers.ModelSerializer):
             )
         if kind == TechCard.KIND_PIECE and basis is not None:
             raise serializers.ValidationError({"basis_weight_kg": "A piece tech card has no basis weight."})
+        section_names = [row["name"] for row in attrs["sections"]]
+        if len(section_names) != len(set(section_names)):
+            raise serializers.ValidationError("A section name is used twice.")
         group_ids = [row["group"].pk for row in attrs["modifier_groups"]]
         if len(group_ids) != len(set(group_ids)):
             raise serializers.ValidationError("A modifier group is linked twice.")
@@ -456,14 +487,30 @@ class TechCardSerializer(serializers.ModelSerializer):
     def _pop_children(self, validated_data: dict) -> dict:
         return {
             "lines": validated_data.pop("lines"),
+            "sections": validated_data.pop("sections"),
             "modifier_groups": validated_data.pop("modifier_groups"),
             "modifier_lines": validated_data.pop("modifier_lines"),
         }
 
     def _save_children(self, instance: TechCard, children: dict) -> None:
         instance.lines.all().delete()
+        instance.sections.all().delete()
         instance.modifier_groups.all().delete()
         instance.modifier_lines.all().delete()
+        for position, section in enumerate(children["sections"]):
+            saved = TechCardSection.objects.create(
+                tech_card=instance,
+                name=section["name"],
+                method=section["method"],
+                position=position,
+            )
+            for line_position, line in enumerate(section["lines"]):
+                TechCardLine.objects.create(
+                    tech_card=instance,
+                    section=saved,
+                    position=line_position,
+                    **line,
+                )
         for position, line in enumerate(children["lines"]):
             TechCardLine.objects.create(tech_card=instance, position=position, **line)
         for position, row in enumerate(children["modifier_groups"]):
