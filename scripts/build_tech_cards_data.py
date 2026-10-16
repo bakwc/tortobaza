@@ -1421,6 +1421,140 @@ def custard_jar() -> dict:
     }
 
 
+def cake_method(diameter: str, bag: str, bento: bool, biscuits: list[tuple[str, str]]) -> str:
+    if bento:
+        layers = (
+            "2 коржа, 1 слой крема с начинкой. Снизу вверх:\n\n"
+            "1. Нижний корж\n"
+            "2. Крем\n"
+            "3. Начинка\n"
+            "4. Верхний корж\n\n"
+            "Покрыть черновым слоем крема и отправить в морозилку на 10–15 минут."
+        )
+        repeat = "Положить следующий корж и повторить пункты 4–5 один раз."
+        finish = "Черновое покрытие и в морозилку на 10–15 минут."
+    else:
+        layers = (
+            "3 коржа, 2 слоя крема с начинкой. Снизу вверх:\n\n"
+            "1. Нижний корж\n"
+            "2. Крем, 1 слой\n"
+            "3. Начинка, 1 слой\n"
+            "4. Средний корж\n"
+            "5. Крем, 2 слой\n"
+            "6. Начинка, 2 слой\n"
+            "7. Верхний корж\n\n"
+            "Затянуть ацетатной пленкой и поставить под пресс."
+        )
+        repeat = "Положить следующий корж и повторить пункты 4–5 два раза."
+        finish = "Ацетатная пленка и под пресс."
+    if biscuits:
+        biscuit_lines = "\n".join(f"- {name}: {quantity} г" for name, quantity in biscuits)
+        biscuit_block = (
+            "Бисквит в составе — отвес полуфабриката на этот размер. На торт берётся один вид.\n\n"
+            + biscuit_lines
+        )
+    else:
+        biscuit_block = "Отвеса бисквита на 3 кг в полуфабрикатах нет."
+    return f"""## Бисквит
+
+Диаметр примерно {diameter}. Размер может меняться по запросу заказчика или по просьбе шеф-кондитера или старшего кондитера.
+
+{biscuit_block}
+
+## Слои
+
+{layers}
+
+## Крем
+
+Крем чиз President. В составе крем на весь торт: внутрь и наружу. Один мешок на внутренние слои: {bag}.
+
+## Правила сборки
+
+1. Бисквит на дефрост. Можно использовать микроволновку на режиме разморозки.
+2. Разрезать бисквит на коржи толщиной примерно 1 см.
+3. Выложить нижний корж на подложку.
+4. Тонко выдавить крем и размазать по бисквиту. Сделать бортик, кремовое кольцо, по краю.
+5. Выложить начинку внутрь бортика.
+6. {repeat}
+7. {finish}
+
+## Важно
+
+- Соблюдать чистоту и аккуратность сборки.
+- Вес торта указан ориентировочно, это готовый торт.
+- Все ингредиенты указаны в граммах.
+
+## Чек-лист перед отдачей
+
+- Вес соответствует заказу
+- Ровное и аккуратное покрытие
+- Надежная подложка
+- Чистая коробка
+- Маркировка: вес, начинка, дата
+- Фото готового торта
+"""
+
+
+def cake_cards(images: list[str]) -> list[dict]:
+    vanilla = {
+        "0.6": "360",
+        "1": "500",
+        "1.5": "1000",
+        "2": "1320",
+        "2.5": "1650",
+    }
+    chocolate = {
+        "0.6": "330",
+        "1": "450",
+        "1.5": "900",
+        "2": "1200",
+        "2.5": "1500",
+    }
+    biscuit_portions = {
+        "Ванильный бисквит": vanilla,
+        "Тропический бисквит": vanilla,
+        "Шоколадный бисквит": chocolate,
+        "Фисташковый бисквит": chocolate,
+    }
+    sizes = [
+        ("Торт бенто 600 г", "0.6", "12 см", "174 г", True, "240", "70", "50"),
+        ("Торт бенто 1 кг", "1", "16 см", "240 г", True, "320", "94", "66"),
+        ("Торт 1,5 кг", "1.5", "16–18 см", "470 г", False, "600", "180", "160"),
+        ("Торт 2 кг", "2", "18 см", "625 г", False, "800", "240", "210"),
+        ("Торт 2,5 кг", "2.5", "18 см", "755 г", False, "1000", "270", "240"),
+        ("Торт 3 кг", "3", "18 см", "906 г", False, "1200", "324", "288"),
+    ]
+    cards = []
+    for name, basis, diameter, bag, bento, cream, butter, sugar in sizes:
+        biscuits = [
+            (biscuit, portions[basis])
+            for biscuit, portions in biscuit_portions.items()
+            if basis in portions
+        ]
+        lines = [semi_line(biscuit, Decimal(quantity)) for biscuit, quantity in biscuits]
+        lines.extend(
+            [
+                component_line("Кремчиз", Decimal(cream), "g"),
+                component_line("Масло сливочное", Decimal(butter), "g"),
+                component_line("Сахарная пудра", Decimal(sugar), "g"),
+            ]
+        )
+        cards.append(
+            {
+                "name": name,
+                "kind": "weighted",
+                "basis_weight_kg": basis,
+                "basis_quantity": None,
+                "category": "Торты",
+                "method": cake_method(diameter, bag, bento, biscuits).strip(),
+                "images": images,
+                "lines": [{key: value for key, value in row.items() if key != "unit"} for row in lines],
+            }
+        )
+    return cards
+
+
 def build() -> None:
     if IMAGES.exists():
         shutil.rmtree(IMAGES)
@@ -1650,6 +1784,9 @@ def build() -> None:
     for filename, (title, rows, extra) in jars.items():
         path = pdfs[nfc(filename)]
         cards.append(jar_card(title, rows, culinart_method(path, extra)))
+    sheet = IMAGES / "kremchiz-sheet.png"
+    shutil.copy(SOURCE / "b0ce358c-c22e-4e69-9866-7e45530f1149.png", sheet)
+    cards.extend(cake_cards(["images/kremchiz-sheet.png"]))
     ingredients: dict[str, str] = {}
     for collection in (semis, cards):
         for entity in collection:
