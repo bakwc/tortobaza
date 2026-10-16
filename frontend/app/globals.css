@@ -149,6 +149,10 @@ input[type="time"] {
   }
 }
 
+div.mdxeditor-popup-container {
+  z-index: 80;
+}
+
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }

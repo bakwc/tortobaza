@@ -740,9 +740,10 @@ export function TechCardsPanel() {
             </p>
           ) : null}
 
-          <Field label={t("method")}>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
             <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
-          </Field>
+          </div>
 
           {viewing ? (
             <MenuImages
@@ -807,7 +808,8 @@ export function TechCardsPanel() {
                 extraColumn="loss"
                 quantityLabel={t("quantity")}
               />
-              <Field label={t("method")}>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
                 <MarkdownEditor
                   value={section.method}
                   onChange={(method) =>
@@ -817,7 +819,7 @@ export function TechCardsPanel() {
                     })
                   }
                 />
-              </Field>
+              </div>
             </div>
           ))}
           <div>

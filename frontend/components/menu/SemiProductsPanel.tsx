@@ -255,9 +255,10 @@ export function SemiProductsPanel() {
             </div>
           </div>
           <p className="text-xs text-[var(--muted-2)]">{t("producedInAdvanceHint")}</p>
-          <Field label={t("method")}>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
             <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
-          </Field>
+          </div>
           {viewing !== null ? (
             <MenuImages
               images={(semiProducts.list.data ?? []).find((row) => row.id === viewing.id)?.images ?? viewing.images}
