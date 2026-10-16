@@ -695,6 +695,8 @@
     "linkedGroups": "Modifier groups",
     "requiredDefault": "As in the group ({value})",
     "chooseGroup": "Choose a group",
+    "addGroup": "Add group",
+    "noGroupsToAdd": "There are no other groups. A new group is created on the Modifier groups tab.",
     "modifierCompositions": "Modifier composition in this tech card",
     "scalesByWeight": "Scales by weight",
     "movements": "Stock movements",

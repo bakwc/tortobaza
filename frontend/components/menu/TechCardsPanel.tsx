@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2, TriangleAlert } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
@@ -95,14 +95,6 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   };
 }
 
-function modifierLabel(name: string, groupName: string): string {
-  const index = name.toLocaleLowerCase().indexOf(groupName.toLocaleLowerCase());
-  if (index === -1) return name;
-  const short = `${name.slice(0, index)} ${name.slice(index + groupName.length)}`.replace(/\s+/g, " ").trim();
-  if (short === "") return name;
-  return short.charAt(0).toLocaleLowerCase() + short.slice(1);
-}
-
 function withDefaultCompositions(draft: TechCardDraft, groups: ModifierGroup[]): TechCardDraft {
   const compositions = { ...draft.compositions };
   for (const link of draft.groups) {
@@ -193,6 +185,16 @@ export function TechCardsPanel() {
   for (const row of missing.data ?? []) {
     missingByCard.set(row.tech_card, (missingByCard.get(row.tech_card) ?? 0) + 1);
   }
+  const cards = techCards.list.data ?? [];
+  const cardGroups = [
+    ...(categories.list.data ?? []).map((category) => ({
+      key: String(category.id),
+      label: category.name,
+      cards: cards.filter((row) => row.category === category.id),
+    })),
+    { key: "none", label: t("noCategory"), cards: cards.filter((row) => row.category === null) },
+  ].filter((group) => group.cards.length > 0);
+  const columnCount = isFinanceAdmin ? 4 : 3;
 
   const setComposition = (modifierId: number, patch: Partial<ModifierComposition>) => {
     if (!draft) return;
@@ -271,42 +273,52 @@ export function TechCardsPanel() {
             <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
               <tr>
                 <th className="py-2">{t("name")}</th>
-                <th className="py-2">{t("category")}</th>
                 <th className="py-2">{t("kind")}</th>
                 <th className="py-2">{t("linkedProducts")}</th>
                 {isFinanceAdmin ? <th className="py-2 text-right">{t("baseCost")}</th> : null}
               </tr>
             </thead>
             <tbody>
-              {(techCards.list.data ?? []).map((row) => (
-                <tr
-                  key={row.id}
-                  onClick={() => openView(row)}
-                  className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
-                >
-                  <td className={row.is_active ? "py-2" : "py-2 text-[var(--muted-2)] line-through"}>
-                    <span className="inline-flex items-center gap-1.5">
-                      {row.name}
-                      {missingByCard.has(row.id) ? (
-                        <TriangleAlert className="h-3.5 w-3.5 text-amber-600" aria-label={t("missingCompositionsTitle")} />
-                      ) : null}
-                    </span>
-                  </td>
-                  <td className="py-2">{row.category_name ?? "—"}</td>
-                  <td className="py-2">
-                    {row.kind === "weighted" && row.basis_weight_kg !== null
-                      ? t("basisKg", { weight: row.basis_weight_kg })
-                      : row.basis_quantity !== null
-                        ? t("basisPieces", { count: row.basis_quantity })
-                        : t("kindPiece")}
-                  </td>
-                  <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
-                  {isFinanceAdmin ? (
-                    <td className="py-2 text-right">
-                      {row.base_cost !== undefined ? formatMoney(row.base_cost) : "—"}
+              {cardGroups.map((group) => (
+                <Fragment key={group.key}>
+                  <tr>
+                    <td
+                      colSpan={columnCount}
+                      className="border-t border-[var(--line)] bg-[var(--cream)] px-2 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/70"
+                    >
+                      {group.label}
                     </td>
-                  ) : null}
-                </tr>
+                  </tr>
+                  {group.cards.map((row) => (
+                    <tr
+                      key={row.id}
+                      onClick={() => openView(row)}
+                      className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
+                    >
+                      <td className={row.is_active ? "py-2" : "py-2 text-[var(--muted-2)] line-through"}>
+                        <span className="inline-flex items-center gap-1.5">
+                          {row.name}
+                          {missingByCard.has(row.id) ? (
+                            <TriangleAlert className="h-3.5 w-3.5 text-amber-600" aria-label={t("missingCompositionsTitle")} />
+                          ) : null}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        {row.kind === "weighted" && row.basis_weight_kg !== null
+                          ? t("basisKg", { weight: row.basis_weight_kg })
+                          : row.basis_quantity !== null
+                            ? t("basisPieces", { count: row.basis_quantity })
+                            : t("kindPiece")}
+                      </td>
+                      <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
+                      {isFinanceAdmin ? (
+                        <td className="py-2 text-right">
+                          {row.base_cost !== undefined ? formatMoney(row.base_cost) : "—"}
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -397,38 +409,65 @@ export function TechCardsPanel() {
                 </p>
               ) : null}
               {current.modifier_groups.length > 0 ? (
-                <div className="grid gap-2">
+                <div className="grid gap-3">
                   <CardTitle>{t("modifiers")}</CardTitle>
                   {current.modifier_groups.map((link) => (
-                    <p key={link.id} className="text-sm text-[var(--ink)]">
-                      <span className="font-semibold">{link.group_name}</span>
-                      {link.effective_is_required ? null : (
-                        <span className="text-[var(--muted-2)]"> ({t("optional")})</span>
-                      )}
-                      :{" "}
-                      {link.modifiers.map((modifier, index) => {
-                        const composition = current.modifier_lines.filter((line) => line.modifier === modifier.id);
-                        return (
-                          <span key={modifier.id}>
-                            {index > 0 ? ", " : ""}
-                            {modifierLabel(modifier.name, link.group_name)}{" "}
-                            {composition.length === 0 ? (
-                              <TriangleAlert
-                                className="inline h-3.5 w-3.5 text-amber-600"
-                                aria-label={t("missingCompositionsTitle")}
-                              />
-                            ) : (
-                              composition
-                                .map(
-                                  (line) =>
-                                    `${line.name === modifier.name ? "" : `${line.name} `}${formatQuantity(line.quantity)} ${units(line.unit)}`,
-                                )
-                                .join(" + ")
-                            )}
-                          </span>
-                        );
-                      })}
-                    </p>
+                    <div key={link.id} className="grid gap-1">
+                      <p className="text-sm font-semibold text-[var(--ink)]">
+                        {link.group_name}
+                        {link.effective_is_required ? null : (
+                          <span className="font-normal text-[var(--muted-2)]"> ({t("optional")})</span>
+                        )}
+                      </p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
+                            <tr>
+                              <th className="py-2 pr-3 font-medium">{t("name")}</th>
+                              <th className="py-2 pr-3 text-right font-medium">{t("quantity")}</th>
+                              <th className="py-2 text-right font-medium">{t("lossPercent")}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {link.modifiers.map((modifier) => {
+                              const composition = current.modifier_lines.filter(
+                                (line) => line.modifier === modifier.id,
+                              );
+                              if (composition.length === 0) {
+                                return (
+                                  <tr key={modifier.id} className="border-t border-[var(--line)]">
+                                    <td className="py-2 pr-3">
+                                      <span className="inline-flex items-center gap-1.5">
+                                        {modifier.name}
+                                        <TriangleAlert
+                                          className="h-3.5 w-3.5 text-amber-600"
+                                          aria-label={t("missingCompositionsTitle")}
+                                        />
+                                      </span>
+                                    </td>
+                                    <td className="py-2 pr-3 text-right">—</td>
+                                    <td className="py-2 text-right">—</td>
+                                  </tr>
+                                );
+                              }
+                              return composition.map((line) => (
+                                <tr key={line.id} className="border-t border-[var(--line)]">
+                                  <td className="py-2 pr-3">
+                                    {line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`}
+                                  </td>
+                                  <td className="py-2 pr-3 text-right tabular-nums">
+                                    {formatQuantity(line.quantity)} {units(line.unit)}
+                                  </td>
+                                  <td className="py-2 text-right tabular-nums">
+                                    {formatQuantity(line.loss_percent)}%
+                                  </td>
+                                </tr>
+                              ));
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : null}
@@ -554,81 +593,47 @@ export function TechCardsPanel() {
             quantityLabel={t("quantity")}
           />
 
-          <CardTitle>{t("linkedGroups")}</CardTitle>
-          <div className="grid gap-2">
-            {draft.groups.map((link) => {
-              const group = allGroups.find((row) => row.id === link.group);
-              return (
-                <div key={link.group} className="grid grid-cols-[1fr_12rem_auto] items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--ink)]">{group?.name ?? link.group}</span>
-                  <NativeSelect
-                    value={requiredValue(link.is_required)}
-                    onChange={(event) =>
-                      setDraft({
-                        ...draft,
-                        groups: draft.groups.map((row) =>
-                          row.group === link.group ? { ...row, is_required: parseRequired(event.target.value) } : row,
-                        ),
-                      })
-                    }
-                  >
-                    <option value="default">
-                      {t("requiredDefault", { value: group?.is_required ? t("yes") : t("no") })}
-                    </option>
-                    <option value="yes">{t("required")}</option>
-                    <option value="no">{t("optional")}</option>
-                  </NativeSelect>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t("removeLine")}
-                    onClick={() =>
-                      setDraft({ ...draft, groups: draft.groups.filter((row) => row.group !== link.group) })
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              );
-            })}
-            <div className="flex gap-2">
-              <NativeSelect value={groupToAdd} onChange={(event) => setGroupToAdd(event.target.value)}>
-                <option value="">{t("chooseGroup")}</option>
-                {allGroups
-                  .filter((group) => !draft.groups.some((link) => link.group === group.id))
-                  .map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-              </NativeSelect>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={groupToAdd === ""}
-                onClick={() => {
-                  setDraft(
-                    withDefaultCompositions(
-                      { ...draft, groups: [...draft.groups, { group: Number(groupToAdd), is_required: null }] },
-                      allGroups,
-                    ),
-                  );
-                  setGroupToAdd("");
-                }}
-              >
-                {t("add")}
-              </Button>
-            </div>
-          </div>
-
-          {draft.groups.length > 0 ? <CardTitle>{t("modifierCompositions")}</CardTitle> : null}
+          <CardTitle>{t("modifiers")}</CardTitle>
           {draft.groups.map((link) => {
             const group = allGroups.find((row) => row.id === link.group);
             if (!group) return null;
             return (
               <div key={link.group} className="grid gap-3 rounded-2xl border border-[var(--line)] p-4">
-                <p className="text-sm font-semibold text-[var(--ink)]">{group.name}</p>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-[var(--ink)]">{group.name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NativeSelect
+                      value={requiredValue(link.is_required)}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          groups: draft.groups.map((row) =>
+                            row.group === link.group
+                              ? { ...row, is_required: parseRequired(event.target.value) }
+                              : row,
+                          ),
+                        })
+                      }
+                    >
+                      <option value="default">
+                        {t("requiredDefault", { value: group.is_required ? t("yes") : t("no") })}
+                      </option>
+                      <option value="yes">{t("required")}</option>
+                      <option value="no">{t("optional")}</option>
+                    </NativeSelect>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setDraft({ ...draft, groups: draft.groups.filter((row) => row.group !== link.group) })
+                      }
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      {t("delete")}
+                    </Button>
+                  </div>
+                </div>
                 {group.modifiers
                   .filter((modifier) => modifier.is_active)
                   .map((modifier) => {
@@ -668,6 +673,38 @@ export function TechCardsPanel() {
               </div>
             );
           })}
+          <div className="flex flex-wrap gap-2">
+            <NativeSelect value={groupToAdd} onChange={(event) => setGroupToAdd(event.target.value)}>
+              <option value="">{t("chooseGroup")}</option>
+              {allGroups
+                .filter((group) => !draft.groups.some((link) => link.group === group.id))
+                .map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+            </NativeSelect>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={groupToAdd === ""}
+              onClick={() => {
+                setDraft(
+                  withDefaultCompositions(
+                    { ...draft, groups: [...draft.groups, { group: Number(groupToAdd), is_required: null }] },
+                    allGroups,
+                  ),
+                );
+                setGroupToAdd("");
+              }}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              {t("addGroup")}
+            </Button>
+          </div>
+          {allGroups.every((group) => draft.groups.some((link) => link.group === group.id)) ? (
+            <p className="text-xs text-[var(--muted-2)]">{t("noGroupsToAdd")}</p>
+          ) : null}
         </EditorDialog>
       ) : null}
     </div>
