@@ -666,6 +666,8 @@
     "noWebsiteOption": "No website option",
     "addModifier": "Add modifier",
     "websiteOptionHint": "A website option links website orders to this modifier automatically.",
+    "noDefaultComponent": "No component",
+    "defaultComponentHint": "The component is added to the modifier composition when the group is linked to a tech card. Only the weight is left to fill in.",
     "missingCompositionsTitle": "Modifiers without a composition",
     "kind": "Kind",
     "linkedProducts": "Website products",

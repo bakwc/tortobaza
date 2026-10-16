@@ -191,7 +191,14 @@ class ModifierInputSerializer(serializers.Serializer):
     id = serializers.IntegerField(allow_null=True)
     name = serializers.CharField(max_length=120)
     catalog_option = serializers.PrimaryKeyRelatedField(queryset=Option.objects.all(), allow_null=True)
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
+    semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
     is_active = serializers.BooleanField()
+
+    def validate(self, attrs):
+        if attrs["ingredient"] is not None and attrs["semi_product"] is not None:
+            raise serializers.ValidationError("Pass ingredient or semi_product, not both.")
+        return attrs
 
 
 class ModifierGroupSerializer(serializers.ModelSerializer):
@@ -224,6 +231,8 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "name": modifier.name,
                 "catalog_option": modifier.catalog_option_id,
                 "catalog_option_label": option_label(modifier.catalog_option),
+                "ingredient": modifier.ingredient_id,
+                "semi_product": modifier.semi_product_id,
                 "is_active": modifier.is_active,
             }
             for modifier in instance.modifiers.select_related("catalog_option__group")
@@ -283,6 +292,8 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             fields = {
                 "name": row["name"],
                 "catalog_option": row["catalog_option"],
+                "ingredient": row["ingredient"],
+                "semi_product": row["semi_product"],
                 "is_active": row["is_active"],
                 "position": position,
             }

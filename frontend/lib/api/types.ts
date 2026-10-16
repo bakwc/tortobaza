@@ -792,6 +792,8 @@ export const ModifierSchema = z.object({
   name: z.string(),
   catalog_option: z.number().nullable(),
   catalog_option_label: z.string().nullable(),
+  ingredient: z.number().nullable(),
+  semi_product: z.number().nullable(),
   is_active: z.boolean(),
 });
 
@@ -919,6 +921,8 @@ export type ModifierGroupBody = {
     id: number | null;
     name: string;
     catalog_option: number | null;
+    ingredient: number | null;
+    semi_product: number | null;
     is_active: boolean;
   }[];
 };

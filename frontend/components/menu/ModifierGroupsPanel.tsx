@@ -5,19 +5,30 @@ import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
+import {
+  componentOptions,
+  componentRef,
+  componentValue,
+  newDraftKey,
+} from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
-import { useCatalogOptions, useModifierGroups } from "@/hooks/useStock";
-import type { ModifierGroup } from "@/lib/api/types";
+import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts } from "@/hooks/useStock";
+import type { Modifier, ModifierGroup } from "@/lib/api/types";
 
 type ModifierDraft = {
   key: string;
   id: number | null;
   name: string;
   catalog_option: number | null;
+  component: string;
   is_active: boolean;
 };
+
+function modifierComponent(modifier: Modifier): string {
+  if (modifier.ingredient === null && modifier.semi_product === null) return "";
+  return componentValue(modifier);
+}
 
 type GroupDraft = {
   name: string;
@@ -48,7 +59,14 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
     min_selections: String(row.min_selections),
     max_selections: row.max_selections === null ? "" : String(row.max_selections),
     position: row.position,
-    modifiers: row.modifiers.map((modifier) => ({ key: newDraftKey(), ...modifier })),
+    modifiers: row.modifiers.map((modifier) => ({
+      key: newDraftKey(),
+      id: modifier.id,
+      name: modifier.name,
+      catalog_option: modifier.catalog_option,
+      component: modifierComponent(modifier),
+      is_active: modifier.is_active,
+    })),
   };
 }
 
@@ -56,6 +74,15 @@ export function ModifierGroupsPanel() {
   const t = useTranslations("stock");
   const groups = useModifierGroups();
   const catalogOptions = useCatalogOptions();
+  const ingredients = useIngredients();
+  const semiProducts = useSemiProducts();
+  const components = componentOptions(
+    ingredients.list.data ?? [],
+    semiProducts.list.data ?? [],
+    "all",
+    t("ingredient"),
+    t("semiProduct"),
+  );
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
 
@@ -140,6 +167,9 @@ export function ModifierGroupsPanel() {
                     id: row.id,
                     name: row.name,
                     catalog_option: row.catalog_option,
+                    ...(row.component === ""
+                      ? { ingredient: null, semi_product: null }
+                      : componentRef(row.component)),
                     is_active: row.is_active,
                   })),
                 },
@@ -196,7 +226,7 @@ export function ModifierGroupsPanel() {
           <CardTitle>{t("modifiers")}</CardTitle>
           <div className="grid gap-2">
             {draft.modifiers.map((row) => (
-              <div key={row.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+              <div key={row.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]">
                 <Input
                   required
                   placeholder={t("name")}
@@ -223,6 +253,17 @@ export function ModifierGroupsPanel() {
                       </option>
                     );
                   })}
+                </NativeSelect>
+                <NativeSelect
+                  value={row.component}
+                  onChange={(event) => updateModifier(row.key, { component: event.target.value })}
+                >
+                  <option value="">{t("noDefaultComponent")}</option>
+                  {components.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </NativeSelect>
                 <div className="flex items-center">
                   <CheckboxField
@@ -254,7 +295,14 @@ export function ModifierGroupsPanel() {
                     ...draft,
                     modifiers: [
                       ...draft.modifiers,
-                      { key: newDraftKey(), id: null, name: "", catalog_option: null, is_active: true },
+                      {
+                        key: newDraftKey(),
+                        id: null,
+                        name: "",
+                        catalog_option: null,
+                        component: "",
+                        is_active: true,
+                      },
                     ],
                   })
                 }
@@ -265,6 +313,7 @@ export function ModifierGroupsPanel() {
             </div>
           </div>
           <p className="text-xs text-[var(--muted-2)]">{t("websiteOptionHint")}</p>
+          <p className="text-xs text-[var(--muted-2)]">{t("defaultComponentHint")}</p>
         </EditorDialog>
       ) : null}
     </div>

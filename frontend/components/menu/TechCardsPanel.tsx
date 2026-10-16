@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/input";
 import {
   ComponentLinesEditor,
   componentOptions,
+  componentValue,
   draftFromLine,
+  emptyLine,
   linesToBody,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
@@ -37,7 +39,7 @@ import {
   useTechCardImages,
   useTechCards,
 } from "@/hooks/useStock";
-import type { TechCard } from "@/lib/api/types";
+import type { ModifierGroup, TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
@@ -92,6 +94,21 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   };
 }
 
+function withDefaultCompositions(draft: TechCardDraft, groups: ModifierGroup[]): TechCardDraft {
+  const compositions = { ...draft.compositions };
+  for (const link of draft.groups) {
+    for (const modifier of groups.find((group) => group.id === link.group)?.modifiers ?? []) {
+      if (!modifier.is_active || compositions[modifier.id]?.lines.length) continue;
+      if (modifier.ingredient === null && modifier.semi_product === null) continue;
+      compositions[modifier.id] = {
+        scales_by_weight: true,
+        lines: [{ ...emptyLine(), component: componentValue(modifier) }],
+      };
+    }
+  }
+  return { ...draft, compositions };
+}
+
 function requiredValue(value: boolean | null): string {
   if (value === null) return "default";
   return value ? "yes" : "no";
@@ -139,7 +156,7 @@ export function TechCardsPanel() {
   };
   const openEdit = () => {
     if (current === null) return;
-    setDraft(draftFrom(current));
+    setDraft(withDefaultCompositions(draftFrom(current), groups.list.data ?? []));
     setMode("edit");
     setGroupToAdd("");
   };
@@ -586,7 +603,12 @@ export function TechCardsPanel() {
                 variant="outline"
                 disabled={groupToAdd === ""}
                 onClick={() => {
-                  setDraft({ ...draft, groups: [...draft.groups, { group: Number(groupToAdd), is_required: null }] });
+                  setDraft(
+                    withDefaultCompositions(
+                      { ...draft, groups: [...draft.groups, { group: Number(groupToAdd), is_required: null }] },
+                      allGroups,
+                    ),
+                  );
                   setGroupToAdd("");
                 }}
               >

@@ -1531,7 +1531,7 @@ def cake_cards(images: list[str]) -> tuple[list[dict], list[dict], list[dict]]:
         "selection_type": "single",
         "is_required": True,
         "position": 0,
-        "modifiers": list(biscuit_portions),
+        "modifiers": [{"name": biscuit, "semi_product": biscuit} for biscuit in biscuit_portions],
     }
     cards = []
     links = []

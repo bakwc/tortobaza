@@ -214,6 +214,22 @@ class Modifier(models.Model):
         blank=True,
         verbose_name=_("Website option"),
     )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        related_name="default_for_modifiers",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Default ingredient"),
+    )
+    semi_product = models.ForeignKey(
+        SemiProduct,
+        related_name="default_for_modifiers",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Default semi-product"),
+    )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
@@ -223,6 +239,10 @@ class Modifier(models.Model):
         verbose_name_plural = _("Modifiers")
         constraints = [
             models.UniqueConstraint(fields=["group", "name"], name="uniq_menu_modifier_group_name"),
+            models.CheckConstraint(
+                condition=models.Q(ingredient__isnull=True) | models.Q(semi_product__isnull=True),
+                name="menu_modifier_one_default_component",
+            ),
         ]
 
     def __str__(self) -> str:

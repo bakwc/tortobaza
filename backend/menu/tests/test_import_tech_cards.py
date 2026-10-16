@@ -49,7 +49,7 @@ class ImportTechCardsTests(TestCase):
                         "selection_type": "single",
                         "is_required": True,
                         "position": 0,
-                        "modifiers": ["Бисквит"],
+                        "modifiers": [{"name": "Бисквит", "semi_product": "Бисквит"}],
                     }
                 ],
                 "tech_card_modifiers": [
@@ -82,7 +82,10 @@ class ImportTechCardsTests(TestCase):
             self.assertEqual(card.images.count(), 1)
             self.assertEqual(card.modifier_groups.get().group, ModifierGroup.objects.get(name="Основа"))
             modifier_line = card.modifier_lines.get()
-            self.assertEqual(modifier_line.modifier, Modifier.objects.get(group__name="Основа", name="Бисквит"))
+            modifier = Modifier.objects.get(group__name="Основа", name="Бисквит")
+            self.assertEqual(modifier_line.modifier, modifier)
+            self.assertEqual(modifier.semi_product.name, "Бисквит")
+            self.assertIsNone(modifier.ingredient)
             self.assertEqual(modifier_line.semi_product.name, "Бисквит")
             self.assertEqual(modifier_line.quantity, Decimal("300"))
             semi = SemiProduct.objects.get(name="Бисквит")

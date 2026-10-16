@@ -40,7 +40,7 @@ class Command(BaseCommand):
         semis = self._semis(payload["semi_products"])
         self._semi_lines(payload["semi_products"], semis, ingredients)
         self._cards(payload["tech_cards"], categories, semis, ingredients)
-        modifiers = self._modifier_groups(payload["modifier_groups"])
+        modifiers = self._modifier_groups(payload["modifier_groups"], semis, ingredients)
         self._tech_card_modifiers(payload["tech_card_modifiers"], modifiers, semis, ingredients)
         self._images(payload["semi_products"], semis, SemiProductImage, "semi_product", data_dir)
         self._images(payload["tech_cards"], self._cards_by_name(payload["tech_cards"]), TechCardImage, "tech_card", data_dir)
@@ -123,7 +123,12 @@ class Command(BaseCommand):
             card.save()
             self._replace_lines(card, TechCardLine, "tech_card", row["lines"], ingredients, semis)
 
-    def _modifier_groups(self, rows: list[dict]) -> dict[tuple[str, str], Modifier]:
+    def _modifier_groups(
+        self,
+        rows: list[dict],
+        semis: dict[str, SemiProduct],
+        ingredients: dict[str, Ingredient],
+    ) -> dict[tuple[str, str], Modifier]:
         found = {}
         for row in rows:
             group, _created = ModifierGroup.objects.get_or_create(
@@ -138,12 +143,18 @@ class Command(BaseCommand):
             group.is_required = row["is_required"]
             group.position = row["position"]
             group.save()
-            for position, name in enumerate(row["modifiers"]):
+            for position, item in enumerate(row["modifiers"]):
                 modifier, _created = Modifier.objects.get_or_create(
                     group=group,
-                    name=name,
+                    name=item["name"],
                     defaults={"position": position},
                 )
+                if "ingredient" in item:
+                    modifier.ingredient = ingredients[item["ingredient"]]
+                    modifier.semi_product = None
+                else:
+                    modifier.ingredient = None
+                    modifier.semi_product = semis[item["semi_product"]]
                 modifier.position = position
                 modifier.is_active = True
                 modifier.save()
