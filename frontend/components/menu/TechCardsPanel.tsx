@@ -213,7 +213,7 @@ export function TechCardsPanel() {
     })),
     { key: "none", label: t("noCategory"), cards: cards.filter((row) => row.category === null) },
   ].filter((group) => group.cards.length > 0);
-  const columnCount = isFinanceAdmin ? 4 : 3;
+  const columnCount = isFinanceAdmin ? 3 : 2;
 
   const setComposition = (modifierId: number, patch: Partial<ModifierComposition>) => {
     if (!draft) return;
@@ -298,7 +298,6 @@ export function TechCardsPanel() {
               <tr>
                 <th className="py-2">{t("name")}</th>
                 <th className="py-2">{t("kind")}</th>
-                <th className="py-2">{t("linkedProducts")}</th>
                 {isFinanceAdmin ? <th className="py-2 text-right">{t("baseCost")}</th> : null}
               </tr>
             </thead>
@@ -334,7 +333,6 @@ export function TechCardsPanel() {
                             ? t("basisPieces", { count: row.basis_quantity })
                             : t("kindPiece")}
                       </td>
-                      <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
                       {isFinanceAdmin ? (
                         <td className="py-2 text-right">
                           {row.base_cost !== undefined ? formatMoney(row.base_cost) : "—"}

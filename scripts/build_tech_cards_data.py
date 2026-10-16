@@ -536,12 +536,26 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[di
         cleaned = text.strip()
         if not cleaned or cleaned.casefold() == "метод приготовления":
             return
+        kept: list[str] = []
+        assembly: list[str] = []
+        for line in cleaned.splitlines():
+            if assembly or (
+                is_method_heading(line.strip()) and heading_title(line).casefold() == "сборка"
+            ):
+                assembly.append(line)
+                continue
+            kept.append(line)
+        if assembly:
+            loose.append("\n".join(assembly).strip())
+        body = "\n".join(kept).strip()
+        if not body:
+            return
         if current:
-            section_text.setdefault(current, []).append(cleaned)
+            section_text.setdefault(current, []).append(body)
             if current not in section_order:
                 section_order.append(current)
             return
-        loose.append(cleaned)
+        loose.append(body)
 
     for name, qty, method in rows:
         header = name.casefold() in {"", "ингредиент", "ингридиенты"} and (
