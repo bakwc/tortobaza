@@ -228,7 +228,9 @@ export function TechCardsPanel() {
                   </td>
                   <td className="py-2">{row.category_name ?? "—"}</td>
                   <td className="py-2">
-                    {row.kind === "weighted" ? t("basisKg", { weight: row.basis_weight_kg }) : t("kindPiece")}
+                    {row.kind === "weighted" && row.basis_weight_kg !== null
+                      ? t("basisKg", { weight: row.basis_weight_kg })
+                      : t("kindPiece")}
                   </td>
                   <td className="py-2">{row.products.map((product) => product.name).join(", ") || "—"}</td>
                   {isFinanceAdmin ? (
