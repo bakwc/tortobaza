@@ -1564,30 +1564,54 @@ def pastry_card(title: str, text: str, method: str) -> dict:
     }
 
 
-def jar_card(name: str, rows: list[tuple[str, Decimal] | dict], method: str) -> dict:
-    lines = []
-    for row in rows:
-        if isinstance(row, dict):
-            lines.append(
-                {
-                    "semi_product": row["semi_product"],
-                    "quantity": qstr(Decimal(row["quantity"])),
-                    "loss_percent": "0",
-                }
-            )
-        else:
-            ingredient, quantity = row
-            lines.append(component_line(ingredient, quantity, "g"))
+def split_method_chapters(method: str) -> tuple[list[tuple[str, str]], str]:
+    chapters: list[tuple[str, str]] = []
+    rest: list[str] = []
+    for part in re.split(r"\n(?=#{2,3} )", method.strip()):
+        if part.startswith("### "):
+            title, _sep, body = part.partition("\n")
+            chapters.append((title.removeprefix("### ").strip(), body.strip()))
+            continue
+        if part.strip():
+            rest.append(part.strip())
+    if not chapters:
+        raise RuntimeError("jar method has no chapters")
+    return chapters, "\n\n".join(rest)
+
+
+def jar_line(row: tuple[str, Decimal] | dict) -> dict:
+    if isinstance(row, dict):
+        return {
+            "semi_product": row["semi_product"],
+            "quantity": qstr(Decimal(row["quantity"])),
+            "loss_percent": "0",
+        }
+    ingredient, quantity = row
+    return component_line(ingredient, quantity, "g")
+
+
+def jar_card(name: str, grouped: list[tuple[str, list[tuple[str, Decimal] | dict]]], method: str) -> dict:
+    chapters, rest = split_method_chapters(method)
+    pending = {title: rows for title, rows in grouped}
+    if len(pending) != len(grouped):
+        raise RuntimeError(f"duplicate section in {name}")
+    sections = []
+    for title, body in chapters:
+        rows = pending.pop(title) if title in pending else None
+        lines = [] if rows is None else [jar_line(row) for row in rows]
+        sections.append({"name": title, "method": body, "lines": without_unit(lines)})
+    if pending:
+        raise RuntimeError(f"{name}: sections missing from method: {', '.join(pending)}")
     return {
         "name": name,
         "kind": "piece",
         "basis_weight_kg": None,
         "basis_quantity": 10,
         "category": "Десерты",
-        "method": add_notes(method, ["Расчёт на 10 порций."]),
+        "method": add_notes(rest, ["Расчёт на 10 порций."]),
         "images": [],
-        "lines": without_unit(lines),
-        "sections": [],
+        "lines": [],
+        "sections": sections,
     }
 
 
@@ -2045,153 +2069,250 @@ def build() -> None:
         "Дубай.pdf": (
             "Дубай",
             [
-                ("Масло сливочное", Decimal("150")),
-                ("Сахар", Decimal("80")),
-                ("Сахар тростниковый", Decimal("90")),
-                ("Яйцо", Decimal("135")),
-                ("Мука пшеничная", Decimal("70")),
-                ("Соль", Decimal("2")),
-                ("Молочный шоколад", Decimal("120")),
-                ("Молочный шоколад", Decimal("150")),
-                ("Сливки 33%", Decimal("80")),
-                ("Сливки 33%", Decimal("300")),
-                ("Желатин", Decimal("4")),
-                ("Вода", Decimal("20")),
-                ("Молочный шоколад", Decimal("200")),
-                ("Сливки 33%", Decimal("200")),
-                ("Желатин", Decimal("4")),
-                ("Вода", Decimal("20")),
-                ("Катаифи", Decimal("225")),
-                ("Масло растительное", Decimal("30")),
-                ("Белый шоколад", Decimal("100")),
-                ("Фисташковая паста", Decimal("200")),
+                (
+                    "Брауни",
+                    [
+                        ("Масло сливочное", Decimal("150")),
+                        ("Сахар", Decimal("80")),
+                        ("Сахар тростниковый", Decimal("90")),
+                        ("Яйцо", Decimal("135")),
+                        ("Мука пшеничная", Decimal("70")),
+                        ("Соль", Decimal("2")),
+                        ("Молочный шоколад", Decimal("120")),
+                    ],
+                ),
+                (
+                    "Шоколадный мусс",
+                    [
+                        ("Молочный шоколад", Decimal("150")),
+                        ("Сливки 33%", Decimal("80")),
+                        ("Сливки 33%", Decimal("300")),
+                        ("Желатин", Decimal("4")),
+                        ("Вода", Decimal("20")),
+                    ],
+                ),
+                (
+                    "Ганаш на молочном шоколаде",
+                    [
+                        ("Молочный шоколад", Decimal("200")),
+                        ("Сливки 33%", Decimal("200")),
+                        ("Желатин", Decimal("4")),
+                        ("Вода", Decimal("20")),
+                    ],
+                ),
+                (
+                    "Начинка Фисташка",
+                    [
+                        ("Катаифи", Decimal("225")),
+                        ("Масло растительное", Decimal("30")),
+                        ("Белый шоколад", Decimal("100")),
+                        ("Фисташковая паста", Decimal("200")),
+                    ],
+                ),
             ],
             "Желатин замочен водой 1:5.",
         ),
         "Твикс.pdf": (
             "Твикс",
             [
-                ("Мука пшеничная", Decimal("280")),
-                ("Масло сливочное", Decimal("180")),
-                ("Миндальная мука", Decimal("52")),
-                ("Сахар", Decimal("110")),
-                ("Соль", Decimal("7")),
-                ("Ванильный экстракт", Decimal("10")),
-                ("Яйцо", Decimal("50")),
-                ("Молочный шоколад", Decimal("250")),
-                ("Сахар", Decimal("120")),
-                ("Масло сливочное", Decimal("40")),
-                ("Сливки 33%", Decimal("150")),
-                ("Соль", Decimal("1")),
-                ("Шоколад", Decimal("225")),
-                ("Сливки 33%", Decimal("120")),
-                ("Сливки 33%", Decimal("450")),
-                ("Желатин", Decimal("6")),
-                ("Вода", Decimal("30")),
-                ("Шоколад", Decimal("200")),
-                ("Сливки 33%", Decimal("200")),
-                ("Желатин", Decimal("2")),
-                ("Вода", Decimal("10")),
+                (
+                    "Ванильное сабле",
+                    [
+                        ("Мука пшеничная", Decimal("280")),
+                        ("Масло сливочное", Decimal("180")),
+                        ("Миндальная мука", Decimal("52")),
+                        ("Сахар", Decimal("110")),
+                        ("Соль", Decimal("7")),
+                        ("Ванильный экстракт", Decimal("10")),
+                        ("Яйцо", Decimal("50")),
+                        ("Молочный шоколад", Decimal("250")),
+                    ],
+                ),
+                (
+                    "Соленая карамель",
+                    [
+                        ("Сахар", Decimal("120")),
+                        ("Масло сливочное", Decimal("40")),
+                        ("Сливки 33%", Decimal("150")),
+                        ("Соль", Decimal("1")),
+                    ],
+                ),
+                (
+                    "Шоколадный мусс",
+                    [
+                        ("Шоколад", Decimal("225")),
+                        ("Сливки 33%", Decimal("120")),
+                        ("Сливки 33%", Decimal("450")),
+                        ("Желатин", Decimal("6")),
+                        ("Вода", Decimal("30")),
+                    ],
+                ),
+                (
+                    "Ганаш на молочном шоколаде",
+                    [
+                        ("Шоколад", Decimal("200")),
+                        ("Сливки 33%", Decimal("200")),
+                        ("Желатин", Decimal("2")),
+                        ("Вода", Decimal("10")),
+                    ],
+                ),
             ],
             "Яйцо в сабле: 1 шт = 50 г на всю партию. Желатин замочен водой 1:5.",
         ),
         "Медовик с облепихой.pdf": (
             "Медовик с облепихой",
             [
-                ("Масло сливочное", Decimal("50")),
-                ("Сахар", Decimal("110")),
-                ("Мёд", Decimal("75")),
-                ("Сода", Decimal("9")),
-                ("Соль", Decimal("1")),
-                ("Мука пшеничная", Decimal("310")),
-                ("Яйцо", Decimal("85")),
-                ("Сок лимона", Decimal("12")),
-                ("Сметана 30%", Decimal("320")),
-                ("Сливки 33%", Decimal("100")),
-                ("Маскарпоне", Decimal("176")),
-                ("Мёд", Decimal("50")),
-                ("Сахарная пудра", Decimal("50")),
-                ("Пюре облепихи", Decimal("360")),
-                ("Сахар", Decimal("120")),
-                ("Пектин NH", Decimal("12")),
-                ("Желатин", Decimal("5")),
-                ("Вода", Decimal("25")),
+                (
+                    "Корж",
+                    [
+                        ("Масло сливочное", Decimal("50")),
+                        ("Сахар", Decimal("110")),
+                        ("Мёд", Decimal("75")),
+                        ("Сода", Decimal("9")),
+                        ("Соль", Decimal("1")),
+                        ("Мука пшеничная", Decimal("310")),
+                        ("Яйцо", Decimal("85")),
+                        ("Сок лимона", Decimal("12")),
+                    ],
+                ),
+                (
+                    "Сметанный крем",
+                    [
+                        ("Сметана 30%", Decimal("320")),
+                        ("Сливки 33%", Decimal("100")),
+                        ("Маскарпоне", Decimal("176")),
+                        ("Мёд", Decimal("50")),
+                        ("Сахарная пудра", Decimal("50")),
+                    ],
+                ),
+                (
+                    "Конфи облепиха",
+                    [
+                        ("Пюре облепихи", Decimal("360")),
+                        ("Сахар", Decimal("120")),
+                        ("Пектин NH", Decimal("12")),
+                        ("Желатин", Decimal("5")),
+                        ("Вода", Decimal("25")),
+                    ],
+                ),
             ],
             "Сметана в карточке указана как 25–30%. Желатин замочен водой 1:5.",
         ),
         "Морковный кекс.pdf": (
             "Морковный кекс",
             [
-                ("Морковь", Decimal("125")),
-                ("Пекан", Decimal("30")),
-                ("Изюм", Decimal("30")),
-                ("Разрыхлитель", Decimal("4")),
-                ("Сода", Decimal("2.5")),
-                ("Корица", Decimal("4")),
-                ("Соль", Decimal("3")),
-                ("Мука пшеничная", Decimal("125")),
-                ("Сахар", Decimal("40")),
-                ("Сахар тростниковый", Decimal("450")),
-                ("Яйцо", Decimal("125")),
-                ("Масло растительное", Decimal("105")),
-                ("Сливки 33%", Decimal("135")),
-                ("Сахарная пудра", Decimal("60")),
-                ("Кремчиз", Decimal("250")),
-                ("Маскарпоне", Decimal("100")),
-                ("Корица", Decimal("2")),
+                (
+                    "Морковный бисквит",
+                    [
+                        ("Морковь", Decimal("125")),
+                        ("Пекан", Decimal("30")),
+                        ("Изюм", Decimal("30")),
+                        ("Мука пшеничная", Decimal("105")),
+                        ("Разрыхлитель", Decimal("4")),
+                        ("Сода", Decimal("2.5")),
+                        ("Корица", Decimal("4")),
+                        ("Соль", Decimal("3")),
+                        ("Сахар", Decimal("125")),
+                        ("Сахар тростниковый", Decimal("40")),
+                        ("Масло растительное", Decimal("135")),
+                        ("Яйцо", Decimal("125")),
+                    ],
+                ),
+                (
+                    "Сырный крем",
+                    [
+                        ("Сливки 33%", Decimal("450")),
+                        ("Сахарная пудра", Decimal("60")),
+                        ("Кремчиз", Decimal("250")),
+                        ("Маскарпоне", Decimal("100")),
+                        ("Корица", Decimal("2")),
+                    ],
+                ),
             ],
-            "В PDF количества бисквита съехали. Сода 2,5 г стояла на строке муки. "
-            "Свободные числа колонки разобраны так: мука 125 г, сахар 40 г, сахар тростниковый 450 г, яйцо 125 г. "
-            "Однозначно читались морковь 125, пекан 30, изюм 30, разрыхлитель 4, корица 4, соль 3, масло 105, "
-            "сливки 135, пудра 60, кремчиз 250, маскарпоне 100, корица крема 2.",
+            "",
         ),
         "Фундучное наслаждение.pdf": (
             "Фундучное наслаждение",
             [
-                ("Яичный белок", Decimal("75")),
-                ("Сахар", Decimal("25")),
-                ("Сахарная пудра", Decimal("60")),
-                ("Миндальная мука", Decimal("60")),
-                ("Фундучное пралине", Decimal("15")),
-                ("Сахар", Decimal("120")),
-                ("Сливки 33%", Decimal("150")),
-                ("Масло сливочное", Decimal("40")),
-                ("Соль", Decimal("1")),
-                {"semi_product": "Заварной крем для банок", "quantity": "250"},
-                ("Фундучное пралине", Decimal("100")),
-                ("Сливки 33%", Decimal("600")),
-                ("Желатин", Decimal("5")),
-                ("Вода", Decimal("25")),
-                ("Молочный шоколад", Decimal("100")),
-                ("Сливки 33%", Decimal("100")),
+                (
+                    "Дакуаз фундучный",
+                    [
+                        ("Яичный белок", Decimal("75")),
+                        ("Сахар", Decimal("25")),
+                        ("Сахарная пудра", Decimal("60")),
+                        ("Миндальная мука", Decimal("60")),
+                        ("Фундучное пралине", Decimal("15")),
+                    ],
+                ),
+                (
+                    "Соленая карамель",
+                    [
+                        ("Сахар", Decimal("120")),
+                        ("Сливки 33%", Decimal("150")),
+                        ("Масло сливочное", Decimal("40")),
+                        ("Соль", Decimal("1")),
+                    ],
+                ),
+                (
+                    "Пралине мусс",
+                    [
+                        {"semi_product": "Заварной крем для банок", "quantity": "250"},
+                        ("Фундучное пралине", Decimal("100")),
+                        ("Сливки 33%", Decimal("600")),
+                        ("Желатин", Decimal("5")),
+                        ("Вода", Decimal("25")),
+                    ],
+                ),
+                (
+                    "Ганаш на молочном шоколаде",
+                    [
+                        ("Молочный шоколад", Decimal("100")),
+                        ("Сливки 33%", Decimal("100")),
+                    ],
+                ),
             ],
             "Заварной крем вынесен в полуфабрикат и в мусс входит строкой 250 г на партию. Желатин замочен водой 1:5.",
         ),
         "Эксзотический десерт.pdf": (
             "Экзотический десерт",
             [
-                ("Сахарная пудра", Decimal("125")),
-                ("Миндальная мука", Decimal("25")),
-                ("Кокосовая стружка", Decimal("125")),
-                ("Яичный белок", Decimal("150")),
-                ("Сахар", Decimal("50")),
-                ("Пюре манго", Decimal("360")),
-                ("Пюре маракуйи", Decimal("90")),
-                ("Сахар", Decimal("90")),
-                ("Желатин", Decimal("9")),
-                ("Вода", Decimal("45")),
-                {"semi_product": "Заварной крем для банок", "quantity": "250"},
-                ("Пюре кокоса", Decimal("250")),
-                ("Сливки 33%", Decimal("250")),
+                (
+                    "Бисквит Дакуаз Кокос",
+                    [
+                        ("Сахарная пудра", Decimal("125")),
+                        ("Миндальная мука", Decimal("25")),
+                        ("Кокосовая стружка", Decimal("125")),
+                        ("Яичный белок", Decimal("150")),
+                        ("Сахар", Decimal("50")),
+                    ],
+                ),
+                (
+                    "Желе манго-маракуйя",
+                    [
+                        ("Пюре манго", Decimal("360")),
+                        ("Пюре маракуйи", Decimal("90")),
+                        ("Сахар", Decimal("90")),
+                        ("Желатин", Decimal("9")),
+                        ("Вода", Decimal("45")),
+                    ],
+                ),
+                (
+                    "Крем кокос",
+                    [
+                        {"semi_product": "Заварной крем для банок", "quantity": "250"},
+                        ("Пюре кокоса", Decimal("250")),
+                        ("Сливки 33%", Decimal("250")),
+                    ],
+                ),
             ],
             "Заварной крем вынесен в полуфабрикат и в кокосовый крем входит строкой 250 г на партию. "
             "Желатин желе замочен водой 1:5. Конфи в сборке — это желе манго-маракуйя.",
         ),
     }
     semis.append(custard_jar())
-    for filename, (title, rows, extra) in jars.items():
+    for filename, (title, grouped, extra) in jars.items():
         path = pdfs[nfc(filename)]
-        cards.append(jar_card(title, rows, culinart_method(path, extra)))
+        cards.append(jar_card(title, grouped, culinart_method(path, extra)))
     sheet = IMAGES / "kremchiz-sheet.png"
     shutil.copy(SOURCE / "b0ce358c-c22e-4e69-9866-7e45530f1149.png", sheet)
     cakes, modifier_groups, tech_card_modifiers = cake_cards(["images/kremchiz-sheet.png"])
