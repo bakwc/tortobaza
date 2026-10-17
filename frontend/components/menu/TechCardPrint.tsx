@@ -46,12 +46,12 @@ function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
 function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
   const units = useTranslations("stock.units");
   return (
-    <div className="grid grid-cols-[48fr_14fr_38fr] break-inside-avoid">
+    <div className="grid grid-cols-[48fr_14fr_38fr]">
       <div className="col-span-2 border-r border-black">
         {chapter.name !== null ? (
           <div
             className={cn(
-              "px-2 py-1 text-sm font-bold italic",
+              "break-inside-avoid px-2 py-1 text-sm font-bold italic",
               chapter.lines.length > 0 && "border-b border-black",
             )}
           >
@@ -62,7 +62,7 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[48fr_14fr]",
+              "grid grid-cols-[48fr_14fr] break-inside-avoid",
               index < chapter.lines.length - 1 && "border-b border-black",
             )}
           >
