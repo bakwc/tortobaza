@@ -643,6 +643,7 @@
     "semiProduct": "Semi-product",
     "yield": "Recipe yield",
     "producedInAdvance": "Produced in advance",
+    "madeToOrder": "Made to order",
     "producedInAdvanceHint": "Semi-products produced in advance (for example, frozen sponges) are kept in stock and written off whole. The rest are expanded into ingredients.",
     "yes": "Yes",
     "no": "No",
