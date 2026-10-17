@@ -92,14 +92,14 @@ export function TechCardPrint({ card }: { card: TechCard }) {
 
   return (
     <div>
-      <div className="mb-6 flex justify-end print:hidden">
-        <Button type="button" onClick={() => window.print()}>
-          {t("print")}
-        </Button>
-      </div>
       <article className="bg-white text-black [--ink:#111111]">
-        <div className="flex justify-end">
-          <img src="/sweet_chill_logo.png" alt="Sweet & Chill" className="h-16 w-auto" />
+        <div className="flex items-start justify-between gap-4">
+          <img src="/logo_print.png" alt="Sweet & Chill" className="h-16 w-auto" />
+          <div className="print:hidden">
+            <Button type="button" onClick={() => window.print()}>
+              {t("print")}
+            </Button>
+          </div>
         </div>
         <h1 className="mt-4 text-center text-xl font-bold uppercase tracking-wide">{card.name}</h1>
         {basis ? <p className="mt-1 text-center text-sm">{basis}</p> : null}
