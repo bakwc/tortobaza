@@ -2395,6 +2395,7 @@ def build() -> None:
         "tech_cards": cards,
         "modifier_groups": modifier_groups,
         "tech_card_modifiers": tech_card_modifiers,
+        "existing_semi_products": [],
     }
     names = [row["name"] for row in semis + cards]
     if len(names) != len(set(names)):

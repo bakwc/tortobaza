@@ -39,6 +39,7 @@ class Command(BaseCommand):
         categories = self._categories(payload["categories"])
         ingredients = self._ingredients(payload["ingredients"])
         semis = self._semis(payload["semi_products"])
+        self._existing_semis(payload["existing_semi_products"], semis)
         self._semi_lines(payload["semi_products"], semis, ingredients)
         self._cards(payload["tech_cards"], categories, semis, ingredients)
         modifiers = self._modifier_groups(payload["modifier_groups"], semis, ingredients)
@@ -70,6 +71,10 @@ class Command(BaseCommand):
                 raise CommandError(f"{ingredient.name}: unit {ingredient.unit} != {row['unit']}")
             found[ingredient.name] = ingredient
         return found
+
+    def _existing_semis(self, names: list[str], semis: dict[str, SemiProduct]) -> None:
+        for name in names:
+            semis[name] = SemiProduct.objects.get(name=name)
 
     def _semis(self, rows: list[dict]) -> dict[str, SemiProduct]:
         found = {}
