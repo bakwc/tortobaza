@@ -1,13 +1,13 @@
 "use client";
 
-import { Fragment, useState, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
-import { Pencil, Printer, TriangleAlert } from "lucide-react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { Check, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
 import { formatQuantity } from "@/components/menu/ui";
-import { Link } from "@/i18n/navigation";
+import { getPathname, Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +100,7 @@ export function RecipeView({
   method,
   onEdit,
   printHref,
+  copyPath,
   children,
 }: {
   title: string;
@@ -112,11 +113,25 @@ export function RecipeView({
   method: string;
   onEdit: () => void;
   printHref: string | null;
+  copyPath: string | null;
   children: ReactNode;
 }) {
   const t = useTranslations("stock");
+  const locale = useLocale();
   const [active, setActive] = useState(0);
+  const [copied, setCopied] = useState(false);
   const image = images.length === 0 ? null : images[Math.min(active, images.length - 1)];
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  const copyLink = () => {
+    if (copyPath === null) return;
+    const path = getPathname({ locale, href: copyPath });
+    void navigator.clipboard.writeText(`${window.location.origin}${path}`);
+    setCopied(true);
+  };
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-start justify-between gap-3 pr-10">
@@ -144,6 +159,12 @@ export function RecipeView({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          {copyPath !== null ? (
+            <Button type="button" size="sm" variant="outline" onClick={copyLink}>
+              {copied ? <Check className="mr-1 h-4 w-4" /> : <Link2 className="mr-1 h-4 w-4" />}
+              {copied ? t("linkCopied") : t("copyLink")}
+            </Button>
+          ) : null}
           {printHref !== null ? (
             <Button size="sm" variant="outline" asChild>
               <Link href={printHref}>

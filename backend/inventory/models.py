@@ -57,6 +57,25 @@ class Supply(models.Model):
         return f"{self.date} #{self.pk}"
 
 
+class SupplyReceipt(models.Model):
+    supply = models.ForeignKey(
+        Supply,
+        related_name="receipts",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Supply"),
+    )
+    image = models.ImageField(upload_to="supply_receipts/", verbose_name=_("Image"))
+    recognized = models.JSONField(verbose_name=_("Recognized"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = _("Supply receipt")
+        verbose_name_plural = _("Supply receipts")
+
+
 class SupplyLine(models.Model):
     supply = models.ForeignKey(
         Supply,

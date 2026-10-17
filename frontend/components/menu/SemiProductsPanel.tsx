@@ -311,6 +311,7 @@ export function SemiProductsPanel() {
               method={current.method}
               onEdit={openEdit}
               printHref={null}
+              copyPath={null}
             >
               {null}
             </RecipeView>

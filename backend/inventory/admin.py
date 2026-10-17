@@ -8,6 +8,7 @@ from inventory.models import (
     Supplier,
     Supply,
     SupplyLine,
+    SupplyReceipt,
     WriteOff,
     WriteOffLine,
     WriteOffReason,
@@ -26,6 +27,16 @@ class WriteOffReasonAdmin(admin.ModelAdmin):
     search_fields = ["name"]
 
 
+class SupplyReceiptInline(admin.TabularInline):
+    model = SupplyReceipt
+    extra = 0
+    fields = ["image", "recognized", "created_at"]
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class SupplyLineInline(admin.TabularInline):
     model = SupplyLine
     extra = 0
@@ -41,7 +52,7 @@ class SupplyAdmin(admin.ModelAdmin):
     list_display = ["id", "date", "supplier", "financial_transaction", "created_by"]
     list_filter = ["date", "supplier"]
     readonly_fields = ["date", "supplier", "financial_transaction", "comment", "created_by", "created_at"]
-    inlines = [SupplyLineInline]
+    inlines = [SupplyReceiptInline, SupplyLineInline]
 
     def has_add_permission(self, request):
         return False

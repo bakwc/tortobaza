@@ -26,6 +26,7 @@ class InventoryApiTests(TestCase):
             "financial_transaction": transaction_id,
             "comment": "",
             "lines": [{"ingredient": self.menu.flour.pk, "quantity": "1000", "total": "10.00"}],
+            "receipts": [],
         }
 
     def test_supplies_require_finance_admin(self):

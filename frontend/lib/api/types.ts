@@ -995,6 +995,30 @@ export const SupplyTransactionSchema = z.object({
   account_name: z.string(),
 });
 
+export const RecognizedReceiptLineSchema = z.object({
+  original_name: z.string(),
+  name_ru: z.string(),
+  ingredient_id: z.number().nullable(),
+  quantity: z.string(),
+  unit: MenuUnitSchema,
+  total: z.string(),
+});
+
+export const RecognizedReceiptSchema = z.object({
+  is_itemized: z.boolean(),
+  merchant_name: z.string(),
+  date: z.string(),
+  total: z.string(),
+  supplier: z.number().nullable(),
+  lines: z.array(RecognizedReceiptLineSchema),
+});
+
+export const SupplyReceiptSchema = z.object({
+  id: z.number(),
+  image: z.string(),
+  recognized: RecognizedReceiptSchema,
+});
+
 export const SupplySchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -1004,6 +1028,7 @@ export const SupplySchema = z.object({
   comment: z.string(),
   created_at: z.string(),
   total: z.string(),
+  receipts: z.array(z.object({ id: z.number(), image: z.string() })),
   lines: z.array(
     z.object({
       id: z.number(),
@@ -1104,6 +1129,7 @@ export const StockRowSchema = z.object({
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
+export type SupplyReceipt = z.infer<typeof SupplyReceiptSchema>;
 export type Supply = z.infer<typeof SupplySchema>;
 export type StockMovementKind = z.infer<typeof StockMovementKindSchema>;
 export type StockMovement = z.infer<typeof StockMovementSchema>;
@@ -1121,6 +1147,7 @@ export type SupplyBody = {
   financial_transaction: number | null;
   comment: string;
   lines: { ingredient: number; quantity: string; total: string }[];
+  receipts: number[];
 };
 
 export type ProductionBody = {

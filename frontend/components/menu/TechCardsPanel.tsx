@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
@@ -46,6 +47,7 @@ import {
   formatQuantity,
 } from "@/components/menu/ui";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { useRouter } from "@/i18n/navigation";
 import {
   useIngredients,
   useMissingModifierLines,
@@ -254,6 +256,8 @@ function TechCardRow({
 export function TechCardsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const techCards = useTechCards();
   const categories = useTechCardCategories();
   const groups = useModifierGroups();
@@ -263,31 +267,54 @@ export function TechCardsPanel() {
   const images = useTechCardImages();
   const currentUser = useCurrentUser();
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
+  const cardParam = searchParams.get("card");
+  const paramId = cardParam === null ? null : Number(cardParam);
   const [mode, setMode] = useState<"view" | "edit" | null>(null);
   const [viewing, setViewing] = useState<TechCard | null>(null);
+  const [ignoreCardParam, setIgnoreCardParam] = useState(false);
   const [draft, setDraft] = useState<TechCardDraft | null>(null);
   const [groupToAdd, setGroupToAdd] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const requestedId = ignoreCardParam
+    ? viewing === null
+      ? null
+      : viewing.id
+    : viewing !== null
+      ? viewing.id
+      : paramId !== null && Number.isFinite(paramId)
+        ? paramId
+        : null;
   const current =
-    viewing === null ? null : (techCards.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
+    requestedId === null
+      ? null
+      : ((techCards.list.data ?? []).find((row) => row.id === requestedId) ??
+        (viewing !== null && viewing.id === requestedId ? viewing : null));
+
+  useEffect(() => {
+    if (ignoreCardParam && cardParam === null) setIgnoreCardParam(false);
+  }, [ignoreCardParam, cardParam]);
 
   const openView = (row: TechCard) => {
     techCards.save.reset();
     techCards.remove.reset();
+    setIgnoreCardParam(false);
     setViewing(row);
     setDraft(null);
     setMode("view");
     setGroupToAdd("");
+    router.replace(`/menu?card=${row.id}`, { scroll: false });
   };
   const openNew = () => {
     techCards.save.reset();
     techCards.remove.reset();
+    setIgnoreCardParam(true);
     setViewing(null);
     setDraft(draftFrom(null));
     setMode("edit");
     setGroupToAdd("");
+    router.replace("/menu", { scroll: false });
   };
   const openEdit = () => {
     if (current === null) return;
@@ -298,11 +325,13 @@ export function TechCardsPanel() {
   const close = () => {
     setMode(null);
     setDraft(null);
+    setIgnoreCardParam(true);
     setViewing(null);
+    router.replace("/menu", { scroll: false });
   };
   const cancelEdit = () => {
     setDraft(null);
-    if (viewing === null) close();
+    if (current === null) close();
     else setMode("view");
   };
 
@@ -362,7 +391,7 @@ export function TechCardsPanel() {
     }
     techCards.save.mutate(
       {
-        id: viewing ? viewing.id : null,
+        id: current ? current.id : null,
         body: {
           name: draft.name,
           category: draft.category,
@@ -383,9 +412,11 @@ export function TechCardsPanel() {
       },
       {
         onSuccess: (saved) => {
+          setIgnoreCardParam(false);
           setViewing(saved);
           setDraft(null);
           setMode("view");
+          router.replace(`/menu?card=${saved.id}`, { scroll: false });
         },
       },
     );
@@ -549,7 +580,7 @@ export function TechCardsPanel() {
         </div>
       </Card>
 
-      {mode === "view" && current ? (
+      {mode !== "edit" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>
           <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
@@ -587,6 +618,7 @@ export function TechCardsPanel() {
               method={current.method}
               onEdit={openEdit}
               printHref={`/menu/${current.id}/print`}
+              copyPath={`/menu?card=${current.id}`}
             >
               {current.products.length > 0 ? (
                 <p className="text-sm text-[var(--muted-2)]">
@@ -653,13 +685,13 @@ export function TechCardsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : cancelEdit())}
-          title={viewing === null ? t("newTechCard") : draft.name}
+          title={current === null ? t("newTechCard") : draft.name}
           pending={techCards.save.isPending}
           error={techCards.save.error ?? techCards.remove.error}
           submitLabel={t("save")}
           onSubmit={submit}
           onCancel={cancelEdit}
-          onDelete={viewing === null ? null : () => techCards.remove.mutate(viewing.id, { onSuccess: close })}
+          onDelete={current === null ? null : () => techCards.remove.mutate(current.id, { onSuccess: close })}
           deletePending={techCards.remove.isPending}
         >
           <div className="grid gap-4 sm:grid-cols-3">
@@ -726,17 +758,17 @@ export function TechCardsPanel() {
             </div>
           </div>
 
-          {viewing && viewing.products.length > 0 ? (
+          {current && current.products.length > 0 ? (
             <p className="text-sm text-[var(--muted-2)]">
-              {t("linkedProducts")}: {viewing.products.map((product) => product.name).join(", ")}
+              {t("linkedProducts")}: {current.products.map((product) => product.name).join(", ")}
             </p>
           ) : null}
-          {viewing && isFinanceAdmin && viewing.base_cost !== undefined ? (
+          {current && isFinanceAdmin && current.base_cost !== undefined ? (
             <p className="text-sm text-[var(--ink)]">
               {draft.kind === "weighted"
                 ? t("costPerKg", { weight: draft.basis_weight_kg })
                 : t("costPerPiece", { count: draft.basis_quantity })}
-              : {formatMoney(viewing.base_cost)}
+              : {formatMoney(current.base_cost)}
             </p>
           ) : null}
 
@@ -745,12 +777,12 @@ export function TechCardsPanel() {
             <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
           </div>
 
-          {viewing ? (
+          {current ? (
             <MenuImages
-              images={(techCards.list.data ?? []).find((row) => row.id === viewing.id)?.images ?? viewing.images}
+              images={(techCards.list.data ?? []).find((row) => row.id === current.id)?.images ?? current.images}
               pending={images.upload.isPending || images.remove.isPending}
-              onUpload={(file) => images.upload.mutate({ id: viewing.id, file })}
-              onDelete={(imageId) => images.remove.mutate({ id: viewing.id, imageId })}
+              onUpload={(file) => images.upload.mutate({ id: current.id, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: current.id, imageId })}
             />
           ) : null}
 

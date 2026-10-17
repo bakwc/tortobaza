@@ -62,7 +62,7 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
           <div
             key={line.id}
             className={cn(
-              "grid grid-cols-[48fr_14fr] break-inside-avoid",
+              "grid grid-cols-[32fr_14fr] break-inside-avoid",
               index < chapter.lines.length - 1 && "border-b border-black",
             )}
           >
@@ -105,9 +105,9 @@ export function TechCardPrint({ card }: { card: TechCard }) {
         {basis ? <p className="mt-1 text-center text-sm">{basis}</p> : null}
         <table className="mt-5 w-full table-fixed border-collapse border border-black">
           <colgroup>
-            <col className="w-[48%]" />
+            <col className="w-[32%]" />
             <col className="w-[14%]" />
-            <col className="w-[38%]" />
+            <col className="w-[54%]" />
           </colgroup>
           <thead>
             <tr className="text-center text-xs font-bold uppercase tracking-wide">

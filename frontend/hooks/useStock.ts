@@ -89,6 +89,12 @@ export function useSupplies() {
   return useResource(["inventory", "supplies"], api.inventorySupplies);
 }
 
+export function useSupplyReceiptUpload() {
+  return useMutation({
+    mutationFn: (file: File) => api.uploadSupplyReceipt(file),
+  });
+}
+
 export function useProductions() {
   return useResource(["inventory", "productions"], api.inventoryProductions);
 }

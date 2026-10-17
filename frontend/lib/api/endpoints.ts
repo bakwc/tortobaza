@@ -87,6 +87,7 @@ import {
   StockMovementSchema,
   StockRowSchema,
   SupplierSchema,
+  SupplyReceiptSchema,
   SupplySchema,
   SupplyTransactionSchema,
   TechCardCategorySchema,
@@ -116,6 +117,7 @@ import {
   type SupplierBody,
   type Supply,
   type SupplyBody,
+  type SupplyReceipt,
   type SupplyTransaction,
   type TechCard,
   type TechCardBody,
@@ -257,6 +259,13 @@ export function endpoints(fetcher: Fetcher) {
     async getCatalogOptions(): Promise<CatalogOption[]> {
       const raw = await fetcher<unknown>("/api/menu/catalog-options/");
       return parse(z.array(CatalogOptionSchema), raw);
+    },
+
+    async uploadSupplyReceipt(file: File): Promise<SupplyReceipt> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>("/api/inventory/receipts/", { method: "POST", body });
+      return parse(SupplyReceiptSchema, raw);
     },
 
     async getStock(date: string | null): Promise<StockRow[]> {

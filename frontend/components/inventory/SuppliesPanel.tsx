@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
@@ -20,11 +21,25 @@ import {
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
-import { useIngredients, useSuppliers, useSupplies, useSupplyTransactions } from "@/hooks/useStock";
-import type { Supply } from "@/lib/api/types";
+import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
+import type { MenuUnit, Supply, SupplyReceipt } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
 
-type SupplyLineDraft = { key: string; ingredient: string; quantity: string; total: string };
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+type SupplyLineDraft = {
+  key: string;
+  ingredient: string;
+  quantity: string;
+  total: string;
+  hint: string;
+  suggestedName: string;
+  suggestedUnit: MenuUnit | null;
+};
+
+type ReceiptPreview = { id: number; image: string };
+
+type ReceiptMismatch = { receiptId: number; total: string; lines: string };
 
 type SupplyDraft = {
   date: string;
@@ -32,11 +47,33 @@ type SupplyDraft = {
   financial_transaction: number | null;
   comment: string;
   lines: SupplyLineDraft[];
+  receipts: ReceiptPreview[];
+  mismatches: ReceiptMismatch[];
 };
+
+function emptyLine(): SupplyLineDraft {
+  return {
+    key: newDraftKey(),
+    ingredient: "",
+    quantity: "",
+    total: "",
+    hint: "",
+    suggestedName: "",
+    suggestedUnit: null,
+  };
+}
 
 function draftFrom(row: Supply | null): SupplyDraft {
   if (row === null) {
-    return { date: getTbilisiTodayIsoDate(), supplier: null, financial_transaction: null, comment: "", lines: [] };
+    return {
+      date: getTbilisiTodayIsoDate(),
+      supplier: null,
+      financial_transaction: null,
+      comment: "",
+      lines: [],
+      receipts: [],
+      mismatches: [],
+    };
   }
   return {
     date: row.date,
@@ -48,7 +85,38 @@ function draftFrom(row: Supply | null): SupplyDraft {
       ingredient: String(line.ingredient),
       quantity: line.quantity,
       total: line.total,
+      hint: "",
+      suggestedName: "",
+      suggestedUnit: null,
     })),
+    receipts: row.receipts.map((receipt) => ({ id: receipt.id, image: receipt.image })),
+    mismatches: [],
+  };
+}
+
+function applyReceipt(draft: SupplyDraft, receipt: SupplyReceipt, dateEdited: boolean): SupplyDraft {
+  const recognized = receipt.recognized;
+  const added = recognized.lines.map((line) => ({
+    key: newDraftKey(),
+    ingredient: line.ingredient_id === null ? "" : String(line.ingredient_id),
+    quantity: line.quantity,
+    total: line.total,
+    hint: `${line.name_ru} · ${line.original_name}`,
+    suggestedName: line.name_ru,
+    suggestedUnit: line.unit,
+  }));
+  const linesSum = added.reduce((sum, line) => sum + Number(decimal(line.total) || "0"), 0);
+  const mismatches = [...draft.mismatches];
+  if (recognized.is_itemized && Math.abs(linesSum - Number(recognized.total)) >= 0.01) {
+    mismatches.push({ receiptId: receipt.id, total: recognized.total, lines: linesSum.toFixed(2) });
+  }
+  return {
+    ...draft,
+    date: !dateEdited && ISO_DATE.test(recognized.date) ? recognized.date : draft.date,
+    supplier: draft.supplier === null ? recognized.supplier : draft.supplier,
+    receipts: [...draft.receipts, { id: receipt.id, image: receipt.image }],
+    lines: [...draft.lines, ...added],
+    mismatches,
   };
 }
 
@@ -63,11 +131,27 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const suppliers = useSuppliers();
   const ingredients = useIngredients();
   const transactions = useSupplyTransactions(supply ? supply.id : null);
+  const receiptUpload = useSupplyReceiptUpload();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const dateEdited = useRef(supply !== null);
   const [draft, setDraft] = useState<SupplyDraft>(() => draftFrom(supply));
   const [newSupplier, setNewSupplier] = useState("");
 
   const updateLine = (key: string, patch: Partial<SupplyLineDraft>) =>
-    setDraft({ ...draft, lines: draft.lines.map((line) => (line.key === key ? { ...line, ...patch } : line)) });
+    setDraft((prev) => ({ ...prev, lines: prev.lines.map((line) => (line.key === key ? { ...line, ...patch } : line)) }));
+
+  const uploadFiles = (files: File[]) => {
+    const [file, ...rest] = files;
+    if (file === undefined) {
+      return;
+    }
+    receiptUpload.mutate(file, {
+      onSuccess: (receipt) => {
+        setDraft((prev) => applyReceipt(prev, receipt, dateEdited.current));
+        uploadFiles(rest);
+      },
+    });
+  };
 
   const total = draft.lines.reduce((sum, line) => sum + Number(decimal(line.total) || "0"), 0);
   const linked = (transactions.data ?? []).find((row) => row.id === draft.financial_transaction);
@@ -91,6 +175,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
               supplier: draft.supplier,
               financial_transaction: draft.financial_transaction,
               comment: draft.comment,
+              receipts: draft.receipts.map((receipt) => receipt.id),
               lines: draft.lines.map((line) => ({
                 ingredient: Number(line.ingredient),
                 quantity: decimal(line.quantity),
@@ -106,7 +191,15 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("date")}>
-          <Input type="date" required value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} />
+          <Input
+            type="date"
+            required
+            value={draft.date}
+            onChange={(event) => {
+              dateEdited.current = true;
+              setDraft({ ...draft, date: event.target.value });
+            }}
+          />
         </Field>
         <Field label={t("supplier")}>
           <NativeSelect
@@ -171,65 +264,154 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
           <Textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
         </Field>
       </div>
-      <CardTitle>{t("lines")}</CardTitle>
-      <div className="grid gap-2">
-        {draft.lines.map((line) => {
-          const ingredient = (ingredients.list.data ?? []).find((row) => String(row.id) === line.ingredient);
-          return (
-            <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
-              <SearchSelect
-                options={(ingredients.list.data ?? [])
-                  .filter((row) => row.is_active || String(row.id) === line.ingredient)
-                  .map((row) => ({ value: String(row.id), label: row.name }))}
-                value={line.ingredient}
-                onChange={(ingredient) => updateLine(line.key, { ingredient })}
-                placeholder={t("chooseComponent")}
-                required={true}
-                className="col-span-2 sm:col-span-1"
-              />
-              <div className="relative">
-                <Input
-                  required
-                  inputMode="decimal"
-                  placeholder={t("quantity")}
-                  value={line.quantity}
-                  onChange={(event) => updateLine(line.key, { quantity: event.target.value })}
-                  className="pr-12"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
-                  {ingredient ? units(ingredient.unit) : ""}
-                </span>
-              </div>
-              <Input
-                required
-                inputMode="decimal"
-                placeholder={t("lineTotal")}
-                value={line.total}
-                onChange={(event) => updateLine(line.key, { total: event.target.value })}
-              />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardTitle>{t("lines")}</CardTitle>
+        <div>
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.heic,image/jpeg,image/png,image/heic"
+            className="hidden"
+            onChange={(event) => {
+              const files = event.target.files;
+              event.target.value = "";
+              if (files !== null && files.length > 0) {
+                uploadFiles(Array.from(files));
+              }
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={receiptUpload.isPending}
+            onClick={() => fileInput.current?.click()}
+          >
+            {receiptUpload.isPending ? <Spinner className="mr-1 h-4 w-4" /> : null}
+            {t("uploadReceipt")}
+          </Button>
+        </div>
+      </div>
+      <ErrorText error={receiptUpload.error} />
+      {draft.receipts.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          {draft.receipts.map((receipt) => (
+            <div key={receipt.id} className="relative">
+              <a href={receipt.image} target="_blank" rel="noreferrer">
+                <img src={receipt.image} alt="" className="h-28 w-28 rounded-xl object-cover" />
+              </a>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label={t("removeLine")}
-                onClick={() => setDraft({ ...draft, lines: draft.lines.filter((row) => row.key !== line.key) })}
+                aria-label={t("removeReceipt")}
+                className="absolute right-1 top-1 bg-white/90"
+                onClick={() =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    receipts: prev.receipts.filter((row) => row.id !== receipt.id),
+                    mismatches: prev.mismatches.filter((row) => row.receiptId !== receipt.id),
+                  }))
+                }
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+          ))}
+        </div>
+      ) : null}
+      {draft.mismatches.map((row) => (
+        <p key={row.receiptId} className="text-sm font-semibold text-amber-700">
+          {t("receiptTotalDiffers", { total: formatMoney(row.total), lines: formatMoney(row.lines) })}
+        </p>
+      ))}
+      <div className="grid gap-2">
+        {draft.lines.map((line) => {
+          const ingredient = (ingredients.list.data ?? []).find((row) => String(row.id) === line.ingredient);
+          const suggestedUnit = line.suggestedUnit;
+          return (
+            <div key={line.key} className="grid gap-1">
+              <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
+                <SearchSelect
+                  options={(ingredients.list.data ?? [])
+                    .filter((row) => row.is_active || String(row.id) === line.ingredient)
+                    .map((row) => ({ value: String(row.id), label: row.name }))}
+                  value={line.ingredient}
+                  onChange={(ingredient) => updateLine(line.key, { ingredient })}
+                  placeholder={t("chooseComponent")}
+                  required={true}
+                  className="col-span-2 sm:col-span-1"
+                />
+                <div className="relative">
+                  <Input
+                    required
+                    inputMode="decimal"
+                    placeholder={t("quantity")}
+                    value={line.quantity}
+                    onChange={(event) => updateLine(line.key, { quantity: event.target.value })}
+                    className="pr-12"
+                  />
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                    {ingredient ? units(ingredient.unit) : suggestedUnit !== null ? units(suggestedUnit) : ""}
+                  </span>
+                </div>
+                <Input
+                  required
+                  inputMode="decimal"
+                  placeholder={t("lineTotal")}
+                  value={line.total}
+                  onChange={(event) => updateLine(line.key, { total: event.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("removeLine")}
+                  onClick={() =>
+                    setDraft((prev) => ({ ...prev, lines: prev.lines.filter((row) => row.key !== line.key) }))
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+              {line.hint !== "" ? <p className="text-xs text-[var(--muted-2)]">{line.hint}</p> : null}
+              {line.ingredient === "" && line.suggestedName !== "" && suggestedUnit !== null ? (
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={ingredients.save.isPending}
+                    onClick={() =>
+                      ingredients.save.mutate(
+                        {
+                          id: null,
+                          body: {
+                            name: line.suggestedName,
+                            category: null,
+                            unit: suggestedUnit,
+                            is_active: true,
+                          },
+                        },
+                        { onSuccess: (created) => updateLine(line.key, { ingredient: String(created.id) }) },
+                      )
+                    }
+                  >
+                    {t("createIngredient")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           );
         })}
+        <ErrorText error={ingredients.save.error} />
         <div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() =>
-              setDraft({
-                ...draft,
-                lines: [...draft.lines, { key: newDraftKey(), ingredient: "", quantity: "", total: "" }],
-              })
-            }
+            onClick={() => setDraft((prev) => ({ ...prev, lines: [...prev.lines, emptyLine()] }))}
           >
             <Plus className="mr-1 h-4 w-4" />
             {t("addLine")}

@@ -11,6 +11,7 @@ from inventory.models import (
     Supplier,
     Supply,
     SupplyLine,
+    SupplyReceipt,
     WriteOff,
     WriteOffLine,
     WriteOffReason,
@@ -41,6 +42,23 @@ class SupplyLineInputSerializer(serializers.Serializer):
     total = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0"))
 
 
+def public_media_url(url: str) -> str:
+    if url.startswith("/"):
+        return url
+    return f"/{url}"
+
+
+class SupplyReceiptSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SupplyReceipt
+        fields = ["id", "image", "recognized"]
+
+    def get_image(self, instance: SupplyReceipt) -> str:
+        return public_media_url(instance.image.url)
+
+
 def transaction_payload(transaction: FinancialTransaction | None) -> dict | None:
     if transaction is None:
         return None
@@ -56,6 +74,7 @@ def transaction_payload(transaction: FinancialTransaction | None) -> dict | None
 
 class SupplySerializer(serializers.ModelSerializer):
     lines = SupplyLineInputSerializer(many=True, write_only=True)
+    receipts = serializers.PrimaryKeyRelatedField(queryset=SupplyReceipt.objects.all(), many=True)
     financial_transaction = serializers.PrimaryKeyRelatedField(
         queryset=FinancialTransaction.objects.select_related("account"),
         allow_null=True,
@@ -63,9 +82,13 @@ class SupplySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Supply
-        fields = ["id", "date", "supplier", "financial_transaction", "comment", "lines", "created_at"]
+        fields = ["id", "date", "supplier", "financial_transaction", "comment", "lines", "receipts", "created_at"]
         read_only_fields = ["created_at"]
-        extra_kwargs = {"supplier": {"required": True}, "comment": {"required": True}}
+        extra_kwargs = {
+            "supplier": {"required": True},
+            "comment": {"required": True},
+            "receipts": {"required": True},
+        }
 
     def validate_financial_transaction(self, value: FinancialTransaction | None) -> FinancialTransaction | None:
         if value is None:
@@ -82,6 +105,12 @@ class SupplySerializer(serializers.ModelSerializer):
     def validate_lines(self, value: list[dict]) -> list[dict]:
         if not value:
             raise serializers.ValidationError("Add at least one line.")
+        return value
+
+    def validate_receipts(self, value: list[SupplyReceipt]) -> list[SupplyReceipt]:
+        for receipt in value:
+            if receipt.supply_id is not None and (self.instance is None or receipt.supply_id != self.instance.pk):
+                raise serializers.ValidationError("This receipt is already linked to another supply.")
         return value
 
     def to_representation(self, instance):
@@ -103,28 +132,42 @@ class SupplySerializer(serializers.ModelSerializer):
                 }
             )
         data["lines"] = lines
+        data["receipts"] = [
+            {"id": receipt.pk, "image": public_media_url(receipt.image.url)} for receipt in instance.receipts.all()
+        ]
         data["total"] = str(total)
         return data
 
     def create(self, validated_data):
         lines = validated_data.pop("lines")
+        receipts = validated_data.pop("receipts")
         validated_data["created_by"] = self.context["request"].user
         instance = Supply.objects.create(**validated_data)
         self._save_lines(instance, lines)
+        self._save_receipts(instance, receipts)
         return instance
 
     def update(self, instance, validated_data):
         lines = validated_data.pop("lines")
+        receipts = validated_data.pop("receipts")
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         self._save_lines(instance, lines)
+        self._save_receipts(instance, receipts)
         return instance
 
     def _save_lines(self, instance: Supply, lines: list[dict]) -> None:
         instance.lines.all().delete()
         for line in lines:
             SupplyLine.objects.create(supply=instance, **line)
+
+    def _save_receipts(self, instance: Supply, receipts: list[SupplyReceipt]) -> None:
+        instance.receipts.exclude(pk__in=[receipt.pk for receipt in receipts]).delete()
+        for receipt in receipts:
+            receipt.supply = instance
+            receipt.save(update_fields=["supply"])
+        instance._prefetched_objects_cache = {}
 
 
 class ProductionSerializer(serializers.ModelSerializer):
