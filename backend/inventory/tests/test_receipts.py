@@ -1,5 +1,5 @@
+import json
 import tempfile
-from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import patch
@@ -40,15 +40,15 @@ def parsed_receipt(ingredient_id: int | None) -> RecognizedReceipt:
         is_itemized=True,
         merchant_name="Loma",
         date="2026-10-16",
-        total=Decimal("11.00"),
+        total="11.00",
         lines=[
             RecognizedLine(
                 original_name="ფქვილი 200გრ",
                 name_ru="Мука",
                 ingredient_id=ingredient_id,
-                quantity=Decimal("200"),
+                quantity="200",
                 unit="g",
-                total=Decimal("11.00"),
+                total="11.00",
             )
         ],
     )
@@ -58,6 +58,7 @@ class RecognizeReceiptTests(TestCase):
     def test_structured_schema_accepts_optional_ingredient(self):
         schema = to_strict_json_schema(RecognizedReceipt)
         self.assertEqual(schema["type"], "object")
+        self.assertNotIn("(?", json.dumps(schema))
 
     @patch("inventory.receipts.OpenAI")
     def test_maps_model_output(self, openai_cls):

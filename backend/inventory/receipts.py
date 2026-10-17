@@ -29,10 +29,10 @@ quantity is the amount in the matched ingredient's unit, or in g, ml, or pcs whe
 - A line sold in pieces whose name contains a package weight or volume is converted. "200გრ" and quantity 1 is 200 g. "200მლ" is 200 ml. "0.5ლ" is 500 ml.
 - A leading zero before grams or milliliters is kilograms or liters written with the smaller unit. "0.800გრ" is 800 g. "0.800მლ" is 800 ml.
 - Countable goods such as eggs stay in pcs.
-total is the line amount, not the unit price.
+quantity and total are decimal numbers written as text with a dot, such as "200" or "11.00". total is the line amount, not the unit price.
 date is the receipt date as YYYY-MM-DD, or an empty string when there is no date.
 merchant_name is the store or company name as printed.
-total is the receipt grand total. Use 0 when it is missing.
+The receipt total is a decimal string. Use "0" when it is missing.
 A card terminal slip or any photo without item lines has is_itemized false and lines [].
 A photo that lists items has is_itemized true and one line per item.
 """
@@ -42,17 +42,21 @@ class RecognizedLine(BaseModel):
     original_name: str
     name_ru: str
     ingredient_id: int | None
-    quantity: Decimal
+    quantity: str
     unit: Literal["g", "ml", "pcs"]
-    total: Decimal
+    total: str
 
 
 class RecognizedReceipt(BaseModel):
     is_itemized: bool
     merchant_name: str
     date: str
-    total: Decimal
+    total: str
     lines: list[RecognizedLine]
+
+
+def decimal_text(value: str) -> str:
+    return format(Decimal(value), "f")
 
 
 def to_jpeg(upload) -> ContentFile:
@@ -68,15 +72,15 @@ def recognized_payload(parsed: RecognizedReceipt) -> dict:
         "is_itemized": parsed.is_itemized,
         "merchant_name": parsed.merchant_name,
         "date": parsed.date,
-        "total": format(parsed.total, "f"),
+        "total": decimal_text(parsed.total),
         "lines": [
             {
                 "original_name": line.original_name,
                 "name_ru": line.name_ru,
                 "ingredient_id": line.ingredient_id,
-                "quantity": format(line.quantity, "f"),
+                "quantity": decimal_text(line.quantity),
                 "unit": line.unit,
-                "total": format(line.total, "f"),
+                "total": decimal_text(line.total),
             }
             for line in parsed.lines
         ],
