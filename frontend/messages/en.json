@@ -651,6 +651,7 @@
     "composition": "Composition",
     "quantity": "Quantity",
     "chooseComponent": "Choose an item",
+    "noMatches": "Nothing found",
     "lossPercent": "Loss",
     "removeLine": "Remove",
     "addLine": "Add line",

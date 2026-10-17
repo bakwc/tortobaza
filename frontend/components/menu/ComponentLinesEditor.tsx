@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NativeSelect } from "@/components/menu/ui";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct } from "@/lib/api/types";
 
 export type ComponentLineDraft = {
@@ -93,19 +93,14 @@ export function ComponentLinesEditor({
         const option = options.find((row) => row.value === line.component);
         return (
           <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]">
-            <NativeSelect
-              required
+            <SearchSelect
+              options={options}
               value={line.component}
-              onChange={(event) => update(line.key, { component: event.target.value })}
+              onChange={(component) => update(line.key, { component })}
+              placeholder={t("chooseComponent")}
+              required={true}
               className="col-span-2 sm:col-span-1"
-            >
-              <option value="">{t("chooseComponent")}</option>
-              {options.map((row) => (
-                <option key={row.value} value={row.value}>
-                  {row.label}
-                </option>
-              ))}
-            </NativeSelect>
+            />
             <div className="relative">
               <Input
                 required

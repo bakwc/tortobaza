@@ -651,6 +651,7 @@
     "composition": "Состав",
     "quantity": "Количество",
     "chooseComponent": "Выберите позицию",
+    "noMatches": "Ничего не найдено",
     "lossPercent": "Потери",
     "removeLine": "Удалить",
     "addLine": "Добавить строку",

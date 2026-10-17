@@ -651,6 +651,7 @@
     "composition": "შემადგენლობა",
     "quantity": "რაოდენობა",
     "chooseComponent": "აირჩიეთ პოზიცია",
+    "noMatches": "არაფერი მოიძებნა",
     "lossPercent": "დანაკარგი",
     "removeLine": "წაშლა",
     "addLine": "ხაზის დამატება",

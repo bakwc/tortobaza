@@ -7,15 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
-import {
-  Card,
-  CardTitle,
-  Field,
-  NativeSelect,
-  QueryState,
-  formatMoney,
-  formatQuantity,
-} from "@/components/menu/ui";
+import { SearchSelect } from "@/components/menu/SearchSelect";
+import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity } from "@/components/menu/ui";
 import { useProductions, useSemiProducts } from "@/hooks/useStock";
 import type { Production, ProductionBody } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -119,18 +112,14 @@ export function ProductionsPanel() {
               />
             </Field>
             <Field label={t("semiProduct")}>
-              <NativeSelect
-                required
+              <SearchSelect
+                options={produced.map((row) => ({ value: String(row.id), label: row.name }))}
                 value={draft.semi_product}
-                onChange={(event) => setDraft({ ...draft, semi_product: event.target.value })}
-              >
-                <option value="">{t("chooseComponent")}</option>
-                {produced.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-              </NativeSelect>
+                onChange={(semi_product) => setDraft({ ...draft, semi_product })}
+                placeholder={t("chooseComponent")}
+                required={true}
+                className=""
+              />
             </Field>
             <Field label={selected ? `${t("quantity")}, ${units(selected.unit)}` : t("quantity")}>
               <Input

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
   Card,
@@ -176,21 +177,16 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
           const ingredient = (ingredients.list.data ?? []).find((row) => String(row.id) === line.ingredient);
           return (
             <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
-              <NativeSelect
-                required
-                value={line.ingredient}
-                onChange={(event) => updateLine(line.key, { ingredient: event.target.value })}
-                className="col-span-2 sm:col-span-1"
-              >
-                <option value="">{t("chooseComponent")}</option>
-                {(ingredients.list.data ?? [])
+              <SearchSelect
+                options={(ingredients.list.data ?? [])
                   .filter((row) => row.is_active || String(row.id) === line.ingredient)
-                  .map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.name}
-                    </option>
-                  ))}
-              </NativeSelect>
+                  .map((row) => ({ value: String(row.id), label: row.name }))}
+                value={line.ingredient}
+                onChange={(ingredient) => updateLine(line.key, { ingredient })}
+                placeholder={t("chooseComponent")}
+                required={true}
+                className="col-span-2 sm:col-span-1"
+              />
               <div className="relative">
                 <Input
                   required

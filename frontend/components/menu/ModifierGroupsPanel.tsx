@@ -12,6 +12,7 @@ import {
   newDraftKey,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts } from "@/hooks/useStock";
 import type { Modifier, ModifierGroup } from "@/lib/api/types";
@@ -254,17 +255,14 @@ export function ModifierGroupsPanel() {
                     );
                   })}
                 </NativeSelect>
-                <NativeSelect
+                <SearchSelect
+                  options={[{ value: "", label: t("noDefaultComponent") }, ...components]}
                   value={row.component}
-                  onChange={(event) => updateModifier(row.key, { component: event.target.value })}
-                >
-                  <option value="">{t("noDefaultComponent")}</option>
-                  {components.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </NativeSelect>
+                  onChange={(component) => updateModifier(row.key, { component })}
+                  placeholder={t("noDefaultComponent")}
+                  required={false}
+                  className=""
+                />
                 <div className="flex items-center">
                   <CheckboxField
                     label={t("isActive")}
