@@ -46,8 +46,8 @@ function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
 function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
   const units = useTranslations("stock.units");
   return (
-    <div className="grid grid-cols-[48fr_14fr_38fr]">
-      <div className="col-span-2 border-r border-black">
+    <tr className="border-t border-black">
+      <td colSpan={2} className="border-r border-black p-0 align-top">
         {chapter.name !== null ? (
           <div
             className={cn(
@@ -72,11 +72,11 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
             </div>
           </div>
         ))}
-      </div>
-      <div className="min-w-0 px-2 py-1 text-[13px] leading-5">
+      </td>
+      <td className="px-2 py-1 align-top text-[13px] leading-5">
         {chapter.method.trim() ? <MarkdownView value={chapter.method} /> : null}
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
 
@@ -103,18 +103,25 @@ export function TechCardPrint({ card }: { card: TechCard }) {
         </div>
         <h1 className="mt-4 text-center text-xl font-bold uppercase tracking-wide">{card.name}</h1>
         {basis ? <p className="mt-1 text-center text-sm">{basis}</p> : null}
-        <div className="mt-5 border border-black">
-          <div className="grid grid-cols-[48fr_14fr_38fr] border-b border-black text-center text-xs font-bold uppercase tracking-wide">
-            <div className="border-r border-black px-2 py-1.5">{t("printIngredients")}</div>
-            <div className="border-r border-black px-2 py-1.5">{t("printWeight")}</div>
-            <div className="px-2 py-1.5">{t("printMethod")}</div>
-          </div>
-          <div className="divide-y divide-black">
+        <table className="mt-5 w-full table-fixed border-collapse border border-black">
+          <colgroup>
+            <col className="w-[48%]" />
+            <col className="w-[14%]" />
+            <col className="w-[38%]" />
+          </colgroup>
+          <thead>
+            <tr className="text-center text-xs font-bold uppercase tracking-wide">
+              <th className="border-r border-black px-2 py-1.5 font-bold">{t("printIngredients")}</th>
+              <th className="border-r border-black px-2 py-1.5 font-bold">{t("printWeight")}</th>
+              <th className="px-2 py-1.5 font-bold">{t("printMethod")}</th>
+            </tr>
+          </thead>
+          <tbody>
             {chapters.map((chapter) => (
               <ChapterBlock key={chapter.key} chapter={chapter} />
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </article>
     </div>
   );
