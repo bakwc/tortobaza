@@ -28,7 +28,11 @@ from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
-from crm.manual_transactions import create_manual_transaction, update_manual_transaction
+from crm.manual_transactions import (
+    create_manual_transaction,
+    delete_manual_transaction,
+    update_manual_transaction,
+)
 from crm.models import (
     CrmOrder,
     CrmOrderEvent,
@@ -526,6 +530,12 @@ class FinanceTransactionDetailView(APIView):
         with transaction.atomic():
             tx = update_manual_transaction(tx, serializer.validated_data)
         return Response(FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data)
+
+    def delete(self, request, pk: int):
+        tx = get_object_or_404(FinancialTransaction, pk=pk)
+        with transaction.atomic():
+            delete_manual_transaction(tx)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class FinanceTransactionSearchView(APIView):

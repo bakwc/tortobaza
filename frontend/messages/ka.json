@@ -619,7 +619,8 @@
       "counterpartAccount": "მეორე ოპერაციის ანგარიში",
       "counterpartDate": "მეორე ოპერაციის თარიღი",
       "counterpartAmount": "მეორე ოპერაციის თანხა",
-      "save": "შენახვა"
+      "save": "შენახვა",
+      "delete": "წაშლა"
     }
   },
   "stock": {

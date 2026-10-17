@@ -506,6 +506,21 @@ class FinanceTransactionsApiTests(TestCase):
         self.assertEqual(nxt.kind, FinancialTransaction.KIND_TRANSFER)
         self.assertEqual(nxt.income_type, "")
 
+    def test_delete_removes_transaction_and_unlinks_pair(self):
+        other_account = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        tx = _tx(self.account, self.day, Decimal("-50.00"), FinancialTransaction.KIND_TRANSFER)
+        other = _tx(other_account, self.day, Decimal("50.00"), FinancialTransaction.KIND_TRANSFER)
+        tx.matched_transaction = other
+        other.matched_transaction = tx
+        tx.save(update_fields=["matched_transaction"])
+        other.save(update_fields=["matched_transaction"])
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.delete(f"/api/crm/finance/transactions/{tx.pk}/")
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(FinancialTransaction.objects.filter(pk=tx.pk).exists())
+        other.refresh_from_db()
+        self.assertIsNone(other.matched_transaction_id)
+
     def test_update_rejects_self_link(self):
         tx = _tx(self.account, self.day, Decimal("-50.00"), FinancialTransaction.KIND_TRANSFER)
         self.client.force_authenticate(user=self.admin)

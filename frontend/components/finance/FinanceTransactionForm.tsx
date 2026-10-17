@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateFinanceTransaction,
+  useDeleteFinanceTransaction,
   useFinanceAccounts,
   useFinanceTransactionSearch,
   useUpdateFinanceTransaction,
@@ -166,7 +167,8 @@ export function FinanceTransactionForm({
   const searchQuery = useFinanceTransactionSearch(submittedQuery);
   const createMutation = useCreateFinanceTransaction();
   const updateMutation = useUpdateFinanceTransaction();
-  const pending = createMutation.isPending || updateMutation.isPending;
+  const deleteMutation = useDeleteFinanceTransaction();
+  const pending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   function setKind(kind: FinanceTransaction["kind"]) {
     setFields((current) => ({
@@ -223,18 +225,25 @@ export function FinanceTransactionForm({
       return;
     }
     const body = buildBody(fields);
-    const onError = (error: unknown) => {
-      if (error instanceof ApiError) {
-        setErrorMessage(error.detail);
-        return;
-      }
-      throw error;
-    };
     if (transaction === null) {
       createMutation.mutate(body, { onSuccess: onClose, onError });
       return;
     }
     updateMutation.mutate({ id: transaction.id, body }, { onSuccess: onClose, onError });
+  }
+
+  function onError(error: unknown) {
+    if (error instanceof ApiError) {
+      setErrorMessage(error.detail);
+      return;
+    }
+    throw error;
+  }
+
+  function onDelete() {
+    if (transaction === null) return;
+    setErrorMessage("");
+    deleteMutation.mutate(transaction.id, { onSuccess: onClose, onError });
   }
 
   const accounts = accountsQuery.data ?? [];
@@ -549,9 +558,20 @@ export function FinanceTransactionForm({
 
           {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
 
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-between gap-3">
+            {transaction !== null ? (
+              <Button type="button" variant="outline" onClick={onDelete} disabled={pending}>
+                {deleteMutation.isPending ? <Spinner className="h-4 w-4" /> : t("form.delete")}
+              </Button>
+            ) : (
+              <span />
+            )}
             <Button type="submit" disabled={pending || accountsQuery.isPending || accountsQuery.isError}>
-              {pending ? <Spinner className="h-4 w-4" /> : t("form.save")}
+              {createMutation.isPending || updateMutation.isPending ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                t("form.save")
+              )}
             </Button>
           </div>
         </form>

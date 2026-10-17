@@ -54,3 +54,13 @@ export function useUpdateFinanceTransaction() {
     },
   });
 }
+
+export function useDeleteFinanceTransaction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteFinanceTransaction(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["finance-transactions"] });
+    },
+  });
+}

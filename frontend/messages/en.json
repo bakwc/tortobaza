@@ -619,7 +619,8 @@
       "counterpartAccount": "Other account",
       "counterpartDate": "Other date",
       "counterpartAmount": "Other amount",
-      "save": "Save"
+      "save": "Save",
+      "delete": "Delete"
     }
   },
   "stock": {

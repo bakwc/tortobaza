@@ -619,7 +619,8 @@
       "counterpartAccount": "Счёт второй операции",
       "counterpartDate": "Дата второй операции",
       "counterpartAmount": "Сумма второй операции",
-      "save": "Сохранить"
+      "save": "Сохранить",
+      "delete": "Удалить"
     }
   },
   "stock": {

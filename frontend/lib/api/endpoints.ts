@@ -527,6 +527,10 @@ export function endpoints(fetcher: Fetcher) {
       return parse(FinanceTransactionSchema, raw);
     },
 
+    async deleteFinanceTransaction(id: number): Promise<void> {
+      await fetcher<void>(`/api/crm/finance/transactions/${id}/`, { method: "DELETE" });
+    },
+
     async getExchangeRates(): Promise<ExchangeRates> {
       const raw = await fetcher<unknown>("/api/crm/finance/exchange-rates/");
       return parse(ExchangeRatesSchema, raw);

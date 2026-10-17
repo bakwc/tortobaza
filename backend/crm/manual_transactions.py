@@ -24,6 +24,11 @@ def create_manual_transaction(data: dict) -> FinancialTransaction:
     return tx
 
 
+def delete_manual_transaction(tx: FinancialTransaction) -> None:
+    unlink(tx)
+    tx.delete()
+
+
 def update_manual_transaction(tx: FinancialTransaction, data: dict) -> FinancialTransaction:
     tx.account_id = data["account_id"]
     tx.date = data["date"]
