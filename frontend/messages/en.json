@@ -738,6 +738,7 @@
     "lineTotal": "Amount",
     "bankAmountDiffers": "bank amount is {amount}",
     "uploadReceipt": "Upload receipt",
+    "recognizingReceipt": "Reading the receipt…",
     "removeReceipt": "Remove receipt",
     "createIngredient": "Create ingredient",
     "receiptTotalDiffers": "receipt total is {total}, lines add up to {lines}",

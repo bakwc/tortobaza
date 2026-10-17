@@ -1,5 +1,7 @@
 import base64
 import json
+import logging
+import time
 from decimal import Decimal
 from io import BytesIO
 from typing import Literal
@@ -15,7 +17,10 @@ from menu.models import Ingredient
 
 pillow_heif.register_heif_opener()
 
+logger = logging.getLogger(__name__)
+
 RECEIPT_MODEL = "gpt-5.5"
+RECEIPT_TIMEOUT_SECONDS = 90
 MAX_EDGE = 2000
 
 RECEIPT_PROMPT = """You read a photo of a shop receipt and return structured data.
@@ -95,7 +100,15 @@ def recognize_receipt(jpeg_bytes: bytes) -> dict:
         ensure_ascii=False,
     )
     encoded = base64.b64encode(jpeg_bytes).decode("ascii")
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    logger.info(
+        "receipt openai request model=%s jpeg_bytes=%s ingredients=%s key_set=%s",
+        RECEIPT_MODEL,
+        len(jpeg_bytes),
+        len(ingredients),
+        bool(settings.OPENAI_API_KEY),
+    )
+    started = time.monotonic()
+    client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=RECEIPT_TIMEOUT_SECONDS)
     response = client.responses.parse(
         model=RECEIPT_MODEL,
         instructions=RECEIPT_PROMPT,
@@ -115,8 +128,10 @@ def recognize_receipt(jpeg_bytes: bytes) -> dict:
         text_format=RecognizedReceipt,
         store=False,
     )
+    logger.info("receipt openai response elapsed=%.1fs", time.monotonic() - started)
     parsed = response.output_parsed
     if parsed is None:
+        logger.error("receipt openai response had no parsed output")
         raise ValueError("Receipt recognition returned no data.")
     for line in parsed.lines:
         if line.ingredient_id is not None and line.ingredient_id not in known:

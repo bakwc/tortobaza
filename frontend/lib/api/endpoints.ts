@@ -1,3 +1,4 @@
+import { ApiError } from "./client";
 import {
   AttendanceEventSchema,
   AttendanceSummarySchema,
@@ -137,6 +138,7 @@ export type Fetcher = <T>(
     body?: string | FormData;
     searchParams?: Record<string, string | number | undefined | null>;
     headers?: HeadersInit;
+    signal?: AbortSignal;
     cache?: RequestCache;
     next?: { revalidate?: number; tags?: string[] };
   },
@@ -264,8 +266,23 @@ export function endpoints(fetcher: Fetcher) {
     async uploadSupplyReceipt(file: File): Promise<SupplyReceipt> {
       const body = new FormData();
       body.append("image", file);
-      const raw = await fetcher<unknown>("/api/inventory/receipts/", { method: "POST", body });
-      return parse(SupplyReceiptSchema, raw);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 100_000);
+      try {
+        const raw = await fetcher<unknown>("/api/inventory/receipts/", {
+          method: "POST",
+          body,
+          signal: controller.signal,
+        });
+        return parse(SupplyReceiptSchema, raw);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw new ApiError(0, JSON.stringify({ detail: "Receipt recognition timed out." }));
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
     },
 
     async getStock(date: string | null): Promise<StockRow[]> {

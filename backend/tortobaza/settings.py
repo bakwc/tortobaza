@@ -177,6 +177,9 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = "info@sweet-chill.ge"
 
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -184,10 +187,18 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
         },
+        "inventory_file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "inventory.log",
+        },
     },
     "loggers": {
         "crm.flowwow": {
             "handlers": ["console"],
+            "level": "INFO",
+        },
+        "inventory": {
+            "handlers": ["console", "inventory_file"],
             "level": "INFO",
         },
     },

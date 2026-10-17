@@ -1,3 +1,5 @@
+import logging
+import time
 from decimal import Decimal
 from pathlib import Path
 
@@ -6,7 +8,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -51,6 +53,8 @@ from inventory.services import (
 )
 from menu.models import Ingredient, SemiProduct
 from menu.views import delete_unless_protected, serializer_context
+
+logger = logging.getLogger(__name__)
 
 
 class InventoryListView(APIView):
@@ -171,14 +175,36 @@ class SupplyReceiptUploadView(APIView):
     def post(self, request):
         upload = request.FILES["image"]
         extension = Path(upload.name).suffix.lower().lstrip(".")
+        logger.info(
+            "receipt upload start name=%s size=%s content_type=%s",
+            upload.name,
+            upload.size,
+            upload.content_type,
+        )
         if extension not in RECEIPT_EXTENSIONS:
+            logger.info("receipt upload rejected extension=%s", extension)
             raise ValidationError({"image": "Upload a jpg, png, or heic image."})
-        jpeg = to_jpeg(upload)
-        recognized = recognize_receipt(jpeg.read())
-        jpeg.seek(0)
+        started = time.monotonic()
+        try:
+            jpeg = to_jpeg(upload)
+            payload = jpeg.read()
+            jpeg.seek(0)
+            logger.info("receipt converted to jpeg bytes=%s", len(payload))
+            recognized = recognize_receipt(payload)
+        except Exception as exc:
+            logger.exception("receipt upload failed name=%s", upload.name)
+            raise APIException(detail=str(exc)) from exc
         supplier = Supplier.objects.filter(name__iexact=recognized["merchant_name"]).first()
         recognized["supplier"] = None if supplier is None else supplier.pk
         receipt = SupplyReceipt.objects.create(image=jpeg, recognized=recognized)
+        logger.info(
+            "receipt stored id=%s merchant=%s lines=%s supplier=%s elapsed=%.1fs",
+            receipt.pk,
+            recognized["merchant_name"],
+            len(recognized["lines"]),
+            recognized["supplier"],
+            time.monotonic() - started,
+        )
         return Response(SupplyReceiptSerializer(receipt).data, status=status.HTTP_201_CREATED)
 
 

@@ -90,8 +90,12 @@ export function apiErrorMessage(error: unknown, fallback: string): string | null
   if (error instanceof ApiError) {
     const messages: string[] = [];
     collectMessages(error.parsed(), messages);
-    return messages.length > 0 ? messages.join(" ") : fallback;
+    if (messages.length > 0) return messages.join(" ");
+    const detail = error.detail.trim();
+    if (detail !== "" && !detail.startsWith("<")) return detail.slice(0, 500);
+    return fallback;
   }
+  if (error instanceof Error && error.message !== "") return error.message;
   return fallback;
 }
 

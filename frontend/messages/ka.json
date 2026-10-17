@@ -738,6 +738,7 @@
     "lineTotal": "თანხა",
     "bankAmountDiffers": "ბანკში {amount}",
     "uploadReceipt": "ჩეკის ატვირთვა",
+    "recognizingReceipt": "ჩეკი იკითხება…",
     "removeReceipt": "ჩეკის წაშლა",
     "createIngredient": "ინგრედიენტის შექმნა",
     "receiptTotalDiffers": "ჩეკში {total}, ხაზებში {lines}",

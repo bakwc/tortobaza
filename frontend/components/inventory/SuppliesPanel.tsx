@@ -289,7 +289,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
             onClick={() => fileInput.current?.click()}
           >
             {receiptUpload.isPending ? <Spinner className="mr-1 h-4 w-4" /> : null}
-            {t("uploadReceipt")}
+            {receiptUpload.isPending ? t("recognizingReceipt") : t("uploadReceipt")}
           </Button>
         </div>
       </div>

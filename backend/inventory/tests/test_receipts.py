@@ -179,8 +179,9 @@ class SupplyReceiptApiTests(TestCase):
     def test_unknown_ingredient_fails_the_request(self):
         self.client.force_authenticate(self.admin)
         with patch("inventory.views.recognize_receipt", side_effect=ValueError("Unknown ingredient id 9.")):
-            with self.assertRaises(ValueError):
-                self.client.post("/api/inventory/receipts/", {"image": png_upload()}, format="multipart")
+            response = self.client.post("/api/inventory/receipts/", {"image": png_upload()}, format="multipart")
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()["detail"], "Unknown ingredient id 9.")
         self.assertFalse(SupplyReceipt.objects.exists())
 
     def test_requires_finance_admin(self):
