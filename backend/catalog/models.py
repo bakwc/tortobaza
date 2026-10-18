@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -236,17 +234,7 @@ class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name=_("Name"))
     slug = models.SlugField(max_length=220, unique=True, verbose_name=_("Slug"))
     description = models.TextField(blank=True, verbose_name=_("Description"))
-    base_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name=_("Price (without delivery)"),
-    )
-    delivery_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=Decimal("0"),
-        verbose_name=_("Delivery"),
-    )
+    base_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Base price"))
     delivery_schedule_tier = models.CharField(
         max_length=20,
         choices=DELIVERY_SCHEDULE_TIER_CHOICES,

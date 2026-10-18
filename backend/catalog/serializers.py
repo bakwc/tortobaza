@@ -198,13 +198,12 @@ class ProductOptionGroupSerializer(serializers.ModelSerializer):
 
 class ProductListSerializer(serializers.ModelSerializer):
     base_price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     primary_image = serializers.SerializerMethodField()
     category = CategorySerializer(read_only=True)
 
     class Meta:
         model = Product
-        fields = ["id", "slug", "name", "base_price", "delivery_price", "primary_image", "category"]
+        fields = ["id", "slug", "name", "base_price", "primary_image", "category"]
 
     def get_primary_image(self, obj: Product):
         first = obj.images.order_by("position", "id").first()

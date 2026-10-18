@@ -110,7 +110,6 @@ class ProductAdmin(TranslationAdmin):
         "category",
         "delivery_schedule_tier",
         "base_price",
-        "delivery_price",
         "tech_card",
         "position",
         "is_active",
