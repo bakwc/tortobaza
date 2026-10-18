@@ -7,6 +7,10 @@ import { Link } from "@/i18n/navigation";
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   const t = useTranslations("catalog");
+  const cake = Number.parseFloat(product.base_price);
+  const delivery = Number.parseFloat(product.delivery_price);
+  const hasDelivery = delivery > 0;
+  const shown = hasDelivery ? cake + delivery : cake;
 
   return (
     <Link
@@ -35,8 +39,16 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         <h3 className="text-[22px] font-normal leading-snug text-[#666]">{product.name}</h3>
         <div className="mt-6">
           <span className="inline-flex h-[36px] w-full items-center justify-center rounded-full bg-product-price-btn px-6 text-[14px] font-normal text-white">
-            {formatAed(product.base_price)}
+            {formatAed(shown)}
           </span>
+          {hasDelivery ? (
+            <p className="mt-1 text-center text-xs text-[var(--muted-2)]">
+              {t("priceBreakdown", {
+                cake: formatAed(cake),
+                delivery: formatAed(delivery),
+              })}
+            </p>
+          ) : null}
         </div>
       </div>
     </Link>

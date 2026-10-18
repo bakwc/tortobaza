@@ -62,6 +62,7 @@
     "decreaseAria": "Уменьшить",
     "increaseAria": "Увеличить",
     "noImage": "Нет фото",
+    "priceBreakdown": "{cake} торт + {delivery} доставка",
     "viewOrder": "К заказу",
     "deliveryTier": {
       "all_day": "Доставка сегодня",

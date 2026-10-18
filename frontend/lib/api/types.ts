@@ -77,6 +77,7 @@ export const ProductListItemSchema = z.object({
   slug: z.string(),
   name: z.string(),
   base_price: z.string(),
+  delivery_price: z.string(),
   primary_image: ResponsiveImageSchema.nullable(),
   category: CategorySchema,
 });
