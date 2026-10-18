@@ -23,6 +23,7 @@ TRACKED_FIELDS = (
     "description",
     "internal_description",
     "cake_price",
+    "delivery_price",
     "prepayment",
     "is_paid",
     "payment_type",

@@ -75,6 +75,7 @@ function buildCrmOrderFormData(
   form.append("description", fields.description);
   form.append("internal_description", fields.internal_description);
   form.append("cake_price", fields.cake_price);
+  form.append("delivery_price", fields.delivery_price);
   form.append("prepayment", fields.prepayment);
   form.append("is_paid", fields.is_paid ? "true" : "false");
   form.append("payment_type", fields.payment_type);
@@ -104,6 +105,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     description: order.description,
     internal_description: order.internal_description,
     cake_price: order.cake_price,
+    delivery_price: order.delivery_price,
     prepayment: order.prepayment,
     is_paid: order.is_paid,
     payment_type: order.payment_type,
@@ -127,6 +129,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     description: "",
     internal_description: "",
     cake_price: "",
+    delivery_price: "0",
     prepayment: "0",
     is_paid: false,
     payment_type: "unknown",
@@ -545,7 +548,7 @@ export function CrmOrderForm(
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-              {t("price")}
+              {t("priceWithoutDelivery")}
             </span>
             <Input
               required
@@ -563,6 +566,17 @@ export function CrmOrderForm(
                 {t("items.priceSum", { value: itemsPriceSum.toFixed(2) })}
               </span>
             ) : null}
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+              {t("delivery")}
+            </span>
+            <Input
+              required
+              inputMode="decimal"
+              value={fields.delivery_price}
+              onChange={(event) => setField("delivery_price", event.target.value)}
+            />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">

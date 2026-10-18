@@ -310,6 +310,8 @@
     "notes": "Notes / Description",
     "internalNotes": "შიდა აღწერა",
     "price": "Price",
+    "priceWithoutDelivery": "ფასი (მიტანის გარეშე)",
+    "priceSplit": "({cake} შეკვეთა, {delivery} მიტანა)",
     "prepaid": "Prepaid",
     "remaining": "Remaining",
     "paymentMethod": "Payment Method",

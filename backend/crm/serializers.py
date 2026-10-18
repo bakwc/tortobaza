@@ -177,6 +177,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     items = CrmOrderItemSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
     phones = serializers.SerializerMethodField()
     taken_by_name = serializers.CharField(read_only=True, allow_null=True)
@@ -220,6 +221,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "description",
             "internal_description",
             "cake_price",
+            "delivery_price",
             "prepayment",
             "is_paid",
             "payment_type",
@@ -336,6 +338,7 @@ class CrmOrderEventSerializer(serializers.ModelSerializer):
 class CrmOrderClientSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
     phones = serializers.SerializerMethodField()
     google_maps_url = serializers.SerializerMethodField()
@@ -359,6 +362,7 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
             "filling",
             "description",
             "cake_price",
+            "delivery_price",
             "prepayment",
             "is_paid",
             "payment_type",
@@ -475,6 +479,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             "description",
             "internal_description",
             "cake_price",
+            "delivery_price",
             "prepayment",
             "is_paid",
             "payment_type",
@@ -709,6 +714,7 @@ class FinanceTransactionCrmOrderSerializer(serializers.Serializer):
     weight = serializers.CharField()
     filling = serializers.CharField()
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class FinanceTransactionSerializer(serializers.Serializer):

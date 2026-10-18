@@ -310,6 +310,8 @@
     "notes": "Заметки / описание",
     "internalNotes": "Внутреннее описание",
     "price": "Цена",
+    "priceWithoutDelivery": "Цена (без доставки)",
+    "priceSplit": "({cake} заказ, {delivery} доставка)",
     "prepaid": "Предоплата",
     "remaining": "К оплате",
     "paymentMethod": "Способ оплаты",

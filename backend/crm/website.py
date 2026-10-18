@@ -55,7 +55,8 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
         weight=", ".join(weight_parts) if weight_parts else "—",
         filling=filling if filling is not None else ", ".join(product_names),
         description=_build_description(order),
-        cake_price=order.total,
+        cake_price=order.total - order.delivery_fee,
+        delivery_price=order.delivery_fee,
         prepayment=Decimal("0"),
         is_paid=False,
         status=CrmOrder.STATUS_UNCONFIRMED,
@@ -81,7 +82,7 @@ def mark_crm_order_paid_for_website_order(order: Order) -> None:
     crm_order = CrmOrder.objects.get(website_order=order)
     before = snapshot_crm_order(crm_order)
     crm_order.is_paid = True
-    crm_order.prepayment = crm_order.cake_price
+    crm_order.prepayment = crm_order.total_price
     crm_order.save(update_fields=["is_paid", "prepayment", "updated_at"])
     record_crm_order_event(
         crm_order,

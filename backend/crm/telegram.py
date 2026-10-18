@@ -130,6 +130,7 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     images = [[img.id, img.position] for img in order.images.all()]
     payload = {
         "cake_price": str(order.cake_price),
+        "delivery_price": str(order.delivery_price),
         "contact": order.contact,
         "contact_e164": None,
         "date": order.date.isoformat(),
@@ -318,7 +319,7 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
     lines.append(f"<b>Начинка:</b> {_esc(order.filling)}")
     if order.description:
         lines.append(f"<b>Описание:</b> {_esc(order.description)}")
-    lines.append(f"<b>Цена:</b> {_format_money(order.cake_price)}")
+    lines.append(f"<b>Цена:</b> {_format_money(order.total_price)}")
     lines.append(f"<b>Предоплата:</b> {_format_money(order.prepayment)}")
     lines.append(f"<b>Оплата:</b> {_PAYMENT_LABELS[order.payment_type]}")
     lines.append(f"<b>Оплачен:</b> {'да' if order.is_paid else 'нет'}")

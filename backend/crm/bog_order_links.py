@@ -75,7 +75,7 @@ def _assign(
     for transaction in transactions:
         candidates: list[tuple[int, CrmOrder]] = []
         for order in orders:
-            if order.cake_price != transaction.amount:
+            if order.total_price != transaction.amount:
                 continue
             distance = abs((transaction.date - center(order)).days)
             if distance <= WINDOW_DAYS:

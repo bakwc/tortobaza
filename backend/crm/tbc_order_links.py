@@ -48,7 +48,7 @@ def _assign_one(
     for transaction in transactions:
         candidates: list[tuple[int, int, CrmOrder]] = []
         for order in orders:
-            if order.cake_price != transaction.amount:
+            if order.total_price != transaction.amount:
                 continue
             distance = abs((transaction.date - center(order)).days)
             if distance <= WINDOW_DAYS:
@@ -98,7 +98,7 @@ def _assign_sums(
         total = sum((transaction.amount for transaction in group), Decimal("0"))
         candidates: list[tuple[int, int, CrmOrder]] = []
         for order in orders:
-            if order.cake_price != total:
+            if order.total_price != total:
                 continue
             distances = [abs((transaction.date - center(order)).days) for transaction in group]
             if any(distance > WINDOW_DAYS for distance in distances):

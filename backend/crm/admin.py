@@ -86,6 +86,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "weight",
         "filling",
         "cake_price",
+        "delivery_price",
         "prepayment",
         "is_paid",
         "payment_type",
@@ -139,7 +140,14 @@ class CrmOrderAdmin(admin.ModelAdmin):
         (
             _("Payment"),
             {
-                "fields": ("cake_price", "prepayment", "is_paid", "payment_type", "payment_date"),
+                "fields": (
+                    "cake_price",
+                    "delivery_price",
+                    "prepayment",
+                    "is_paid",
+                    "payment_type",
+                    "payment_date",
+                ),
             },
         ),
         (

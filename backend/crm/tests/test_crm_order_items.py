@@ -129,7 +129,8 @@ class WebsiteOrderItemsTests(TestCase):
         mock_now.return_value = _frozen_now()
         crm = self._order([self.weight_option, self.raspberry_option])
         self.assertEqual(crm.filling, "Raspberry")
-        self.assertEqual(crm.cake_price, crm.website_order.total)
+        self.assertEqual(crm.cake_price, crm.website_order.total - crm.website_order.delivery_fee)
+        self.assertEqual(crm.delivery_price, crm.website_order.delivery_fee)
         self.assertEqual(crm.status, CrmOrder.STATUS_UNCONFIRMED)
         self.assertFalse(StockMovement.objects.exists())
 

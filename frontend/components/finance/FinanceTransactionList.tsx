@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import {
+  crmOrderTotal,
   formatAed,
   formatCrmCompactDate,
   formatCrmDate,
@@ -989,7 +990,7 @@ function CrmOrderChips({ orders }: { orders: CrmOrderLink[] }) {
           <span className="min-w-0 truncate font-medium">
             {order.weight} · {order.filling} · {order.contact}
           </span>
-          <span className="shrink-0">{formatAed(order.cake_price)}</span>
+          <span className="shrink-0">{formatAed(crmOrderTotal(order))}</span>
         </Link>
       ))}
     </>

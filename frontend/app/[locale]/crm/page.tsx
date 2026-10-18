@@ -61,7 +61,7 @@ import {
   crmOrderSelectableStatuses,
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
-import { formatAed, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
+import { formatAed, formatAmount, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function formatRouteMinutes(seconds: number): number {
@@ -462,7 +462,9 @@ function CrmOrderCard({
       ? null
       : formatRouteMinutes(order.delivery_duration_seconds);
 
-  const priceNum = Number.parseFloat(order.cake_price);
+  const cakeNum = Number.parseFloat(order.cake_price);
+  const deliveryNum = Number.parseFloat(order.delivery_price);
+  const priceNum = cakeNum + deliveryNum;
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
 
@@ -1001,7 +1003,13 @@ function CrmOrderCard({
               <div>
                 <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
                 <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
-                  {formatAed(order.cake_price)}
+                  {formatAed(priceNum)}
+                </p>
+                <p className="text-[10px] leading-tight text-[var(--muted-2)]">
+                  {t("priceSplit", {
+                    cake: formatAmount(cakeNum),
+                    delivery: formatAmount(deliveryNum),
+                  })}
                 </p>
               </div>
               <div>

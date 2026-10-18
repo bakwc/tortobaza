@@ -156,6 +156,12 @@ class CrmOrder(models.Model):
     description = models.TextField(blank=True, verbose_name=_("Description"))
     internal_description = models.TextField(blank=True, verbose_name=_("Internal description"))
     cake_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Cake price"))
+    delivery_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name=_("Delivery price"),
+    )
     prepayment = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name=_("Prepayment"))
     is_paid = models.BooleanField(default=False, verbose_name=_("Is paid"))
     payment_type = models.CharField(
@@ -233,6 +239,10 @@ class CrmOrder(models.Model):
             ),
             "time_start",
         ]
+
+    @property
+    def total_price(self) -> Decimal:
+        return self.cake_price + self.delivery_price
 
     def __str__(self) -> str:
         if self.when_ready:

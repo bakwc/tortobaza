@@ -66,7 +66,7 @@ def _unique_subset(orders: list[CrmOrder], amount: Decimal) -> list[CrmOrder] | 
     matched: list[CrmOrder] | None = None
     for size in range(1, len(orders) + 1):
         for subset in combinations(orders, size):
-            gross = sum((order.cake_price for order in subset), Decimal("0"))
+            gross = sum((order.total_price for order in subset), Decimal("0"))
             if gross <= amount:
                 continue
             if (gross - amount) / gross > MAX_COMMISSION:

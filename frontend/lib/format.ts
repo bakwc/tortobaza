@@ -26,6 +26,17 @@ export function formatAed(amount: string | number): string {
   return formatMoney(amount, "GEL");
 }
 
+export function formatAmount(amount: string | number): string {
+  const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (Number.isNaN(value)) return "0";
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(2);
+}
+
+export function crmOrderTotal(order: { cake_price: string; delivery_price: string }): number {
+  return Number.parseFloat(order.cake_price) + Number.parseFloat(order.delivery_price);
+}
+
 export function toGel(
   amount: string | number,
   currency: string,
@@ -60,8 +71,8 @@ export function formatAedWhole(amount: string | number): string {
   return `${sign}${grouped} ₾`;
 }
 
-export function sumCrmCakePrices(orders: { cake_price: string }[]): number {
-  return orders.reduce((sum, order) => sum + Number.parseFloat(order.cake_price), 0);
+export function sumCrmCakePrices(orders: { cake_price: string; delivery_price: string }[]): number {
+  return orders.reduce((sum, order) => sum + crmOrderTotal(order), 0);
 }
 
 export function formatPriceDelta(delta: string | number): string {

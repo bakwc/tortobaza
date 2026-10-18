@@ -31,6 +31,7 @@ import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@
 import type { CrmOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import {
+  crmOrderTotal,
   formatAed,
   formatCrmCompactDate,
   formatCrmDate,
@@ -336,7 +337,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
               <span>{order.filling}</span>
             </p>
             <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
-              {formatAed(order.cake_price)}
+              {formatAed(crmOrderTotal(order))}
             </span>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">

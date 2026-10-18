@@ -26,7 +26,7 @@ def sync_cash_paid_order_transactions() -> None:
             FinancialTransaction(
                 account=account,
                 date=_transaction_date(order),
-                amount=order.cake_price,
+                amount=order.total_price,
                 kind=FinancialTransaction.KIND_INCOME,
                 income_type=FinancialTransaction.INCOME_CASH,
             )

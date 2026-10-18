@@ -23,7 +23,7 @@ import { useCrmClientOrderMap } from "@/hooks/useCrmOrders";
 import { CRM_CLIENT_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import { SITE_INFO } from "@/lib/site-info";
 import type { CrmClientOrder } from "@/lib/api/types";
-import { formatAed } from "@/lib/format";
+import { formatAed, formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function paymentTypeLabel(type: string, t: (key: string) => string): string {
@@ -74,7 +74,9 @@ export function CrmClientOrderView({
 
   const images = order.images;
   const activeImage = images[activeImageIndex] ?? images[0];
-  const priceNum = Number.parseFloat(order.cake_price);
+  const cakeNum = Number.parseFloat(order.cake_price);
+  const deliveryNum = Number.parseFloat(order.delivery_price);
+  const priceNum = cakeNum + deliveryNum;
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
   const showPickupBadge =
@@ -357,7 +359,13 @@ export function CrmClientOrderView({
               <div>
                 <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
                 <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
-                  {formatAed(order.cake_price)}
+                  {formatAed(priceNum)}
+                </p>
+                <p className="text-[10px] leading-tight text-[var(--muted-2)]">
+                  {t("priceSplit", {
+                    cake: formatAmount(cakeNum),
+                    delivery: formatAmount(deliveryNum),
+                  })}
                 </p>
               </div>
               <div>

@@ -235,6 +235,7 @@ class FinanceTransactionsApiTests(TestCase):
                     "weight": "1kg",
                     "filling": "Vanilla",
                     "cake_price": "85.00",
+                    "delivery_price": "0.00",
                 }
             ],
         )

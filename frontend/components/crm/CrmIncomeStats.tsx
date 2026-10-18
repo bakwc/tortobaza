@@ -12,7 +12,7 @@ export function CrmIncomeStats({
   compact,
   detailed,
 }: {
-  orders: { cake_price: string; is_paid: boolean }[];
+  orders: { cake_price: string; delivery_price: string; is_paid: boolean }[];
   compact: boolean;
   detailed: boolean;
 }) {
@@ -29,7 +29,7 @@ function CrmIncomeBadge({
   compact,
   detailed,
 }: {
-  orders: { cake_price: string; is_paid: boolean }[];
+  orders: { cake_price: string; delivery_price: string; is_paid: boolean }[];
   compact: boolean;
   detailed: boolean;
 }) {

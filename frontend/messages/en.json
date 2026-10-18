@@ -310,6 +310,8 @@
     "notes": "Notes / Description",
     "internalNotes": "Internal description",
     "price": "Price",
+    "priceWithoutDelivery": "Price (without delivery)",
+    "priceSplit": "({cake} order, {delivery} delivery)",
     "prepaid": "Prepaid",
     "remaining": "Remaining",
     "paymentMethod": "Payment Method",

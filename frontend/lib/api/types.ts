@@ -343,6 +343,7 @@ export const CrmOrderSchema = z.object({
   description: z.string(),
   internal_description: z.string(),
   cake_price: z.string(),
+  delivery_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
   payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
@@ -487,6 +488,7 @@ export const FinanceTransactionSchema = z.object({
       weight: z.string(),
       filling: z.string(),
       cake_price: z.string(),
+      delivery_price: z.string(),
     }),
   ),
   matched_account: z
@@ -572,6 +574,7 @@ export const CrmClientOrderSchema = z.object({
   filling: z.string(),
   description: z.string(),
   cake_price: z.string(),
+  delivery_price: z.string(),
   prepayment: z.string(),
   is_paid: z.boolean(),
   payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
@@ -669,6 +672,7 @@ export type CrmOrderWriteFields = {
   description: string;
   internal_description: string;
   cake_price: string;
+  delivery_price: string;
   prepayment: string;
   is_paid: boolean;
   payment_type: CrmOrderPaymentType;

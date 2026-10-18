@@ -26,6 +26,7 @@ const HISTORY_FIELDS = [
   "description",
   "internal_description",
   "cake_price",
+  "delivery_price",
   "prepayment",
   "is_paid",
   "payment_type",
@@ -54,6 +55,7 @@ const HISTORY_FIELD_KEYS = {
   description: "notes",
   internal_description: "internalNotes",
   cake_price: "price",
+  delivery_price: "delivery",
   prepayment: "prepaid",
   is_paid: "paid",
   payment_type: "paymentMethod",
@@ -178,7 +180,9 @@ function CrmOrderHistoryBody({ orderId }: { orderId: number }) {
       if (field === "payment_type") return paymentTypeLabel(value, t);
       if (field === "date" || field === "payment_date") return formatTimeslotDateLabel(value, locale);
       if (field === "time_start" || field === "time_end") return value.slice(0, 5);
-      if (field === "cake_price" || field === "prepayment") return formatAed(value);
+      if (field === "cake_price" || field === "delivery_price" || field === "prepayment") {
+        return formatAed(value);
+      }
       return value;
     }
     return String(value);

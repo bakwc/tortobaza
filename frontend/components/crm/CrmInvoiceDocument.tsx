@@ -3,13 +3,13 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { CrmOrder } from "@/lib/api/types";
-import { formatAed, formatCrmDate } from "@/lib/format";
+import { crmOrderTotal, formatAed, formatCrmDate } from "@/lib/format";
 import { SITE_INFO } from "@/lib/site-info";
 
 export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
   const locale = useLocale();
-  const priceNum = Number.parseFloat(order.cake_price);
+  const priceNum = crmOrderTotal(order);
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
   const companyAddress = `${SITE_INFO.address.line1}, ${SITE_INFO.address.city}, ${SITE_INFO.address.country}`;
@@ -103,14 +103,14 @@ export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
                     <p className="mt-1 whitespace-pre-wrap text-[var(--ink)]/80">{order.description}</p>
                   ) : null}
                 </td>
-                <td className="py-4 text-right font-semibold tabular-nums">{formatAed(order.cake_price)}</td>
+                <td className="py-4 text-right font-semibold tabular-nums">{formatAed(priceNum)}</td>
               </tr>
             </tbody>
           </table>
           <dl className="ml-auto mt-4 w-full max-w-xs space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--ink)]/60">{t("price")}</dt>
-              <dd className="tabular-nums">{formatAed(order.cake_price)}</dd>
+              <dd className="tabular-nums">{formatAed(priceNum)}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[var(--ink)]/60">{t("prepaid")}</dt>
