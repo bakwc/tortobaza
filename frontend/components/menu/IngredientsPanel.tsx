@@ -1,10 +1,9 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronRight, Droplets, Hash, Package, Pencil, Plus, Scale, Search, Trash2, Wheat } from "lucide-react";
+import { Check, ChevronRight, Droplets, Hash, Package, Plus, Scale, Search, Trash2, Wheat } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
@@ -116,51 +115,34 @@ export function IngredientsPanel() {
   const units = useTranslations("stock.units");
   const ingredients = useIngredients();
   const categories = useIngredientCategories();
-  const [mode, setMode] = useState<"view" | "edit" | null>(null);
   const [viewing, setViewing] = useState<Ingredient | null>(null);
   const [draft, setDraft] = useState<IngredientBody | null>(null);
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const current =
-    viewing === null ? null : (ingredients.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
 
-  const openView = (row: Ingredient) => {
+  const openEdit = (row: Ingredient) => {
     ingredients.save.reset();
     ingredients.remove.reset();
     setViewing(row);
-    setDraft(null);
-    setMode("view");
+    setDraft({
+      name: row.name,
+      category: row.category,
+      unit: row.unit,
+      is_active: row.is_active,
+      avg_cost: row.avg_cost === undefined ? null : packPrice(row.avg_cost, row.cost_quantity),
+      cost_quantity: row.avg_cost === undefined ? null : unitCostDraft(row.cost_quantity),
+    });
   };
   const openNew = () => {
     ingredients.save.reset();
     ingredients.remove.reset();
     setViewing(null);
     setDraft(emptyIngredient());
-    setMode("edit");
-  };
-  const openEdit = () => {
-    if (current === null) return;
-    setDraft({
-      name: current.name,
-      category: current.category,
-      unit: current.unit,
-      is_active: current.is_active,
-      avg_cost:
-        current.avg_cost === undefined ? null : packPrice(current.avg_cost, current.cost_quantity),
-      cost_quantity: current.avg_cost === undefined ? null : unitCostDraft(current.cost_quantity),
-    });
-    setMode("edit");
   };
   const close = () => {
-    setMode(null);
     setDraft(null);
     setViewing(null);
-  };
-  const cancelEdit = () => {
-    setDraft(null);
-    if (viewing === null) close();
-    else setMode("view");
   };
 
   const rows = ingredients.list.data ?? [];
@@ -178,19 +160,6 @@ export function IngredientsPanel() {
     .map((group) => ({ ...group, rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)) }))
     .filter((group) => group.rows.length > 0);
   const activeCount = rows.filter((row) => row.is_active).length;
-  const badges =
-    current === null
-      ? []
-      : [current.category_name ?? "", current.is_active ? "" : t("inactive")].filter((badge) => badge !== "");
-  const stats =
-    current === null
-      ? []
-      : [
-          { label: t("unit"), value: units(current.unit) },
-          ...(current.avg_cost !== undefined
-            ? [{ label: t("avgCost"), value: priceForQuantity(current.avg_cost, current.cost_quantity, units(current.unit)) }]
-            : []),
-        ];
 
   return (
     <div className="grid gap-6">
@@ -278,7 +247,7 @@ export function IngredientsPanel() {
                 </div>
                 <div className="divide-y divide-[var(--line)]">
                   {group.rows.map((row) => (
-                    <IngredientRow key={row.id} row={row} unitLabel={units(row.unit)} onOpen={() => openView(row)} />
+                    <IngredientRow key={row.id} row={row} unitLabel={units(row.unit)} onOpen={() => openEdit(row)} />
                   ))}
                 </div>
               </section>
@@ -335,48 +304,11 @@ export function IngredientsPanel() {
         </div>
       </Card>
 
-      {mode === "view" && current ? (
-        <Dialog open onOpenChange={(value) => (value ? null : close())}>
-          <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
-            <DialogDescription className="hidden">{current.name}</DialogDescription>
-            <div className="flex flex-wrap items-start justify-between gap-3 pr-10">
-              <div className="grid min-w-0 gap-1.5">
-                <DialogTitle className="text-2xl font-semibold leading-tight text-[var(--ink)]">{current.name}</DialogTitle>
-                {badges.length > 0 ? (
-                  <p className="text-sm text-[var(--muted-2)]">
-                    {badges.map((badge, index) => (
-                      <Fragment key={badge}>
-                        {index > 0 ? <span className="mx-1.5">·</span> : null}
-                        {badge}
-                      </Fragment>
-                    ))}
-                  </p>
-                ) : null}
-                {stats.length > 0 ? (
-                  <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-                    {stats.map((stat) => (
-                      <div key={stat.label} className="flex items-baseline gap-1.5">
-                        <dt className="text-[var(--muted-2)]">{stat.label}:</dt>
-                        <dd className="font-semibold tabular-nums text-[var(--ink)]">{stat.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : null}
-              </div>
-              <Button type="button" size="sm" variant="outline" onClick={openEdit}>
-                <Pencil className="mr-1 h-4 w-4" />
-                {t("edit")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : null}
-
       {draft ? (
         <EditorDialog
           open
-          onOpenChange={(value) => (value ? null : cancelEdit())}
-          onCancel={cancelEdit}
+          onOpenChange={(value) => (value ? null : close())}
+          onCancel={close}
           title={viewing === null ? t("newIngredient") : draft.name}
           pending={ingredients.save.isPending}
           error={ingredients.save.error ?? ingredients.remove.error}
@@ -384,13 +316,7 @@ export function IngredientsPanel() {
           onSubmit={() =>
             ingredients.save.mutate(
               { id: viewing === null ? null : viewing.id, body: ingredientRequest(draft) },
-              {
-                onSuccess: (saved) => {
-                  setViewing(saved);
-                  setDraft(null);
-                  setMode("view");
-                },
-              },
+              { onSuccess: close },
             )
           }
           onDelete={viewing === null ? null : () => ingredients.remove.mutate(viewing.id, { onSuccess: close })}
