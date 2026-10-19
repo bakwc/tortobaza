@@ -46,9 +46,18 @@ def compute_day_worked_seconds(events: list[AttendanceEvent]) -> int:
     return total_seconds
 
 
+def daily_monthly_share(monthly_rate: Decimal, day: date) -> Decimal:
+    days = monthrange(day.year, day.month)[1]
+    base = (monthly_rate / Decimal(days)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    if day.day == days:
+        return monthly_rate - base * (days - 1)
+    return base
+
+
 def compute_salary(user, start_date: date, end_date: date) -> dict:
     profile = UserProfile.objects.filter(user=user).first()
     hourly_rate = profile.hourly_rate if profile else Decimal("0.00")
+    monthly_rate = profile.monthly_rate if profile else Decimal("0.00")
 
     start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
     end_dt = timezone.make_aware(
@@ -78,10 +87,13 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
         )
-        money = (Decimal(seconds) * hourly_rate / Decimal(3600)).quantize(
-            Decimal("0.01"),
-            rounding=ROUND_HALF_UP,
-        )
+        if monthly_rate > 0:
+            money = daily_monthly_share(monthly_rate, current)
+        else:
+            money = (Decimal(seconds) * hourly_rate / Decimal(3600)).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            )
         arrivals = [event for event in day_events if event.event_type == AttendanceEvent.ARRIVAL]
         departures = [
             event for event in day_events if event.event_type == AttendanceEvent.DEPARTURE
@@ -109,21 +121,26 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
     }
 
 
-def compute_all_salaries(start_date: date, end_date: date) -> dict:
+def _salary_users(start_date: date, end_date: date):
     start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
     end_dt = timezone.make_aware(
         datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
         _TB,
     )
-    user_ids = (
-        AttendanceEvent.objects.filter(
-            timestamp__gte=start_dt,
-            timestamp__lt=end_dt,
-        )
-        .values_list("user_id", flat=True)
-        .distinct()
+    event_user_ids = AttendanceEvent.objects.filter(
+        timestamp__gte=start_dt,
+        timestamp__lt=end_dt,
+    ).values_list("user_id", flat=True)
+    monthly_user_ids = UserProfile.objects.filter(monthly_rate__gt=0).values_list(
+        "user_id",
+        flat=True,
     )
-    users = User.objects.filter(id__in=user_ids)
+    user_ids = set(event_user_ids) | set(monthly_user_ids)
+    return User.objects.filter(id__in=user_ids)
+
+
+def compute_all_salaries(start_date: date, end_date: date) -> dict:
+    users = _salary_users(start_date, end_date)
     total_money = Decimal("0.00")
     by_date: dict[date, Decimal] = {}
     for user in users:
@@ -153,20 +170,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
     end_date = date(year, month, last_day)
     first_end = date(year, month, 14)
     second_start = date(year, month, 15)
-    start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
-    end_dt = timezone.make_aware(
-        datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
-        _TB,
-    )
-    user_ids = (
-        AttendanceEvent.objects.filter(
-            timestamp__gte=start_dt,
-            timestamp__lt=end_dt,
-        )
-        .values_list("user_id", flat=True)
-        .distinct()
-    )
-    users = User.objects.filter(id__in=user_ids)
+    users = _salary_users(start_date, end_date)
     first_employees: list[dict] = []
     second_employees: list[dict] = []
     for user in users:
@@ -183,7 +187,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
             else:
                 second_hours += row["hours"]
                 second_money += row["money"]
-        if first_hours > 0:
+        if first_hours > 0 or first_money > 0:
             first_employees.append(
                 {
                     "id": user.id,
@@ -192,7 +196,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                     "money": first_money,
                 }
             )
-        if second_hours > 0:
+        if second_hours > 0 or second_money > 0:
             second_employees.append(
                 {
                     "id": user.id,

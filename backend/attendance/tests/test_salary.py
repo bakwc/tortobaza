@@ -8,7 +8,13 @@ from django.utils import timezone
 
 from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
-from attendance.salary import compute_all_salaries, compute_day_worked_seconds, compute_salary
+from attendance.salary import (
+    compute_all_salaries,
+    compute_day_worked_seconds,
+    compute_month_salaries,
+    compute_salary,
+    daily_monthly_share,
+)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -262,3 +268,49 @@ class ComputeAllSalariesTests(TestCase):
         self.assertEqual(result["total_money"], Decimal("200.00"))
         self.assertEqual(result["by_date"][self.day1], Decimal("160.00"))
         self.assertEqual(result["by_date"][self.day2], Decimal("40.00"))
+
+
+class MonthlyRateSalaryTests(TestCase):
+    def test_daily_share_puts_remainder_on_last_day(self):
+        self.assertEqual(daily_monthly_share(Decimal("100.00"), date(2026, 6, 15)), Decimal("3.33"))
+        self.assertEqual(daily_monthly_share(Decimal("100.00"), date(2026, 6, 30)), Decimal("3.43"))
+        total = sum(
+            (daily_monthly_share(Decimal("100.00"), date(2026, 6, day)) for day in range(1, 31)),
+            Decimal("0.00"),
+        )
+        self.assertEqual(total, Decimal("100.00"))
+
+    def test_money_ignores_hours_and_hourly_rate(self):
+        user = User.objects.create_user(username="fixed", password="pass")
+        UserProfile.objects.create(
+            user=user,
+            hourly_rate=Decimal("10.00"),
+            monthly_rate=Decimal("100.00"),
+        )
+        day = date(2026, 6, 15)
+        _event(user, AttendanceEvent.ARRIVAL, day, 9, 0)
+        _event(user, AttendanceEvent.DEPARTURE, day, 17, 0)
+        result = compute_salary(user, day, day)
+        self.assertEqual(result["rows"][0]["hours"], Decimal("8.00"))
+        self.assertEqual(result["rows"][0]["money"], Decimal("3.33"))
+        self.assertEqual(result["total_money"], Decimal("3.33"))
+
+    def test_month_includes_user_without_shifts(self):
+        user = User.objects.create_user(username="fixed", password="pass")
+        UserProfile.objects.create(user=user, monthly_rate=Decimal("100.00"), internal_name="Фикс")
+        result = compute_month_salaries(2026, 6)
+        self.assertEqual(result["total_hours"], Decimal("0.00"))
+        self.assertEqual(result["total_money"], Decimal("100.00"))
+        self.assertEqual(result["periods"][0]["employees"][0]["name"], "Фикс")
+        self.assertEqual(result["periods"][0]["employees"][0]["hours"], Decimal("0.00"))
+        self.assertEqual(result["periods"][0]["employees"][0]["money"], Decimal("46.62"))
+        self.assertEqual(result["periods"][1]["employees"][0]["money"], Decimal("53.38"))
+        self.assertEqual(result["periods"][1]["end"], date(2026, 6, 30))
+
+    def test_day_without_shifts_includes_monthly_share(self):
+        user = User.objects.create_user(username="fixed", password="pass")
+        UserProfile.objects.create(user=user, monthly_rate=Decimal("100.00"))
+        day = date(2026, 6, 30)
+        result = compute_all_salaries(day, day)
+        self.assertEqual(result["total_money"], Decimal("3.43"))
+        self.assertEqual(result["by_date"][day], Decimal("3.43"))

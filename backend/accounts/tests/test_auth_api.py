@@ -31,3 +31,23 @@ class AuthApiTests(TestCase):
         response = self.client.get("/api/auth/me/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["is_finance_admin"], True)
+
+    def test_login_denied_when_can_login_false(self):
+        UserProfile.objects.create(user=self.worker, can_login=False)
+        response = self.client.post(
+            "/api/auth/login/",
+            {"username": "worker", "password": "password"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["non_field_errors"], ["Invalid username or password."])
+        me = self.client.get("/api/auth/me/")
+        self.assertEqual(me.status_code, 403)
+
+    def test_existing_session_logged_out_when_can_login_false(self):
+        UserProfile.objects.create(user=self.worker, can_login=True)
+        self.assertTrue(self.client.login(username="worker", password="password"))
+        profile = UserProfile.objects.get(user=self.worker)
+        profile.can_login = False
+        profile.save()
+        response = self.client.get("/api/auth/me/")
+        self.assertEqual(response.status_code, 403)

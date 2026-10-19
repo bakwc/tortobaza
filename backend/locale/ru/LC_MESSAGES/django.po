@@ -16,6 +16,12 @@ msgstr "Профиль"
 msgid "Hourly rate"
 msgstr "Почасовая ставка"
 
+msgid "Monthly rate"
+msgstr "Месячная ставка"
+
+msgid "Can log in"
+msgstr "Может входить"
+
 msgid "Accounts"
 msgstr "Аккаунты"
 

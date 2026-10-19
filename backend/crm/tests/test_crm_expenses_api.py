@@ -49,6 +49,17 @@ class CrmExpensesApiTests(TestCase):
         response = self.client.get("/api/crm/expenses/")
         self.assertEqual(response.status_code, 403)
 
+    def test_day_without_shifts_includes_monthly_rate(self):
+        fixed = User.objects.create_user(username="fixed", password="password")
+        UserProfile.objects.create(user=fixed, monthly_rate=Decimal("100.00"))
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/expenses/", {"date": "2026-06-30"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {"date": "2026-06-30", "salary": "3.43", "rent": "0.00"},
+        )
+
     def test_day_salary(self):
         _event(self.worker, AttendanceEvent.ARRIVAL, self.day, 9, 0)
         _event(self.worker, AttendanceEvent.DEPARTURE, self.day, 17, 0)

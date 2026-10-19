@@ -33,5 +33,8 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid username or password.")
         if not user.is_active:
             raise serializers.ValidationError("This account is inactive.")
+        profile = UserProfile.objects.filter(user=user).first()
+        if profile is not None and not profile.can_login:
+            raise serializers.ValidationError("Invalid username or password.")
         attrs["user"] = user
         return attrs

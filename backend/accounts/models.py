@@ -25,6 +25,13 @@ class UserProfile(models.Model):
         default=Decimal("0.00"),
         verbose_name=_("Hourly rate"),
     )
+    monthly_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name=_("Monthly rate"),
+    )
+    can_login = models.BooleanField(default=True, verbose_name=_("Can log in"))
     telegram_username = models.CharField(max_length=32, blank=True, verbose_name=_("Telegram username"))
     internal_name = models.CharField(max_length=64, blank=True, verbose_name=_("Internal name"))
     gender = models.CharField(
