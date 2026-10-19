@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity } from "@/components/menu/ui";
+import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity, formatUnitCost } from "@/components/menu/ui";
 import { useStockLevels, useStockMovements } from "@/hooks/useStock";
 import type { StockRow } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -100,7 +100,7 @@ export function StockPanel() {
                   <td className={cn("py-2 text-right", Number(row.quantity) < 0 ? "text-[var(--danger)]" : "")}>
                     {formatQuantity(row.quantity)} {units(row.unit)}
                   </td>
-                  {hasCosts ? <td className="py-2 text-right">{formatMoney(row.avg_cost ?? "0")}</td> : null}
+                  {hasCosts ? <td className="py-2 text-right">{formatUnitCost(row.avg_cost ?? "0")}</td> : null}
                   {hasCosts ? <td className="py-2 text-right">{formatMoney(row.value ?? "0")}</td> : null}
                 </tr>
               ))}

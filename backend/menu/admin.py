@@ -30,7 +30,6 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ["name", "category", "unit", "avg_cost", "is_active"]
     list_filter = ["category", "unit", "is_active"]
     search_fields = ["name"]
-    readonly_fields = ["avg_cost"]
 
 
 class SemiProductImageInline(admin.TabularInline):

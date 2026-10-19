@@ -912,6 +912,7 @@ export type IngredientBody = {
   category: number | null;
   unit: MenuUnit;
   is_active: boolean;
+  avg_cost: string | null;
 };
 
 export type SemiProductBody = {

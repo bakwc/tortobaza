@@ -49,11 +49,16 @@ class IngredientCategorySerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
+    avg_cost = serializers.DecimalField(max_digits=14, decimal_places=6, min_value=Decimal("0"), required=False)
 
     class Meta:
         model = Ingredient
         fields = ["id", "name", "category", "category_name", "unit", "avg_cost", "is_active"]
-        read_only_fields = ["avg_cost"]
+
+    def validate(self, attrs):
+        if "avg_cost" in self.initial_data and not show_costs(self.context):
+            raise serializers.ValidationError("Only finance admins can set unit costs.")
+        return attrs
 
     def to_representation(self, instance):
         return drop_costs(super().to_representation(instance), self.context, ["avg_cost"])

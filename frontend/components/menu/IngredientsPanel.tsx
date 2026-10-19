@@ -15,7 +15,7 @@ import {
   Field,
   NativeSelect,
   QueryState,
-  formatMoney,
+  formatUnitCost,
 } from "@/components/menu/ui";
 import { useIngredientCategories, useIngredients } from "@/hooks/useStock";
 import type { Ingredient, IngredientBody, MenuUnit } from "@/lib/api/types";
@@ -26,7 +26,25 @@ const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 const UNIT_ICONS = { g: Scale, ml: Droplets, pcs: Hash };
 
 function emptyIngredient(): IngredientBody {
-  return { name: "", category: null, unit: "g", is_active: true };
+  return { name: "", category: null, unit: "g", is_active: true, avg_cost: null };
+}
+
+function unitCostDraft(value: string): string {
+  return value.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+function ingredientRequest(draft: IngredientBody): IngredientBody {
+  const body: IngredientBody = {
+    name: draft.name,
+    category: draft.category,
+    unit: draft.unit,
+    is_active: draft.is_active,
+    avg_cost: draft.avg_cost === null ? null : draft.avg_cost.replace(",", "."),
+  };
+  if (body.avg_cost === null) {
+    Reflect.deleteProperty(body, "avg_cost");
+  }
+  return body;
 }
 
 function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel: string; onOpen: () => void }) {
@@ -60,7 +78,7 @@ function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel:
       </span>
       {row.avg_cost !== undefined ? (
         <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatMoney(row.avg_cost)}
+          {formatUnitCost(row.avg_cost)}
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -98,7 +116,13 @@ export function IngredientsPanel() {
   };
   const openEdit = () => {
     if (current === null) return;
-    setDraft({ name: current.name, category: current.category, unit: current.unit, is_active: current.is_active });
+    setDraft({
+      name: current.name,
+      category: current.category,
+      unit: current.unit,
+      is_active: current.is_active,
+      avg_cost: current.avg_cost === undefined ? null : unitCostDraft(current.avg_cost),
+    });
     setMode("edit");
   };
   const close = () => {
@@ -136,7 +160,7 @@ export function IngredientsPanel() {
       ? []
       : [
           { label: t("unit"), value: units(current.unit) },
-          ...(current.avg_cost !== undefined ? [{ label: t("avgCost"), value: formatMoney(current.avg_cost) }] : []),
+          ...(current.avg_cost !== undefined ? [{ label: t("avgCost"), value: formatUnitCost(current.avg_cost) }] : []),
         ];
 
   return (
@@ -330,7 +354,7 @@ export function IngredientsPanel() {
           submitLabel={t("save")}
           onSubmit={() =>
             ingredients.save.mutate(
-              { id: viewing === null ? null : viewing.id, body: draft },
+              { id: viewing === null ? null : viewing.id, body: ingredientRequest(draft) },
               {
                 onSuccess: (saved) => {
                   setViewing(saved);
@@ -374,6 +398,16 @@ export function IngredientsPanel() {
                 ))}
               </NativeSelect>
             </Field>
+            {draft.avg_cost !== null ? (
+              <Field label={t("avgCost")}>
+                <Input
+                  required
+                  inputMode="decimal"
+                  value={draft.avg_cost}
+                  onChange={(event) => setDraft({ ...draft, avg_cost: event.target.value })}
+                />
+              </Field>
+            ) : null}
             <div className="flex items-end pb-3">
               <CheckboxField
                 label={t("isActive")}

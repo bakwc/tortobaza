@@ -137,3 +137,8 @@ export function formatQuantity(value: string): string {
 export function formatMoney(value: string): string {
   return `${Number(value).toFixed(2)} ₾`;
 }
+
+export function formatUnitCost(value: string): string {
+  const trimmed = value.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  return `${trimmed} ₾`;
+}
