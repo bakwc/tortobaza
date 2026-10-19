@@ -26,11 +26,35 @@ const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 const UNIT_ICONS = { g: Scale, ml: Droplets, pcs: Hash };
 
 function emptyIngredient(): IngredientBody {
-  return { name: "", category: null, unit: "g", is_active: true, avg_cost: null };
+  return { name: "", category: null, unit: "g", is_active: true, avg_cost: null, cost_quantity: null };
 }
 
 function unitCostDraft(value: string): string {
   return value.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+}
+
+function decimalNumber(value: string): number {
+  return Number(value.replace(",", "."));
+}
+
+function trimDecimal(value: number): string {
+  return unitCostDraft(String(Math.round(value * 1e6) / 1e6));
+}
+
+function packPrice(avgCost: string, costQuantity: string): string {
+  return trimDecimal(decimalNumber(avgCost) * decimalNumber(costQuantity));
+}
+
+function scaledPackPrice(price: string, quantity: string, nextQuantity: string): string | null {
+  const currentQuantity = decimalNumber(quantity);
+  const next = decimalNumber(nextQuantity);
+  const currentPrice = decimalNumber(price);
+  if (!(currentQuantity > 0) || !(next > 0) || Number.isNaN(currentPrice)) return null;
+  return trimDecimal((currentPrice / currentQuantity) * next);
+}
+
+function priceForQuantity(avgCost: string, costQuantity: string, unitLabel: string): string {
+  return `${formatUnitCost(packPrice(avgCost, costQuantity))} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
 
 function ingredientRequest(draft: IngredientBody): IngredientBody {
@@ -39,10 +63,19 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     category: draft.category,
     unit: draft.unit,
     is_active: draft.is_active,
-    avg_cost: draft.avg_cost === null ? null : draft.avg_cost.replace(",", "."),
+    avg_cost: null,
+    cost_quantity: null,
   };
+  if (draft.avg_cost !== null && draft.cost_quantity !== null) {
+    const quantity = draft.cost_quantity.replace(",", ".");
+    body.cost_quantity = quantity;
+    body.avg_cost = trimDecimal(decimalNumber(draft.avg_cost) / decimalNumber(quantity));
+  }
   if (body.avg_cost === null) {
     Reflect.deleteProperty(body, "avg_cost");
+  }
+  if (body.cost_quantity === null) {
+    Reflect.deleteProperty(body, "cost_quantity");
   }
   return body;
 }
@@ -77,8 +110,8 @@ function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel:
         {unitLabel}
       </span>
       {row.avg_cost !== undefined ? (
-        <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatUnitCost(row.avg_cost)}
+        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+          {priceForQuantity(row.avg_cost, row.cost_quantity, unitLabel)}
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -121,7 +154,9 @@ export function IngredientsPanel() {
       category: current.category,
       unit: current.unit,
       is_active: current.is_active,
-      avg_cost: current.avg_cost === undefined ? null : unitCostDraft(current.avg_cost),
+      avg_cost:
+        current.avg_cost === undefined ? null : packPrice(current.avg_cost, current.cost_quantity),
+      cost_quantity: current.avg_cost === undefined ? null : unitCostDraft(current.cost_quantity),
     });
     setMode("edit");
   };
@@ -160,7 +195,9 @@ export function IngredientsPanel() {
       ? []
       : [
           { label: t("unit"), value: units(current.unit) },
-          ...(current.avg_cost !== undefined ? [{ label: t("avgCost"), value: formatUnitCost(current.avg_cost) }] : []),
+          ...(current.avg_cost !== undefined
+            ? [{ label: t("avgCost"), value: priceForQuantity(current.avg_cost, current.cost_quantity, units(current.unit)) }]
+            : []),
         ];
 
   return (
@@ -398,13 +435,34 @@ export function IngredientsPanel() {
                 ))}
               </NativeSelect>
             </Field>
-            {draft.avg_cost !== null ? (
+            {draft.avg_cost !== null && draft.cost_quantity !== null ? (
               <Field label={t("avgCost")}>
                 <Input
                   required
                   inputMode="decimal"
                   value={draft.avg_cost}
                   onChange={(event) => setDraft({ ...draft, avg_cost: event.target.value })}
+                />
+              </Field>
+            ) : null}
+            {draft.avg_cost !== null && draft.cost_quantity !== null ? (
+              <Field label={`${t("costQuantity")}, ${units(draft.unit)}`}>
+                <Input
+                  required
+                  inputMode="decimal"
+                  value={draft.cost_quantity}
+                  onChange={(event) => {
+                    const price = draft.avg_cost;
+                    const quantity = draft.cost_quantity;
+                    const nextQuantity = event.target.value;
+                    if (price === null || quantity === null) return;
+                    const nextPrice = scaledPackPrice(price, quantity, nextQuantity);
+                    setDraft({
+                      ...draft,
+                      cost_quantity: nextQuantity,
+                      avg_cost: nextPrice === null ? price : nextPrice,
+                    });
+                  }}
                 />
               </Field>
             ) : null}

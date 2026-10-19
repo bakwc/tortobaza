@@ -57,3 +57,32 @@ class IngredientCostApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.flour.refresh_from_db()
         self.assertEqual(self.flour.avg_cost, Decimal("0.01"))
+
+    def test_finance_admin_sets_cost_quantity(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload("0.004")
+        payload["cost_quantity"] = "1000"
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.flour.refresh_from_db()
+        self.assertEqual(self.flour.cost_quantity, Decimal("1000.000"))
+        self.assertEqual(Decimal(response.json()["cost_quantity"]), Decimal("1000"))
+
+    def test_staff_update_keeps_cost_quantity(self):
+        self.flour.cost_quantity = Decimal("1000")
+        self.flour.save(update_fields=["cost_quantity"])
+        self.client.force_authenticate(self.staff)
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            self._payload(None),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(Decimal(response.json()["cost_quantity"]), Decimal("1000"))
+        self.flour.refresh_from_db()
+        self.assertEqual(self.flour.cost_quantity, Decimal("1000"))
+        self.assertEqual(self.flour.avg_cost, Decimal("0.01"))

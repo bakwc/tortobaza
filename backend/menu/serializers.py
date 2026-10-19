@@ -50,10 +50,13 @@ class IngredientCategorySerializer(serializers.ModelSerializer):
 class IngredientSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
     avg_cost = serializers.DecimalField(max_digits=14, decimal_places=6, min_value=Decimal("0"), required=False)
+    cost_quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=3, min_value=Decimal("0.001"), required=False
+    )
 
     class Meta:
         model = Ingredient
-        fields = ["id", "name", "category", "category_name", "unit", "avg_cost", "is_active"]
+        fields = ["id", "name", "category", "category_name", "unit", "avg_cost", "cost_quantity", "is_active"]
 
     def validate(self, attrs):
         if "avg_cost" in self.initial_data and not show_costs(self.context):

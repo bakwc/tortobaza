@@ -27,7 +27,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "unit", "avg_cost", "is_active"]
+    list_display = ["name", "category", "unit", "avg_cost", "cost_quantity", "is_active"]
     list_filter = ["category", "unit", "is_active"]
     search_fields = ["name"]
 

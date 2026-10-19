@@ -636,6 +636,7 @@
     "category": "Категория",
     "unit": "Единица",
     "avgCost": "Средняя цена",
+    "costQuantity": "За количество",
     "categories": "Категории ингредиентов",
     "newCategory": "Новая категория",
     "techCardCategories": "Категории тех. карт",

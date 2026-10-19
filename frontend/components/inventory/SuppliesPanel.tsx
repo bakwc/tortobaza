@@ -390,8 +390,10 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                         unit: suggestedUnit,
                         is_active: true,
                         avg_cost: null,
+                        cost_quantity: null,
                       };
                       Reflect.deleteProperty(body, "avg_cost");
+                      Reflect.deleteProperty(body, "cost_quantity");
                       ingredients.save.mutate(
                         { id: null, body },
                         { onSuccess: (created) => updateLine(line.key, { ingredient: String(created.id) }) },

@@ -44,6 +44,13 @@ class Ingredient(models.Model):
         default=Decimal("0"),
         verbose_name=_("Average cost"),
     )
+    cost_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        default=Decimal("1"),
+        validators=[MinValueValidator(Decimal("0.001"))],
+        verbose_name=_("Cost quantity"),
+    )
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
     class Meta:

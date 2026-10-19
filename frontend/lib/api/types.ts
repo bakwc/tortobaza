@@ -759,6 +759,7 @@ export const IngredientSchema = z.object({
   category_name: z.string().nullable(),
   unit: MenuUnitSchema,
   avg_cost: z.string().optional(),
+  cost_quantity: z.string(),
   is_active: z.boolean(),
 });
 
@@ -913,6 +914,7 @@ export type IngredientBody = {
   unit: MenuUnit;
   is_active: boolean;
   avg_cost: string | null;
+  cost_quantity: string | null;
 };
 
 export type SemiProductBody = {

@@ -636,6 +636,7 @@
     "category": "Category",
     "unit": "Unit",
     "avgCost": "Average cost",
+    "costQuantity": "For quantity",
     "categories": "Ingredient categories",
     "newCategory": "New category",
     "techCardCategories": "Tech card categories",
