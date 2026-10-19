@@ -45,14 +45,6 @@ function packPrice(avgCost: string, costQuantity: string): string {
   return trimDecimal(decimalNumber(avgCost) * decimalNumber(costQuantity));
 }
 
-function scaledPackPrice(price: string, quantity: string, nextQuantity: string): string | null {
-  const currentQuantity = decimalNumber(quantity);
-  const next = decimalNumber(nextQuantity);
-  const currentPrice = decimalNumber(price);
-  if (!(currentQuantity > 0) || !(next > 0) || Number.isNaN(currentPrice)) return null;
-  return trimDecimal((currentPrice / currentQuantity) * next);
-}
-
 function priceForQuantity(avgCost: string, costQuantity: string, unitLabel: string): string {
   return `${formatUnitCost(packPrice(avgCost, costQuantity))} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
@@ -451,18 +443,7 @@ export function IngredientsPanel() {
                   required
                   inputMode="decimal"
                   value={draft.cost_quantity}
-                  onChange={(event) => {
-                    const price = draft.avg_cost;
-                    const quantity = draft.cost_quantity;
-                    const nextQuantity = event.target.value;
-                    if (price === null || quantity === null) return;
-                    const nextPrice = scaledPackPrice(price, quantity, nextQuantity);
-                    setDraft({
-                      ...draft,
-                      cost_quantity: nextQuantity,
-                      avg_cost: nextPrice === null ? price : nextPrice,
-                    });
-                  }}
+                  onChange={(event) => setDraft({ ...draft, cost_quantity: event.target.value })}
                 />
               </Field>
             ) : null}
