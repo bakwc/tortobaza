@@ -497,7 +497,7 @@ function CrmOrderCard({
       onClick={toggleCollapsed}
       aria-label={collapsed ? t("expandOrder") : t("collapseOrder")}
       aria-expanded={!collapsed}
-      className="h-8 w-8 shrink-0 px-0"
+      className="absolute right-3 top-3 z-10 h-8 w-8 shrink-0 px-0"
     >
       <ChevronDown className={cn("h-4 w-4 transition-transform", !collapsed && "rotate-180")} />
     </Button>
@@ -507,14 +507,15 @@ function CrmOrderCard({
     <div
       id={`crm-order-${order.id}`}
       className={cn(
-        "rounded-2xl border shadow-sm transition-colors md:rounded-3xl",
+        "relative rounded-2xl border shadow-sm transition-colors md:rounded-3xl",
         collapsed ? "p-3" : "p-3 sm:p-4 md:p-8",
         tone.card,
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
       )}
     >
+      {collapseButton}
       {collapsed ? (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pr-10">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <CrmOrderTimeSlot
               timeStart={order.time_start}
@@ -564,7 +565,6 @@ function CrmOrderCard({
               {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
             </span>
           </div>
-          {collapseButton}
         </div>
       ) : null}
       {collapsed ? null : (
@@ -681,7 +681,7 @@ function CrmOrderCard({
           <div className="flex flex-col gap-2.5 lg:gap-4">
             <div
               className={cn(
-                "flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 lg:pb-4",
+                "flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 pr-10 sm:pr-9 md:pr-5 lg:pb-4",
                 tone.divider,
               )}
             >
@@ -744,7 +744,6 @@ function CrmOrderCard({
                       : null
                   }
                 />
-                {collapseButton}
               </div>
             </div>
 
