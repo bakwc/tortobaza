@@ -383,20 +383,20 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                     variant="outline"
                     size="sm"
                     disabled={ingredients.save.isPending}
-                    onClick={() =>
+                    onClick={() => {
+                      const body = {
+                        name: line.suggestedName,
+                        category: null,
+                        unit: suggestedUnit,
+                        is_active: true,
+                        avg_cost: null,
+                      };
+                      Reflect.deleteProperty(body, "avg_cost");
                       ingredients.save.mutate(
-                        {
-                          id: null,
-                          body: {
-                            name: line.suggestedName,
-                            category: null,
-                            unit: suggestedUnit,
-                            is_active: true,
-                          },
-                        },
+                        { id: null, body },
                         { onSuccess: (created) => updateLine(line.key, { ingredient: String(created.id) }) },
-                      )
-                    }
+                      );
+                    }}
                   >
                     {t("createIngredient")}
                   </Button>
