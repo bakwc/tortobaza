@@ -3,7 +3,6 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-git pull --ff-only
 poetry install --no-root
 poetry run python manage.py migrate
 

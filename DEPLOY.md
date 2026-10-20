@@ -353,21 +353,16 @@ When `sweet-chill.ge` is ready:
 
 ## 9. Updating a deployed instance
 
+A push to `master` deploys this host. The self-hosted runner is at `/home/ubuntu/actions-runner` (SSH host `aws`, label `tortobaza`). The workflow fast-forwards `/home/ubuntu/koding/tortobaza` to `origin/master` and runs `deploy/deploy.sh`.
+
+Manual run:
+
 ```bash
 cd /home/ubuntu/koding/tortobaza
-git pull --ff-only
-
-cd backend
-poetry install --no-root
-poetry run python manage.py migrate
-
-cd ../frontend
-npm ci
-npm run build:deploy
-
-sudo systemctl restart tortobaza-backend.service
-sudo systemctl restart tortobaza-frontend.service
+./deploy/deploy.sh
 ```
+
+`/home/ubuntu/.tortobaza/deploy.json` stores the last attempt (`sha` is updated only after a successful rollout). `GET /health/` returns the SHA of the running backend process. GitHub Environment `production` shows the SHA of the last successful deploy; a failed run is red in Actions.
 
 ---
 
