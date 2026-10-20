@@ -295,6 +295,7 @@
     "delivery": "Delivery",
     "pickup": "Pickup",
     "contact": "Recipient",
+    "gift": "საჩუქარი",
     "nickname": "Sender",
     "deliveryAddress": "Delivery address",
     "resolvingAddress": "Resolving...",

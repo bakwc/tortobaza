@@ -322,6 +322,7 @@ export const CrmOrderSchema = z.object({
   time_end: z.string().nullable(),
   when_ready: z.boolean(),
   contact: z.string(),
+  is_gift: z.boolean(),
   phones: z.array(CrmPhoneSchema),
   nickname: z.string(),
   delivery_address: z.string(),
@@ -564,6 +565,7 @@ export const CrmClientOrderSchema = z.object({
   time_end: z.string().nullable(),
   when_ready: z.boolean(),
   contact: z.string(),
+  is_gift: z.boolean(),
   phones: z.array(CrmPhoneSchema),
   nickname: z.string(),
   delivery_address: z.string(),
@@ -663,6 +665,7 @@ export type CrmOrderWriteFields = {
   time_end: string | null;
   when_ready: boolean;
   contact: string;
+  is_gift: boolean;
   nickname: string;
   delivery_address: string;
   fulfillment_type: "delivery" | "pickup";

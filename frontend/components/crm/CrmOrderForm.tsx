@@ -66,6 +66,7 @@ function buildCrmOrderFormData(
   form.append("time_end", fields.time_end ?? "");
   form.append("when_ready", fields.when_ready ? "true" : "false");
   form.append("contact", fields.contact);
+  form.append("is_gift", fields.is_gift ? "true" : "false");
   form.append("nickname", fields.nickname);
   form.append("delivery_address", fields.delivery_address);
   form.append("fulfillment_type", fields.fulfillment_type);
@@ -96,6 +97,7 @@ function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
     time_end: order.time_end ? sliceTime(order.time_end) : null,
     when_ready: order.when_ready,
     contact: order.contact,
+    is_gift: order.is_gift,
     nickname: order.nickname,
     delivery_address: order.delivery_address,
     fulfillment_type: order.fulfillment_type,
@@ -120,6 +122,7 @@ function emptyFields(initialDate: string): CrmOrderWriteFields {
     time_end: null,
     when_ready: false,
     contact: "",
+    is_gift: false,
     nickname: "",
     delivery_address: "",
     fulfillment_type: "delivery",
@@ -407,16 +410,27 @@ export function CrmOrderForm(
           {t("customerSection")}
         </h2>
         <div className="mt-4 grid gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-              {t("contact")}
-            </span>
-            <Textarea
-              required
-              value={fields.contact}
-              onChange={(event) => setField("contact", event.target.value)}
-            />
-          </label>
+          <div className="flex items-end gap-3">
+            <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
+                {t("contact")}
+              </span>
+              <Textarea
+                required
+                value={fields.contact}
+                onChange={(event) => setField("contact", event.target.value)}
+              />
+            </label>
+            <label className="flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border border-[var(--line)] px-4 text-sm">
+              <input
+                type="checkbox"
+                checked={fields.is_gift}
+                onChange={(event) => setField("is_gift", event.target.checked)}
+                className="h-4 w-4 accent-[var(--brand)]"
+              />
+              {t("gift")}
+            </label>
+          </div>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
               {t("nickname")}

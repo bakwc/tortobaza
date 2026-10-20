@@ -81,6 +81,7 @@ class CrmOrder(models.Model):
     time_end = models.TimeField(null=True, blank=True, verbose_name=_("Time end"))
     when_ready = models.BooleanField(default=False, verbose_name=_("When ready"))
     contact = models.TextField(verbose_name=_("Contact"))
+    is_gift = models.BooleanField(default=False, verbose_name=_("Gift"))
     nickname = models.CharField(max_length=100, blank=True, verbose_name=_("Nickname"))
     phones = models.JSONField(default=list, verbose_name=_("Phones"))
     delivery_address = models.TextField(blank=True, verbose_name=_("Delivery address"))

@@ -8,6 +8,7 @@ import {
   Check,
   CreditCard,
   FileText,
+  Gift,
   MapPin,
   Package,
   Store,
@@ -248,7 +249,11 @@ export function CrmClientOrderView({
             <div className="flex flex-col gap-2.5 lg:gap-4">
               <div className="rounded-xl bg-[var(--cream-soft)] p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4">
                 <div className="flex items-start gap-2">
-                  <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  {order.is_gift ? (
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  ) : (
+                    <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("contact")}

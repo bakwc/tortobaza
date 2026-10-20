@@ -13,6 +13,7 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Gift,
   Lock,
   MapPin,
   Package,
@@ -553,8 +554,9 @@ function CrmOrderCard({
             >
               #{order.id}
             </Link>
-            <p className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink)]">
-              {order.contact}
+            <p className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium text-[var(--ink)]">
+              {order.is_gift ? <Gift className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : null}
+              <span className="min-w-0 truncate">{order.contact}</span>
             </p>
             <span
               className={cn(
@@ -755,7 +757,11 @@ function CrmOrderCard({
                 )}
               >
                 <div className="flex items-start gap-2">
-                  <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  {order.is_gift ? (
+                    <Gift className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  ) : (
+                    <User className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--ink)]/60 lg:text-xs">
                       {t("contact")}

@@ -295,6 +295,7 @@
     "delivery": "Доставка",
     "pickup": "Самовывоз",
     "contact": "Получатель",
+    "gift": "Подарок",
     "nickname": "Отправитель",
     "deliveryAddress": "Адрес доставки",
     "resolvingAddress": "Резолвим...",

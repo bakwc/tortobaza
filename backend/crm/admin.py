@@ -121,6 +121,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "contact",
+                    "is_gift",
                     "nickname",
                     "delivery_address",
                     "fulfillment_type",

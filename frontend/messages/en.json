@@ -295,6 +295,7 @@
     "delivery": "Delivery",
     "pickup": "Pickup",
     "contact": "Recipient",
+    "gift": "Gift",
     "nickname": "Sender",
     "deliveryAddress": "Delivery address",
     "resolvingAddress": "Resolving...",

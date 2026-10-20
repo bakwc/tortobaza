@@ -11,6 +11,7 @@ TRACKED_FIELDS = (
     "time_end",
     "when_ready",
     "contact",
+    "is_gift",
     "nickname",
     "delivery_address",
     "fulfillment_type",
