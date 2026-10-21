@@ -7,6 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from crm.bog_order_links import ACCOUNT_NAME, sync_bog_order_links
+from crm.internal_transfers import BOG_BANK_NAME
 from crm.models import CrmOrder, CrmOrderEvent, FinancialAccount, FinancialTransaction
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -55,7 +56,11 @@ def _created_paid(order: CrmOrder, day: date) -> None:
 
 
 def _account(name: str) -> FinancialAccount:
-    return FinancialAccount.objects.create(name=name, kind=FinancialAccount.KIND_BANK)
+    return FinancialAccount.objects.create(
+        name=name,
+        kind=FinancialAccount.KIND_BANK,
+        bank_name=BOG_BANK_NAME,
+    )
 
 
 def _income(amount: Decimal, tx_date: date, **kwargs) -> FinancialTransaction:
@@ -305,10 +310,15 @@ class SyncBogOrderLinksTests(TestCase):
             amount=Decimal("75.00"),
             kind=FinancialTransaction.KIND_EXPENSE,
         )
+        other_bank = FinancialAccount.objects.create(
+            name="TBC Daria",
+            kind=FinancialAccount.KIND_BANK,
+            bank_name="TBC",
+        )
         other_account_tx = _income(
             Decimal("75.00"),
             date(2026, 9, 7),
-            account=_account("BOG filipp GEL"),
+            account=other_bank,
         )
 
         sync_bog_order_links()
@@ -322,6 +332,18 @@ class SyncBogOrderLinksTests(TestCase):
         self.assertEqual(prelinked_tx.crm_orders.get().pk, prelinked_order.pk)
         self.assertEqual(expense.crm_orders.count(), 0)
         self.assertEqual(other_account_tx.crm_orders.count(), 0)
+
+    def test_links_income_on_personal_bog_account(self):
+        order = _order(date=date(2026, 9, 8), cake_price=Decimal("90.00"))
+        transaction = _income(
+            Decimal("90.00"),
+            date(2026, 9, 8),
+            account=_account("BOG filipp GEL"),
+        )
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.get().pk, order.pk)
 
     def test_second_run_does_not_duplicate_links(self):
         order = _order(date=date(2026, 9, 3), cake_price=Decimal("270.00"))

@@ -3,6 +3,7 @@ from datetime import date
 
 from django.utils import timezone
 
+from crm.internal_transfers import BOG_BANK_NAME
 from crm.models import CrmOrder, FinancialTransaction
 
 ACCOUNT_NAME = "BOG business GEL"
@@ -15,7 +16,7 @@ def sync_bog_order_links() -> None:
         transaction
         for transaction in FinancialTransaction.objects.filter(
             kind=FinancialTransaction.KIND_INCOME,
-            account__name=ACCOUNT_NAME,
+            account__bank_name=BOG_BANK_NAME,
             crm_orders__isnull=True,
         ).order_by("date", "pk")
         if not _is_platform(transaction)
