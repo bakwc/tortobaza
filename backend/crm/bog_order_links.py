@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from datetime import date
+from decimal import Decimal
 
 from django.utils import timezone
 
@@ -8,6 +9,7 @@ from crm.models import CrmOrder, FinancialTransaction
 
 ACCOUNT_NAME = "BOG business GEL"
 WINDOW_DAYS = 2
+AMOUNT_TOLERANCE = Decimal("0.03")
 _PLATFORM_MARKERS = ("wolt", "volt jorjia", "udora", "g-1002221")
 
 
@@ -29,14 +31,16 @@ def sync_bog_order_links() -> None:
             financial_transactions__isnull=True,
         ).prefetch_related("events")
     )
-    first, orders, transactions = _assign(orders, transactions, _estimated_payment_date)
-    second, _orders, _transactions = _assign(orders, transactions, _created_date)
+    exact_payment, orders, transactions = _assign(orders, transactions, _estimated_payment_date, True)
+    exact_created, orders, transactions = _assign(orders, transactions, _created_date, True)
+    near_payment, orders, transactions = _assign(orders, transactions, _estimated_payment_date, False)
+    near_created, _orders, _transactions = _assign(orders, transactions, _created_date, False)
     links = [
         FinancialTransaction.crm_orders.through(
             financialtransaction_id=transaction.pk,
             crmorder_id=order.pk,
         )
-        for transaction, order in first + second
+        for transaction, order in exact_payment + exact_created + near_payment + near_created
     ]
     if links:
         FinancialTransaction.crm_orders.through.objects.bulk_create(links)
@@ -67,16 +71,23 @@ def _created_date(order: CrmOrder) -> date:
     return timezone.localtime(order.created_at).date()
 
 
+def _amounts_match(order: CrmOrder, transaction: FinancialTransaction, exact: bool) -> bool:
+    if exact:
+        return order.total_price == transaction.amount
+    return abs(order.total_price - transaction.amount) <= order.total_price * AMOUNT_TOLERANCE
+
+
 def _assign(
     orders: list[CrmOrder],
     transactions: list[FinancialTransaction],
     center: Callable[[CrmOrder], date],
+    exact: bool,
 ) -> tuple[list[tuple[FinancialTransaction, CrmOrder]], list[CrmOrder], list[FinancialTransaction]]:
     preferences: list[tuple[int, FinancialTransaction, CrmOrder]] = []
     for transaction in transactions:
         candidates: list[tuple[int, CrmOrder]] = []
         for order in orders:
-            if order.total_price != transaction.amount:
+            if not _amounts_match(order, transaction, exact):
                 continue
             distance = abs((transaction.date - center(order)).days)
             if distance <= WINDOW_DAYS:

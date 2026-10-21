@@ -333,6 +333,66 @@ class SyncBogOrderLinksTests(TestCase):
         self.assertEqual(expense.crm_orders.count(), 0)
         self.assertEqual(other_account_tx.crm_orders.count(), 0)
 
+    def test_links_amount_within_three_percent_when_exact_misses(self):
+        order = _order(
+            date=date(2026, 10, 21),
+            cake_price=Decimal("330.00"),
+            delivery_price=Decimal("7.00"),
+        )
+        transaction = _income(Decimal("340.00"), date(2026, 10, 21))
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.get().pk, order.pk)
+
+    def test_exact_amount_wins_over_near_amount(self):
+        exact_order = _order(date=date(2026, 9, 7), cake_price=Decimal("100.00"))
+        near_order = _order(date=date(2026, 9, 7), cake_price=Decimal("103.00"))
+        transaction = _income(Decimal("100.00"), date(2026, 9, 7))
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.get().pk, exact_order.pk)
+        self.assertEqual(near_order.financial_transactions.count(), 0)
+
+    def test_amount_over_three_percent_stays_unlinked(self):
+        order = _order(date=date(2026, 9, 7), cake_price=Decimal("100.00"))
+        transaction = _income(Decimal("104.00"), date(2026, 9, 7))
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.count(), 0)
+        self.assertEqual(order.financial_transactions.count(), 0)
+
+    def test_three_percent_boundary_links(self):
+        above = _order(date=date(2026, 9, 7), cake_price=Decimal("100.00"))
+        below = _order(date=date(2026, 9, 8), cake_price=Decimal("100.00"))
+        above_tx = _income(Decimal("103.00"), date(2026, 9, 7))
+        below_tx = _income(Decimal("97.00"), date(2026, 9, 8))
+
+        sync_bog_order_links()
+
+        self.assertEqual(above_tx.crm_orders.get().pk, above.pk)
+        self.assertEqual(below_tx.crm_orders.get().pk, below.pk)
+
+    def test_near_amounts_at_equal_distance_stay_unlinked(self):
+        _order(date=date(2026, 9, 7), cake_price=Decimal("336.00"))
+        _order(date=date(2026, 9, 7), cake_price=Decimal("337.00"))
+        transaction = _income(Decimal("340.00"), date(2026, 9, 7))
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.count(), 0)
+
+    def test_near_amount_uses_created_date_when_delivery_window_misses(self):
+        order = _order(date=date(2026, 9, 27), cake_price=Decimal("100.00"))
+        _created(order, date(2026, 9, 3))
+        transaction = _income(Decimal("103.00"), date(2026, 9, 3))
+
+        sync_bog_order_links()
+
+        self.assertEqual(transaction.crm_orders.get().pk, order.pk)
+
     def test_links_income_on_personal_bog_account(self):
         order = _order(date=date(2026, 9, 8), cake_price=Decimal("90.00"))
         transaction = _income(
