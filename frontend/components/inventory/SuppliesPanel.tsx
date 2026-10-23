@@ -392,6 +392,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                         is_active: true,
                         avg_cost: null,
                         cost_quantity: null,
+                        grams_per_unit: null,
                       };
                       Reflect.deleteProperty(body, "avg_cost");
                       Reflect.deleteProperty(body, "cost_quantity");
