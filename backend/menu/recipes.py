@@ -239,6 +239,29 @@ def needs_cost(needs: Needs) -> Decimal:
     return total.quantize(_CENT)
 
 
+def _recipe_needs(component: Component, quantity: Decimal, needs: Needs, path: frozenset[int]) -> None:
+    if isinstance(component, Ingredient):
+        _add(needs, component, quantity)
+        return
+    if component.pk in path:
+        raise ValidationError(_("Semi-product %(name)s contains itself.") % {"name": component.name})
+    factor = quantity / component.yield_quantity
+    nested_path = path | {component.pk}
+    for line in _semi_lines(component):
+        _recipe_needs(
+            line.component,
+            line_component_quantity(line) * factor,
+            needs,
+            nested_path,
+        )
+
+
+def semi_product_cost(semi_product: SemiProduct) -> Decimal:
+    needs: Needs = {}
+    _recipe_needs(semi_product, semi_product.yield_quantity, needs, frozenset())
+    return needs_cost(needs)
+
+
 def tech_card_cost(
     tech_card: TechCard,
     modifiers: list[tuple[Modifier, int]],

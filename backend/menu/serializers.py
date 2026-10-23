@@ -21,7 +21,7 @@ from menu.models import (
     TechCardModifierLine,
     TechCardSection,
 )
-from menu.recipes import missing_modifier_compositions, tech_card_cost
+from menu.recipes import missing_modifier_compositions, semi_product_cost, tech_card_cost
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
 LOSS_FIELD = {
@@ -182,7 +182,10 @@ class SemiProductSerializer(serializers.ModelSerializer):
             for line in instance.lines.select_related("ingredient", "semi_product")
         ]
         data["images"] = menu_image_rows(instance.images.all(), self.context["request"])
-        return drop_costs(data, self.context, ["avg_cost"])
+        data = drop_costs(data, self.context, ["avg_cost"])
+        if show_costs(self.context):
+            data["cost"] = str(semi_product_cost(instance))
+        return data
 
     @transaction.atomic
     def create(self, validated_data):

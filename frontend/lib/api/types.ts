@@ -791,6 +791,7 @@ export const SemiProductSchema = z.object({
   yield_quantity: z.string(),
   is_produced: z.boolean(),
   avg_cost: z.string().optional(),
+  cost: z.string().optional(),
   is_active: z.boolean(),
   method: z.string(),
   images: z.array(MenuImageSchema),

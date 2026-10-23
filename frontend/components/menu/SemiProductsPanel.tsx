@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, ChefHat, ChevronRight, Layers, Package, Plus, Search } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
@@ -28,6 +29,7 @@ import {
   formatQuantity,
 } from "@/components/menu/ui";
 import { useIngredients, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
+import { useRouter } from "@/i18n/navigation";
 import type { MenuUnit, SemiProduct } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -99,9 +101,9 @@ function SemiProductRow({
       <span className="hidden shrink-0 items-center gap-1 rounded-full bg-[var(--cream)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] sm:flex">
         {yieldLabel}
       </span>
-      {row.avg_cost !== undefined && row.is_produced ? (
+      {row.cost !== undefined ? (
         <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatMoney(row.avg_cost)}
+          {formatMoney(row.cost)}
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -127,30 +129,55 @@ function draftFrom(row: SemiProduct | null): SemiDraft {
 export function SemiProductsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const semiProducts = useSemiProducts();
   const images = useSemiProductImages();
   const ingredients = useIngredients();
+  const semiParam = searchParams.get("semi");
+  const paramId = semiParam === null ? null : Number(semiParam);
   const [mode, setMode] = useState<"view" | "edit" | null>(null);
   const [viewing, setViewing] = useState<SemiProduct | null>(null);
+  const [ignoreSemiParam, setIgnoreSemiParam] = useState(false);
   const [draft, setDraft] = useState<SemiDraft | null>(null);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState("all");
+  const requestedId = ignoreSemiParam
+    ? viewing === null
+      ? null
+      : viewing.id
+    : viewing !== null
+      ? viewing.id
+      : paramId !== null && Number.isFinite(paramId)
+        ? paramId
+        : null;
   const current =
-    viewing === null ? null : (semiProducts.list.data ?? []).find((row) => row.id === viewing.id) ?? viewing;
+    requestedId === null
+      ? null
+      : ((semiProducts.list.data ?? []).find((row) => row.id === requestedId) ??
+        (viewing !== null && viewing.id === requestedId ? viewing : null));
+
+  useEffect(() => {
+    if (ignoreSemiParam && semiParam === null) setIgnoreSemiParam(false);
+  }, [ignoreSemiParam, semiParam]);
 
   const openView = (row: SemiProduct) => {
     semiProducts.save.reset();
     semiProducts.remove.reset();
+    setIgnoreSemiParam(false);
     setViewing(row);
     setDraft(null);
     setMode("view");
+    router.replace(`/menu/semi-products?semi=${row.id}`, { scroll: false });
   };
   const openNew = () => {
     semiProducts.save.reset();
     semiProducts.remove.reset();
+    setIgnoreSemiParam(true);
     setViewing(null);
     setDraft(draftFrom(null));
     setMode("edit");
+    router.replace("/menu/semi-products", { scroll: false });
   };
   const openEdit = () => {
     if (current === null) return;
@@ -160,17 +187,19 @@ export function SemiProductsPanel() {
   const close = () => {
     setMode(null);
     setDraft(null);
+    setIgnoreSemiParam(true);
     setViewing(null);
+    router.replace("/menu/semi-products", { scroll: false });
   };
   const cancelEdit = () => {
     setDraft(null);
-    if (viewing === null) close();
+    if (current === null) close();
     else setMode("view");
   };
 
   const options = componentOptions(
     ingredients.list.data ?? [],
-    (semiProducts.list.data ?? []).filter((row) => viewing === null || row.id !== viewing.id),
+    (semiProducts.list.data ?? []).filter((row) => current === null || row.id !== current.id),
     "all",
     t("ingredient"),
     t("semiProduct"),
@@ -287,7 +316,7 @@ export function SemiProductsPanel() {
         )}
       </QueryState>
 
-      {mode === "view" && current ? (
+      {mode !== "edit" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>
           <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
@@ -300,8 +329,8 @@ export function SemiProductsPanel() {
               stats={[
                 { label: t("yield"), value: `${formatQuantity(current.yield_quantity)} ${units(current.unit)}` },
                 { label: t("componentsLabel"), value: String(current.lines.length) },
-                ...(current.avg_cost !== undefined && current.is_produced
-                  ? [{ label: t("avgCost"), value: formatMoney(current.avg_cost) }]
+                ...(current.cost !== undefined
+                  ? [{ label: t("recipeCost"), value: formatMoney(current.cost) }]
                   : []),
               ]}
               images={current.images}
@@ -323,14 +352,14 @@ export function SemiProductsPanel() {
         <EditorDialog
           open
           onOpenChange={(value) => (value ? null : cancelEdit())}
-          title={viewing === null ? t("newSemiProduct") : draft.name}
+          title={current === null ? t("newSemiProduct") : draft.name}
           pending={semiProducts.save.isPending}
           error={semiProducts.save.error ?? semiProducts.remove.error}
           submitLabel={t("save")}
           onSubmit={() =>
             semiProducts.save.mutate(
               {
-                id: viewing === null ? null : viewing.id,
+                id: current === null ? null : current.id,
                 body: {
                   name: draft.name,
                   unit: draft.unit,
@@ -343,15 +372,17 @@ export function SemiProductsPanel() {
               },
               {
                 onSuccess: (saved) => {
+                  setIgnoreSemiParam(false);
                   setViewing(saved);
                   setDraft(null);
                   setMode("view");
+                  router.replace(`/menu/semi-products?semi=${saved.id}`, { scroll: false });
                 },
               },
             )
           }
           onCancel={cancelEdit}
-          onDelete={viewing === null ? null : () => semiProducts.remove.mutate(viewing.id, { onSuccess: close })}
+          onDelete={current === null ? null : () => semiProducts.remove.mutate(current.id, { onSuccess: close })}
           deletePending={semiProducts.remove.isPending}
           below={null}
         >
@@ -397,12 +428,12 @@ export function SemiProductsPanel() {
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
             <MarkdownEditor value={draft.method} onChange={(method) => setDraft({ ...draft, method })} />
           </div>
-          {viewing !== null ? (
+          {current !== null ? (
             <MenuImages
-              images={(semiProducts.list.data ?? []).find((row) => row.id === viewing.id)?.images ?? viewing.images}
+              images={(semiProducts.list.data ?? []).find((row) => row.id === current.id)?.images ?? current.images}
               pending={images.upload.isPending || images.remove.isPending}
-              onUpload={(file) => images.upload.mutate({ id: viewing.id, file })}
-              onDelete={(imageId) => images.remove.mutate({ id: viewing.id, imageId })}
+              onUpload={(file) => images.upload.mutate({ id: current.id, file })}
+              onDelete={(imageId) => images.remove.mutate({ id: current.id, imageId })}
             />
           ) : null}
           <CardTitle>{t("composition")}</CardTitle>

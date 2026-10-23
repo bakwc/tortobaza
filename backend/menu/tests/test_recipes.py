@@ -20,6 +20,7 @@ from menu.recipes import (
     expand_order_item,
     expand_semi_product,
     order_cost,
+    semi_product_cost,
     tech_card_cost,
     validate_order_item,
 )
@@ -225,6 +226,62 @@ class GramsConversionTests(TestCase):
         )
         needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
         self.assertEqual(needs[self.menu.cream], Decimal("62.5"))
+
+    def test_semi_product_cost_uses_ingredient_price_when_stock_cost_is_zero(self):
+        oil = Ingredient.objects.create(
+            name="Oil",
+            unit=UNIT_MILLILITER,
+            avg_cost=Decimal("0.01"),
+            grams_per_unit=Decimal("1"),
+        )
+        batter = SemiProduct.objects.create(
+            name="Batter",
+            unit=UNIT_GRAM,
+            yield_quantity=Decimal("1000"),
+            is_produced=True,
+            avg_cost=Decimal("0"),
+        )
+        SemiProductLine.objects.create(
+            parent=batter,
+            ingredient=oil,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.assertEqual(semi_product_cost(batter), Decimal("1.00"))
+
+    def test_semi_product_cost_explodes_nested_produced_semi_product(self):
+        oil = Ingredient.objects.create(
+            name="Oil",
+            unit=UNIT_MILLILITER,
+            avg_cost=Decimal("0.01"),
+            grams_per_unit=Decimal("1"),
+        )
+        batter = SemiProduct.objects.create(
+            name="Batter",
+            unit=UNIT_GRAM,
+            yield_quantity=Decimal("1000"),
+            is_produced=True,
+            avg_cost=Decimal("0"),
+        )
+        SemiProductLine.objects.create(
+            parent=batter,
+            ingredient=oil,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        cake = SemiProduct.objects.create(
+            name="Cake base",
+            unit=UNIT_GRAM,
+            yield_quantity=Decimal("500"),
+            is_produced=False,
+        )
+        SemiProductLine.objects.create(
+            parent=cake,
+            semi_product=batter,
+            quantity=Decimal("500"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.assertEqual(semi_product_cost(cake), Decimal("0.50"))
 
     def test_semi_line_in_grams_scales_with_yield(self):
         oil = Ingredient.objects.create(

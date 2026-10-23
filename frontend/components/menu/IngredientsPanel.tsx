@@ -107,42 +107,77 @@ function cardUsesIngredient(card: TechCard, ingredientId: number, semiIds: Set<n
   );
 }
 
+function UsageList({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { id: number; name: string; is_active: boolean; href: string }[];
+}) {
+  const t = useTranslations("stock");
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted-2)]">{title}</p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-[var(--muted-2)]">{t("notUsedInTechCards")}</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-[var(--line)]">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <Link
+                href={row.href}
+                className="flex items-center justify-between gap-3 py-2 text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand)]"
+              >
+                <span className={cn(!row.is_active && "line-through")}>{row.name}</span>
+                {row.is_active ? null : (
+                  <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
+                    {t("inactive")}
+                  </span>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function IngredientTechCards({ ingredientId }: { ingredientId: number }) {
   const t = useTranslations("stock");
   const techCards = useTechCards();
   const semiProducts = useSemiProducts();
-  const semiIds = semiProductsWithIngredient(ingredientId, semiProducts.list.data ?? []);
+  const semis = semiProducts.list.data ?? [];
+  const semiIds = semiProductsWithIngredient(ingredientId, semis);
   const cards = (techCards.list.data ?? []).filter((card) => cardUsesIngredient(card, ingredientId, semiIds));
   return (
-    <div>
-      <p className="text-sm font-semibold text-[var(--ink)]">{t("usedInTechCards")}</p>
-      <QueryState
-        isLoading={techCards.list.isLoading || semiProducts.list.isLoading}
-        isError={techCards.list.isError || semiProducts.list.isError}
-      >
-        {cards.length === 0 ? (
-          <p className="mt-2 text-sm text-[var(--muted-2)]">{t("notUsedInTechCards")}</p>
-        ) : (
-          <ul className="mt-2 divide-y divide-[var(--line)]">
-            {cards.map((card) => (
-              <li key={card.id}>
-                <Link
-                  href={`/menu?card=${card.id}`}
-                  className="flex items-center justify-between gap-3 py-2 text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand)]"
-                >
-                  <span className={cn(!card.is_active && "line-through")}>{card.name}</span>
-                  {card.is_active ? null : (
-                    <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
-                      {t("inactive")}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </QueryState>
-    </div>
+    <QueryState
+      isLoading={techCards.list.isLoading || semiProducts.list.isLoading}
+      isError={techCards.list.isError || semiProducts.list.isError}
+    >
+      <div className="grid gap-6">
+        <UsageList
+          title={t("usedInSemiProducts")}
+          rows={semis
+            .filter((semi) => semiIds.has(semi.id))
+            .map((semi) => ({
+              id: semi.id,
+              name: semi.name,
+              is_active: semi.is_active,
+              href: `/menu/semi-products?semi=${semi.id}`,
+            }))}
+        />
+        <UsageList
+          title={t("usedInTechCards")}
+          rows={cards.map((card) => ({
+            id: card.id,
+            name: card.name,
+            is_active: card.is_active,
+            href: `/menu?card=${card.id}`,
+          }))}
+        />
+      </div>
+    </QueryState>
   );
 }
 
