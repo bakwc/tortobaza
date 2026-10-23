@@ -262,6 +262,16 @@ def semi_product_cost(semi_product: SemiProduct) -> Decimal:
     return needs_cost(needs)
 
 
+def stock_line_cost(line) -> Decimal:
+    return needs_cost(expand_component(line.component, line_component_quantity(line)))
+
+
+def recipe_line_cost(line) -> Decimal:
+    needs: Needs = {}
+    _recipe_needs(line.component, line_component_quantity(line), needs, frozenset())
+    return needs_cost(needs)
+
+
 def tech_card_cost(
     tech_card: TechCard,
     modifiers: list[tuple[Modifier, int]],

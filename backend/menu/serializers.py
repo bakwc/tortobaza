@@ -21,7 +21,13 @@ from menu.models import (
     TechCardModifierLine,
     TechCardSection,
 )
-from menu.recipes import missing_modifier_compositions, semi_product_cost, tech_card_cost
+from menu.recipes import (
+    missing_modifier_compositions,
+    recipe_line_cost,
+    semi_product_cost,
+    stock_line_cost,
+    tech_card_cost,
+)
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
 LOSS_FIELD = {
@@ -133,10 +139,12 @@ def component_payload(line) -> dict:
     }
 
 
-def recipe_line_payload(line) -> dict:
+def recipe_line_payload(line, cost: Decimal | None) -> dict:
     payload = component_payload(line)
     payload["loss_percent"] = str(line.loss_percent)
     payload["quantity_unit"] = line.quantity_unit
+    if cost is not None:
+        payload["cost"] = str(cost)
     return payload
 
 
@@ -177,8 +185,9 @@ class SemiProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        costs = show_costs(self.context)
         data["lines"] = [
-            recipe_line_payload(line)
+            recipe_line_payload(line, recipe_line_cost(line) if costs else None)
             for line in instance.lines.select_related("ingredient", "semi_product")
         ]
         data["images"] = menu_image_rows(instance.images.all(), self.context["request"])
@@ -436,8 +445,9 @@ class TechCardSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        costs = show_costs(self.context)
         data["lines"] = [
-            recipe_line_payload(line)
+            recipe_line_payload(line, stock_line_cost(line) if costs else None)
             for line in instance.lines.filter(section__isnull=True).select_related("ingredient", "semi_product")
         ]
         data["sections"] = [
@@ -447,7 +457,7 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "method": section.method,
                 "position": section.position,
                 "lines": [
-                    recipe_line_payload(line)
+                    recipe_line_payload(line, stock_line_cost(line) if costs else None)
                     for line in section.lines.select_related("ingredient", "semi_product")
                 ],
             }
@@ -472,7 +482,7 @@ class TechCardSerializer(serializers.ModelSerializer):
         ]
         modifier_lines = []
         for line in instance.modifier_lines.select_related("ingredient", "semi_product", "modifier"):
-            payload = recipe_line_payload(line)
+            payload = recipe_line_payload(line, stock_line_cost(line) if costs else None)
             payload["modifier"] = line.modifier_id
             payload["scales_by_weight"] = line.scales_by_weight
             modifier_lines.append(payload)

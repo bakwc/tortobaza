@@ -1,8 +1,11 @@
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from crm.models import CrmOrder, CrmOrderItemLine
 from menu.models import (
     UNIT_GRAM,
@@ -327,3 +330,91 @@ class GramsConversionTests(TestCase):
             }
         )
         self.assertFalse(serializer.is_valid())
+
+
+class LineCostApiTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.client = APIClient()
+        self.staff = User.objects.create_user("chef", password="x")
+        self.admin = User.objects.create_user("boss", password="x")
+        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        section = TechCardSection.objects.create(
+            tech_card=self.menu.cake,
+            name="Syrup",
+            method="Boil.",
+            position=0,
+        )
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            section=section,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.menu.frozen_sponge.avg_cost = Decimal("0.02")
+        self.menu.frozen_sponge.save(update_fields=["avg_cost"])
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            semi_product=self.menu.frozen_sponge,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.layered = SemiProduct.objects.create(
+            name="Layered",
+            unit=UNIT_GRAM,
+            yield_quantity=Decimal("500"),
+            is_produced=False,
+        )
+        SemiProductLine.objects.create(
+            parent=self.layered,
+            semi_product=self.menu.frozen_sponge,
+            quantity=Decimal("500"),
+            quantity_unit=UNIT_GRAM,
+        )
+
+    def test_finance_admin_sees_line_costs_that_sum_to_the_total(self):
+        self.client.force_authenticate(self.admin)
+        card = self.client.get(f"/api/menu/tech-cards/{self.menu.cake.pk}/")
+        self.assertEqual(card.status_code, 200, card.content)
+        body = card.json()
+        lines = body["lines"] + [line for section in body["sections"] for line in section["lines"]]
+        self.assertEqual(sum(Decimal(line["cost"]) for line in lines), Decimal(body["base_cost"]))
+        frozen = next(line for line in body["lines"] if line["semi_product"] == self.menu.frozen_sponge.pk)
+        self.assertEqual(Decimal(frozen["cost"]), Decimal("2.00"))
+        self.assertTrue(all("cost" in line for line in body["modifier_lines"]))
+
+        sponge = self.client.get(f"/api/menu/semi-products/{self.menu.sponge.pk}/")
+        self.assertEqual(sponge.status_code, 200, sponge.content)
+        sponge_body = sponge.json()
+        self.assertEqual(
+            sum(Decimal(line["cost"]) for line in sponge_body["lines"]),
+            Decimal(sponge_body["cost"]),
+        )
+
+        layered = self.client.get(f"/api/menu/semi-products/{self.layered.pk}/")
+        self.assertEqual(layered.status_code, 200, layered.content)
+        layered_body = layered.json()
+        self.assertEqual(Decimal(layered_body["lines"][0]["cost"]), Decimal("4.00"))
+        self.assertEqual(
+            sum(Decimal(line["cost"]) for line in layered_body["lines"]),
+            Decimal(layered_body["cost"]),
+        )
+
+    def test_staff_does_not_see_line_costs(self):
+        self.client.force_authenticate(self.staff)
+        card = self.client.get(f"/api/menu/tech-cards/{self.menu.cake.pk}/")
+        self.assertEqual(card.status_code, 200, card.content)
+        body = card.json()
+        self.assertNotIn("base_cost", body)
+        for line in body["lines"] + body["modifier_lines"]:
+            self.assertNotIn("cost", line)
+        for section in body["sections"]:
+            for line in section["lines"]:
+                self.assertNotIn("cost", line)
+        sponge = self.client.get(f"/api/menu/semi-products/{self.menu.sponge.pk}/")
+        self.assertEqual(sponge.status_code, 200, sponge.content)
+        sponge_body = sponge.json()
+        self.assertNotIn("cost", sponge_body)
+        for line in sponge_body["lines"]:
+            self.assertNotIn("cost", line)

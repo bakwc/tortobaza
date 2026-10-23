@@ -776,6 +776,7 @@ export const RecipeLineSchema = z.object({
   quantity: z.string(),
   quantity_unit: MenuUnitSchema,
   loss_percent: z.string(),
+  cost: z.string().optional(),
 });
 
 export const MenuImageSchema = z.object({

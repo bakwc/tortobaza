@@ -663,6 +663,7 @@ export function TechCardsPanel() {
                                 tag: null,
                                 amount: "—",
                                 loss: "—",
+                                cost: null,
                                 warning: true,
                               },
                             ];
@@ -675,6 +676,7 @@ export function TechCardsPanel() {
                               tag: null,
                               amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
                               loss: loss === "0" ? "—" : `${loss}%`,
+                              cost: line.cost === undefined ? null : formatMoney(line.cost),
                               warning: false,
                             };
                           });
