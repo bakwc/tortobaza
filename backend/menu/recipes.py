@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 
 from menu.models import (
+    UNIT_GRAM,
     Ingredient,
     Modifier,
     ModifierGroup,
@@ -22,6 +23,29 @@ _CENT = Decimal("0.01")
 
 def gross_quantity(quantity: Decimal, loss_percent: Decimal) -> Decimal:
     return quantity * _HUNDRED / (_HUNDRED - loss_percent)
+
+
+def component_quantity(component: Component, quantity: Decimal, quantity_unit: str) -> Decimal:
+    if quantity_unit == component.unit:
+        return quantity
+    if quantity_unit == UNIT_GRAM and isinstance(component, Ingredient) and component.unit != UNIT_GRAM:
+        if component.grams_per_unit is None:
+            raise ValidationError(
+                _("Ingredient %(name)s has no grams per unit.") % {"name": component.name}
+            )
+        return quantity / component.grams_per_unit
+    raise ValidationError(
+        _("Quantity unit %(quantity_unit)s cannot be converted to %(unit)s for %(name)s.")
+        % {"quantity_unit": quantity_unit, "unit": component.unit, "name": component.name}
+    )
+
+
+def line_component_quantity(line) -> Decimal:
+    return component_quantity(
+        line.component,
+        gross_quantity(line.quantity, line.loss_percent),
+        line.quantity_unit,
+    )
 
 
 def _add(needs: Needs, component: Component, quantity: Decimal) -> None:
@@ -48,7 +72,7 @@ def _explode(component: Component, quantity: Decimal, needs: Needs, path: frozen
     for line in _semi_lines(component):
         _explode(
             line.component,
-            gross_quantity(line.quantity, line.loss_percent) * factor,
+            line_component_quantity(line) * factor,
             needs,
             nested_path,
         )
@@ -67,7 +91,7 @@ def expand_semi_product(semi_product: SemiProduct, quantity: Decimal) -> Needs:
     for line in _semi_lines(semi_product):
         _explode(
             line.component,
-            gross_quantity(line.quantity, line.loss_percent) * factor,
+            line_component_quantity(line) * factor,
             needs,
             path,
         )
@@ -164,7 +188,7 @@ def expand_order_item(
         for line in tech_card.lines.select_related("ingredient", "semi_product"):
             _explode(
                 line.component,
-                gross_quantity(line.quantity, line.loss_percent) * line_factor,
+                line_component_quantity(line) * line_factor,
                 needs,
                 frozenset(),
             )
@@ -178,7 +202,7 @@ def expand_order_item(
                     factor = factor * weight_factor
                 _explode(
                     line.component,
-                    gross_quantity(line.quantity, line.loss_percent) * factor,
+                    line_component_quantity(line) * factor,
                     needs,
                     frozenset(),
                 )

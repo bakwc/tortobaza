@@ -246,6 +246,7 @@ function ItemEditor({
           options={options}
           extraColumn={null}
           quantityLabel={t("quantity")}
+          chooseQuantityUnit={false}
         />
       </div>
       <Field label={t("comment")}>

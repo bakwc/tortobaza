@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog
 import { Input } from "@/components/ui/input";
 import {
   ComponentLinesEditor,
+  QuantityUnitControl,
   componentOptions,
   componentValue,
   draftFromLine,
@@ -33,6 +34,7 @@ import {
   linesToBody,
   newDraftKey,
   type ComponentLineDraft,
+  type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
@@ -131,15 +133,21 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   };
 }
 
-function withDefaultCompositions(draft: TechCardDraft, groups: ModifierGroup[]): TechCardDraft {
+function withDefaultCompositions(
+  draft: TechCardDraft,
+  groups: ModifierGroup[],
+  options: ComponentOption[],
+): TechCardDraft {
   const compositions = { ...draft.compositions };
   for (const link of draft.groups) {
     for (const modifier of groups.find((group) => group.id === link.group)?.modifiers ?? []) {
       if (!modifier.is_active || compositions[modifier.id]?.lines.length) continue;
       if (modifier.ingredient === null && modifier.semi_product === null) continue;
+      const option = options.find((row) => row.value === componentValue(modifier));
+      if (option === undefined) continue;
       compositions[modifier.id] = {
         scales_by_weight: true,
-        lines: [{ ...emptyLine(), component: componentValue(modifier) }],
+        lines: [{ ...emptyLine(), component: option.value, quantity_unit: option.unit }],
       };
     }
   }
@@ -318,7 +326,7 @@ export function TechCardsPanel() {
   };
   const openEdit = () => {
     if (current === null) return;
-    setDraft(withDefaultCompositions(draftFrom(current), groups.list.data ?? []));
+    setDraft(withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options));
     setMode("edit");
     setGroupToAdd("");
   };
@@ -665,7 +673,7 @@ export function TechCardsPanel() {
                               key: String(line.id),
                               name: line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`,
                               tag: null,
-                              amount: `${formatQuantity(line.quantity)} ${units(line.unit)}`,
+                              amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
                               loss: loss === "0" ? "—" : `${loss}%`,
                               warning: false,
                             };
@@ -798,6 +806,7 @@ export function TechCardsPanel() {
             options={options}
             extraColumn="loss"
             quantityLabel={t("quantity")}
+            chooseQuantityUnit={true}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -840,6 +849,7 @@ export function TechCardsPanel() {
                 options={options}
                 extraColumn="loss"
                 quantityLabel={t("quantity")}
+                chooseQuantityUnit={true}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
@@ -926,7 +936,6 @@ export function TechCardsPanel() {
                             lines: [],
                           };
                           const line = composition.lines[0];
-                          const unit = options.find((option) => option.value === line?.component)?.unit;
                           return (
                             <tr key={modifier.id} className="border-t border-[var(--line)]">
                               <td className="py-2 pr-3">
@@ -952,11 +961,18 @@ export function TechCardsPanel() {
                                           lines: [{ ...line, quantity: event.target.value }],
                                         })
                                       }
-                                      className="pr-12 text-right"
+                                      className="pr-16 text-right"
                                     />
-                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
-                                      {unit ? units(unit) : ""}
-                                    </span>
+                                    <QuantityUnitControl
+                                      option={options.find((row) => row.value === line.component)}
+                                      value={line.quantity_unit}
+                                      chooseQuantityUnit={true}
+                                      onChange={(quantity_unit) =>
+                                        setComposition(modifier.id, {
+                                          lines: [{ ...line, quantity_unit }],
+                                        })
+                                      }
+                                    />
                                   </div>
                                 ) : (
                                   <p className="text-right">—</p>
@@ -1012,6 +1028,7 @@ export function TechCardsPanel() {
                   withDefaultCompositions(
                     { ...draft, groups: [...draft.groups, { group: Number(groupToAdd), is_required: null }] },
                     allGroups,
+                    options,
                   ),
                 );
                 setGroupToAdd("");

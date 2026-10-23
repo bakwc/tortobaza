@@ -4,8 +4,18 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from crm.models import CrmOrder, CrmOrderItemLine
-from menu.models import TechCardLine, TechCardSection
+from menu.models import (
+    UNIT_GRAM,
+    UNIT_MILLILITER,
+    Ingredient,
+    SemiProduct,
+    SemiProductLine,
+    TechCardLine,
+    TechCardSection,
+)
+from menu.serializers import RecipeLineSerializer
 from menu.recipes import (
+    component_quantity,
     expand_order,
     expand_order_item,
     expand_semi_product,
@@ -166,6 +176,7 @@ class CostTests(TestCase):
             section=section,
             ingredient=self.menu.sugar,
             quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
         )
         needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
         self.assertEqual(needs[self.menu.sugar], Decimal("300"))
@@ -188,3 +199,74 @@ class CostTests(TestCase):
 
     def test_expand_order_without_items_is_empty(self):
         self.assertEqual(expand_order(make_crm_order(CrmOrder.STATUS_NEW)), {})
+
+
+class GramsConversionTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+
+    def test_grams_of_milliliters_convert_before_cost(self):
+        self.menu.cream.grams_per_unit = Decimal("0.5")
+        self.menu.cream.save(update_fields=["grams_per_unit"])
+        TechCardLine.objects.filter(tech_card=self.menu.cake, ingredient=self.menu.cream).update(
+            quantity_unit=UNIT_GRAM
+        )
+        needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.cream], Decimal("600"))
+        self.assertEqual(tech_card_cost(self.menu.cake, [], Decimal("1")), Decimal("16.00"))
+
+    def test_loss_is_applied_in_grams_before_conversion(self):
+        self.menu.cream.grams_per_unit = Decimal("2")
+        self.menu.cream.save(update_fields=["grams_per_unit"])
+        TechCardLine.objects.filter(tech_card=self.menu.cake, ingredient=self.menu.cream).update(
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+            loss_percent=Decimal("20"),
+        )
+        needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.cream], Decimal("62.5"))
+
+    def test_semi_line_in_grams_scales_with_yield(self):
+        oil = Ingredient.objects.create(
+            name="Oil",
+            unit=UNIT_MILLILITER,
+            avg_cost=Decimal("0.01"),
+            grams_per_unit=Decimal("1"),
+        )
+        batter = SemiProduct.objects.create(
+            name="Batter",
+            unit=UNIT_GRAM,
+            yield_quantity=Decimal("1000"),
+            is_produced=False,
+        )
+        SemiProductLine.objects.create(
+            parent=batter,
+            ingredient=oil,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.assertEqual(expand_semi_product(batter, Decimal("500")), {oil: Decimal("50")})
+
+    def test_grams_of_non_gram_semi_product_are_rejected(self):
+        juice = SemiProduct.objects.create(
+            name="Juice",
+            unit=UNIT_MILLILITER,
+            yield_quantity=Decimal("100"),
+            is_produced=False,
+        )
+        with self.assertRaises(ValidationError):
+            component_quantity(juice, Decimal("10"), UNIT_GRAM)
+
+    def test_mismatched_units_are_rejected(self):
+        with self.assertRaises(ValidationError):
+            component_quantity(self.menu.paper, Decimal("1"), UNIT_MILLILITER)
+        serializer = RecipeLineSerializer(
+            data={
+                "ingredient": self.menu.paper.pk,
+                "semi_product": None,
+                "quantity": "1",
+                "loss_percent": "0",
+                "quantity_unit": UNIT_MILLILITER,
+            }
+        )
+        self.assertFalse(serializer.is_valid())

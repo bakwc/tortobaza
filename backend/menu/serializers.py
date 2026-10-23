@@ -6,6 +6,7 @@ from rest_framework import serializers
 from catalog.models import Option
 from catalog.responsive_urls import detail_image
 from menu.models import (
+    UNIT_CHOICES,
     UNIT_GRAM,
     Ingredient,
     IngredientCategory,
@@ -103,6 +104,21 @@ class ComponentLineSerializer(serializers.Serializer):
 
 class RecipeLineSerializer(ComponentLineSerializer):
     loss_percent = serializers.DecimalField(**LOSS_FIELD)
+    quantity_unit = serializers.ChoiceField(choices=UNIT_CHOICES)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        component = attrs["ingredient"] if attrs["ingredient"] is not None else attrs["semi_product"]
+        quantity_unit = attrs["quantity_unit"]
+        if quantity_unit == component.unit:
+            return attrs
+        if quantity_unit == UNIT_GRAM and attrs["ingredient"] is not None and component.unit != UNIT_GRAM:
+            if component.grams_per_unit is None:
+                raise serializers.ValidationError({"quantity_unit": "Ingredient has no grams per unit."})
+            return attrs
+        raise serializers.ValidationError(
+            {"quantity_unit": "Quantity unit cannot be converted to the component unit."}
+        )
 
 
 def component_payload(line) -> dict:
@@ -120,6 +136,7 @@ def component_payload(line) -> dict:
 def recipe_line_payload(line) -> dict:
     payload = component_payload(line)
     payload["loss_percent"] = str(line.loss_percent)
+    payload["quantity_unit"] = line.quantity_unit
     return payload
 
 

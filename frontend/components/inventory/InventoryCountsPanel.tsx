@@ -44,6 +44,7 @@ function draftFrom(row: InventoryCount | null): CountDraft {
       quantity: line.actual_quantity,
       loss_percent: "0",
       unit_cost: line.unit_cost ?? "",
+      quantity_unit: line.unit,
     })),
   };
 }
@@ -126,7 +127,14 @@ export function InventoryCountsPanel() {
       if (!row.is_active) continue;
       const value = componentValue({ ingredient: row.ingredient, semi_product: row.semi_product });
       if (present.has(value)) continue;
-      extra.push({ key: newDraftKey(), component: value, quantity: "", loss_percent: "0", unit_cost: "" });
+      extra.push({
+        key: newDraftKey(),
+        component: value,
+        quantity: "",
+        loss_percent: "0",
+        unit_cost: "",
+        quantity_unit: row.unit,
+      });
     }
     setDraft({ ...draft, lines: [...draft.lines, ...extra] });
   };
@@ -231,6 +239,7 @@ export function InventoryCountsPanel() {
                 options={options}
                 extraColumn={isFinanceAdmin ? "unitCost" : null}
                 quantityLabel={t("actual")}
+                chooseQuantityUnit={false}
               />
               {editing ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">

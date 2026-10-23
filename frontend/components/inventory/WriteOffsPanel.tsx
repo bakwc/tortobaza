@@ -34,7 +34,12 @@ function draftFrom(row: WriteOff | null): WriteOffDraft {
   if (row === null) {
     return { date: getTbilisiTodayIsoDate(), reason: "", comment: "", lines: [] };
   }
-  return { date: row.date, reason: String(row.reason), comment: row.comment, lines: row.lines.map(draftFromLine) };
+  return {
+    date: row.date,
+    reason: String(row.reason),
+    comment: row.comment,
+    lines: row.lines.map((line) => draftFromLine({ ...line, quantity_unit: line.unit })),
+  };
 }
 
 export function WriteOffsPanel() {
@@ -203,6 +208,7 @@ export function WriteOffsPanel() {
             options={options}
             extraColumn={null}
             quantityLabel={t("quantity")}
+            chooseQuantityUnit={false}
           />
         </EditorDialog>
       ) : null}

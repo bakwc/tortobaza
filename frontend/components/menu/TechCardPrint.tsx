@@ -68,7 +68,7 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
           >
             <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
             <div className="px-2 py-1 text-right text-sm tabular-nums">
-              {formatQuantity(line.quantity)} {units(line.unit)}
+              {formatQuantity(line.quantity)} {units(line.quantity_unit)}
             </div>
           </div>
         ))}

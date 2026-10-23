@@ -193,6 +193,7 @@ class Command(BaseCommand):
                     tech_card=card,
                     modifier=modifiers[(group.name, line["modifier"])],
                     quantity=Decimal(line["quantity"]),
+                    quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
                     loss_percent=Decimal(line["loss_percent"]),
                     scales_by_weight=line["scales_by_weight"],
                     position=position,
@@ -223,6 +224,7 @@ class Command(BaseCommand):
                     tech_card=card,
                     section=saved,
                     quantity=Decimal(line["quantity"]),
+                    quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
                     loss_percent=Decimal(line["loss_percent"]),
                     position=line_position,
                     **component,
@@ -249,6 +251,7 @@ class Command(BaseCommand):
             line_model.objects.create(
                 **{parent_field: parent},
                 quantity=Decimal(row["quantity"]),
+                quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
                 loss_percent=Decimal(row["loss_percent"]),
                 position=position,
                 **component,

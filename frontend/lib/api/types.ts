@@ -774,6 +774,7 @@ export const RecipeLineSchema = z.object({
   name: z.string(),
   unit: MenuUnitSchema,
   quantity: z.string(),
+  quantity_unit: MenuUnitSchema,
   loss_percent: z.string(),
 });
 
@@ -907,6 +908,7 @@ export type ComponentRefBody = {
 
 export type RecipeLineBody = ComponentRefBody & {
   quantity: string;
+  quantity_unit: MenuUnit;
   loss_percent: string;
 };
 

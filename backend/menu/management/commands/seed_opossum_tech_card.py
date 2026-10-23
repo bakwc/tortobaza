@@ -104,6 +104,7 @@ class Command(BaseCommand):
                 ingredient=ingredients[name],
                 semi_product=None,
                 quantity=quantity,
+                quantity_unit=ingredients[name].unit,
                 loss_percent=Decimal("0"),
                 position=position,
             )

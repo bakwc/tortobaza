@@ -33,8 +33,12 @@ class MenuFixture:
             yield_quantity=Decimal("1000"),
             is_produced=False,
         )
-        SemiProductLine.objects.create(parent=self.sponge, ingredient=self.flour, quantity=Decimal("600"))
-        SemiProductLine.objects.create(parent=self.sponge, ingredient=self.sugar, quantity=Decimal("400"))
+        SemiProductLine.objects.create(
+            parent=self.sponge, ingredient=self.flour, quantity=Decimal("600"), quantity_unit=UNIT_GRAM
+        )
+        SemiProductLine.objects.create(
+            parent=self.sponge, ingredient=self.sugar, quantity=Decimal("400"), quantity_unit=UNIT_GRAM
+        )
 
         self.frozen_sponge = SemiProduct.objects.create(
             name="Frozen sponge",
@@ -42,8 +46,12 @@ class MenuFixture:
             yield_quantity=Decimal("1000"),
             is_produced=True,
         )
-        SemiProductLine.objects.create(parent=self.frozen_sponge, ingredient=self.flour, quantity=Decimal("600"))
-        SemiProductLine.objects.create(parent=self.frozen_sponge, ingredient=self.sugar, quantity=Decimal("400"))
+        SemiProductLine.objects.create(
+            parent=self.frozen_sponge, ingredient=self.flour, quantity=Decimal("600"), quantity_unit=UNIT_GRAM
+        )
+        SemiProductLine.objects.create(
+            parent=self.frozen_sponge, ingredient=self.sugar, quantity=Decimal("400"), quantity_unit=UNIT_GRAM
+        )
 
         self.filling = ModifierGroup.objects.create(
             name="Filling",
@@ -67,8 +75,12 @@ class MenuFixture:
             kind=TechCard.KIND_WEIGHTED,
             basis_weight_kg=Decimal("1"),
         )
-        TechCardLine.objects.create(tech_card=self.cake, semi_product=self.sponge, quantity=Decimal("500"))
-        TechCardLine.objects.create(tech_card=self.cake, ingredient=self.cream, quantity=Decimal("300"))
+        TechCardLine.objects.create(
+            tech_card=self.cake, semi_product=self.sponge, quantity=Decimal("500"), quantity_unit=UNIT_GRAM
+        )
+        TechCardLine.objects.create(
+            tech_card=self.cake, ingredient=self.cream, quantity=Decimal("300"), quantity_unit=UNIT_MILLILITER
+        )
         TechCardModifierGroup.objects.create(tech_card=self.cake, group=self.filling, position=0)
         TechCardModifierGroup.objects.create(tech_card=self.cake, group=self.decor, position=1)
         TechCardModifierLine.objects.create(
@@ -76,6 +88,7 @@ class MenuFixture:
             modifier=self.raspberry_filling,
             ingredient=self.raspberry,
             quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
             scales_by_weight=True,
         )
         TechCardModifierLine.objects.create(
@@ -83,6 +96,7 @@ class MenuFixture:
             modifier=self.photo,
             ingredient=self.paper,
             quantity=Decimal("1"),
+            quantity_unit=UNIT_PIECE,
             scales_by_weight=False,
         )
         TechCardModifierLine.objects.create(
@@ -90,6 +104,7 @@ class MenuFixture:
             modifier=self.photo,
             ingredient=self.ink,
             quantity=Decimal("2"),
+            quantity_unit=UNIT_MILLILITER,
             scales_by_weight=False,
         )
         TechCardModifierLine.objects.create(
@@ -97,18 +112,26 @@ class MenuFixture:
             modifier=self.berries,
             ingredient=self.raspberry,
             quantity=Decimal("50"),
+            quantity_unit=UNIT_GRAM,
             scales_by_weight=True,
         )
 
         self.bento = TechCard.objects.create(name="Bento", kind=TechCard.KIND_PIECE, basis_quantity=1)
-        TechCardLine.objects.create(tech_card=self.bento, ingredient=self.flour, quantity=Decimal("100"))
+        TechCardLine.objects.create(
+            tech_card=self.bento, ingredient=self.flour, quantity=Decimal("100"), quantity_unit=UNIT_GRAM
+        )
 
         self.frozen_cake = TechCard.objects.create(
             name="Frozen cake",
             kind=TechCard.KIND_PIECE,
             basis_quantity=1,
         )
-        TechCardLine.objects.create(tech_card=self.frozen_cake, semi_product=self.frozen_sponge, quantity=Decimal("400"))
+        TechCardLine.objects.create(
+            tech_card=self.frozen_cake,
+            semi_product=self.frozen_sponge,
+            quantity=Decimal("400"),
+            quantity_unit=UNIT_GRAM,
+        )
 
 
 def make_crm_order(status: str) -> CrmOrder:

@@ -80,7 +80,7 @@ export function CompositionTable({ lines }: { lines: RecipeLine[] }) {
           key: String(line.id),
           name: line.name,
           tag: line.semi_product !== null ? t("semiProduct").toLowerCase() : null,
-          amount: `${formatQuantity(line.quantity)} ${units(line.unit)}`,
+          amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
           loss: loss === "0" ? "—" : `${loss}%`,
           warning: false,
         };
