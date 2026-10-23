@@ -86,3 +86,35 @@ class IngredientCostApiTests(TestCase):
         self.flour.refresh_from_db()
         self.assertEqual(self.flour.cost_quantity, Decimal("1000"))
         self.assertEqual(self.flour.avg_cost, Decimal("0.01"))
+
+    def test_grams_clear_grams_per_unit(self):
+        self.flour.grams_per_unit = Decimal("1")
+        self.flour.save(update_fields=["grams_per_unit"])
+        self.client.force_authenticate(self.admin)
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            self._payload(None),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIsNone(response.json()["grams_per_unit"])
+        self.flour.refresh_from_db()
+        self.assertIsNone(self.flour.grams_per_unit)
+
+    def test_milliliters_require_grams_per_unit(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Oil"
+        payload["unit"] = "ml"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_milliliters_save_grams_per_unit(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Oil"
+        payload["unit"] = "ml"
+        payload["grams_per_unit"] = "0.920"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Decimal(response.json()["grams_per_unit"]), Decimal("0.920"))

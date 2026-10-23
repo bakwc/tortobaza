@@ -26,7 +26,15 @@ const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 const UNIT_ICONS = { g: Scale, ml: Droplets, pcs: Hash };
 
 function emptyIngredient(): IngredientBody {
-  return { name: "", category: null, unit: "g", is_active: true, avg_cost: null, cost_quantity: null };
+  return {
+    name: "",
+    category: null,
+    unit: "g",
+    is_active: true,
+    avg_cost: null,
+    cost_quantity: null,
+    grams_per_unit: null,
+  };
 }
 
 function unitCostDraft(value: string): string {
@@ -57,6 +65,7 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     is_active: draft.is_active,
     avg_cost: null,
     cost_quantity: null,
+    grams_per_unit: draft.unit === "g" || draft.grams_per_unit === null ? null : draft.grams_per_unit.replace(",", "."),
   };
   if (draft.avg_cost !== null && draft.cost_quantity !== null) {
     const quantity = draft.cost_quantity.replace(",", ".");
@@ -198,6 +207,7 @@ export function IngredientsPanel() {
       is_active: row.is_active,
       avg_cost: row.avg_cost === undefined ? null : packPrice(row.avg_cost, row.cost_quantity),
       cost_quantity: row.avg_cost === undefined ? null : unitCostDraft(row.cost_quantity),
+      grams_per_unit: row.grams_per_unit === null ? null : unitCostDraft(row.grams_per_unit),
     });
   };
   const openNew = () => {
@@ -411,7 +421,10 @@ export function IngredientsPanel() {
             <Field label={t("unit")}>
               <NativeSelect
                 value={draft.unit}
-                onChange={(event) => setDraft({ ...draft, unit: event.target.value as MenuUnit })}
+                onChange={(event) => {
+                  const unit = event.target.value as MenuUnit;
+                  setDraft({ ...draft, unit, grams_per_unit: unit === "g" ? null : draft.grams_per_unit });
+                }}
               >
                 {UNITS.map((unit) => (
                   <option key={unit} value={unit}>
@@ -420,6 +433,16 @@ export function IngredientsPanel() {
                 ))}
               </NativeSelect>
             </Field>
+            {draft.unit === "g" ? null : (
+              <Field label={t(draft.unit === "ml" ? "density" : "pieceWeight")}>
+                <Input
+                  required
+                  inputMode="decimal"
+                  value={draft.grams_per_unit ?? ""}
+                  onChange={(event) => setDraft({ ...draft, grams_per_unit: event.target.value })}
+                />
+              </Field>
+            )}
             {draft.avg_cost !== null && draft.cost_quantity !== null ? (
               <Field label={t("avgCost")}>
                 <Input

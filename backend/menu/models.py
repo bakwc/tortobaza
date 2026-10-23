@@ -51,6 +51,14 @@ class Ingredient(models.Model):
         validators=[MinValueValidator(Decimal("0.001"))],
         verbose_name=_("Cost quantity"),
     )
+    grams_per_unit = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.001"))],
+        verbose_name=_("Grams per unit"),
+    )
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
     class Meta:

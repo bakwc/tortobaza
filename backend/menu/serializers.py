@@ -6,6 +6,7 @@ from rest_framework import serializers
 from catalog.models import Option
 from catalog.responsive_urls import detail_image
 from menu.models import (
+    UNIT_GRAM,
     Ingredient,
     IngredientCategory,
     Modifier,
@@ -53,14 +54,36 @@ class IngredientSerializer(serializers.ModelSerializer):
     cost_quantity = serializers.DecimalField(
         max_digits=12, decimal_places=3, min_value=Decimal("0.001"), required=False
     )
+    grams_per_unit = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        min_value=Decimal("0.001"),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Ingredient
-        fields = ["id", "name", "category", "category_name", "unit", "avg_cost", "cost_quantity", "is_active"]
+        fields = [
+            "id",
+            "name",
+            "category",
+            "category_name",
+            "unit",
+            "avg_cost",
+            "cost_quantity",
+            "grams_per_unit",
+            "is_active",
+        ]
 
     def validate(self, attrs):
         if "avg_cost" in self.initial_data and not show_costs(self.context):
             raise serializers.ValidationError("Only finance admins can set unit costs.")
+        unit = attrs["unit"] if "unit" in attrs else self.instance.unit
+        if unit == UNIT_GRAM:
+            attrs["grams_per_unit"] = None
+        elif attrs.get("grams_per_unit") is None:
+            raise serializers.ValidationError({"grams_per_unit": "Required."})
         return attrs
 
     def to_representation(self, instance):

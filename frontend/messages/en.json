@@ -636,6 +636,8 @@
     "name": "Name",
     "category": "Category",
     "unit": "Unit",
+    "density": "Density, g/ml",
+    "pieceWeight": "Weight of one piece, g",
     "avgCost": "Average cost",
     "costQuantity": "For quantity",
     "categories": "Ingredient categories",
