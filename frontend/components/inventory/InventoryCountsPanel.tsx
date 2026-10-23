@@ -197,6 +197,7 @@ export function InventoryCountsPanel() {
           }
           onDelete={editing === null ? null : () => counts.remove.mutate(editing.id, { onSuccess: close })}
           deletePending={counts.remove.isPending}
+          below={null}
         >
           {isClosed && editing ? (
             <ClosedCountView count={editing} />

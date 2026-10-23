@@ -708,6 +708,8 @@
     "sectionsCount": "{count, plural, one {# глава} few {# главы} many {# глав} other {# главы}}",
     "groupsCount": "{count, plural, one {# группа} few {# группы} many {# групп} other {# группы}}",
     "inactive": "Неактивна",
+    "usedInTechCards": "Используется в тех. картах",
+    "notUsedInTechCards": "Не используется",
     "notes": "Примечания",
     "images": "Картинки",
     "addImage": "Добавить картинку",

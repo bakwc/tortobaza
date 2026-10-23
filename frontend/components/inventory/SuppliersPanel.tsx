@@ -79,6 +79,7 @@ function SuppliersList() {
           }
           onDelete={editingId === null ? null : () => suppliers.remove.mutate(editingId, { onSuccess: close })}
           deletePending={suppliers.remove.isPending}
+          below={null}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>

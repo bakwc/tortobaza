@@ -188,6 +188,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
       }
       onDelete={supply === null ? null : () => supplies.remove.mutate(supply.id, { onSuccess: onClose })}
       deletePending={supplies.remove.isPending}
+      below={null}
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("date")}>

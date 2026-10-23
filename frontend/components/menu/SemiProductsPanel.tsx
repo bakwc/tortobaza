@@ -353,6 +353,7 @@ export function SemiProductsPanel() {
           onCancel={cancelEdit}
           onDelete={viewing === null ? null : () => semiProducts.remove.mutate(viewing.id, { onSuccess: close })}
           deletePending={semiProducts.remove.isPending}
+          below={null}
         >
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">

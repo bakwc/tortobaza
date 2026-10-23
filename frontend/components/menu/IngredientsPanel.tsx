@@ -16,8 +16,9 @@ import {
   QueryState,
   formatUnitCost,
 } from "@/components/menu/ui";
-import { useIngredientCategories, useIngredients } from "@/hooks/useStock";
-import type { Ingredient, IngredientBody, MenuUnit } from "@/lib/api/types";
+import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
+import { Link } from "@/i18n/navigation";
+import type { Ingredient, IngredientBody, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
@@ -69,6 +70,71 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     Reflect.deleteProperty(body, "cost_quantity");
   }
   return body;
+}
+
+function semiProductsWithIngredient(ingredientId: number, semiProducts: SemiProduct[]): Set<number> {
+  const used = new Set<number>();
+  for (const semi of semiProducts) {
+    if (semi.lines.some((line) => line.ingredient === ingredientId)) used.add(semi.id);
+  }
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const semi of semiProducts) {
+      if (used.has(semi.id)) continue;
+      if (semi.lines.some((line) => line.semi_product !== null && used.has(line.semi_product))) {
+        used.add(semi.id);
+        grew = true;
+      }
+    }
+  }
+  return used;
+}
+
+function cardUsesIngredient(card: TechCard, ingredientId: number, semiIds: Set<number>): boolean {
+  const lines = [...card.lines, ...card.sections.flatMap((section) => section.lines), ...card.modifier_lines];
+  return lines.some(
+    (line) => line.ingredient === ingredientId || (line.semi_product !== null && semiIds.has(line.semi_product)),
+  );
+}
+
+function IngredientTechCards({ ingredientId }: { ingredientId: number }) {
+  const t = useTranslations("stock");
+  const techCards = useTechCards();
+  const semiProducts = useSemiProducts();
+  const semiIds = semiProductsWithIngredient(ingredientId, semiProducts.list.data ?? []);
+  const cards = (techCards.list.data ?? []).filter((card) => cardUsesIngredient(card, ingredientId, semiIds));
+  return (
+    <div>
+      <p className="text-sm font-semibold text-[var(--ink)]">{t("usedInTechCards")}</p>
+      <QueryState
+        isLoading={techCards.list.isLoading || semiProducts.list.isLoading}
+        isError={techCards.list.isError || semiProducts.list.isError}
+      >
+        {cards.length === 0 ? (
+          <p className="mt-2 text-sm text-[var(--muted-2)]">{t("notUsedInTechCards")}</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-[var(--line)]">
+            {cards.map((card) => (
+              <li key={card.id}>
+                <Link
+                  href={`/menu?card=${card.id}`}
+                  className="flex items-center justify-between gap-3 py-2 text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand)]"
+                >
+                  <span className={cn(!card.is_active && "line-through")}>{card.name}</span>
+                  {card.is_active ? null : (
+                    <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
+                      {t("inactive")}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </QueryState>
+    </div>
+  );
 }
 
 function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel: string; onOpen: () => void }) {
@@ -321,6 +387,7 @@ export function IngredientsPanel() {
           }
           onDelete={viewing === null ? null : () => ingredients.remove.mutate(viewing.id, { onSuccess: close })}
           deletePending={ingredients.remove.isPending}
+          below={viewing === null ? null : <IngredientTechCards ingredientId={viewing.id} />}
         >
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">

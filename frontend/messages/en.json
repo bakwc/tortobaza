@@ -708,6 +708,8 @@
     "sectionsCount": "{count, plural, one {# section} other {# sections}}",
     "groupsCount": "{count, plural, one {# group} other {# groups}}",
     "inactive": "Inactive",
+    "usedInTechCards": "Used in tech cards",
+    "notUsedInTechCards": "Not used",
     "notes": "Notes",
     "images": "Images",
     "addImage": "Add image",

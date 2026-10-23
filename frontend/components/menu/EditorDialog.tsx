@@ -18,6 +18,7 @@ export function EditorDialog({
   onDelete,
   deletePending,
   submitLabel,
+  below,
   children,
 }: {
   open: boolean;
@@ -30,6 +31,7 @@ export function EditorDialog({
   onDelete: (() => void) | null;
   deletePending: boolean;
   submitLabel: string | null;
+  below: ReactNode;
   children: ReactNode;
 }) {
   const t = useTranslations("stock");
@@ -67,6 +69,7 @@ export function EditorDialog({
             </div>
           </div>
         </form>
+        {below === null ? null : <div className="mt-6 border-t border-[var(--line)] pt-5">{below}</div>}
       </DialogContent>
     </Dialog>
   );
