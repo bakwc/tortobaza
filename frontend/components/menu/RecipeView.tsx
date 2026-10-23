@@ -14,12 +14,19 @@ import { cn } from "@/lib/utils";
 export type RecipeTableRow = {
   key: string;
   name: string;
+  href: string | null;
   tag: string | null;
   amount: string;
   loss: string;
   cost: string | null;
   warning: boolean;
 };
+
+export function componentHref(ingredient: number | null, semiProduct: number | null): string | null {
+  if (ingredient !== null) return `/menu/ingredients?ingredient=${ingredient}`;
+  if (semiProduct !== null) return `/menu/semi-products?semi=${semiProduct}`;
+  return null;
+}
 
 export function RecipeHeading({ number, title, note }: { number: number | null; title: string; note: string }) {
   return (
@@ -51,7 +58,13 @@ export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
             <tr key={row.key} className="border-t border-[var(--line)]/70">
               <td className="py-2 pr-3 text-[var(--ink)]">
                 <span className="inline-flex flex-wrap items-center gap-2">
-                  {row.name}
+                  {row.href !== null ? (
+                    <Link href={row.href} className="text-[var(--ink)] hover:text-[var(--brand)]">
+                      {row.name}
+                    </Link>
+                  ) : (
+                    row.name
+                  )}
                   {row.tag !== null ? (
                     <span className="text-xs italic text-[var(--muted-2)]">{row.tag}</span>
                   ) : null}
@@ -87,6 +100,7 @@ export function CompositionTable({ lines }: { lines: RecipeLine[] }) {
         return {
           key: String(line.id),
           name: line.name,
+          href: componentHref(line.ingredient, line.semi_product),
           tag: line.semi_product !== null ? t("semiProduct").toLowerCase() : null,
           amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
           loss: loss === "0" ? "—" : `${loss}%`,

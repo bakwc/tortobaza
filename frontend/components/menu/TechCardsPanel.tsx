@@ -20,7 +20,13 @@ import {
 } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
-import { RecipeHeading, RecipeTable, RecipeView, type RecipeTableRow } from "@/components/menu/RecipeView";
+import {
+  componentHref,
+  RecipeHeading,
+  RecipeTable,
+  RecipeView,
+  type RecipeTableRow,
+} from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -660,6 +666,7 @@ export function TechCardsPanel() {
                               {
                                 key: `m${modifier.id}`,
                                 name: modifier.name,
+                                href: null,
                                 tag: null,
                                 amount: "—",
                                 loss: "—",
@@ -673,6 +680,7 @@ export function TechCardsPanel() {
                             return {
                               key: String(line.id),
                               name: line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`,
+                              href: componentHref(line.ingredient, line.semi_product),
                               tag: null,
                               amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
                               loss: loss === "0" ? "—" : `${loss}%`,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, ChevronRight, Droplets, Hash, Package, Plus, Scale, Search, Trash2, Wheat } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   formatUnitCost,
 } from "@/components/menu/ui";
 import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { Ingredient, IngredientBody, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,18 @@ function emptyIngredient(): IngredientBody {
     avg_cost: null,
     cost_quantity: null,
     grams_per_unit: null,
+  };
+}
+
+function ingredientDraft(row: Ingredient): IngredientBody {
+  return {
+    name: row.name,
+    category: row.category,
+    unit: row.unit,
+    is_active: row.is_active,
+    avg_cost: row.avg_cost === undefined ? null : packPrice(row.avg_cost, row.cost_quantity),
+    cost_quantity: row.avg_cost === undefined ? null : unitCostDraft(row.cost_quantity),
+    grams_per_unit: row.grams_per_unit === null ? null : unitCostDraft(row.grams_per_unit),
   };
 }
 
@@ -223,37 +236,62 @@ function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel:
 export function IngredientsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const ingredients = useIngredients();
   const categories = useIngredientCategories();
+  const ingredientParam = searchParams.get("ingredient");
+  const paramId = ingredientParam === null ? null : Number(ingredientParam);
   const [viewing, setViewing] = useState<Ingredient | null>(null);
   const [draft, setDraft] = useState<IngredientBody | null>(null);
+  const [ignoreIngredientParam, setIgnoreIngredientParam] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const requestedId = ignoreIngredientParam
+    ? viewing === null
+      ? null
+      : viewing.id
+    : viewing !== null
+      ? viewing.id
+      : paramId !== null && Number.isFinite(paramId)
+        ? paramId
+        : null;
+
+  useEffect(() => {
+    if (ignoreIngredientParam && ingredientParam === null) setIgnoreIngredientParam(false);
+  }, [ignoreIngredientParam, ingredientParam]);
+
+  useEffect(() => {
+    if (requestedId === null) return;
+    if (viewing !== null && viewing.id === requestedId && draft !== null) return;
+    const row = (ingredients.list.data ?? []).find((item) => item.id === requestedId);
+    if (row === undefined) return;
+    setViewing(row);
+    setDraft(ingredientDraft(row));
+  }, [requestedId, ingredients.list.data, viewing, draft]);
 
   const openEdit = (row: Ingredient) => {
     ingredients.save.reset();
     ingredients.remove.reset();
+    setIgnoreIngredientParam(false);
     setViewing(row);
-    setDraft({
-      name: row.name,
-      category: row.category,
-      unit: row.unit,
-      is_active: row.is_active,
-      avg_cost: row.avg_cost === undefined ? null : packPrice(row.avg_cost, row.cost_quantity),
-      cost_quantity: row.avg_cost === undefined ? null : unitCostDraft(row.cost_quantity),
-      grams_per_unit: row.grams_per_unit === null ? null : unitCostDraft(row.grams_per_unit),
-    });
+    setDraft(ingredientDraft(row));
+    router.replace(`/menu/ingredients?ingredient=${row.id}`, { scroll: false });
   };
   const openNew = () => {
     ingredients.save.reset();
     ingredients.remove.reset();
+    setIgnoreIngredientParam(true);
     setViewing(null);
     setDraft(emptyIngredient());
+    router.replace("/menu/ingredients", { scroll: false });
   };
   const close = () => {
+    setIgnoreIngredientParam(true);
     setDraft(null);
     setViewing(null);
+    router.replace("/menu/ingredients", { scroll: false });
   };
 
   const rows = ingredients.list.data ?? [];
