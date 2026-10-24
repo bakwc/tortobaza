@@ -24,6 +24,9 @@ from rest_framework.views import APIView
 from accounts.models import UserProfile
 from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
+from crm.analytics import clients as analytics_clients
+from crm.analytics import production as analytics_production
+from crm.analytics import pulse as analytics_pulse
 from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
@@ -43,6 +46,7 @@ from crm.models import (
 )
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
+    AnalyticsMonthQuerySerializer,
     CrmExpensesDaySerializer,
     CrmExpensesMonthSerializer,
     CrmMapOrderSerializer,
@@ -85,6 +89,13 @@ def is_finance_admin(user) -> bool:
 
 class IsFinanceAdmin(BasePermission):
     def has_permission(self, request, view):
+        return is_finance_admin(request.user)
+
+
+class IsStaffOrFinanceAdmin(BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_staff:
+            return True
         return is_finance_admin(request.user)
 
 
@@ -559,6 +570,42 @@ class FinanceTransactionSearchView(APIView):
             )
         transactions = transactions.order_by("-date", "-id")[:20]
         return Response(FinanceTransactionSearchSerializer(transactions, many=True).data)
+
+
+class AnalyticsPulseView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+
+    def get(self, request):
+        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        today = _tbilisi_now().date()
+        month = query_serializer.validated_data.get("month")
+        if month is None:
+            month = f"{today.year:04d}-{today.month:02d}"
+        return Response(analytics_pulse(month, today))
+
+
+class AnalyticsLoadView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+
+    def get(self, request):
+        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        today = _tbilisi_now().date()
+        month = query_serializer.validated_data.get("month")
+        if month is None:
+            month = f"{today.year:04d}-{today.month:02d}"
+        return Response(analytics_production(month, today))
+
+
+class AnalyticsClientsView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+
+    def get(self, request):
+        return Response(analytics_clients(_tbilisi_now().date()))
 
 
 class FinanceAccountsView(APIView):

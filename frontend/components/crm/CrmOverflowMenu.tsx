@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Banknote, BookOpen, ClipboardList, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
+import { Banknote, BookOpen, ChartColumn, ClipboardList, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -32,6 +32,7 @@ export function CrmOverflowMenu() {
   const month = monthParam ?? (dateParam ? dateParam.slice(0, 7) : null);
   const salariesHref = month ? `/crm/salaries?month=${month}` : "/crm/salaries";
   const financeHref = month ? `/finance?month=${month}` : "/finance";
+  const analyticsHref = month ? `/analytics?month=${month}` : "/analytics";
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
   const isStaff = Boolean(currentUser.data?.is_staff);
   const isSalaries = isUnder(pathname, "/crm/salaries");
@@ -44,6 +45,17 @@ export function CrmOverflowMenu() {
       icon: ClipboardList,
       active: isUnder(pathname, "/crm") && !isSalaries,
     },
+    ...(isStaff || isFinanceAdmin
+      ? [
+          {
+            key: "analytics",
+            href: analyticsHref,
+            label: t("analyticsSection"),
+            icon: ChartColumn,
+            active: isUnder(pathname, "/analytics"),
+          },
+        ]
+      : []),
     ...(isFinanceAdmin
       ? [
           {

@@ -452,6 +452,162 @@ export const CrmSalariesSchema = z.object({
   total_money: z.string(),
 });
 
+export const AnalyticsTotalsSchema = z.object({
+  orders: z.number(),
+  revenue: z.string(),
+  average_check: z.string().nullable(),
+  kilograms: z.string(),
+  weight_unknown: z.number(),
+});
+
+export const AnalyticsWeekSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  orders: z.number(),
+  revenue: z.string(),
+  kilograms: z.string(),
+});
+
+export const AnalyticsWeekdaySchema = z.object({
+  weekday: z.number(),
+  orders: z.number(),
+  revenue: z.string(),
+  kilograms: z.string(),
+});
+
+export const AnalyticsPulseSchema = z.object({
+  month: z.string(),
+  start: z.string(),
+  end: z.string(),
+  previous_start: z.string(),
+  previous_end: z.string(),
+  current: AnalyticsTotalsSchema,
+  previous: AnalyticsTotalsSchema,
+  weeks: z.array(AnalyticsWeekSchema),
+  weekdays: z.array(AnalyticsWeekdaySchema),
+});
+
+export const AnalyticsBaselineSchema = z.object({
+  days: z.number(),
+  orders_median: z.string().nullable(),
+  orders_p90: z.string().nullable(),
+  orders_max: z.string().nullable(),
+  kilograms_median: z.string().nullable(),
+  kilograms_p90: z.string().nullable(),
+  kilograms_max: z.string().nullable(),
+});
+
+export const AnalyticsDaySchema = z.object({
+  date: z.string(),
+  orders: z.number(),
+  kilograms: z.string(),
+  weight_unknown: z.number(),
+});
+
+export const AnalyticsSlotsSchema = z.object({
+  interval: z.number(),
+  exact: z.number(),
+  missing: z.number(),
+  morning: z.number(),
+  day: z.number(),
+  evening: z.number(),
+  hours: z.array(z.object({ hour: z.number(), orders: z.number() })),
+});
+
+export const AnalyticsHorizonDaySchema = z.object({
+  date: z.string(),
+  orders: z.number(),
+  kilograms: z.string(),
+});
+
+export const AnalyticsLoadSchema = z.object({
+  month: z.string(),
+  start: z.string(),
+  end: z.string(),
+  baseline: AnalyticsBaselineSchema,
+  days: z.array(AnalyticsDaySchema),
+  slots: AnalyticsSlotsSchema,
+  lead: z.object({
+    median: z.string().nullable(),
+    same_day: z.number(),
+    next_day: z.number(),
+    long: z.number(),
+  }),
+  horizon: z.object({
+    today: z.string(),
+    tomorrow: AnalyticsHorizonDaySchema,
+    day_after: AnalyticsHorizonDaySchema,
+  }),
+});
+
+export const AnalyticsMonthRowSchema = z.object({
+  month: z.string(),
+  new_orders: z.number(),
+  new_revenue: z.string(),
+  return_orders: z.number(),
+  return_revenue: z.string(),
+});
+
+export const AnalyticsCohortCellSchema = z.object({
+  offset: z.number(),
+  count: z.number().nullable(),
+  share: z.string().nullable(),
+  observed: z.boolean(),
+});
+
+export const AnalyticsCustomerSchema = z.object({
+  name: z.string(),
+  phones: z.array(z.string()),
+  orders: z.number(),
+  revenue: z.string(),
+  first: z.string(),
+  last: z.string(),
+  order_id: z.number(),
+});
+
+export const AnalyticsLapsedSchema = z.object({
+  name: z.string(),
+  phones: z.array(z.string()),
+  revenue: z.string(),
+  date: z.string(),
+  order_id: z.number(),
+});
+
+export const AnalyticsFrequencyBucketSchema = z.object({
+  clients: z.number(),
+  revenue: z.string(),
+});
+
+export const AnalyticsClientsSchema = z.object({
+  orders: z.number(),
+  known_orders: z.number(),
+  unknown_orders: z.number(),
+  clients: z.number(),
+  repeat_clients: z.number(),
+  known_revenue: z.string(),
+  repeat_revenue: z.string(),
+  months: z.array(AnalyticsMonthRowSchema),
+  cohorts: z.array(
+    z.object({
+      month: z.string(),
+      clients: z.number(),
+      cells: z.array(AnalyticsCohortCellSchema),
+    }),
+  ),
+  gaps: z.object({
+    median: z.string().nullable(),
+    bins: z.array(z.object({ label: z.string(), count: z.number() })),
+  }),
+  frequency: z.object({
+    once: AnalyticsFrequencyBucketSchema,
+    twice: AnalyticsFrequencyBucketSchema,
+    more: AnalyticsFrequencyBucketSchema,
+  }),
+  top_revenue: z.array(AnalyticsCustomerSchema),
+  top_orders: z.array(AnalyticsCustomerSchema),
+  lapsed: z.array(AnalyticsLapsedSchema),
+});
+
 export const FinanceTransactionSchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -641,6 +797,11 @@ export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type CrmSalaryEmployee = z.infer<typeof CrmSalaryEmployeeSchema>;
 export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
 export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
+export type AnalyticsPulse = z.infer<typeof AnalyticsPulseSchema>;
+export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
+export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
+export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;
+export type AnalyticsLapsed = z.infer<typeof AnalyticsLapsedSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
 export type FinanceAccount = z.infer<typeof FinanceAccountSchema>;

@@ -654,6 +654,10 @@ class CrmSalariesQuerySerializer(serializers.Serializer):
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
 
 
+class AnalyticsMonthQuerySerializer(serializers.Serializer):
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+
+
 class CrmSalaryEmployeeSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
