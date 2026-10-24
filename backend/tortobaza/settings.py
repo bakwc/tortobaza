@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "crm",
     "menu",
     "inventory",
+    "rsge",
     "tortobaza",
 ]
 
@@ -169,6 +170,8 @@ LIBERTY_PAY_ENABLED = os.environ.get("LIBERTY_PAY_ENABLED")
 FLOWWOW_WEBHOOK_SECRET = os.environ.get("FLOWWOW_WEBHOOK_SECRET", "")
 FLOWWOW_API_TOKEN = os.environ.get("FLOWWOW_API_TOKEN")
 FLOWWOW_SHOP_ID = os.environ.get("FLOWWOW_SHOP_ID")
+RS_SU = os.environ.get("RS_SU", "")
+RS_SP = os.environ.get("RS_SP", "")
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465

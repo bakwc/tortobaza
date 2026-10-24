@@ -465,6 +465,7 @@
     "ordersSection": "Orders",
     "menuSection": "Menu",
     "inventorySection": "Inventory",
+    "rsgeSection": "RS.GE",
     "items": {
       "section": "Items",
       "hint": "Optional. Items are used for ingredient write-off and food cost. Weight and filling are prefilled from the items until you edit them.",
@@ -804,5 +805,16 @@
       "writeOffs": "Write-offs",
       "inventoryCounts": "Inventory counts"
     }
+  },
+  "rsge": {
+    "waybills": "Waybills",
+    "empty": "No waybills yet",
+    "status": "Status",
+    "name": "Name",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "price": "Price",
+    "amount": "Amount",
+    "barcode": "Barcode"
   }
 }

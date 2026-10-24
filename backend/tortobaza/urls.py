@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/", include("crm.urls")),
     path("api/", include("menu.urls")),
     path("api/", include("inventory.urls")),
+    path("api/", include("rsge.urls")),
 ]
 
 if settings.DEBUG:

@@ -1142,6 +1142,59 @@ export const StockRowSchema = z.object({
   value: z.string().optional(),
 });
 
+export const RsWaybillGoodSchema = z.object({
+  id: z.number(),
+  rs_id: z.number(),
+  name: z.string(),
+  unit_id: z.number(),
+  unit_txt: z.string(),
+  quantity: z.string(),
+  price: z.string(),
+  amount: z.string(),
+  bar_code: z.string(),
+  a_id: z.number(),
+  vat_type: z.number(),
+  quantity_ext: z.string().nullable(),
+  status: z.number(),
+  quantity_f: z.string(),
+});
+
+export const RsWaybillSchema = z.object({
+  id: z.number(),
+  rs_id: z.number(),
+  waybill_number: z.string(),
+  type: z.number(),
+  status: z.number(),
+  create_date: z.string(),
+  activate_date: z.string(),
+  begin_date: z.string(),
+  delivery_date: z.string().nullable(),
+  close_date: z.string().nullable(),
+  buyer_tin: z.string(),
+  buyer_name: z.string(),
+  seller_tin: z.string(),
+  seller_name: z.string(),
+  start_address: z.string(),
+  end_address: z.string(),
+  driver_tin: z.string(),
+  driver_name: z.string(),
+  car_number: z.string(),
+  reception_info: z.string(),
+  waybill_comment: z.string(),
+  transport_coast: z.string(),
+  full_amount: z.string(),
+  s_user_id: z.number(),
+  par_id: z.number().nullable(),
+  invoice_id: z.number().nullable(),
+  is_confirmed: z.number(),
+  is_corrected: z.number(),
+  seller_st: z.number(),
+  is_med: z.number(),
+  goods: z.array(RsWaybillGoodSchema),
+});
+
+export type RsWaybillGood = z.infer<typeof RsWaybillGoodSchema>;
+export type RsWaybill = z.infer<typeof RsWaybillSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;

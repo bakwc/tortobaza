@@ -213,6 +213,7 @@ class SyncTelegramPhoneTests(TestCase):
         with (
             patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders"),
             patch("crm.management.commands.sync_crm_orders_to_telegram.sync_crm_order_to_telegram"),
+            patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None),
             patch("crm.management.commands.sync_crm_orders_to_telegram.resolve_phone", resolve),
         ):
             call_command("sync_crm_orders_to_telegram")
