@@ -435,9 +435,19 @@ function CrmOrderCard({
   const [resolvingTarget, setResolvingTarget] = useState<"address" | "yandex" | "google" | null>(
     null,
   );
-  const [collapsed, setCollapsed] = useState(order.status === "delivered");
+  const [collapsed, setCollapsed] = useState(order.status === "delivered" && !focused);
   const expandedByUser = useRef(false);
   const previousStatus = useRef(order.status);
+
+  useEffect(() => {
+    if (!focused) {
+      return;
+    }
+    setCollapsed(false);
+    if (order.status === "delivered") {
+      expandedByUser.current = true;
+    }
+  }, [focused, order.status]);
 
   useEffect(() => {
     const previous = previousStatus.current;
