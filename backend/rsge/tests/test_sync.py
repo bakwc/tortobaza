@@ -316,7 +316,7 @@ class WaybillApiTests(TestCase):
 
     def test_finance_admin_lists_waybills_newest_first(self):
         self.client.force_authenticate(self.finance)
-        response = self.client.get("/api/rsge/waybills/")
+        response = self.client.get("/api/rsge/waybills/", {"month": "2026-10"})
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
         self.assertEqual([row["rs_id"] for row in payload], [2, 1])
@@ -327,6 +327,17 @@ class WaybillApiTests(TestCase):
         self.assertIsNone(payload[0]["goods"][0]["quantity_ext"])
         self.assertEqual(payload[1]["goods"], [])
         self.assertEqual(payload[1]["id"], self.first.pk)
+
+    def test_other_month_is_empty(self):
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/waybills/", {"month": "2026-09"})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json(), [])
+
+    def test_month_is_required(self):
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/waybills/")
+        self.assertEqual(response.status_code, 400)
 
     def test_staff_without_finance_admin_is_forbidden(self):
         self.client.force_authenticate(self.staff)
@@ -604,7 +615,7 @@ class InvoiceApiTests(TestCase):
 
     def test_finance_admin_lists_invoices_newest_first(self):
         self.client.force_authenticate(self.finance)
-        response = self.client.get("/api/rsge/invoices/")
+        response = self.client.get("/api/rsge/invoices/", {"month": "2026-10"})
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
         self.assertEqual([row["rs_id"] for row in payload], [364841672, 363988109])
@@ -619,6 +630,17 @@ class InvoiceApiTests(TestCase):
         self.assertEqual(payload[1]["notes"], "apex")
         self.assertIsNotNone(payload[1]["agree_date"])
         self.assertEqual(payload[1]["id"], self.first.pk)
+
+    def test_other_month_is_empty(self):
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/invoices/", {"month": "2026-09"})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json(), [])
+
+    def test_month_is_required(self):
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/invoices/")
+        self.assertEqual(response.status_code, 400)
 
     def test_staff_without_finance_admin_is_forbidden(self):
         self.client.force_authenticate(self.staff)

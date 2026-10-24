@@ -3,6 +3,10 @@ from rest_framework import serializers
 from rsge.models import Invoice, InvoiceLine, Waybill, WaybillGood
 
 
+class MonthQuerySerializer(serializers.Serializer):
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
 class WaybillGoodSerializer(serializers.ModelSerializer):
     class Meta:
         model = WaybillGood

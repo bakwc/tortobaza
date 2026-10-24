@@ -220,8 +220,15 @@ export function endpoints(fetcher: Fetcher) {
       "/api/inventory/inventory-counts/",
       InventoryCountSchema,
     ),
-    rsgeWaybills: resource<RsWaybill, never>(fetcher, "/api/rsge/waybills/", RsWaybillSchema),
-    rsgeInvoices: resource<RsInvoice, never>(fetcher, "/api/rsge/invoices/", RsInvoiceSchema),
+    async getRsgeWaybills(month: string): Promise<RsWaybill[]> {
+      const raw = await fetcher<unknown>("/api/rsge/waybills/", { searchParams: { month } });
+      return parse(z.array(RsWaybillSchema), raw);
+    },
+
+    async getRsgeInvoices(month: string): Promise<RsInvoice[]> {
+      const raw = await fetcher<unknown>("/api/rsge/invoices/", { searchParams: { month } });
+      return parse(z.array(RsInvoiceSchema), raw);
+    },
 
     async getTechCardCost(
       id: number,

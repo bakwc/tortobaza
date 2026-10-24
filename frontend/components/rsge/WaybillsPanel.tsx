@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Card, QueryState, formatQuantity } from "@/components/menu/ui";
+import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useWaybills } from "@/hooks/useWaybills";
 import { formatCrmDateTime, formatMoney } from "@/lib/format";
 import type { RsWaybillGood } from "@/lib/api/types";
@@ -20,7 +21,8 @@ function unitLabel(good: RsWaybillGood, locale: string): string {
 export function WaybillsPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
-  const waybills = useWaybills();
+  const period = useFinancePeriod();
+  const waybills = useWaybills(period.month);
 
   return (
     <QueryState isLoading={waybills.isLoading} isError={waybills.isError}>

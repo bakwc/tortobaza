@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Card, QueryState, formatQuantity } from "@/components/menu/ui";
+import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useInvoices } from "@/hooks/useInvoices";
 import { formatCrmDateTime, formatMoney } from "@/lib/format";
 
@@ -13,7 +14,8 @@ function localized(locale: string, original: string, ru: string): string {
 export function InvoicesPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
-  const invoices = useInvoices();
+  const period = useFinancePeriod();
+  const invoices = useInvoices(period.month);
 
   return (
     <QueryState isLoading={invoices.isLoading} isError={invoices.isError}>
