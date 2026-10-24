@@ -7,8 +7,15 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from rsge.client import fetch_buyer_waybills, fetch_waybill_goods
-from rsge.models import Waybill, WaybillGood, WaybillSync
+from rsge.client import (
+    call_chek,
+    call_get_un_id,
+    fetch_buyer_invoices,
+    fetch_buyer_waybills,
+    fetch_invoice_lines,
+    fetch_waybill_goods,
+)
+from rsge.models import Invoice, InvoiceLine, InvoiceSync, Waybill, WaybillGood, WaybillSync
 
 TB = ZoneInfo("Asia/Tbilisi")
 RECENT_DAYS = 3
@@ -171,6 +178,84 @@ def mark_synced(now: datetime) -> None:
     state.save(update_fields=["synced_at"])
 
 
+def optional_decimal(element: ET.Element, tag: str) -> Decimal | None:
+    value = child_text(element, tag)
+    if value is None:
+        return None
+    return Decimal(value)
+
+
+def line_from(invoice: Invoice, element: ET.Element) -> InvoiceLine:
+    return InvoiceLine(
+        invoice=invoice,
+        rs_id=int(require_child(element, "ID")),
+        goods=require_child(element, "GOODS"),
+        unit=require_child(element, "G_UNIT"),
+        quantity=Decimal(require_child(element, "G_NUMBER")),
+        full_amount=Decimal(require_child(element, "FULL_AMOUNT")),
+        vat_amount=Decimal(require_child(element, "DRG_AMOUNT")),
+        excise_amount=optional_decimal(element, "AQCIZI_AMOUNT"),
+        excise_id=int(require_child(element, "AKCIS_ID")),
+        waybill_id=optional_int(element, "WAYBILL_ID"),
+        vat_type=int(require_child(element, "VAT_TYPE")),
+    )
+
+
+def save_invoice(su: str, sp: str, user_id: str, element: ET.Element) -> None:
+    rs_id = int(require_child(element, "ID"))
+    if Invoice.objects.filter(rs_id=rs_id).exists():
+        return
+    lines = fetch_invoice_lines(su, sp, user_id, str(rs_id))
+    with transaction.atomic():
+        invoice = Invoice.objects.create(
+            rs_id=rs_id,
+            seller_un_id=int(require_child(element, "SELLER_UN_ID")),
+            seq_num_b=optional_int(element, "SEQ_NUM_B"),
+            status=int(require_child(element, "STATUS")),
+            was_ref=int(require_child(element, "WAS_REF")),
+            series=require_child(element, "F_SERIES"),
+            number=require_child(element, "F_NUMBER"),
+            reg_dt=parse_dt(require_child(element, "REG_DT")),
+            operation_dt=parse_dt(require_child(element, "OPERATION_DT")),
+            s_user_id=int(require_child(element, "S_USER_ID")),
+            b_s_user_id=int(require_child(element, "B_S_USER_ID")),
+            doc_mos_nom=blank(element, "DOC_MOS_NOM_B"),
+            seller_tin=require_child(element, "SA_IDENT_NO"),
+            org_name=require_child(element, "ORG_NAME"),
+            notes=blank(element, "NOTES"),
+            amount=Decimal(require_child(element, "TANXA")),
+            vat=Decimal(require_child(element, "VAT")),
+            k_id=int(require_child(element, "K_ID")),
+            agree_date=optional_dt(element, "AGREE_DATE"),
+            agree_s_user_id=optional_int(element, "AGREE_S_USER_ID"),
+            ref_date=optional_dt(element, "REF_DATE"),
+            ref_s_user_id=optional_int(element, "REF_S_USER_ID"),
+            note=blank(element, "NOTE"),
+        )
+        InvoiceLine.objects.bulk_create([line_from(invoice, line) for line in lines])
+
+
+def save_new_invoices(su: str, sp: str, user_id: str, rows: list[ET.Element]) -> None:
+    for element in rows:
+        save_invoice(su, sp, user_id, element)
+
+
+def stored_invoice_synced_at() -> datetime | None:
+    state = InvoiceSync.objects.order_by("pk").first()
+    if state is None:
+        return None
+    return state.synced_at
+
+
+def mark_invoices_synced(now: datetime) -> None:
+    state = InvoiceSync.objects.order_by("pk").first()
+    if state is None:
+        InvoiceSync.objects.create(synced_at=now)
+        return
+    state.synced_at = now
+    state.save(update_fields=["synced_at"])
+
+
 def sync_waybills() -> None:
     su = settings.RS_SU
     sp = settings.RS_SP
@@ -183,3 +268,19 @@ def sync_waybills() -> None:
         result = fetch_buyer_waybills(su, sp, create_date_s, create_date_e)
         save_new_waybills(su, sp, result)
     mark_synced(now)
+
+
+def sync_invoices() -> None:
+    su = settings.RS_SU
+    sp = settings.RS_SP
+    if su == "" or sp == "":
+        raise RuntimeError("RS_SU and RS_SP are required")
+    now = timezone.now()
+    start = window_start(now, stored_invoice_synced_at())
+    end = now.astimezone(TB).date()
+    user_id = call_chek(su, sp)
+    un_id = call_get_un_id(su, sp, user_id)
+    for s_dt, e_dt in chunk_bounds(start, end):
+        rows = fetch_buyer_invoices(su, sp, user_id, un_id, s_dt, e_dt)
+        save_new_invoices(su, sp, user_id, rows)
+    mark_invoices_synced(now)

@@ -808,7 +808,10 @@
   },
   "rsge": {
     "waybills": "Waybills",
+    "invoices": "Invoices",
     "empty": "No waybills yet",
+    "invoicesEmpty": "No invoices yet",
+    "vat": "VAT",
     "status": "Status",
     "name": "Name",
     "quantity": "Quantity",

@@ -1193,8 +1193,52 @@ export const RsWaybillSchema = z.object({
   goods: z.array(RsWaybillGoodSchema),
 });
 
+export const RsInvoiceLineSchema = z.object({
+  id: z.number(),
+  rs_id: z.number(),
+  goods: z.string(),
+  unit: z.string(),
+  quantity: z.string(),
+  full_amount: z.string(),
+  vat_amount: z.string(),
+  excise_amount: z.string().nullable(),
+  excise_id: z.number(),
+  waybill_id: z.number().nullable(),
+  vat_type: z.number(),
+});
+
+export const RsInvoiceSchema = z.object({
+  id: z.number(),
+  rs_id: z.number(),
+  seller_un_id: z.number(),
+  seq_num_b: z.number().nullable(),
+  status: z.number(),
+  was_ref: z.number(),
+  series: z.string(),
+  number: z.string(),
+  reg_dt: z.string(),
+  operation_dt: z.string(),
+  s_user_id: z.number(),
+  b_s_user_id: z.number(),
+  doc_mos_nom: z.string(),
+  seller_tin: z.string(),
+  org_name: z.string(),
+  notes: z.string(),
+  amount: z.string(),
+  vat: z.string(),
+  k_id: z.number(),
+  agree_date: z.string().nullable(),
+  agree_s_user_id: z.number().nullable(),
+  ref_date: z.string().nullable(),
+  ref_s_user_id: z.number().nullable(),
+  note: z.string(),
+  lines: z.array(RsInvoiceLineSchema),
+});
+
 export type RsWaybillGood = z.infer<typeof RsWaybillGoodSchema>;
 export type RsWaybill = z.infer<typeof RsWaybillSchema>;
+export type RsInvoiceLine = z.infer<typeof RsInvoiceLineSchema>;
+export type RsInvoice = z.infer<typeof RsInvoiceSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from rsge.models import Waybill, WaybillGood
+from rsge.models import Invoice, InvoiceLine, Waybill, WaybillGood
 
 
 class WaybillGoodSerializer(serializers.ModelSerializer):
@@ -61,4 +61,56 @@ class WaybillSerializer(serializers.ModelSerializer):
             "seller_st",
             "is_med",
             "goods",
+        ]
+
+
+class InvoiceLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceLine
+        fields = [
+            "id",
+            "rs_id",
+            "goods",
+            "unit",
+            "quantity",
+            "full_amount",
+            "vat_amount",
+            "excise_amount",
+            "excise_id",
+            "waybill_id",
+            "vat_type",
+        ]
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    lines = InvoiceLineSerializer(many=True)
+
+    class Meta:
+        model = Invoice
+        fields = [
+            "id",
+            "rs_id",
+            "seller_un_id",
+            "seq_num_b",
+            "status",
+            "was_ref",
+            "series",
+            "number",
+            "reg_dt",
+            "operation_dt",
+            "s_user_id",
+            "b_s_user_id",
+            "doc_mos_nom",
+            "seller_tin",
+            "org_name",
+            "notes",
+            "amount",
+            "vat",
+            "k_id",
+            "agree_date",
+            "agree_s_user_id",
+            "ref_date",
+            "ref_s_user_id",
+            "note",
+            "lines",
         ]

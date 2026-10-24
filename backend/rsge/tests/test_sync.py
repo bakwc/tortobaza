@@ -8,8 +8,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from rsge.models import Waybill, WaybillGood, WaybillSync
-from rsge.sync import sync_waybills, window_start
+from rsge.models import Invoice, InvoiceLine, InvoiceSync, Waybill, WaybillGood, WaybillSync
+from rsge.sync import sync_invoices, sync_waybills, window_start
 
 TB = ZoneInfo("Asia/Tbilisi")
 NOW = datetime(2026, 10, 24, 12, 0, tzinfo=TB)
@@ -329,4 +329,295 @@ class WaybillApiTests(TestCase):
     def test_non_staff_is_forbidden(self):
         self.client.force_authenticate(self.worker)
         response = self.client.get("/api/rsge/waybills/")
+        self.assertEqual(response.status_code, 403)
+
+
+DIFFGRAM_NS = "urn:schemas-microsoft-com:xml-diffgram-v1"
+
+
+def invoice_xml(rs_id: int, status: int, reg_dt: str, agree: bool) -> str:
+    agree_xml = ""
+    if agree:
+        agree_xml = "<AGREE_DATE>2026-10-03T10:54:15+04:00</AGREE_DATE><AGREE_S_USER_ID>437747</AGREE_S_USER_ID>"
+    return f"""
+    <invoices>
+      <ID>{rs_id}</ID>
+      <SELLER_UN_ID>931738</SELLER_UN_ID>
+      <STATUS>{status}</STATUS>
+      <WAS_REF>0</WAS_REF>
+      <F_SERIES>ეა-86</F_SERIES>
+      <F_NUMBER>8508123</F_NUMBER>
+      <REG_DT>{reg_dt}</REG_DT>
+      <OPERATION_DT>2026-09-26T18:18:46+04:00</OPERATION_DT>
+      <S_USER_ID>437747</S_USER_ID>
+      <B_S_USER_ID>0</B_S_USER_ID>
+      <SA_IDENT_NO>248435670</SA_IDENT_NO>
+      <ORG_NAME>შპს თურსა</ORG_NAME>
+      <NOTES>apex</NOTES>
+      <TANXA>222.17</TANXA>
+      <VAT>33.89</VAT>
+      <K_ID>-1</K_ID>
+      {agree_xml}
+    </invoices>
+    """
+
+
+def line_xml(rs_id: int, inv_id: int, goods: str, quantity: str) -> str:
+    return f"""
+    <invoices_descs>
+      <ID>{rs_id}</ID>
+      <INV_ID>{inv_id}</INV_ID>
+      <GOODS>{goods}</GOODS>
+      <G_UNIT>კგ</G_UNIT>
+      <G_NUMBER>{quantity}</G_NUMBER>
+      <FULL_AMOUNT>18.48</FULL_AMOUNT>
+      <DRG_AMOUNT>2.82</DRG_AMOUNT>
+      <AKCIS_ID>0</AKCIS_ID>
+      <VAT_TYPE>0</VAT_TYPE>
+    </invoices_descs>
+    """
+
+
+def diffgram_result(*rows: str) -> ET.Element:
+    body = "".join(rows)
+    return ET.fromstring(
+        f"""<Result>
+          <diffgram xmlns="{DIFFGRAM_NS}">
+            <DocumentElement xmlns="">{body}</DocumentElement>
+          </diffgram>
+        </Result>"""
+    )
+
+
+def empty_invoices() -> ET.Element:
+    return ET.fromstring(f'<Result><diffgram xmlns="{DIFFGRAM_NS}" /></Result>')
+
+
+def stored_invoice(rs_id: int) -> Invoice:
+    moment = datetime(2026, 10, 1, 12, 0, tzinfo=TB)
+    return Invoice.objects.create(
+        rs_id=rs_id,
+        seller_un_id=1,
+        status=1,
+        was_ref=0,
+        series="old",
+        number=str(rs_id),
+        reg_dt=moment,
+        operation_dt=moment,
+        s_user_id=0,
+        b_s_user_id=0,
+        seller_tin="1",
+        org_name="Old org",
+        amount=Decimal("1"),
+        vat=Decimal("0"),
+        k_id=-1,
+    )
+
+
+@override_settings(RS_SU="su", RS_SP="sp")
+class InvoiceSyncTests(TestCase):
+    @patch("rsge.sync.timezone.now", return_value=NOW)
+    @patch("rsge.client.call_get_invoice_desc")
+    @patch("rsge.client.call_get_buyer_invoices")
+    @patch("rsge.sync.call_get_un_id", return_value="931738")
+    @patch("rsge.sync.call_chek", return_value="437747")
+    def test_recent_sync_requests_the_last_three_days(self, chek, un_id, buyer, detail, _now):
+        InvoiceSync.objects.create(synced_at=datetime(2026, 10, 23, 15, 0, tzinfo=TB))
+        buyer.return_value = empty_invoices()
+        sync_invoices()
+        self.assertEqual(chek.call_args_list, [call("su", "sp")])
+        self.assertEqual(un_id.call_args_list, [call("su", "sp", "437747")])
+        self.assertEqual(
+            [item.args[4:] for item in buyer.call_args_list],
+            [
+                ("2026-10-21T00:00:00", "2026-10-24T00:00:00"),
+                ("2026-10-24T00:00:00", "2026-10-25T00:00:00"),
+            ],
+        )
+        self.assertEqual(buyer.call_args_list[0].args[:4], ("su", "sp", "437747", "931738"))
+        detail.assert_not_called()
+        self.assertEqual(InvoiceSync.objects.get().synced_at, NOW)
+
+    @patch("rsge.sync.timezone.now", return_value=NOW)
+    @patch("rsge.client.call_get_invoice_desc")
+    @patch("rsge.client.call_get_buyer_invoices")
+    @patch("rsge.sync.call_get_un_id", return_value="931738")
+    @patch("rsge.sync.call_chek", return_value="437747")
+    def test_existing_invoice_is_not_fetched_again(self, chek, un_id, buyer, detail, _now):
+        existing = stored_invoice(363988109)
+        InvoiceSync.objects.create(synced_at=datetime(2026, 10, 23, 8, 0, tzinfo=TB))
+        buyer.return_value = diffgram_result(
+            invoice_xml(363988109, 9, "2026-10-02T18:29:21+04:00", True),
+            invoice_xml(364841672, 1, "2026-10-11T21:51:47+04:00", False),
+        )
+        detail.return_value = diffgram_result(
+            line_xml(4670731325, 364841672, "ლაიმი", "0.924"),
+            line_xml(4670731326, 364841672, "ბანანი", "2.016"),
+        )
+        sync_invoices()
+        self.assertEqual(detail.call_args_list, [call("su", "sp", "437747", "364841672")])
+        existing.refresh_from_db()
+        self.assertEqual(existing.status, 1)
+        self.assertEqual(existing.org_name, "Old org")
+        self.assertEqual(existing.lines.count(), 0)
+        created = Invoice.objects.get(rs_id=364841672)
+        self.assertEqual(created.series, "ეა-86")
+        self.assertEqual(created.number, "8508123")
+        self.assertEqual(created.org_name, "შპს თურსა")
+        self.assertEqual(created.notes, "apex")
+        self.assertEqual(created.seller_tin, "248435670")
+        self.assertEqual(created.amount, Decimal("222.17"))
+        self.assertEqual(created.vat, Decimal("33.89"))
+        self.assertEqual(created.status, 1)
+        self.assertIsNone(created.agree_date)
+        self.assertIsNone(created.seq_num_b)
+        self.assertEqual(created.doc_mos_nom, "")
+        self.assertEqual(created.note, "")
+        self.assertEqual(created.reg_dt, datetime.fromisoformat("2026-10-11T21:51:47+04:00"))
+        self.assertEqual(created.operation_dt, datetime.fromisoformat("2026-09-26T18:18:46+04:00"))
+        lime = created.lines.get(rs_id=4670731325)
+        banana = created.lines.get(rs_id=4670731326)
+        self.assertEqual(lime.goods, "ლაიმი")
+        self.assertEqual(lime.unit, "კგ")
+        self.assertEqual(lime.quantity, Decimal("0.924"))
+        self.assertEqual(lime.full_amount, Decimal("18.48"))
+        self.assertEqual(lime.vat_amount, Decimal("2.82"))
+        self.assertIsNone(lime.excise_amount)
+        self.assertIsNone(lime.waybill_id)
+        self.assertEqual(lime.excise_id, 0)
+        self.assertEqual(banana.quantity, Decimal("2.016"))
+        self.assertEqual(InvoiceSync.objects.get().synced_at, NOW)
+        chek.assert_called_once_with("su", "sp")
+        un_id.assert_called_once_with("su", "sp", "437747")
+
+    @patch("rsge.sync.timezone.now", return_value=NOW)
+    @patch("rsge.client.call_get_invoice_desc")
+    @patch("rsge.client.call_get_buyer_invoices")
+    @patch("rsge.sync.call_get_un_id", return_value="931738")
+    @patch("rsge.sync.call_chek", return_value="437747")
+    def test_agreed_invoice_keeps_offset_and_lines(self, _chek, _un_id, buyer, detail, _now):
+        InvoiceSync.objects.create(synced_at=datetime(2026, 10, 23, 8, 0, tzinfo=TB))
+        buyer.return_value = diffgram_result(
+            invoice_xml(363988109, 2, "2026-10-02T18:29:21+04:00", True),
+        )
+        detail.return_value = diffgram_result(line_xml(4670731325, 363988109, "ლაიმი", "0.924"))
+        sync_invoices()
+        created = Invoice.objects.get(rs_id=363988109)
+        self.assertEqual(created.status, 2)
+        self.assertEqual(created.agree_date, datetime.fromisoformat("2026-10-03T10:54:15+04:00"))
+        self.assertEqual(created.agree_s_user_id, 437747)
+        self.assertEqual(created.reg_dt, datetime.fromisoformat("2026-10-02T18:29:21+04:00"))
+        self.assertEqual(created.lines.count(), 1)
+
+    @patch("rsge.sync.timezone.now", return_value=NOW)
+    @patch("rsge.client.call_get_invoice_desc")
+    @patch("rsge.client.call_get_buyer_invoices")
+    @patch("rsge.sync.call_get_un_id", return_value="931738")
+    @patch("rsge.sync.call_chek", return_value="437747")
+    def test_failed_chunk_keeps_saved_invoices_and_synced_at(self, _chek, _un_id, buyer, detail, _now):
+        old = datetime(2026, 10, 10, 8, 0, tzinfo=TB)
+        InvoiceSync.objects.create(synced_at=old)
+
+        def lists(su, sp, user_id, un_id, start, end):
+            if start == "2026-10-10T00:00:00":
+                return diffgram_result(invoice_xml(5, 2, "2026-10-02T18:29:21+04:00", True))
+            if start == "2026-10-13T00:00:00":
+                return ET.fromstring("<Result><STATUS>-1</STATUS></Result>")
+            return empty_invoices()
+
+        buyer.side_effect = lists
+        detail.return_value = diffgram_result(line_xml(10, 5, "ლაიმი", "1"))
+        with self.assertRaises(RuntimeError):
+            sync_invoices()
+        self.assertEqual(Invoice.objects.get(rs_id=5).lines.count(), 1)
+        self.assertEqual(InvoiceSync.objects.get().synced_at, old)
+        self.assertEqual(detail.call_args_list, [call("su", "sp", "437747", "5")])
+
+    @override_settings(RS_SU="", RS_SP="")
+    @patch("rsge.sync.call_chek")
+    def test_empty_credentials_raise(self, chek):
+        with self.assertRaises(RuntimeError):
+            sync_invoices()
+        chek.assert_not_called()
+        self.assertEqual(InvoiceSync.objects.count(), 0)
+
+
+class InvoiceApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.staff = User.objects.create_user("boss", password="x", is_staff=True)
+        self.worker = User.objects.create_user("worker", password="x")
+        older = datetime(2026, 10, 2, 18, 29, 21, tzinfo=TB)
+        newer = datetime(2026, 10, 11, 21, 51, 47, tzinfo=TB)
+        first = Invoice.objects.create(
+            rs_id=363988109,
+            seller_un_id=931738,
+            status=2,
+            was_ref=0,
+            series="ეა-86",
+            number="8508123",
+            reg_dt=older,
+            operation_dt=older,
+            s_user_id=437747,
+            b_s_user_id=0,
+            seller_tin="248435670",
+            org_name="შპს თურსა",
+            notes="apex",
+            amount=Decimal("222.17"),
+            vat=Decimal("33.89"),
+            k_id=-1,
+            agree_date=datetime(2026, 10, 3, 10, 54, 15, tzinfo=TB),
+        )
+        second = Invoice.objects.create(
+            rs_id=364841672,
+            seller_un_id=2719091,
+            status=1,
+            was_ref=0,
+            series="ეა-86",
+            number="9392733",
+            reg_dt=newer,
+            operation_dt=newer,
+            s_user_id=507792,
+            b_s_user_id=0,
+            seller_tin="405260042",
+            org_name="შპს ვოლტ ჯორჯია",
+            notes="ERP ნექსია",
+            amount=Decimal("21.24"),
+            vat=Decimal("3.24"),
+            k_id=-1,
+        )
+        InvoiceLine.objects.create(
+            invoice=second,
+            rs_id=4686329596,
+            goods="Wolt service",
+            unit="მომსახურება",
+            quantity=Decimal("0"),
+            full_amount=Decimal("21.24"),
+            vat_amount=Decimal("3.24"),
+            excise_id=0,
+            vat_type=0,
+        )
+        self.first = first
+
+    def test_staff_lists_invoices_newest_first(self):
+        self.client.force_authenticate(self.staff)
+        response = self.client.get("/api/rsge/invoices/")
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertEqual([row["rs_id"] for row in payload], [364841672, 363988109])
+        self.assertEqual(payload[0]["number"], "9392733")
+        self.assertEqual(payload[0]["org_name"], "შპს ვოლტ ჯორჯია")
+        self.assertEqual(payload[0]["notes"], "ERP ნექსია")
+        self.assertEqual(payload[0]["lines"][0]["goods"], "Wolt service")
+        self.assertEqual(payload[0]["lines"][0]["unit"], "მომსახურება")
+        self.assertIsNone(payload[0]["lines"][0]["excise_amount"])
+        self.assertIsNone(payload[0]["agree_date"])
+        self.assertEqual(payload[1]["lines"], [])
+        self.assertEqual(payload[1]["notes"], "apex")
+        self.assertIsNotNone(payload[1]["agree_date"])
+        self.assertEqual(payload[1]["id"], self.first.pk)
+
+    def test_non_staff_is_forbidden(self):
+        self.client.force_authenticate(self.worker)
+        response = self.client.get("/api/rsge/invoices/")
         self.assertEqual(response.status_code, 403)

@@ -537,6 +537,7 @@ class FlowwowProductFieldsTests(TestCase):
 
 
 class FlowwowSyncCommandTests(TestCase):
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")
     def test_existing_timer_command_imports_flowwow_orders(self, mock_sync):

@@ -86,3 +86,80 @@ class WaybillGood(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class InvoiceSync(models.Model):
+    synced_at = models.DateTimeField(verbose_name=_("Synced at"))
+
+    class Meta:
+        verbose_name = _("Invoice sync")
+        verbose_name_plural = _("Invoice syncs")
+
+    def __str__(self) -> str:
+        return self.synced_at.isoformat()
+
+
+class Invoice(models.Model):
+    rs_id = models.BigIntegerField(unique=True, verbose_name=_("RS id"))
+    seller_un_id = models.BigIntegerField(verbose_name=_("Seller un id"))
+    seq_num_b = models.BigIntegerField(null=True, verbose_name=_("Sequence number"))
+    status = models.IntegerField(verbose_name=_("Status"))
+    was_ref = models.IntegerField(verbose_name=_("Was ref"))
+    series = models.CharField(max_length=32, verbose_name=_("Series"))
+    number = models.CharField(max_length=64, verbose_name=_("Number"))
+    reg_dt = models.DateTimeField(verbose_name=_("Registration date"))
+    operation_dt = models.DateTimeField(verbose_name=_("Operation date"))
+    s_user_id = models.BigIntegerField(verbose_name=_("Seller user id"))
+    b_s_user_id = models.BigIntegerField(verbose_name=_("Buyer user id"))
+    doc_mos_nom = models.CharField(max_length=128, blank=True, verbose_name=_("Document number"))
+    seller_tin = models.CharField(max_length=32, verbose_name=_("Seller TIN"))
+    org_name = models.TextField(verbose_name=_("Organization"))
+    notes = models.TextField(blank=True, verbose_name=_("Notes"))
+    amount = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("Amount"))
+    vat = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("VAT"))
+    k_id = models.BigIntegerField(verbose_name=_("K id"))
+    agree_date = models.DateTimeField(null=True, verbose_name=_("Agree date"))
+    agree_s_user_id = models.BigIntegerField(null=True, verbose_name=_("Agree user id"))
+    ref_date = models.DateTimeField(null=True, verbose_name=_("Ref date"))
+    ref_s_user_id = models.BigIntegerField(null=True, verbose_name=_("Ref user id"))
+    note = models.TextField(blank=True, verbose_name=_("Note"))
+
+    class Meta:
+        ordering = ["-reg_dt", "-rs_id"]
+        verbose_name = _("Invoice")
+        verbose_name_plural = _("Invoices")
+
+    def __str__(self) -> str:
+        return f"{self.series} {self.number}"
+
+
+class InvoiceLine(models.Model):
+    invoice = models.ForeignKey(
+        Invoice,
+        related_name="lines",
+        on_delete=models.CASCADE,
+        verbose_name=_("Invoice"),
+    )
+    rs_id = models.BigIntegerField(unique=True, verbose_name=_("RS id"))
+    goods = models.TextField(verbose_name=_("Goods"))
+    unit = models.CharField(max_length=64, verbose_name=_("Unit"))
+    quantity = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("Quantity"))
+    full_amount = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("Full amount"))
+    vat_amount = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("VAT amount"))
+    excise_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=4,
+        null=True,
+        verbose_name=_("Excise amount"),
+    )
+    excise_id = models.BigIntegerField(verbose_name=_("Excise id"))
+    waybill_id = models.BigIntegerField(null=True, verbose_name=_("Waybill id"))
+    vat_type = models.IntegerField(verbose_name=_("VAT type"))
+
+    class Meta:
+        ordering = ["rs_id"]
+        verbose_name = _("Invoice line")
+        verbose_name_plural = _("Invoice lines")
+
+    def __str__(self) -> str:
+        return self.goods

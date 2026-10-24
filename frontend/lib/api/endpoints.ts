@@ -23,6 +23,7 @@ import {
   CrmOrdersResponseSchema,
   ResolveGoogleAddressResponseSchema,
   ResolveYandexAddressResponseSchema,
+  RsInvoiceSchema,
   RsWaybillSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
@@ -72,6 +73,7 @@ import {
   type ProductDetail,
   type ProductsPage,
   type PromoValidation,
+  type RsInvoice,
   type RsWaybill,
   type SessionUser,
   type StartPaymentBody,
@@ -219,6 +221,7 @@ export function endpoints(fetcher: Fetcher) {
       InventoryCountSchema,
     ),
     rsgeWaybills: resource<RsWaybill, never>(fetcher, "/api/rsge/waybills/", RsWaybillSchema),
+    rsgeInvoices: resource<RsInvoice, never>(fetcher, "/api/rsge/invoices/", RsInvoiceSchema),
 
     async getTechCardCost(
       id: number,
