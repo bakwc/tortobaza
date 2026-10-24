@@ -41,6 +41,8 @@ class UserProfile(models.Model):
         verbose_name=_("Gender"),
     )
     is_finance_admin = models.BooleanField(default=False, verbose_name=_("Finance admin"))
+    is_active_courier = models.BooleanField(default=False, verbose_name=_("Active courier"))
+    pushover_user = models.CharField(max_length=30, blank=True, verbose_name=_("Pushover user"))
 
     class Meta:
         verbose_name = _("Profile")

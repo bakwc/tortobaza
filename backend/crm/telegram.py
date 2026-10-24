@@ -229,6 +229,16 @@ def _prep_lead_minutes(duration_seconds: int | None) -> int:
     return math.ceil(lead / 5) * 5
 
 
+def crm_order_departure_datetime(order: CrmOrder) -> datetime | None:
+    if order.fulfillment_type != CrmOrder.FULFILLMENT_DELIVERY:
+        return None
+    if order.when_ready or order.time_start is None:
+        return None
+    slot = crm_order_slot_datetime(order)
+    lead = _prep_lead_minutes(order.delivery_duration_seconds)
+    return slot - timedelta(minutes=lead)
+
+
 def _format_prep_slot(order: CrmOrder) -> str | None:
     if order.when_ready or order.time_start is None:
         return None

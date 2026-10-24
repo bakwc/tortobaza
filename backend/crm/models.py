@@ -100,6 +100,11 @@ class CrmOrder(models.Model):
         blank=True,
         verbose_name=_("Delivery route computed at"),
     )
+    courier_alerted_departure_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Courier alerted departure at"),
+    )
     fulfillment_type = models.CharField(
         max_length=10,
         choices=FULFILLMENT_CHOICES,
