@@ -167,11 +167,10 @@ class AnalyticsApiTests(TestCase):
         response = self.client.get("/api/crm/analytics/load/")
         self.assertEqual(response.status_code, 403)
 
-    def test_staff_can_read(self):
+    def test_staff_access_denied(self):
         self.client.force_authenticate(user=self.staff)
         response = self.client.get("/api/crm/analytics/pulse/", {"month": "2026-10"})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["month"], "2026-10")
+        self.assertEqual(response.status_code, 403)
 
     def test_finance_admin_can_read(self):
         self.client.force_authenticate(user=self.finance)

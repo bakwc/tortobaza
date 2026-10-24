@@ -92,13 +92,6 @@ class IsFinanceAdmin(BasePermission):
         return is_finance_admin(request.user)
 
 
-class IsStaffOrFinanceAdmin(BasePermission):
-    def has_permission(self, request, view):
-        if request.user.is_staff:
-            return True
-        return is_finance_admin(request.user)
-
-
 class CrmOrderWritePermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
@@ -574,7 +567,7 @@ class FinanceTransactionSearchView(APIView):
 
 class AnalyticsPulseView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
 
     def get(self, request):
         query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
@@ -588,7 +581,7 @@ class AnalyticsPulseView(APIView):
 
 class AnalyticsLoadView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
 
     def get(self, request):
         query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
@@ -602,7 +595,7 @@ class AnalyticsLoadView(APIView):
 
 class AnalyticsClientsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsStaffOrFinanceAdmin]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
 
     def get(self, request):
         return Response(analytics_clients(_tbilisi_now().date()))

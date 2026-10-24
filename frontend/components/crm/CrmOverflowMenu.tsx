@@ -45,7 +45,7 @@ export function CrmOverflowMenu() {
       icon: ClipboardList,
       active: isUnder(pathname, "/crm") && !isSalaries,
     },
-    ...(isStaff || isFinanceAdmin
+    ...(isFinanceAdmin
       ? [
           {
             key: "analytics",
@@ -54,10 +54,6 @@ export function CrmOverflowMenu() {
             icon: ChartColumn,
             active: isUnder(pathname, "/analytics"),
           },
-        ]
-      : []),
-    ...(isFinanceAdmin
-      ? [
           {
             key: "finance",
             href: financeHref,

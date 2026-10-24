@@ -49,7 +49,7 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
   const currentQuery = searchParams.toString();
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
-  const allowed = Boolean(currentUser.data?.is_staff || currentUser.data?.is_finance_admin);
+  const allowed = Boolean(currentUser.data?.is_finance_admin);
   const showPeriod = section !== "clients";
 
   if (!allowed) {
@@ -58,7 +58,7 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
         <div className="flex justify-end">
           <CrmOverflowMenu />
         </div>
-        <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">{crm("adminOnly")}</div>
+        <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">{crm("staffOnly")}</div>
       </div>
     );
   }
