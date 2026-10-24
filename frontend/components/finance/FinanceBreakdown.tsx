@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
@@ -13,6 +13,14 @@ const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment",
 const NEUTRAL_ACTIVE = "bg-[var(--ink)] text-white";
 const INCOME_ACTIVE = "bg-emerald-600 text-white";
 const EXPENSE_ACTIVE = "bg-rose-600 text-white";
+const DONUT_SIZE = 260;
+const DONUT_CENTER = 130;
+const DONUT_OUTER = 118;
+const DONUT_INNER = 70;
+const DONUT_PULL = 8;
+const DONUT_TOP = 7;
+const REST_KEY = "__rest__";
+const REST_COLOR = "#b5b5b5";
 const PIE_COLORS = [
   "#cc767f",
   "#d4a017",
@@ -182,9 +190,11 @@ export function FinanceBreakdown({
       .reduce((sum, tx) => sum + magnitude(tx, rates), 0),
   }));
 
+  const showDonut = typeField === "expense_type";
+
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
           <FilterPill
             active={accountFilters.length === 0}
@@ -239,15 +249,14 @@ export function FinanceBreakdown({
         </div>
       ) : (
         <>
-          <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+          <section className="min-w-0 rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">
               {t("total")}
             </h2>
             <p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{formatAed(total)}</p>
           </section>
           <ChartCard title={t("byAccount")}>
-            {typeField === "expense_type" ? <SharePie rows={byAccount} /> : null}
-            <BarList
+            <BreakdownChart
               rows={byAccount}
               selectedKeys={accountFilters.map(String)}
               disabledKeys={[]}
@@ -257,11 +266,13 @@ export function FinanceBreakdown({
                   type: typeFilters,
                 })
               }
+              showDonut={showDonut}
+              collapseDonut={false}
+              restLabel=""
             />
           </ChartCard>
           <ChartCard title={t("byType")}>
-            {typeField === "expense_type" ? <SharePie rows={byType} /> : null}
-            <BarList
+            <BreakdownChart
               rows={byType}
               selectedKeys={typeFilters}
               disabledKeys={[]}
@@ -271,15 +282,20 @@ export function FinanceBreakdown({
                   type: typeFilters.includes(key) ? [] : [key],
                 })
               }
+              showDonut={showDonut}
+              collapseDonut={false}
+              restLabel=""
             />
           </ChartCard>
           <ChartCard title={t("byCounterparty")}>
-            {typeField === "expense_type" ? <SharePie rows={byCounterparty} /> : null}
-            <BarList
+            <BreakdownChart
               rows={byCounterparty}
               selectedKeys={[]}
               disabledKeys={["unspecified", "other"]}
               onSelect={openCounterparty}
+              showDonut={showDonut}
+              collapseDonut={showDonut}
+              restLabel={t("otherCounterparties")}
             />
           </ChartCard>
           <ChartCard title={t("byDay")}>
@@ -294,7 +310,7 @@ export function FinanceBreakdown({
 function FilterRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-      <span className="mr-1 w-28 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)]">
+      <span className="mr-1 shrink-0 basis-full text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-2)] sm:basis-auto sm:w-28">
         {label}
       </span>
       {children}
@@ -330,56 +346,292 @@ function FilterPill({
   );
 }
 
-function SharePie({ rows }: { rows: { key: string; label: string; amount: number }[] }) {
+type BreakdownRow = { key: string; label: string; amount: number };
+
+type DrawnSlice = BreakdownRow & {
+  color: string;
+  percent: number;
+  path: string;
+  labelX: number;
+  labelY: number;
+  pullX: number;
+  pullY: number;
+  selectable: boolean;
+};
+
+function BreakdownChart({
+  rows,
+  selectedKeys,
+  disabledKeys,
+  onSelect,
+  showDonut,
+  collapseDonut,
+  restLabel,
+}: {
+  rows: BreakdownRow[];
+  selectedKeys: string[];
+  disabledKeys: string[];
+  onSelect: ((key: string) => void) | null;
+  showDonut: boolean;
+  collapseDonut: boolean;
+  restLabel: string;
+}) {
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
-  if (total === 0) return null;
+  const percents = total === 0 ? rows.map(() => 0) : percentShares(rows.map((row) => row.amount), total);
+  const max = Math.max(...rows.map((row) => row.amount));
+  const collapseTail = collapseDonut && rows.length > DONUT_TOP;
+  const slices = showDonut ? drawSlices(donutRows(rows, collapseTail, restLabel), disabledKeys, onSelect) : [];
+  const focus = centerFocus(hoveredKey, rows, slices);
+  const hasDonut = slices.length > 0;
+
+  return (
+    <div
+      className={cn(
+        "grid min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-6",
+        hasDonut && "md:grid-cols-[260px_minmax(0,1fr)]",
+      )}
+      onMouseLeave={() => setHoveredKey(null)}
+    >
+      {hasDonut ? (
+        <svg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} className="mx-auto h-auto w-full max-w-[260px] font-sans">
+          {slices.map((slice) => {
+            const selected = selectedKeys.includes(slice.key);
+            const hovered = sliceIsHovered(slice.key, hoveredKey, rows, collapseTail);
+            const dimmed = sliceDimmed(hovered, selected, hoveredKey, selectedKeys);
+            return (
+              <g
+                key={slice.key}
+                transform={selected ? `translate(${slice.pullX} ${slice.pullY})` : undefined}
+                onMouseEnter={() => setHoveredKey(slice.key)}
+                onClick={slice.selectable && onSelect ? () => onSelect(slice.key) : undefined}
+                className={slice.selectable ? "cursor-pointer" : undefined}
+              >
+                <path
+                  d={slice.path}
+                  fill={slice.color}
+                  stroke="white"
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  fillRule="evenodd"
+                  className="transition-[fill-opacity] duration-150"
+                  style={{ fillOpacity: dimmed ? 0.4 : 1 }}
+                />
+                {slice.percent >= 5 ? (
+                  <text
+                    x={slice.labelX}
+                    y={slice.labelY}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="#ffffff"
+                    fontSize={12}
+                    fontWeight={700}
+                    pointerEvents="none"
+                    className="transition-opacity duration-150"
+                    style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)", opacity: dimmed ? 0.4 : 1 }}
+                  >
+                    {slice.percent}%
+                  </text>
+                ) : null}
+              </g>
+            );
+          })}
+          <g pointerEvents="none">
+            {focus ? (
+              <>
+                <text
+                  x={DONUT_CENTER}
+                  y={DONUT_CENTER - 11}
+                  textAnchor="middle"
+                  className="fill-[var(--muted)]"
+                  fontSize={11}
+                >
+                  {shortLabel(focus.label)}
+                </text>
+                <text
+                  x={DONUT_CENTER}
+                  y={DONUT_CENTER + 12}
+                  textAnchor="middle"
+                  className="fill-[var(--ink)]"
+                  fontSize={centerAmountSize(focus.amount)}
+                  fontWeight={600}
+                >
+                  {formatAed(focus.amount)}
+                </text>
+              </>
+            ) : (
+              <text
+                x={DONUT_CENTER}
+                y={DONUT_CENTER}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className="fill-[var(--ink)]"
+                fontSize={centerAmountSize(total)}
+                fontWeight={600}
+              >
+                {formatAed(total)}
+              </text>
+            )}
+          </g>
+        </svg>
+      ) : null}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+        {rows.map((row, index) => {
+          const active = selectedKeys.includes(row.key);
+          const highlighted = rowHighlighted(row.key, index, hoveredKey, collapseTail);
+          const color = rowColor(index, collapseTail);
+          const content = (
+            <>
+              <div className="flex min-w-0 items-baseline justify-between gap-3 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <span
+                    className={cn(
+                      "min-w-0 truncate",
+                      active ? "font-semibold text-[var(--brand)]" : "text-[var(--ink)]",
+                    )}
+                  >
+                    {row.label}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                  <span className={cn("font-medium", active ? "text-[var(--brand)]" : "text-[var(--ink)]")}>
+                    {formatAed(row.amount)}
+                  </span>
+                  <span className="w-11 text-right text-[var(--muted-2)]">{percents[index]}%</span>
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-[var(--line)]">
+                <div
+                  className="h-1.5 rounded-full transition-[width]"
+                  style={{
+                    width: max === 0 ? "0%" : `${(row.amount / max) * 100}%`,
+                    backgroundColor: color,
+                  }}
+                />
+              </div>
+            </>
+          );
+          if (onSelect && !disabledKeys.includes(row.key)) {
+            return (
+              <button
+                key={row.key}
+                type="button"
+                aria-pressed={active}
+                onMouseEnter={() => setHoveredKey(row.key)}
+                onClick={() => onSelect(row.key)}
+                className={cn(
+                  "w-full min-w-0 rounded-lg px-1.5 py-1 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]",
+                  highlighted && "bg-[var(--cream-soft)]",
+                )}
+              >
+                {content}
+              </button>
+            );
+          }
+          return (
+            <div
+              key={row.key}
+              onMouseEnter={() => setHoveredKey(row.key)}
+              className={cn("min-w-0 rounded-lg px-1.5 py-1", highlighted && "bg-[var(--cream-soft)]")}
+            >
+              {content}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function donutRows(rows: BreakdownRow[], collapseTail: boolean, restLabel: string): (BreakdownRow & { color: string })[] {
+  const colored = rows.map((row, index) => ({ ...row, color: rowColor(index, false) }));
+  if (!collapseTail) return colored;
+  const head = colored.slice(0, DONUT_TOP);
+  const amount = rows.slice(DONUT_TOP).reduce((sum, row) => sum + row.amount, 0);
+  return [...head, { key: REST_KEY, label: restLabel, amount, color: REST_COLOR }];
+}
+
+function rowColor(index: number, collapseTail: boolean): string {
+  if (collapseTail && index >= DONUT_TOP) return REST_COLOR;
+  return PIE_COLORS[index % PIE_COLORS.length];
+}
+
+function drawSlices(
+  slices: (BreakdownRow & { color: string })[],
+  disabledKeys: string[],
+  onSelect: ((key: string) => void) | null,
+): DrawnSlice[] {
+  const positive = slices.filter((slice) => slice.amount > 0);
+  const total = positive.reduce((sum, slice) => sum + slice.amount, 0);
+  if (total === 0) return [];
   const percents = percentShares(
-    rows.map((row) => row.amount),
+    positive.map((slice) => slice.amount),
     total,
   );
-  const size = 160;
-  const center = size / 2;
-  const radius = 72;
   let angle = -Math.PI / 2;
-  const slices = rows.map((row, index) => {
-    const sweep = (row.amount / total) * Math.PI * 2;
+  return positive.map((slice, index) => {
+    const sweep = (slice.amount / total) * Math.PI * 2;
     const start = angle;
     const end = angle + sweep;
     angle = end;
-    const full = sweep >= Math.PI * 2 - 1e-6;
+    const mid = start + sweep / 2;
+    const labelAt = polar(DONUT_CENTER, DONUT_CENTER, (DONUT_OUTER + DONUT_INNER) / 2, mid);
     return {
-      key: row.key,
-      label: row.label,
+      key: slice.key,
+      label: slice.label,
+      amount: slice.amount,
+      color: slice.color,
       percent: percents[index],
-      color: PIE_COLORS[index % PIE_COLORS.length],
-      full,
-      d: full ? "" : pieSlice(center, center, radius, start, end),
+      path: pieSlice(DONUT_CENTER, DONUT_CENTER, DONUT_OUTER, DONUT_INNER, start, end),
+      labelX: labelAt.x,
+      labelY: labelAt.y,
+      pullX: Math.cos(mid) * DONUT_PULL,
+      pullY: Math.sin(mid) * DONUT_PULL,
+      selectable: onSelect !== null && slice.key !== REST_KEY && !disabledKeys.includes(slice.key),
     };
   });
-  return (
-    <div className="mb-5 flex flex-wrap items-center gap-5">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
-        {slices.map((slice) =>
-          slice.full ? (
-            <circle key={slice.key} cx={center} cy={center} r={radius} fill={slice.color} />
-          ) : (
-            <path key={slice.key} d={slice.d} fill={slice.color} />
-          ),
-        )}
-      </svg>
-      <ul className="grid min-w-0 flex-1 gap-1.5">
-        {slices.map((slice) => (
-          <li key={slice.key} className="flex items-baseline justify-between gap-3 text-sm">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} />
-              <span className="truncate text-[var(--ink)]">{slice.label}</span>
-            </span>
-            <span className="shrink-0 font-medium tabular-nums text-[var(--ink)]">{slice.percent}%</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+}
+
+function centerFocus(
+  hoveredKey: string | null,
+  rows: BreakdownRow[],
+  slices: DrawnSlice[],
+): BreakdownRow | null {
+  if (hoveredKey === null) return null;
+  return rows.find((row) => row.key === hoveredKey) ?? slices.find((slice) => slice.key === hoveredKey) ?? null;
+}
+
+function sliceIsHovered(sliceKey: string, hoveredKey: string | null, rows: BreakdownRow[], collapseTail: boolean): boolean {
+  if (hoveredKey === null) return false;
+  if (sliceKey === hoveredKey) return true;
+  if (!collapseTail || sliceKey !== REST_KEY) return false;
+  const index = rows.findIndex((row) => row.key === hoveredKey);
+  return index >= DONUT_TOP;
+}
+
+function sliceDimmed(hovered: boolean, selected: boolean, hoveredKey: string | null, selectedKeys: string[]): boolean {
+  if (hoveredKey === null && selectedKeys.length === 0) return false;
+  return !hovered && !selected;
+}
+
+function rowHighlighted(key: string, index: number, hoveredKey: string | null, collapseTail: boolean): boolean {
+  if (hoveredKey === null) return false;
+  if (hoveredKey === key) return true;
+  return collapseTail && hoveredKey === REST_KEY && index >= DONUT_TOP;
+}
+
+function shortLabel(label: string): string {
+  const limit = 14;
+  if (label.length <= limit) return label;
+  return `${label.slice(0, limit - 1)}…`;
+}
+
+function centerAmountSize(amount: number): number {
+  const length = formatAed(amount).length;
+  if (length > 16) return 11;
+  if (length > 13) return 13;
+  return 16;
 }
 
 function percentShares(amounts: number[], total: number): number[] {
@@ -397,11 +649,30 @@ function percentShares(amounts: number[], total: number): number[] {
   return percents;
 }
 
-function pieSlice(cx: number, cy: number, radius: number, start: number, end: number): string {
-  const startPoint = polar(cx, cy, radius, end);
-  const endPoint = polar(cx, cy, radius, start);
+function pieSlice(cx: number, cy: number, outer: number, inner: number, start: number, end: number): string {
+  if (end - start >= Math.PI * 2 - 1e-6) {
+    return [
+      `M ${cx} ${cy - outer}`,
+      `A ${outer} ${outer} 0 1 1 ${cx} ${cy + outer}`,
+      `A ${outer} ${outer} 0 1 1 ${cx} ${cy - outer}`,
+      `M ${cx} ${cy - inner}`,
+      `A ${inner} ${inner} 0 1 0 ${cx} ${cy + inner}`,
+      `A ${inner} ${inner} 0 1 0 ${cx} ${cy - inner}`,
+      "Z",
+    ].join(" ");
+  }
   const large = end - start > Math.PI ? 1 : 0;
-  return `M ${cx} ${cy} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${large} 0 ${endPoint.x} ${endPoint.y} Z`;
+  const outerStart = polar(cx, cy, outer, start);
+  const outerEnd = polar(cx, cy, outer, end);
+  const innerEnd = polar(cx, cy, inner, end);
+  const innerStart = polar(cx, cy, inner, start);
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outer} ${outer} 0 ${large} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `A ${inner} ${inner} 0 ${large} 0 ${innerStart.x} ${innerStart.y}`,
+    "Z",
+  ].join(" ");
 }
 
 function polar(cx: number, cy: number, radius: number, angle: number): { x: number; y: number } {
@@ -410,96 +681,49 @@ function polar(cx: number, cy: number, radius: number, angle: number): { x: numb
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+    <section className="min-w-0 rounded-3xl border border-[var(--line)] bg-white p-4 shadow-sm sm:p-6">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink)]/60">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <div className="mt-4 min-w-0">{children}</div>
     </section>
-  );
-}
-
-function BarList({
-  rows,
-  selectedKeys,
-  disabledKeys,
-  onSelect,
-}: {
-  rows: { key: string; label: string; amount: number }[];
-  selectedKeys: string[];
-  disabledKeys: string[];
-  onSelect: ((key: string) => void) | null;
-}) {
-  const max = Math.max(...rows.map((row) => row.amount));
-  return (
-    <div className="grid gap-3">
-      {rows.map((row) => {
-        const active = selectedKeys.includes(row.key);
-        const content = (
-          <>
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  active ? "font-semibold text-[var(--brand)]" : "text-[var(--ink)]",
-                )}
-              >
-                {row.label}
-              </span>
-              <span
-                className={cn(
-                  "shrink-0 font-medium tabular-nums",
-                  active ? "text-[var(--brand)]" : "text-[var(--ink)]",
-                )}
-              >
-                {formatAed(row.amount)}
-              </span>
-            </div>
-            <div className={cn("mt-1 h-2 rounded-full", active ? "bg-[var(--brand)]/20" : "bg-[var(--line)]")}>
-              <div
-                className={cn(
-                  "h-2 rounded-full transition-[width,background-color]",
-                  active ? "bg-[var(--brand)]" : "bg-[var(--brand)]/70",
-                )}
-                style={{ width: max === 0 ? "0%" : `${(row.amount / max) * 100}%` }}
-              />
-            </div>
-          </>
-        );
-        if (onSelect && !disabledKeys.includes(row.key)) {
-          return (
-            <button
-              key={row.key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onSelect(row.key)}
-              className="w-full rounded text-left transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)]"
-            >
-              {content}
-            </button>
-          );
-        }
-        return <div key={row.key}>{content}</div>;
-      })}
-    </div>
   );
 }
 
 function DayColumns({ days }: { days: { date: string; amount: number }[] }) {
   const max = Math.max(...days.map((day) => day.amount));
+  const lastDay = Number(days[days.length - 1].date.slice(8));
   return (
-    <div className="flex items-end gap-1 overflow-x-auto">
-      {days.map((day) => {
-        const height = day.amount === 0 || max === 0 ? 0 : Math.max(4, (day.amount / max) * 112);
-        return (
-          <div key={day.date} className="flex w-6 shrink-0 flex-col items-center gap-1" title={formatAed(day.amount)}>
-            <div className="flex h-28 w-full items-end rounded-t bg-[var(--cream)]">
-              <div className="w-full rounded-t bg-[var(--brand)]" style={{ height }} />
+    <div className="min-w-0">
+      <p className="mb-2 text-left text-[10px] text-[var(--muted-2)]">{formatAed(max)}</p>
+      <div className="flex w-full min-w-0 items-end gap-0.5 sm:gap-1">
+        {days.map((day) => {
+          const dayNum = Number(day.date.slice(8));
+          const height = day.amount === 0 || max === 0 ? 0 : Math.max(4, (day.amount / max) * 112);
+          const showNumber = mobileDayLabel(dayNum, lastDay);
+          return (
+            <div key={day.date} title={formatAed(day.amount)} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <div className="flex h-28 w-full items-end rounded-t bg-[var(--cream)]">
+                <div className="w-full rounded-t bg-[var(--brand)]" style={{ height }} />
+              </div>
+              <span className="relative block h-3 w-full">
+                <span
+                  className={cn(
+                    "absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap text-[10px] leading-none text-[var(--muted-2)]",
+                    showNumber ? "block" : "hidden sm:block",
+                  )}
+                >
+                  {dayNum}
+                </span>
+              </span>
             </div>
-            <span className="text-[10px] text-[var(--muted-2)]">{Number(day.date.slice(8))}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
+}
+
+function mobileDayLabel(day: number, lastDay: number): boolean {
+  return day === lastDay || day === 1 || day === 5 || day === 10 || day === 15 || day === 20 || day === 25;
 }
 
 function group(

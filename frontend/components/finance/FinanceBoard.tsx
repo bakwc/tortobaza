@@ -78,8 +78,8 @@ function FinanceBoardContent({
   const isCurrentMonth = period.month === today.slice(0, 7);
 
   return (
-    <div className="grid gap-6">
-      <div className="flex items-start justify-between gap-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
+      <div className="flex min-w-0 items-start justify-between gap-2">
         <nav className="flex min-w-0 flex-1 flex-wrap gap-2">
           {SECTIONS.map((item) => (
             <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
@@ -96,7 +96,7 @@ function FinanceBoardContent({
         </div>
       </div>
 
-      <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+      <div className="min-w-0 rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
