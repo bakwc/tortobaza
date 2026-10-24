@@ -23,7 +23,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideInvoice, useInvoices } from "@/hooks/useInvoices";
-import { formatMoney } from "@/lib/format";
+import { formatCrmCompactDate, formatMoney } from "@/lib/format";
 import type { RsInvoice } from "@/lib/api/types";
 
 const PENDING_STATUSES = new Set([1, 5, 6]);
@@ -188,6 +188,19 @@ export function InvoicesPanel() {
                       <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: invoice.lines.length })}
                       </RsgeChip>
+                      {invoice.waybills.map((waybill) => (
+                        <RsgeChip key={waybill.id} className="bg-emerald-100 text-emerald-900">
+                          {t("waybillBadge")} {waybill.waybill_number}{" "}
+                          {localized(locale, waybill.seller_name, waybill.seller_name_ru)}{" "}
+                          {formatMoney(waybill.full_amount, "GEL")}
+                        </RsgeChip>
+                      ))}
+                      {invoice.financial_transactions.map((transaction) => (
+                        <RsgeChip key={transaction.id} className="bg-violet-100 text-violet-900">
+                          {t("paymentBadge")} {formatCrmCompactDate(transaction.date, locale)}{" "}
+                          {formatMoney(transaction.amount, "GEL")} {transaction.counterparty_name}
+                        </RsgeChip>
+                      ))}
                     </>
                   }
                   onConfirm={pending ? () => openDecision(invoice.id, "confirm") : null}

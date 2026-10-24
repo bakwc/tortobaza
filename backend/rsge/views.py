@@ -49,7 +49,11 @@ class WaybillListView(APIView):
         query = MonthQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         start, end = _month_bounds(query.validated_data["month"])
-        waybills = Waybill.objects.prefetch_related("goods").filter(
+        waybills = Waybill.objects.prefetch_related(
+            "goods",
+            "invoices",
+            "financial_transactions",
+        ).filter(
             create_date__gte=start,
             create_date__lt=end,
         )
@@ -65,7 +69,10 @@ def rs_credentials() -> tuple[str, str]:
 
 
 def waybill_for_decision(pk: int) -> Waybill:
-    return get_object_or_404(Waybill.objects.prefetch_related("goods"), pk=pk)
+    return get_object_or_404(
+        Waybill.objects.prefetch_related("goods", "invoices", "financial_transactions"),
+        pk=pk,
+    )
 
 
 class WaybillConfirmView(APIView):
@@ -102,7 +109,11 @@ class InvoiceListView(APIView):
         query = MonthQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         start, end = _month_bounds(query.validated_data["month"])
-        invoices = Invoice.objects.prefetch_related("lines").filter(
+        invoices = Invoice.objects.prefetch_related(
+            "lines",
+            "waybills",
+            "financial_transactions",
+        ).filter(
             reg_dt__gte=start,
             reg_dt__lt=end,
         )
@@ -110,7 +121,10 @@ class InvoiceListView(APIView):
 
 
 def invoice_for_decision(pk: int) -> Invoice:
-    invoice = get_object_or_404(Invoice.objects.prefetch_related("lines"), pk=pk)
+    invoice = get_object_or_404(
+        Invoice.objects.prefetch_related("lines", "waybills", "financial_transactions"),
+        pk=pk,
+    )
     if invoice.status not in ACCEPT_TARGET or invoice.was_ref != 0:
         raise RuntimeError(
             f"invoice {invoice.rs_id} status {invoice.status} cannot be decided"

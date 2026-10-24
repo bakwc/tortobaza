@@ -490,7 +490,7 @@ class FinanceTransactionsView(APIView):
         transactions = FinancialTransaction.objects.select_related(
             "account",
             "matched_transaction__account",
-        ).prefetch_related("crm_orders")
+        ).prefetch_related("crm_orders", "waybills", "invoices")
         if month:
             year_str, month_str = month.split("-")
             year = int(year_str)
@@ -575,7 +575,7 @@ def _finance_transaction_for_response(pk: int) -> FinancialTransaction:
         FinancialTransaction.objects.select_related(
             "account",
             "matched_transaction__account",
-        ).prefetch_related("crm_orders"),
+        ).prefetch_related("crm_orders", "waybills", "invoices"),
         pk=pk,
     )
 

@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideWaybill, useWaybills } from "@/hooks/useWaybills";
-import { formatMoney } from "@/lib/format";
+import { formatCrmCompactDate, formatMoney } from "@/lib/format";
 import type { RsWaybill, RsWaybillGood } from "@/lib/api/types";
 
 function waybillStatus(status: number, t: ReturnType<typeof useTranslations<"rsge">>): string {
@@ -189,6 +189,18 @@ export function WaybillsPanel() {
                       <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: waybill.goods.length })}
                       </RsgeChip>
+                      {waybill.invoices.map((invoice) => (
+                        <RsgeChip key={invoice.id} className="bg-sky-100 text-sky-900">
+                          {t("invoiceBadge")} {invoice.series} {invoice.number}{" "}
+                          {formatMoney(invoice.amount, "GEL")}
+                        </RsgeChip>
+                      ))}
+                      {waybill.financial_transactions.map((transaction) => (
+                        <RsgeChip key={transaction.id} className="bg-violet-100 text-violet-900">
+                          {t("paymentBadge")} {formatCrmCompactDate(transaction.date, locale)}{" "}
+                          {formatMoney(transaction.amount, "GEL")} {transaction.counterparty_name}
+                        </RsgeChip>
+                      ))}
                     </>
                   }
                   onConfirm={pending ? () => openDecision(waybill.id, "confirm") : null}

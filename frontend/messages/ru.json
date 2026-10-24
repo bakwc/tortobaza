@@ -588,6 +588,8 @@
       "counterpartyIban": "IBAN контрагента",
       "flowwowOrder": "Заказ Flowwow",
       "crmOrders": "Заказы CRM",
+      "waybills": "Накладные",
+      "invoices": "Инвойсы",
       "matchedTransaction": "Связанная операция",
       "id": "ID операции",
       "transferId": "ID перевода",
@@ -857,6 +859,9 @@
     "route": "Маршрут",
     "driver": "Водитель",
     "car": "Авто",
-    "notes": "Примечание"
+    "notes": "Примечание",
+    "waybillBadge": "Накладная",
+    "invoiceBadge": "Инвойс",
+    "paymentBadge": "Оплата"
   }
 }

@@ -609,6 +609,18 @@ class FinancialTransaction(models.Model):
         blank=True,
         verbose_name=_("CRM orders"),
     )
+    waybills = models.ManyToManyField(
+        "rsge.Waybill",
+        related_name="financial_transactions",
+        blank=True,
+        verbose_name=_("Waybills"),
+    )
+    invoices = models.ManyToManyField(
+        "rsge.Invoice",
+        related_name="financial_transactions",
+        blank=True,
+        verbose_name=_("Invoices"),
+    )
     matched_transaction = models.OneToOneField(
         "self",
         null=True,

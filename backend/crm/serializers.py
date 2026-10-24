@@ -720,6 +720,23 @@ class FinanceTransactionCrmOrderSerializer(serializers.Serializer):
     delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
+class FinanceTransactionWaybillSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    waybill_number = serializers.CharField()
+    seller_name = serializers.CharField()
+    seller_name_ru = serializers.CharField()
+    full_amount = serializers.DecimalField(max_digits=14, decimal_places=4)
+    create_date = serializers.DateTimeField()
+
+
+class FinanceTransactionInvoiceSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    series = serializers.CharField()
+    number = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=14, decimal_places=4)
+    reg_dt = serializers.DateTimeField()
+
+
 class FinanceTransactionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     date = serializers.DateField()
@@ -735,6 +752,8 @@ class FinanceTransactionSerializer(serializers.Serializer):
     transfer_id = serializers.UUIDField(allow_null=True)
     flowwow_order_number = serializers.SerializerMethodField()
     crm_orders = FinanceTransactionCrmOrderSerializer(many=True)
+    waybills = FinanceTransactionWaybillSerializer(many=True)
+    invoices = FinanceTransactionInvoiceSerializer(many=True)
     matched_account = FinanceTransactionAccountSerializer(
         source="matched_transaction.account",
         allow_null=True,

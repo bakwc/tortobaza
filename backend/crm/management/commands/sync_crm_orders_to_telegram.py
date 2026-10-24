@@ -11,6 +11,7 @@ from crm.flowwow import sync_flowwow_orders
 from crm.flowwow_bog_transfers import sync_flowwow_bog_transfers
 from crm.flowwow_order_links import sync_flowwow_order_links
 from crm.internal_transfers import sync_internal_transfers
+from crm.rsge_links import sync_rsge_document_links
 from crm.liberty_online_links import sync_liberty_online_order_links
 from crm.liberty_terminal_links import sync_liberty_terminal_order_links
 from crm.tbc_order_links import sync_tbc_order_links
@@ -208,3 +209,4 @@ class Command(BaseCommand):
         translate_waybills()
         sync_invoices()
         translate_invoices()
+        sync_rsge_document_links()

@@ -588,6 +588,8 @@
       "counterpartyIban": "კონტრაგენტის IBAN",
       "flowwowOrder": "Flowwow შეკვეთა",
       "crmOrders": "CRM შეკვეთები",
+      "waybills": "ზედნადებები",
+      "invoices": "ფაქტურები",
       "matchedTransaction": "დაკავშირებული ოპერაცია",
       "id": "ოპერაციის ID",
       "transferId": "გადარიცხვის ID",
@@ -857,6 +859,9 @@
     "route": "მარშრუტი",
     "driver": "მძღოლი",
     "car": "მანქანა",
-    "notes": "შენიშვნა"
+    "notes": "შენიშვნა",
+    "waybillBadge": "ზედნადები",
+    "invoiceBadge": "ფაქტურა",
+    "paymentBadge": "გადახდა"
   }
 }

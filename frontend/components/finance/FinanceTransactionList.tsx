@@ -9,8 +9,10 @@ import {
   ArrowUpRight,
   ChevronDown,
   CircleDot,
+  FileText,
   Flower,
   Package,
+  Truck,
 } from "lucide-react";
 import { FinanceTransactionForm } from "@/components/finance/FinanceTransactionForm";
 import { Button } from "@/components/ui/button";
@@ -887,6 +889,7 @@ function TransactionRow({
             </Chip>
           ) : null}
           <CrmOrderChips orders={tx.crm_orders} />
+          <DocumentChips waybills={tx.waybills} invoices={tx.invoices} />
         </>
       }
       action={null}
@@ -972,6 +975,52 @@ function FlowwowGroupRow({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function sellerLabel(sellerName: string, sellerNameRu: string, locale: string): string {
+  if (locale === "ru" && sellerNameRu !== "") return sellerNameRu;
+  return sellerName;
+}
+
+function DocumentChips({
+  waybills,
+  invoices,
+}: {
+  waybills: FinanceTransaction["waybills"];
+  invoices: FinanceTransaction["invoices"];
+}) {
+  const locale = useLocale();
+  return (
+    <>
+      {waybills.map((waybill) => (
+        <span
+          key={`waybill-${waybill.id}`}
+          onClick={(event) => event.stopPropagation()}
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+        >
+          <Truck className="h-3 w-3 shrink-0" />
+          <span className="shrink-0">{waybill.waybill_number}</span>
+          <span className="min-w-0 truncate font-medium">
+            {sellerLabel(waybill.seller_name, waybill.seller_name_ru, locale)}
+          </span>
+          <span className="shrink-0">{formatAed(waybill.full_amount)}</span>
+        </span>
+      ))}
+      {invoices.map((invoice) => (
+        <span
+          key={`invoice-${invoice.id}`}
+          onClick={(event) => event.stopPropagation()}
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-sky-700 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+        >
+          <FileText className="h-3 w-3 shrink-0" />
+          <span className="shrink-0">
+            {invoice.series} {invoice.number}
+          </span>
+          <span className="shrink-0">{formatAed(invoice.amount)}</span>
+        </span>
+      ))}
+    </>
   );
 }
 
@@ -1106,6 +1155,26 @@ function TransactionDetail({
           {tx.crm_orders.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               <CrmOrderChips orders={tx.crm_orders} />
+            </div>
+          ) : (
+            <span className="text-sm text-[var(--muted-2)]">—</span>
+          )}
+        </div>
+        <div className="grid gap-1">
+          <span className="text-xs font-medium text-[var(--muted-2)]">{t("detail.waybills")}</span>
+          {tx.waybills.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <DocumentChips waybills={tx.waybills} invoices={[]} />
+            </div>
+          ) : (
+            <span className="text-sm text-[var(--muted-2)]">—</span>
+          )}
+        </div>
+        <div className="grid gap-1">
+          <span className="text-xs font-medium text-[var(--muted-2)]">{t("detail.invoices")}</span>
+          {tx.invoices.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              <DocumentChips waybills={[]} invoices={tx.invoices} />
             </div>
           ) : (
             <span className="text-sm text-[var(--muted-2)]">—</span>

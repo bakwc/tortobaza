@@ -492,6 +492,25 @@ export const FinanceTransactionSchema = z.object({
       delivery_price: z.string(),
     }),
   ),
+  waybills: z.array(
+    z.object({
+      id: z.number(),
+      waybill_number: z.string(),
+      seller_name: z.string(),
+      seller_name_ru: z.string(),
+      full_amount: z.string(),
+      create_date: z.string(),
+    }),
+  ),
+  invoices: z.array(
+    z.object({
+      id: z.number(),
+      series: z.string(),
+      number: z.string(),
+      amount: z.string(),
+      reg_dt: z.string(),
+    }),
+  ),
   matched_account: z
     .object({
       id: z.number(),
@@ -1163,6 +1182,30 @@ export const RsWaybillGoodSchema = z.object({
   quantity_f: z.string(),
 });
 
+export const RsLinkedTransactionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  counterparty_name: z.string(),
+});
+
+export const RsLinkedWaybillSchema = z.object({
+  id: z.number(),
+  waybill_number: z.string(),
+  seller_name: z.string(),
+  seller_name_ru: z.string(),
+  full_amount: z.string(),
+  create_date: z.string(),
+});
+
+export const RsLinkedInvoiceSchema = z.object({
+  id: z.number(),
+  series: z.string(),
+  number: z.string(),
+  amount: z.string(),
+  reg_dt: z.string(),
+});
+
 export const RsWaybillSchema = z.object({
   id: z.number(),
   rs_id: z.number(),
@@ -1202,6 +1245,8 @@ export const RsWaybillSchema = z.object({
   seller_st: z.number(),
   is_med: z.number(),
   goods: z.array(RsWaybillGoodSchema),
+  invoices: z.array(RsLinkedInvoiceSchema),
+  financial_transactions: z.array(RsLinkedTransactionSchema),
 });
 
 export const RsInvoiceLineSchema = z.object({
@@ -1249,6 +1294,8 @@ export const RsInvoiceSchema = z.object({
   note: z.string(),
   note_ru: z.string(),
   lines: z.array(RsInvoiceLineSchema),
+  waybills: z.array(RsLinkedWaybillSchema),
+  financial_transactions: z.array(RsLinkedTransactionSchema),
 });
 
 export type RsWaybillGood = z.infer<typeof RsWaybillGoodSchema>;

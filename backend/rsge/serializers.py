@@ -34,8 +34,36 @@ class WaybillGoodSerializer(serializers.ModelSerializer):
         ]
 
 
+class LinkedTransactionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    counterparty_name = serializers.CharField()
+
+
+class LinkedWaybillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Waybill
+        fields = [
+            "id",
+            "waybill_number",
+            "seller_name",
+            "seller_name_ru",
+            "full_amount",
+            "create_date",
+        ]
+
+
+class LinkedInvoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Invoice
+        fields = ["id", "series", "number", "amount", "reg_dt"]
+
+
 class WaybillSerializer(serializers.ModelSerializer):
     goods = WaybillGoodSerializer(many=True)
+    invoices = LinkedInvoiceSerializer(many=True)
+    financial_transactions = LinkedTransactionSerializer(many=True)
 
     class Meta:
         model = Waybill
@@ -78,6 +106,8 @@ class WaybillSerializer(serializers.ModelSerializer):
             "seller_st",
             "is_med",
             "goods",
+            "invoices",
+            "financial_transactions",
         ]
 
 
@@ -103,6 +133,8 @@ class InvoiceLineSerializer(serializers.ModelSerializer):
 
 class InvoiceSerializer(serializers.ModelSerializer):
     lines = InvoiceLineSerializer(many=True)
+    waybills = LinkedWaybillSerializer(many=True)
+    financial_transactions = LinkedTransactionSerializer(many=True)
 
     class Meta:
         model = Invoice
@@ -135,4 +167,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
             "note",
             "note_ru",
             "lines",
+            "waybills",
+            "financial_transactions",
         ]

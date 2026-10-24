@@ -104,6 +104,8 @@ class FinanceTransactionsApiTests(TestCase):
                         "transfer_id": None,
                         "flowwow_order_number": None,
                         "crm_orders": [],
+                        "waybills": [],
+                        "invoices": [],
                         "matched_account": None,
                         "matched_transaction": None,
                         "created_at": serializers.DateTimeField().to_representation(inside.created_at),

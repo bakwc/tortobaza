@@ -50,6 +50,12 @@ class Waybill(models.Model):
     is_corrected = models.IntegerField(verbose_name=_("Is corrected"))
     seller_st = models.IntegerField(verbose_name=_("Seller ST"))
     is_med = models.IntegerField(verbose_name=_("Is med"))
+    invoices = models.ManyToManyField(
+        "Invoice",
+        related_name="waybills",
+        blank=True,
+        verbose_name=_("Invoices"),
+    )
 
     class Meta:
         ordering = ["-create_date", "-rs_id"]
