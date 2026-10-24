@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCrmCompactDate, formatCrmDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -13,6 +12,7 @@ export type RsgeToneName = "pending" | "confirmed" | "rejected" | "neutral";
 
 export type RsgeTone = {
   card: string;
+  accent: string;
   media: string;
   chip: string;
   amount: string;
@@ -25,26 +25,30 @@ export type RsgeColumn = {
 
 const TONES: Record<RsgeToneName, RsgeTone> = {
   pending: {
-    card: "border-amber-300 bg-amber-100",
-    media: "border-amber-200 bg-white text-amber-700",
-    chip: "bg-amber-600 text-white",
-    amount: "text-amber-800",
+    card: "border-amber-200 bg-amber-50/60",
+    accent: "border-l-amber-400",
+    media: "border-amber-200 bg-white/70 text-amber-600",
+    chip: "bg-amber-100 text-amber-800",
+    amount: "text-[var(--ink)]",
   },
   confirmed: {
-    card: "border-emerald-300 bg-emerald-100",
-    media: "border-emerald-200 bg-white text-emerald-700",
-    chip: "bg-emerald-600 text-white",
-    amount: "text-emerald-800",
+    card: "border-emerald-200 bg-emerald-50/50",
+    accent: "border-l-emerald-400",
+    media: "border-emerald-200 bg-white/70 text-emerald-600",
+    chip: "bg-emerald-100 text-emerald-800",
+    amount: "text-[var(--ink)]",
   },
   rejected: {
-    card: "border-rose-300 bg-rose-100",
-    media: "border-rose-200 bg-white text-rose-700",
-    chip: "bg-rose-600 text-white",
-    amount: "text-rose-800",
+    card: "border-rose-200 bg-rose-50/50",
+    accent: "border-l-rose-400",
+    media: "border-rose-200 bg-white/70 text-rose-600",
+    chip: "bg-rose-100 text-rose-800",
+    amount: "text-[var(--ink)]",
   },
   neutral: {
     card: "border-[var(--line)] bg-white",
-    media: "border-[var(--line)] bg-[var(--cream)] text-[var(--muted-2)]",
+    accent: "border-l-[var(--line)]",
+    media: "border-[var(--line)] bg-white/70 text-[var(--muted-2)]",
     chip: "bg-[var(--cream)] text-[var(--ink)]",
     amount: "text-[var(--ink)]",
   },
@@ -180,23 +184,11 @@ export function RsgeDocumentRow({
   rows: string[][];
 }) {
   const t = useTranslations("rsge");
-  const [open, setOpen] = useState(false);
   const pending = onConfirm !== null && onReject !== null;
 
   return (
-    <div className={cn("grid gap-2 rounded-xl border px-1.5 py-1.5 shadow-sm md:rounded-2xl md:px-3 md:py-2", tone.card)}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setOpen((current) => !current)}
-        onKeyDown={(event) => {
-          if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-            event.preventDefault();
-            setOpen((current) => !current);
-          }
-        }}
-        className="flex min-w-0 cursor-pointer items-center gap-1.5 rounded-lg focus-visible:outline-2 focus-visible:outline-[var(--ink)] md:gap-3"
-      >
+    <div className={cn("grid gap-3 rounded-2xl border border-l-4 p-3 shadow-sm md:p-4", tone.card, tone.accent)}>
+      <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <div
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border md:h-10 md:w-10 md:rounded-lg",
@@ -205,31 +197,22 @@ export function RsgeDocumentRow({
         >
           {icon}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
-              <span className="font-semibold text-[var(--ink)]">{title}</span>
-              {subtitle !== "" ? (
-                <>
-                  <span className="mx-1">·</span>
-                  <span>{subtitle}</span>
-                </>
-              ) : null}
-            </p>
-            <span className={cn("shrink-0 text-sm font-bold", tone.amount)}>{amount}</span>
-          </div>
-          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">{chips}</div>
-        </div>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--ink)] transition-transform", open && "rotate-180")} />
+        <p className="min-w-0 flex-1 truncate text-xs text-[var(--muted-2)] md:text-sm">
+          <span className="font-semibold text-[var(--ink)]">{title}</span>
+          {subtitle !== "" ? (
+            <>
+              <span className="mx-1">·</span>
+              <span>{subtitle}</span>
+            </>
+          ) : null}
+        </p>
+        <span className={cn("shrink-0 text-sm font-bold", tone.amount)}>{amount}</span>
       </div>
-      {open ? (
-        <div className="grid gap-3 border-t border-black/5 pt-2">
-          {details}
-          {rows.length > 0 ? <RsgeGoodsTable columns={columns} rowKeys={rowKeys} rows={rows} /> : null}
-        </div>
-      ) : null}
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">{chips}</div>
+      {details}
+      {rows.length > 0 ? <RsgeGoodsTable columns={columns} rowKeys={rowKeys} rows={rows} /> : null}
       {pending ? (
-        <div className="flex justify-end gap-2 border-t border-black/5 pt-2">
+        <div className="flex justify-end gap-2 border-t border-black/5 pt-3">
           <Button type="button" size="sm" onClick={onConfirm}>
             {t("confirm")}
           </Button>
@@ -238,7 +221,7 @@ export function RsgeDocumentRow({
             size="sm"
             variant="outline"
             onClick={onReject}
-            className="border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger)]/10"
+            className="text-[var(--danger)] hover:bg-rose-50"
           >
             {t("reject")}
           </Button>
@@ -267,15 +250,15 @@ function RsgeGoodsTable({
   rows: string[][];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl">
+    <div className="overflow-x-auto">
       <table className="w-full min-w-[36rem] text-sm">
         <thead>
-          <tr className="bg-[var(--cream)] text-xs uppercase tracking-wide text-[var(--ink)]/50">
+          <tr className="border-b border-black/5 text-[10px] uppercase tracking-wide text-[var(--muted-2)]">
             {columns.map((column) => (
               <th
                 key={column.label}
                 className={cn(
-                  "px-3 py-2 font-medium",
+                  "px-2 py-1.5 font-medium first:pl-0 last:pr-0",
                   column.align === "right" ? "text-right" : "text-left",
                 )}
               >
@@ -286,12 +269,12 @@ function RsgeGoodsTable({
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={rowKeys[index]} className="border-t border-[var(--line)] bg-white/70">
+            <tr key={rowKeys[index]} className="border-t border-black/5">
               {row.map((cell, cellIndex) => (
                 <td
                   key={columns[cellIndex].label}
                   className={cn(
-                    "px-3 py-2 text-[var(--ink)]",
+                    "px-2 py-1.5 text-[var(--ink)] first:pl-0 last:pr-0",
                     columns[cellIndex].align === "right" && "whitespace-nowrap text-right tabular-nums",
                   )}
                 >

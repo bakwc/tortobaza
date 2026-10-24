@@ -181,12 +181,12 @@ export function WaybillsPanel() {
                     <>
                       <RsgeChip className={tone.chip}>{waybillStatus(waybill.status, t)}</RsgeChip>
                       {waybill.is_confirmed === 1 ? (
-                        <RsgeChip className="bg-white/80 text-emerald-800">{t("confirmed")}</RsgeChip>
+                        <RsgeChip className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
                       ) : null}
                       {waybill.is_confirmed === -1 ? (
-                        <RsgeChip className="bg-white/80 text-rose-800">{t("rejected")}</RsgeChip>
+                        <RsgeChip className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
                       ) : null}
-                      <RsgeChip className="bg-white/80 text-[var(--muted-2)]">
+                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: waybill.goods.length })}
                       </RsgeChip>
                     </>

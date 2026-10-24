@@ -177,15 +177,15 @@ export function InvoicesPanel() {
                     <>
                       <RsgeChip className={tone.chip}>{invoiceStatus(invoice.status, t)}</RsgeChip>
                       {invoice.status === 2 || invoice.status === 8 ? (
-                        <RsgeChip className="bg-white/80 text-emerald-800">{t("confirmed")}</RsgeChip>
+                        <RsgeChip className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
                       ) : null}
                       {invoice.was_ref === 1 ? (
-                        <RsgeChip className="bg-white/80 text-rose-800">{t("rejected")}</RsgeChip>
+                        <RsgeChip className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
                       ) : null}
-                      <RsgeChip className="bg-white/80 text-[var(--ink)]">
+                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("vat")} {formatMoney(invoice.vat, "GEL")}
                       </RsgeChip>
-                      <RsgeChip className="bg-white/80 text-[var(--muted-2)]">
+                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: invoice.lines.length })}
                       </RsgeChip>
                     </>
