@@ -3,17 +3,30 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crm.views import IsFinanceAdmin
-from rsge.client import call_confirm_waybill, call_reject_waybill
+from rsge.client import (
+    call_accept_invoice,
+    call_chek,
+    call_confirm_waybill,
+    call_ref_invoice,
+    call_reject_waybill,
+)
 from rsge.models import Invoice, Waybill
-from rsge.serializers import InvoiceSerializer, MonthQuerySerializer, WaybillSerializer
+from rsge.serializers import (
+    InvoiceRejectSerializer,
+    InvoiceSerializer,
+    MonthQuerySerializer,
+    WaybillSerializer,
+)
 
 _TB = ZoneInfo("Asia/Tbilisi")
+ACCEPT_TARGET = {1: 2, 5: 8, 6: 7}
 
 
 def _month_bounds(month: str) -> tuple[datetime, datetime]:
@@ -94,3 +107,45 @@ class InvoiceListView(APIView):
             reg_dt__lt=end,
         )
         return Response(InvoiceSerializer(invoices, many=True).data)
+
+
+def invoice_for_decision(pk: int) -> Invoice:
+    invoice = get_object_or_404(Invoice.objects.prefetch_related("lines"), pk=pk)
+    if invoice.status not in ACCEPT_TARGET or invoice.was_ref != 0:
+        raise RuntimeError(
+            f"invoice {invoice.rs_id} status {invoice.status} cannot be decided"
+        )
+    return invoice
+
+
+class InvoiceConfirmView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    def post(self, request, pk: int):
+        invoice = invoice_for_decision(pk)
+        su, sp = rs_credentials()
+        user_id = call_chek(su, sp)
+        target = ACCEPT_TARGET[invoice.status]
+        call_accept_invoice(su, sp, user_id, str(invoice.rs_id), str(target))
+        invoice.status = target
+        invoice.agree_date = timezone.now()
+        invoice.save(update_fields=["status", "agree_date"])
+        return Response(InvoiceSerializer(invoice).data)
+
+
+class InvoiceRejectView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    def post(self, request, pk: int):
+        body = InvoiceRejectSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        invoice = invoice_for_decision(pk)
+        su, sp = rs_credentials()
+        user_id = call_chek(su, sp)
+        call_ref_invoice(su, sp, user_id, str(invoice.rs_id), body.validated_data["ref_text"])
+        invoice.was_ref = 1
+        invoice.ref_date = timezone.now()
+        invoice.save(update_fields=["was_ref", "ref_date"])
+        return Response(InvoiceSerializer(invoice).data)

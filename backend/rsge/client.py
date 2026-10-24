@@ -134,6 +134,36 @@ def call_reject_waybill(su: str, sp: str, waybill_id: str) -> None:
     call_waybill_decision("reject_waybill", su, sp, waybill_id)
 
 
+def call_invoice_bool(action: str, body: str, inv_id: str) -> None:
+    result = invoice_soap_call(action, body)
+    if result.text is None or result.text.strip().lower() != "true":
+        raise RuntimeError(
+            f"RS.ge {action} rejected invoice {inv_id}\n" + result_text(result)
+        )
+
+
+def call_accept_invoice(su: str, sp: str, user_id: str, inv_id: str, status: str) -> None:
+    body = "".join([
+        soap_value("user_id", user_id),
+        soap_value("inv_id", inv_id),
+        soap_value("status", status),
+        soap_value("su", su),
+        soap_value("sp", sp),
+    ])
+    call_invoice_bool("acsept_invoice_status", body, inv_id)
+
+
+def call_ref_invoice(su: str, sp: str, user_id: str, inv_id: str, ref_text: str) -> None:
+    body = "".join([
+        soap_value("user_id", user_id),
+        soap_value("inv_id", inv_id),
+        soap_value("ref_text", ref_text),
+        soap_value("su", su),
+        soap_value("sp", sp),
+    ])
+    call_invoice_bool("ref_invoice_status", body, inv_id)
+
+
 def fetch_buyer_waybills(su: str, sp: str, create_date_s: str, create_date_e: str) -> ET.Element:
     result = call_get_buyer_waybills(su, sp, create_date_s, create_date_e)
     if result.find("WAYBILL_LIST") is not None:

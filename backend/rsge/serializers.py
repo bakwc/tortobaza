@@ -7,6 +7,10 @@ class MonthQuerySerializer(serializers.Serializer):
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$")
 
 
+class InvoiceRejectSerializer(serializers.Serializer):
+    ref_text = serializers.CharField(allow_blank=False, trim_whitespace=True)
+
+
 class WaybillGoodSerializer(serializers.ModelSerializer):
     class Meta:
         model = WaybillGood

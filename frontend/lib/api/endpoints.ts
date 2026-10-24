@@ -240,6 +240,19 @@ export function endpoints(fetcher: Fetcher) {
       return parse(z.array(RsInvoiceSchema), raw);
     },
 
+    async confirmRsgeInvoice(id: number): Promise<RsInvoice> {
+      const raw = await fetcher<unknown>(`/api/rsge/invoices/${id}/confirm/`, { method: "POST" });
+      return parse(RsInvoiceSchema, raw);
+    },
+
+    async rejectRsgeInvoice(id: number, refText: string): Promise<RsInvoice> {
+      const raw = await fetcher<unknown>(`/api/rsge/invoices/${id}/reject/`, {
+        method: "POST",
+        body: JSON.stringify({ ref_text: refText }),
+      });
+      return parse(RsInvoiceSchema, raw);
+    },
+
     async getTechCardCost(
       id: number,
       weightKg: string | null,

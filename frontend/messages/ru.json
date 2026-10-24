@@ -836,6 +836,18 @@
     "unit": "Единица",
     "price": "Цена",
     "amount": "Сумма",
-    "barcode": "Штрихкод"
+    "barcode": "Штрихкод",
+    "invoiceStatusNew": "Новая",
+    "invoiceStatusSent": "Отправлена, ждёт подтверждения",
+    "invoiceStatusConfirmed": "Подтверждена",
+    "invoiceStatusCorrectedPrimary": "Исходная, есть корректировка",
+    "invoiceStatusCorrection": "Новая корректировка",
+    "invoiceStatusCorrectionSent": "Корректировка отправлена, ждёт подтверждения",
+    "invoiceStatusCancelled": "Аннулирование отправлено, ждёт подтверждения",
+    "invoiceStatusCancellationConfirmed": "Аннулирование подтверждено",
+    "invoiceStatusCorrectionConfirmed": "Корректировка подтверждена",
+    "invoiceConfirmTitle": "Подтвердить эту фактуру?",
+    "invoiceRejectTitle": "Отклонить эту фактуру?",
+    "rejectReason": "Причина"
   }
 }

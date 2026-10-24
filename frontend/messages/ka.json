@@ -836,6 +836,18 @@
     "unit": "ერთეული",
     "price": "ფასი",
     "amount": "თანხა",
-    "barcode": "შტრიხკოდი"
+    "barcode": "შტრიხკოდი",
+    "invoiceStatusNew": "ახალი",
+    "invoiceStatusSent": "გადაგზავნილი, დასადასტურებელი",
+    "invoiceStatusConfirmed": "დადასტურებული",
+    "invoiceStatusCorrectedPrimary": "პირველადი, კორექტირებული",
+    "invoiceStatusCorrection": "ახალი კორექტირება",
+    "invoiceStatusCorrectionSent": "კორექტირება გადაგზავნილი, დასადასტურებელი",
+    "invoiceStatusCancelled": "გაუქმება გადაგზავნილი, დასადასტურებელი",
+    "invoiceStatusCancellationConfirmed": "გაუქმება დადასტურებული",
+    "invoiceStatusCorrectionConfirmed": "კორექტირება დადასტურებული",
+    "invoiceConfirmTitle": "დარწმუნებული ხართ, რომ გსურთ ფაქტურის დადასტურება?",
+    "invoiceRejectTitle": "დარწმუნებული ხართ, რომ გსურთ ფაქტურის უარყოფა?",
+    "rejectReason": "მიზეზი"
   }
 }

@@ -836,6 +836,18 @@
     "unit": "Unit",
     "price": "Price",
     "amount": "Amount",
-    "barcode": "Barcode"
+    "barcode": "Barcode",
+    "invoiceStatusNew": "New",
+    "invoiceStatusSent": "Sent, awaiting confirmation",
+    "invoiceStatusConfirmed": "Confirmed",
+    "invoiceStatusCorrectedPrimary": "Original, correction issued",
+    "invoiceStatusCorrection": "New correction",
+    "invoiceStatusCorrectionSent": "Correction sent, awaiting confirmation",
+    "invoiceStatusCancelled": "Cancellation sent, awaiting confirmation",
+    "invoiceStatusCancellationConfirmed": "Cancellation confirmed",
+    "invoiceStatusCorrectionConfirmed": "Correction confirmed",
+    "invoiceConfirmTitle": "Confirm this invoice?",
+    "invoiceRejectTitle": "Reject this invoice?",
+    "rejectReason": "Reason"
   }
 }
