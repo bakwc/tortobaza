@@ -13,6 +13,29 @@ const EXPENSE_TYPES = ["salary", "rent", "products", "consumables", "equipment",
 const NEUTRAL_ACTIVE = "bg-[var(--ink)] text-white";
 const INCOME_ACTIVE = "bg-emerald-600 text-white";
 const EXPENSE_ACTIVE = "bg-rose-600 text-white";
+const PIE_COLORS = [
+  "#cc767f",
+  "#d4a017",
+  "#5b8fa8",
+  "#6a9a6a",
+  "#8b6bb1",
+  "#d07a3a",
+  "#3d8b8b",
+  "#7a7a7a",
+  "#c45c8a",
+  "#8fa83d",
+  "#4f6db5",
+  "#c47a5a",
+  "#6b8f71",
+  "#a67c52",
+  "#7d6b8a",
+  "#b85c5c",
+  "#5c7a99",
+  "#9a8b4f",
+  "#6e6e8a",
+  "#b56b7a",
+  "#4f8f7a",
+];
 
 function isIncomeType(value: string): value is (typeof INCOME_TYPES)[number] {
   return INCOME_TYPES.some((item) => item === value);
@@ -223,6 +246,7 @@ export function FinanceBreakdown({
             <p className="mt-2 text-3xl font-semibold text-[var(--ink)]">{formatAed(total)}</p>
           </section>
           <ChartCard title={t("byAccount")}>
+            {typeField === "expense_type" ? <SharePie rows={byAccount} /> : null}
             <BarList
               rows={byAccount}
               selectedKeys={accountFilters.map(String)}
@@ -236,6 +260,7 @@ export function FinanceBreakdown({
             />
           </ChartCard>
           <ChartCard title={t("byType")}>
+            {typeField === "expense_type" ? <SharePie rows={byType} /> : null}
             <BarList
               rows={byType}
               selectedKeys={typeFilters}
@@ -249,6 +274,7 @@ export function FinanceBreakdown({
             />
           </ChartCard>
           <ChartCard title={t("byCounterparty")}>
+            {typeField === "expense_type" ? <SharePie rows={byCounterparty} /> : null}
             <BarList
               rows={byCounterparty}
               selectedKeys={[]}
@@ -302,6 +328,84 @@ function FilterPill({
       {children}
     </button>
   );
+}
+
+function SharePie({ rows }: { rows: { key: string; label: string; amount: number }[] }) {
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+  if (total === 0) return null;
+  const percents = percentShares(
+    rows.map((row) => row.amount),
+    total,
+  );
+  const size = 160;
+  const center = size / 2;
+  const radius = 72;
+  let angle = -Math.PI / 2;
+  const slices = rows.map((row, index) => {
+    const sweep = (row.amount / total) * Math.PI * 2;
+    const start = angle;
+    const end = angle + sweep;
+    angle = end;
+    const full = sweep >= Math.PI * 2 - 1e-6;
+    return {
+      key: row.key,
+      label: row.label,
+      percent: percents[index],
+      color: PIE_COLORS[index % PIE_COLORS.length],
+      full,
+      d: full ? "" : pieSlice(center, center, radius, start, end),
+    };
+  });
+  return (
+    <div className="mb-5 flex flex-wrap items-center gap-5">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+        {slices.map((slice) =>
+          slice.full ? (
+            <circle key={slice.key} cx={center} cy={center} r={radius} fill={slice.color} />
+          ) : (
+            <path key={slice.key} d={slice.d} fill={slice.color} />
+          ),
+        )}
+      </svg>
+      <ul className="grid min-w-0 flex-1 gap-1.5">
+        {slices.map((slice) => (
+          <li key={slice.key} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} />
+              <span className="truncate text-[var(--ink)]">{slice.label}</span>
+            </span>
+            <span className="shrink-0 font-medium tabular-nums text-[var(--ink)]">{slice.percent}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function percentShares(amounts: number[], total: number): number[] {
+  const exact = amounts.map((amount) => (amount / total) * 100);
+  const percents = exact.map((value) => Math.floor(value));
+  let leftover = 100 - percents.reduce((sum, value) => sum + value, 0);
+  const order = exact
+    .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
+    .sort((left, right) => right.remainder - left.remainder);
+  for (const item of order) {
+    if (leftover <= 0) break;
+    percents[item.index] += 1;
+    leftover -= 1;
+  }
+  return percents;
+}
+
+function pieSlice(cx: number, cy: number, radius: number, start: number, end: number): string {
+  const startPoint = polar(cx, cy, radius, end);
+  const endPoint = polar(cx, cy, radius, start);
+  const large = end - start > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${large} 0 ${endPoint.x} ${endPoint.y} Z`;
+}
+
+function polar(cx: number, cy: number, radius: number, angle: number): { x: number; y: number } {
+  return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
 }
 
 function ChartCard({ title, children }: { title: string; children: ReactNode }) {

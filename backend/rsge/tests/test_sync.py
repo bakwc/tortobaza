@@ -113,8 +113,8 @@ def stored_waybill(rs_id: int) -> Waybill:
 
 
 class WindowStartTests(TestCase):
-    def test_no_sync_starts_thirty_days_back(self):
-        self.assertEqual(window_start(NOW, None), date(2026, 9, 24))
+    def test_no_sync_starts_ten_months_back(self):
+        self.assertEqual(window_start(NOW, None), date(2025, 12, 24))
 
     def test_recent_sync_looks_back_three_days(self):
         last = datetime(2026, 10, 23, 12, 0, tzinfo=TB)
@@ -124,9 +124,13 @@ class WindowStartTests(TestCase):
         last = datetime(2026, 10, 10, 8, 0, tzinfo=TB)
         self.assertEqual(window_start(NOW, last), date(2026, 10, 10))
 
-    def test_sync_older_than_a_month_is_clamped(self):
+    def test_sync_older_than_ten_months_is_clamped(self):
+        last = datetime(2025, 1, 1, 8, 0, tzinfo=TB)
+        self.assertEqual(window_start(NOW, last), date(2025, 12, 24))
+
+    def test_sync_inside_ten_months_uses_its_date(self):
         last = datetime(2026, 8, 1, 8, 0, tzinfo=TB)
-        self.assertEqual(window_start(NOW, last), date(2026, 9, 24))
+        self.assertEqual(window_start(NOW, last), date(2026, 8, 1))
 
     def test_sync_at_least_three_days_ago_uses_its_date(self):
         last = datetime(2026, 10, 20, 18, 0, tzinfo=TB)
@@ -135,6 +139,11 @@ class WindowStartTests(TestCase):
 
 @override_settings(RS_SU="su", RS_SP="sp")
 class WaybillSyncTests(TestCase):
+    def setUp(self):
+        patcher = patch("rsge.sync.time.sleep")
+        self.sleep = patcher.start()
+        self.addCleanup(patcher.stop)
+
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_waybill")
     @patch("rsge.client.call_get_buyer_waybills")
@@ -173,21 +182,22 @@ class WaybillSyncTests(TestCase):
 
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_buyer_waybills")
-    def test_first_sync_starts_a_month_ago(self, buyer, _now):
+    def test_first_sync_starts_ten_months_ago(self, buyer, _now):
         buyer.return_value = empty_list()
         sync_waybills()
         ranges = [item.args[2:] for item in buyer.call_args_list]
-        self.assertEqual(ranges[0], ("2026-09-24T00:00:00", "2026-09-27T00:00:00"))
-        self.assertEqual(ranges[-1], ("2026-10-24T00:00:00", "2026-10-25T00:00:00"))
-        self.assertEqual(len(ranges), 11)
+        self.assertEqual(ranges[0], ("2025-12-24T00:00:00", "2025-12-27T00:00:00"))
+        self.assertEqual(ranges[-1], ("2026-10-23T00:00:00", "2026-10-25T00:00:00"))
+        self.assertEqual(len(ranges), 102)
+        self.assertEqual(self.sleep.call_args_list, [call(1)] * 101)
 
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_buyer_waybills")
-    def test_sync_older_than_a_month_starts_a_month_ago(self, buyer, _now):
+    def test_sync_inside_ten_months_starts_on_its_date(self, buyer, _now):
         WaybillSync.objects.create(synced_at=datetime(2026, 8, 1, 8, 0, tzinfo=TB))
         buyer.return_value = empty_list()
         sync_waybills()
-        self.assertEqual(buyer.call_args_list[0].args[2:], ("2026-09-24T00:00:00", "2026-09-27T00:00:00"))
+        self.assertEqual(buyer.call_args_list[0].args[2:], ("2026-08-01T00:00:00", "2026-08-04T00:00:00"))
 
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_waybill")
@@ -483,6 +493,11 @@ def stored_invoice(rs_id: int) -> Invoice:
 
 @override_settings(RS_SU="su", RS_SP="sp")
 class InvoiceSyncTests(TestCase):
+    def setUp(self):
+        patcher = patch("rsge.sync.time.sleep")
+        self.sleep = patcher.start()
+        self.addCleanup(patcher.stop)
+
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_invoice_desc")
     @patch("rsge.client.call_get_buyer_invoices")
@@ -503,6 +518,7 @@ class InvoiceSyncTests(TestCase):
         )
         self.assertEqual(buyer.call_args_list[0].args[:4], ("su", "sp", "437747", "931738"))
         detail.assert_not_called()
+        self.assertEqual(self.sleep.call_args_list, [call(1)])
         self.assertEqual(InvoiceSync.objects.get().synced_at, NOW)
 
     @patch("rsge.sync.timezone.now", return_value=NOW)

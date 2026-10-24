@@ -1,3 +1,5 @@
+import calendar
+import time
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from xml.etree import ElementTree as ET
@@ -19,13 +21,21 @@ from rsge.models import Invoice, InvoiceLine, InvoiceSync, Waybill, WaybillGood,
 
 TB = ZoneInfo("Asia/Tbilisi")
 RECENT_DAYS = 3
-MAX_DAYS = 30
+MAX_MONTHS = 10
 CHUNK_DAYS = 3
+
+
+def months_ago(day: date, months: int) -> date:
+    month_index = day.year * 12 + (day.month - 1) - months
+    year, month_zero = divmod(month_index, 12)
+    month = month_zero + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day.day, last_day))
 
 
 def window_start(now: datetime, last_synced_at: datetime | None) -> date:
     today = now.astimezone(TB).date()
-    earliest = today - timedelta(days=MAX_DAYS)
+    earliest = months_ago(today, MAX_MONTHS)
     if last_synced_at is None:
         return earliest
     if now - last_synced_at < timedelta(days=RECENT_DAYS):
@@ -264,7 +274,9 @@ def sync_waybills() -> None:
     now = timezone.now()
     start = window_start(now, stored_synced_at())
     end = now.astimezone(TB).date()
-    for create_date_s, create_date_e in chunk_bounds(start, end):
+    for index, (create_date_s, create_date_e) in enumerate(chunk_bounds(start, end)):
+        if index:
+            time.sleep(1)
         result = fetch_buyer_waybills(su, sp, create_date_s, create_date_e)
         save_new_waybills(su, sp, result)
     mark_synced(now)
@@ -280,7 +292,9 @@ def sync_invoices() -> None:
     end = now.astimezone(TB).date()
     user_id = call_chek(su, sp)
     un_id = call_get_un_id(su, sp, user_id)
-    for s_dt, e_dt in chunk_bounds(start, end):
+    for index, (s_dt, e_dt) in enumerate(chunk_bounds(start, end)):
+        if index:
+            time.sleep(1)
         rows = fetch_buyer_invoices(su, sp, user_id, un_id, s_dt, e_dt)
         save_new_invoices(su, sp, user_id, rows)
     mark_invoices_synced(now)
