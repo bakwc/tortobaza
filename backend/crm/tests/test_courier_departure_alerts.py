@@ -124,9 +124,23 @@ class NotifyCourierDeparturesTests(TestCase):
         _courier("one", True, "key-one")
 
         notify_courier_departures(_NOW - timedelta(minutes=1))
-        notify_courier_departures(datetime(2026, 10, 24, 12, 30, tzinfo=_TB))
+        notify_courier_departures(datetime(2026, 10, 24, 18, 30, tzinfo=_TB))
 
         self.post.assert_not_called()
+
+    def test_overdue_not_in_delivery_sends_for_six_hours(self):
+        _order()
+        _courier("one", True, "key-one")
+
+        notify_courier_departures(datetime(2026, 10, 24, 12, 30, tzinfo=_TB))
+
+        self.assertEqual(self.post.call_args.kwargs["data"]["title"], "Выезд просрочен")
+        self.post.reset_mock()
+        _order()
+        notify_courier_departures(datetime(2026, 10, 24, 18, 29, tzinfo=_TB))
+
+        self.assertEqual(self.post.call_count, 1)
+        self.assertEqual(self.post.call_args.kwargs["data"]["title"], "Выезд просрочен")
 
     def test_pickup_when_ready_and_in_delivery_are_silent(self):
         _order(fulfillment_type=CrmOrder.FULFILLMENT_PICKUP)

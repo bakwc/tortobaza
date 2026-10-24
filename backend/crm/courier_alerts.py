@@ -9,7 +9,8 @@ from crm.models import CrmOrder
 from crm.telegram import crm_order_departure_datetime
 
 _PUSHOVER_MESSAGES_URL = "https://api.pushover.net/1/messages.json"
-_ALERT_WINDOW = timedelta(minutes=20)
+_ALERT_BEFORE = timedelta(minutes=20)
+_ALERT_AFTER = timedelta(hours=6)
 _SKIP_STATUSES = (
     CrmOrder.STATUS_UNCONFIRMED,
     CrmOrder.STATUS_IN_DELIVERY,
@@ -34,7 +35,7 @@ def notify_courier_departures(now: datetime) -> None:
         if departure is None:
             continue
         remaining = departure - now
-        if not (timedelta(0) < remaining <= _ALERT_WINDOW):
+        if now < departure - _ALERT_BEFORE or now >= departure + _ALERT_AFTER:
             continue
         if order.courier_alerted_departure_at == departure:
             continue
@@ -50,7 +51,11 @@ def _send_departure_alert(
     departure: datetime,
     remaining: timedelta,
 ) -> None:
-    minutes = math.ceil(remaining.total_seconds() / 60)
+    if remaining > timedelta(0):
+        minutes = math.ceil(remaining.total_seconds() / 60)
+        title = f"Выезд через {minutes} мин"
+    else:
+        title = "Выезд просрочен"
     start = order.time_start.strftime("%H:%M")
     if order.time_end is not None:
         slot = f"{start} – {order.time_end.strftime('%H:%M')}"
@@ -69,7 +74,7 @@ def _send_departure_alert(
         data={
             "token": settings.PUSHOVER_API_TOKEN,
             "user": user_key,
-            "title": f"Выезд через {minutes} мин",
+            "title": title,
             "message": message,
             "url": f"{settings.SITE_URL}/ru/crm?date={order.date.isoformat()}&order={order.pk}",
             "url_title": "Открыть заказ",
