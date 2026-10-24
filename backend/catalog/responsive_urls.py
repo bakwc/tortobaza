@@ -1,5 +1,5 @@
 LIST_WIDTHS = (200, 400, 600)
-DETAIL_WIDTHS = (400, 800, 1200, 1600)
+DETAIL_WIDTHS = (96, 200, 400, 800, 1200, 1600)
 
 
 def _base(rel: str, public_base_url: str) -> str:

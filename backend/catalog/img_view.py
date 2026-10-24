@@ -8,7 +8,7 @@ from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.views.decorators.http import require_GET
 from PIL import Image, ImageOps
 
-ALLOWED_DIMENSIONS = (200, 400, 600, 800, 1200, 1600)
+ALLOWED_DIMENSIONS = (96, 200, 400, 600, 800, 1200, 1600)
 
 
 def cache_dir_for(relative_path: str) -> Path:
