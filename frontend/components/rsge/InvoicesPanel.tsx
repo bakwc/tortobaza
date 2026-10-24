@@ -5,6 +5,11 @@ import { Card, QueryState, formatQuantity } from "@/components/menu/ui";
 import { useInvoices } from "@/hooks/useInvoices";
 import { formatCrmDateTime, formatMoney } from "@/lib/format";
 
+function localized(locale: string, original: string, ru: string): string {
+  if (locale === "ru" && ru !== "") return ru;
+  return original;
+}
+
 export function InvoicesPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
@@ -21,12 +26,19 @@ export function InvoicesPanel() {
                   <p className="text-sm text-[var(--ink)]/70">{formatCrmDateTime(invoice.reg_dt, locale)}</p>
                   <p className="text-base font-semibold text-[var(--ink)]">
                     {invoice.series} {invoice.number}
-                    <span className="font-medium text-[var(--ink)]/80"> · {invoice.org_name}</span>
+                    <span className="font-medium text-[var(--ink)]/80">
+                      {" · "}
+                      {localized(locale, invoice.org_name, invoice.org_name_ru)}
+                    </span>
                   </p>
                   <p className="text-sm text-[var(--ink)]/70">
                     {t("status")} {invoice.status}
                   </p>
-                  {invoice.notes !== "" ? <p className="text-sm text-[var(--ink)]/80">{invoice.notes}</p> : null}
+                  {invoice.notes !== "" ? (
+                    <p className="text-sm text-[var(--ink)]/80">
+                      {localized(locale, invoice.notes, invoice.notes_ru)}
+                    </p>
+                  ) : null}
                 </div>
                 <p className="text-base font-semibold tabular-nums text-[var(--ink)]">
                   {formatMoney(invoice.amount, "GEL")}
@@ -45,11 +57,15 @@ export function InvoicesPanel() {
                 <tbody>
                   {invoice.lines.map((line) => (
                     <tr key={line.id} className="border-t border-[var(--line)]">
-                      <td className="py-2 pr-3 text-[var(--ink)]">{line.goods}</td>
+                      <td className="py-2 pr-3 text-[var(--ink)]">
+                        {localized(locale, line.goods, line.goods_ru)}
+                      </td>
                       <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
                         {formatQuantity(line.quantity)}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">{line.unit}</td>
+                      <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">
+                        {localized(locale, line.unit, line.unit_ru)}
+                      </td>
                       <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
                         {formatMoney(line.full_amount, "GEL")}
                       </td>

@@ -34,6 +34,7 @@ from crm.telegram import crm_order_slot_datetime, sync_crm_order_to_telegram
 from crm.telegram_user import pending_telegram_phones, resolve_phone
 from crm.yandex_maps import resolve_yandex_maps_url
 from rsge.sync import sync_invoices, sync_waybills
+from rsge.translate import translate_invoices, translate_waybills
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -204,4 +205,6 @@ class Command(BaseCommand):
         sync_bog_order_links()
         sync_flowwow_order_links()
         sync_waybills()
+        translate_waybills()
         sync_invoices()
+        translate_invoices()

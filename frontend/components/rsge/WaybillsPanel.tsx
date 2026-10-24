@@ -6,8 +6,14 @@ import { useWaybills } from "@/hooks/useWaybills";
 import { formatCrmDateTime, formatMoney } from "@/lib/format";
 import type { RsWaybillGood } from "@/lib/api/types";
 
-function unitLabel(good: RsWaybillGood): string {
-  if (good.unit_txt !== "") return good.unit_txt;
+function localized(locale: string, original: string, ru: string): string {
+  if (locale === "ru" && ru !== "") return ru;
+  return original;
+}
+
+function unitLabel(good: RsWaybillGood, locale: string): string {
+  const unit = localized(locale, good.unit_txt, good.unit_txt_ru);
+  if (unit !== "") return unit;
   return String(good.unit_id);
 }
 
@@ -27,7 +33,10 @@ export function WaybillsPanel() {
                   <p className="text-sm text-[var(--ink)]/70">{formatCrmDateTime(waybill.create_date, locale)}</p>
                   <p className="text-base font-semibold text-[var(--ink)]">
                     {waybill.waybill_number}
-                    <span className="font-medium text-[var(--ink)]/80"> · {waybill.seller_name}</span>
+                    <span className="font-medium text-[var(--ink)]/80">
+                      {" · "}
+                      {localized(locale, waybill.seller_name, waybill.seller_name_ru)}
+                    </span>
                   </p>
                   <p className="text-sm text-[var(--ink)]/70">
                     {t("status")} {waybill.status}
@@ -51,11 +60,13 @@ export function WaybillsPanel() {
                 <tbody>
                   {waybill.goods.map((good) => (
                     <tr key={good.id} className="border-t border-[var(--line)]">
-                      <td className="py-2 pr-3 text-[var(--ink)]">{good.name}</td>
+                      <td className="py-2 pr-3 text-[var(--ink)]">
+                        {localized(locale, good.name, good.name_ru)}
+                      </td>
                       <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
                         {formatQuantity(good.quantity)}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">{unitLabel(good)}</td>
+                      <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">{unitLabel(good, locale)}</td>
                       <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
                         {formatMoney(good.price, "GEL")}
                       </td>
