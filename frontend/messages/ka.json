@@ -720,8 +720,9 @@
     "removeImage": "სურათის წაშლა",
     "newTechCard": "ახალი ტექ. ბარათი",
     "recipeCost": "თვითღირებულება",
-    "costPerKg": "ფუძის თვითღირებულება {weight} კგ-ზე",
-    "costPerPiece": "ფუძის თვითღირებულება {count} ცალზე",
+    "costPerKg": "თვითღირებულება {weight} კგ-ზე",
+    "costPerPiece": "თვითღირებულება {count} ცალზე",
+    "costRange": "{min}-დან {max}-მდე",
     "baseCompositionPerKg": "ფუძის შემადგენლობა {weight} კგ-ზე",
     "baseCompositionPerPiece": "ფუძის შემადგენლობა {count} ცალზე",
     "linkedGroups": "მოდიფიკატორების ჯგუფები",
@@ -848,6 +849,14 @@
     "invoiceStatusCorrectionConfirmed": "კორექტირება დადასტურებული",
     "invoiceConfirmTitle": "დარწმუნებული ხართ, რომ გსურთ ფაქტურის დადასტურება?",
     "invoiceRejectTitle": "დარწმუნებული ხართ, რომ გსურთ ფაქტურის უარყოფა?",
-    "rejectReason": "მიზეზი"
+    "rejectReason": "მიზეზი",
+    "summaryCount": "დოკუმენტი",
+    "summaryTotal": "ჯამი",
+    "summaryPending": "დასადასტურებელი",
+    "positions": "{count, plural, one {# პოზიცია} other {# პოზიცია}}",
+    "route": "მარშრუტი",
+    "driver": "მძღოლი",
+    "car": "მანქანა",
+    "notes": "შენიშვნა"
   }
 }

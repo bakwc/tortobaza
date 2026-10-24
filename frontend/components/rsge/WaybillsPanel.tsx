@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Card, QueryState, formatQuantity } from "@/components/menu/ui";
+import { Truck } from "lucide-react";
+import { QueryState, formatQuantity } from "@/components/menu/ui";
+import {
+  RsgeChip,
+  RsgeDayHeader,
+  RsgeDocumentRow,
+  RsgeEmpty,
+  RsgeSummary,
+  groupRsgeByDate,
+  rsgeDateKey,
+  rsgeTone,
+  sumGel,
+  type RsgeColumn,
+  type RsgeToneName,
+} from "@/components/rsge/RsgeDocumentRow";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideWaybill, useWaybills } from "@/hooks/useWaybills";
-import { formatCrmDateTime, formatMoney } from "@/lib/format";
-import type { RsWaybillGood } from "@/lib/api/types";
+import { formatMoney } from "@/lib/format";
+import type { RsWaybill, RsWaybillGood } from "@/lib/api/types";
 
 function waybillStatus(status: number, t: ReturnType<typeof useTranslations<"rsge">>): string {
   if (status === 0) return t("statusSaved");
@@ -30,6 +44,17 @@ function unitLabel(good: RsWaybillGood, locale: string): string {
   const unit = localized(locale, good.unit_txt, good.unit_txt_ru);
   if (unit !== "") return unit;
   return String(good.unit_id);
+}
+
+function waybillToneName(waybill: RsWaybill): RsgeToneName {
+  if (waybill.is_confirmed === 0) return "pending";
+  if (waybill.is_confirmed === -1 || waybill.status === -1 || waybill.status === -2) return "rejected";
+  if (waybill.is_confirmed === 1) return "confirmed";
+  return "neutral";
+}
+
+function waybillPending(waybill: RsWaybill): boolean {
+  return waybill.is_confirmed === 0;
 }
 
 function WaybillDecisionDialog({
@@ -73,6 +98,31 @@ function WaybillDecisionDialog({
   );
 }
 
+function WaybillMeta({ waybill, locale }: { waybill: RsWaybill; locale: string }) {
+  const t = useTranslations("rsge");
+  const start = localized(locale, waybill.start_address, waybill.start_address_ru);
+  const end = localized(locale, waybill.end_address, waybill.end_address_ru);
+  const driver = localized(locale, waybill.driver_name, waybill.driver_name_ru);
+  const rows: { label: string; value: string }[] = [];
+  if (start !== "" || end !== "") {
+    rows.push({ label: t("route"), value: `${start} → ${end}` });
+  }
+  if (driver !== "") rows.push({ label: t("driver"), value: driver });
+  if (waybill.car_number !== "") rows.push({ label: t("car"), value: waybill.car_number });
+  if (rows.length === 0) return null;
+  return (
+    <div className="grid gap-1.5 text-sm">
+      {rows.map((row) => (
+        <p key={row.label}>
+          <span className="font-medium text-[var(--muted-2)]">{row.label}</span>
+          <span className="mx-1.5 text-[var(--ink)]/40">·</span>
+          <span className="text-[var(--ink)]">{row.value}</span>
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export function WaybillsPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
@@ -86,85 +136,87 @@ export function WaybillsPanel() {
     setDecision({ id, action });
   }
 
+  const columns: RsgeColumn[] = [
+    { label: t("name"), align: "left" },
+    { label: t("quantity"), align: "right" },
+    { label: t("unit"), align: "left" },
+    { label: t("price"), align: "right" },
+    { label: t("amount"), align: "right" },
+    { label: t("barcode"), align: "left" },
+  ];
+
+  const documents = waybills.data ?? [];
+  const groups = groupRsgeByDate(documents, (waybill) => rsgeDateKey(waybill.create_date), waybillPending);
+  const pendingCount = documents.filter(waybillPending).length;
+
+  let list: ReactNode = <RsgeEmpty>{t("empty")}</RsgeEmpty>;
+  if (documents.length > 0) {
+    list = (
+      <div className="grid gap-6">
+        <RsgeSummary
+          count={documents.length}
+          total={formatMoney(sumGel(documents.map((waybill) => waybill.full_amount)), "GEL")}
+          pending={pendingCount}
+        />
+        {groups.map((day) => (
+          <section key={day.date} className="grid gap-2">
+            <RsgeDayHeader
+              date={day.date}
+              count={day.items.length}
+              sum={formatMoney(sumGel(day.items.map((waybill) => waybill.full_amount)), "GEL")}
+            />
+            {day.items.map((waybill) => {
+              const toneName = waybillToneName(waybill);
+              const tone = rsgeTone(toneName);
+              const pending = waybillPending(waybill);
+              return (
+                <RsgeDocumentRow
+                  key={waybill.id}
+                  tone={tone}
+                  icon={<Truck className="h-4 w-4" />}
+                  title={localized(locale, waybill.seller_name, waybill.seller_name_ru)}
+                  subtitle={waybill.waybill_number}
+                  amount={formatMoney(waybill.full_amount, "GEL")}
+                  chips={
+                    <>
+                      <RsgeChip className={tone.chip}>{waybillStatus(waybill.status, t)}</RsgeChip>
+                      {waybill.is_confirmed === 1 ? (
+                        <RsgeChip className="bg-white/80 text-emerald-800">{t("confirmed")}</RsgeChip>
+                      ) : null}
+                      {waybill.is_confirmed === -1 ? (
+                        <RsgeChip className="bg-white/80 text-rose-800">{t("rejected")}</RsgeChip>
+                      ) : null}
+                      <RsgeChip className="bg-white/80 text-[var(--muted-2)]">
+                        {t("positions", { count: waybill.goods.length })}
+                      </RsgeChip>
+                    </>
+                  }
+                  onConfirm={pending ? () => openDecision(waybill.id, "confirm") : null}
+                  onReject={pending ? () => openDecision(waybill.id, "reject") : null}
+                  details={<WaybillMeta waybill={waybill} locale={locale} />}
+                  columns={columns}
+                  rowKeys={waybill.goods.map((good) => good.id)}
+                  rows={waybill.goods.map((good) => [
+                    localized(locale, good.name, good.name_ru),
+                    formatQuantity(good.quantity),
+                    unitLabel(good, locale),
+                    formatMoney(good.price, "GEL"),
+                    formatMoney(good.amount, "GEL"),
+                    good.bar_code,
+                  ])}
+                />
+              );
+            })}
+          </section>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <>
       <QueryState isLoading={waybills.isLoading} isError={waybills.isError}>
-      {waybills.data?.length ? (
-        <div className="grid gap-4">
-          {waybills.data.map((waybill) => (
-            <Card key={waybill.id} className="grid gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="grid gap-1">
-                  <p className="text-sm text-[var(--ink)]/70">{formatCrmDateTime(waybill.create_date, locale)}</p>
-                  <p className="text-base font-semibold text-[var(--ink)]">
-                    {waybill.waybill_number}
-                    <span className="font-medium text-[var(--ink)]/80">
-                      {" · "}
-                      {localized(locale, waybill.seller_name, waybill.seller_name_ru)}
-                    </span>
-                  </p>
-                  <p className="text-sm text-[var(--ink)]/70">
-                    {t("status")} {waybillStatus(waybill.status, t)}
-                  </p>
-                  {waybill.is_confirmed === 1 ? (
-                    <p className="text-sm text-[var(--ink)]/70">{t("confirmed")}</p>
-                  ) : null}
-                  {waybill.is_confirmed === -1 ? (
-                    <p className="text-sm text-[var(--ink)]/70">{t("rejected")}</p>
-                  ) : null}
-                  {waybill.is_confirmed === 0 ? (
-                    <div className="mt-1 flex gap-2">
-                      <Button type="button" size="sm" onClick={() => openDecision(waybill.id, "confirm")}>
-                        {t("confirm")}
-                      </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => openDecision(waybill.id, "reject")}>
-                        {t("reject")}
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
-                <p className="text-base font-semibold tabular-nums text-[var(--ink)]">
-                  {formatMoney(waybill.full_amount, "GEL")}
-                </p>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-                    <th className="py-2 pr-3 font-medium">{t("name")}</th>
-                    <th className="py-2 pr-3 font-medium">{t("quantity")}</th>
-                    <th className="py-2 pr-3 font-medium">{t("unit")}</th>
-                    <th className="py-2 pr-3 font-medium">{t("price")}</th>
-                    <th className="py-2 pr-3 font-medium">{t("amount")}</th>
-                    <th className="py-2 font-medium">{t("barcode")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {waybill.goods.map((good) => (
-                    <tr key={good.id} className="border-t border-[var(--line)]">
-                      <td className="py-2 pr-3 text-[var(--ink)]">
-                        {localized(locale, good.name, good.name_ru)}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
-                        {formatQuantity(good.quantity)}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">{unitLabel(good, locale)}</td>
-                      <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
-                        {formatMoney(good.price, "GEL")}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
-                        {formatMoney(good.amount, "GEL")}
-                      </td>
-                      <td className="py-2 text-[var(--ink)]/80">{good.bar_code}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-[var(--ink)]/70">{t("empty")}</p>
-      )}
+        {list}
       </QueryState>
       {decision ? (
         <WaybillDecisionDialog

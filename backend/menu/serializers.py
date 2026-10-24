@@ -27,6 +27,7 @@ from menu.recipes import (
     semi_product_cost,
     stock_line_cost,
     tech_card_cost,
+    tech_card_cost_range,
 )
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
@@ -495,7 +496,10 @@ class TechCardSerializer(serializers.ModelSerializer):
         data["images"] = menu_image_rows(instance.images.all(), self.context["request"])
         if show_costs(self.context):
             weight = instance.basis_weight_kg if instance.kind == TechCard.KIND_WEIGHTED else None
+            low, high = tech_card_cost_range(instance, weight)
             data["base_cost"] = str(tech_card_cost(instance, [], weight))
+            data["cost_min"] = str(low)
+            data["cost_max"] = str(high)
         return data
 
     def validate(self, attrs):

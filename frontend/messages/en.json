@@ -720,8 +720,9 @@
     "removeImage": "Remove image",
     "newTechCard": "New tech card",
     "recipeCost": "Cost",
-    "costPerKg": "Base cost for {weight} kg",
-    "costPerPiece": "Base cost for {count} pcs",
+    "costPerKg": "Cost for {weight} kg",
+    "costPerPiece": "Cost for {count} pcs",
+    "costRange": "{min} – {max}",
     "baseCompositionPerKg": "Base composition for {weight} kg",
     "baseCompositionPerPiece": "Base composition for {count} pcs",
     "linkedGroups": "Modifier groups",
@@ -848,6 +849,14 @@
     "invoiceStatusCorrectionConfirmed": "Correction confirmed",
     "invoiceConfirmTitle": "Confirm this invoice?",
     "invoiceRejectTitle": "Reject this invoice?",
-    "rejectReason": "Reason"
+    "rejectReason": "Reason",
+    "summaryCount": "Documents",
+    "summaryTotal": "Total",
+    "summaryPending": "Awaiting decision",
+    "positions": "{count, plural, one {# item} other {# items}}",
+    "route": "Route",
+    "driver": "Driver",
+    "car": "Car",
+    "notes": "Notes"
   }
 }

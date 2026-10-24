@@ -1,15 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Card, QueryState, formatQuantity } from "@/components/menu/ui";
+import { FileText } from "lucide-react";
+import { QueryState, formatQuantity } from "@/components/menu/ui";
+import {
+  RsgeChip,
+  RsgeDayHeader,
+  RsgeDocumentRow,
+  RsgeEmpty,
+  RsgeSummary,
+  groupRsgeByDate,
+  rsgeDateKey,
+  rsgeTone,
+  sumGel,
+  type RsgeColumn,
+  type RsgeToneName,
+} from "@/components/rsge/RsgeDocumentRow";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideInvoice, useInvoices } from "@/hooks/useInvoices";
-import { formatCrmDateTime, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
+import type { RsInvoice } from "@/lib/api/types";
 
 const PENDING_STATUSES = new Set([1, 5, 6]);
 
@@ -29,6 +44,17 @@ function invoiceStatus(status: number, t: ReturnType<typeof useTranslations<"rsg
 function localized(locale: string, original: string, ru: string): string {
   if (locale === "ru" && ru !== "") return ru;
   return original;
+}
+
+function invoicePending(invoice: RsInvoice): boolean {
+  return PENDING_STATUSES.has(invoice.status) && invoice.was_ref === 0;
+}
+
+function invoiceToneName(invoice: RsInvoice): RsgeToneName {
+  if (invoicePending(invoice)) return "pending";
+  if (invoice.was_ref === 1 || invoice.status === 7) return "rejected";
+  if (invoice.status === 2 || invoice.status === 8) return "confirmed";
+  return "neutral";
 }
 
 function InvoiceDecisionDialog({
@@ -80,6 +106,19 @@ function InvoiceDecisionDialog({
   );
 }
 
+function InvoiceNotes({ invoice, locale }: { invoice: RsInvoice; locale: string }) {
+  const t = useTranslations("rsge");
+  const notes = localized(locale, invoice.notes, invoice.notes_ru);
+  if (notes === "") return null;
+  return (
+    <p className="text-sm text-[var(--ink)]">
+      <span className="font-medium text-[var(--muted-2)]">{t("notes")}</span>
+      <span className="mx-1.5 text-[var(--ink)]/40">·</span>
+      {notes}
+    </p>
+  );
+}
+
 export function InvoicesPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
@@ -93,87 +132,89 @@ export function InvoicesPanel() {
     setDecision({ id, action });
   }
 
+  const columns: RsgeColumn[] = [
+    { label: t("name"), align: "left" },
+    { label: t("quantity"), align: "right" },
+    { label: t("unit"), align: "left" },
+    { label: t("amount"), align: "right" },
+    { label: t("vat"), align: "right" },
+  ];
+
+  const documents = invoices.data ?? [];
+  const groups = groupRsgeByDate(documents, (invoice) => rsgeDateKey(invoice.reg_dt), invoicePending);
+  const pendingCount = documents.filter(invoicePending).length;
+
+  let list: ReactNode = <RsgeEmpty>{t("invoicesEmpty")}</RsgeEmpty>;
+  if (documents.length > 0) {
+    list = (
+      <div className="grid gap-6">
+        <RsgeSummary
+          count={documents.length}
+          total={formatMoney(sumGel(documents.map((invoice) => invoice.amount)), "GEL")}
+          pending={pendingCount}
+        />
+        {groups.map((day) => (
+          <section key={day.date} className="grid gap-2">
+            <RsgeDayHeader
+              date={day.date}
+              count={day.items.length}
+              sum={formatMoney(sumGel(day.items.map((invoice) => invoice.amount)), "GEL")}
+            />
+            {day.items.map((invoice) => {
+              const toneName = invoiceToneName(invoice);
+              const tone = rsgeTone(toneName);
+              const pending = invoicePending(invoice);
+              const number = `${invoice.series} ${invoice.number}`.trim();
+              return (
+                <RsgeDocumentRow
+                  key={invoice.id}
+                  tone={tone}
+                  icon={<FileText className="h-4 w-4" />}
+                  title={number}
+                  subtitle={localized(locale, invoice.org_name, invoice.org_name_ru)}
+                  amount={formatMoney(invoice.amount, "GEL")}
+                  chips={
+                    <>
+                      <RsgeChip className={tone.chip}>{invoiceStatus(invoice.status, t)}</RsgeChip>
+                      {invoice.status === 2 || invoice.status === 8 ? (
+                        <RsgeChip className="bg-white/80 text-emerald-800">{t("confirmed")}</RsgeChip>
+                      ) : null}
+                      {invoice.was_ref === 1 ? (
+                        <RsgeChip className="bg-white/80 text-rose-800">{t("rejected")}</RsgeChip>
+                      ) : null}
+                      <RsgeChip className="bg-white/80 text-[var(--ink)]">
+                        {t("vat")} {formatMoney(invoice.vat, "GEL")}
+                      </RsgeChip>
+                      <RsgeChip className="bg-white/80 text-[var(--muted-2)]">
+                        {t("positions", { count: invoice.lines.length })}
+                      </RsgeChip>
+                    </>
+                  }
+                  onConfirm={pending ? () => openDecision(invoice.id, "confirm") : null}
+                  onReject={pending ? () => openDecision(invoice.id, "reject") : null}
+                  details={<InvoiceNotes invoice={invoice} locale={locale} />}
+                  columns={columns}
+                  rowKeys={invoice.lines.map((line) => line.id)}
+                  rows={invoice.lines.map((line) => [
+                    localized(locale, line.goods, line.goods_ru),
+                    formatQuantity(line.quantity),
+                    localized(locale, line.unit, line.unit_ru),
+                    formatMoney(line.full_amount, "GEL"),
+                    formatMoney(line.vat_amount, "GEL"),
+                  ])}
+                />
+              );
+            })}
+          </section>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <>
       <QueryState isLoading={invoices.isLoading} isError={invoices.isError}>
-        {invoices.data?.length ? (
-          <div className="grid gap-4">
-            {invoices.data.map((invoice) => (
-              <Card key={invoice.id} className="grid gap-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="grid gap-1">
-                    <p className="text-sm text-[var(--ink)]/70">{formatCrmDateTime(invoice.reg_dt, locale)}</p>
-                    <p className="text-base font-semibold text-[var(--ink)]">
-                      {invoice.series} {invoice.number}
-                      <span className="font-medium text-[var(--ink)]/80">
-                        {" · "}
-                        {localized(locale, invoice.org_name, invoice.org_name_ru)}
-                      </span>
-                    </p>
-                    <p className="text-sm text-[var(--ink)]/70">
-                      {t("status")} {invoiceStatus(invoice.status, t)}
-                    </p>
-                    {invoice.was_ref === 1 ? (
-                      <p className="text-sm text-[var(--ink)]/70">{t("rejected")}</p>
-                    ) : null}
-                    {PENDING_STATUSES.has(invoice.status) && invoice.was_ref === 0 ? (
-                      <div className="mt-1 flex gap-2">
-                        <Button type="button" size="sm" onClick={() => openDecision(invoice.id, "confirm")}>
-                          {t("confirm")}
-                        </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={() => openDecision(invoice.id, "reject")}>
-                          {t("reject")}
-                        </Button>
-                      </div>
-                    ) : null}
-                    {invoice.notes !== "" ? (
-                      <p className="text-sm text-[var(--ink)]/80">
-                        {localized(locale, invoice.notes, invoice.notes_ru)}
-                      </p>
-                    ) : null}
-                  </div>
-                  <p className="text-base font-semibold tabular-nums text-[var(--ink)]">
-                    {formatMoney(invoice.amount, "GEL")}
-                  </p>
-                </div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-                      <th className="py-2 pr-3 font-medium">{t("name")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("quantity")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("unit")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("amount")}</th>
-                      <th className="py-2 font-medium">{t("vat")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoice.lines.map((line) => (
-                      <tr key={line.id} className="border-t border-[var(--line)]">
-                        <td className="py-2 pr-3 text-[var(--ink)]">
-                          {localized(locale, line.goods, line.goods_ru)}
-                        </td>
-                        <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
-                          {formatQuantity(line.quantity)}
-                        </td>
-                        <td className="whitespace-nowrap py-2 pr-3 text-[var(--ink)]/80">
-                          {localized(locale, line.unit, line.unit_ru)}
-                        </td>
-                        <td className="whitespace-nowrap py-2 pr-3 tabular-nums text-[var(--ink)]">
-                          {formatMoney(line.full_amount, "GEL")}
-                        </td>
-                        <td className="whitespace-nowrap py-2 tabular-nums text-[var(--ink)]">
-                          {formatMoney(line.vat_amount, "GEL")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-[var(--ink)]/70">{t("invoicesEmpty")}</p>
-        )}
+        {list}
       </QueryState>
       {decision ? (
         <InvoiceDecisionDialog

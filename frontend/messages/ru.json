@@ -720,8 +720,9 @@
     "removeImage": "Удалить картинку",
     "newTechCard": "Новая тех. карта",
     "recipeCost": "Себестоимость",
-    "costPerKg": "Себестоимость основы на {weight} кг",
-    "costPerPiece": "Себестоимость основы на {count} шт",
+    "costPerKg": "Себестоимость на {weight} кг",
+    "costPerPiece": "Себестоимость на {count} шт",
+    "costRange": "от {min} до {max}",
     "baseCompositionPerKg": "Базовый состав на {weight} кг",
     "baseCompositionPerPiece": "Базовый состав на {count} шт",
     "linkedGroups": "Группы модификаторов",
@@ -848,6 +849,14 @@
     "invoiceStatusCorrectionConfirmed": "Корректировка подтверждена",
     "invoiceConfirmTitle": "Подтвердить эту фактуру?",
     "invoiceRejectTitle": "Отклонить эту фактуру?",
-    "rejectReason": "Причина"
+    "rejectReason": "Причина",
+    "summaryCount": "Документов",
+    "summaryTotal": "Сумма",
+    "summaryPending": "Ждут решения",
+    "positions": "{count, plural, one {# позиция} few {# позиции} many {# позиций} other {# позиций}}",
+    "route": "Маршрут",
+    "driver": "Водитель",
+    "car": "Авто",
+    "notes": "Примечание"
   }
 }

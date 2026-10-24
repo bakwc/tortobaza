@@ -25,6 +25,7 @@ from menu.recipes import (
     order_cost,
     semi_product_cost,
     tech_card_cost,
+    tech_card_cost_range,
     validate_order_item,
 )
 from menu.tests.fixtures import MenuFixture, add_item, make_crm_order
@@ -193,6 +194,16 @@ class CostTests(TestCase):
             Decimal("2"),
         )
         self.assertEqual(cost, Decimal("27.70"))
+
+    def test_tech_card_cost_range_includes_modifiers(self):
+        low, high = tech_card_cost_range(self.menu.cake, Decimal("1"))
+        self.assertEqual(low, Decimal("10.00"))
+        self.assertEqual(high, Decimal("16.20"))
+
+    def test_tech_card_without_modifiers_has_equal_bounds(self):
+        low, high = tech_card_cost_range(self.menu.bento, None)
+        self.assertEqual(low, high)
+        self.assertEqual(low, tech_card_cost(self.menu.bento, [], None))
 
     def test_order_cost_sums_items(self):
         order = make_crm_order(CrmOrder.STATUS_NEW)
@@ -380,6 +391,8 @@ class LineCostApiTests(TestCase):
         body = card.json()
         lines = body["lines"] + [line for section in body["sections"] for line in section["lines"]]
         self.assertEqual(sum(Decimal(line["cost"]) for line in lines), Decimal(body["base_cost"]))
+        self.assertEqual(Decimal(body["cost_min"]), Decimal("12.50"))
+        self.assertEqual(Decimal(body["cost_max"]), Decimal("18.70"))
         frozen = next(line for line in body["lines"] if line["semi_product"] == self.menu.frozen_sponge.pk)
         self.assertEqual(Decimal(frozen["cost"]), Decimal("2.00"))
         self.assertTrue(all("cost" in line for line in body["modifier_lines"]))
@@ -407,6 +420,8 @@ class LineCostApiTests(TestCase):
         self.assertEqual(card.status_code, 200, card.content)
         body = card.json()
         self.assertNotIn("base_cost", body)
+        self.assertNotIn("cost_min", body)
+        self.assertNotIn("cost_max", body)
         for line in body["lines"] + body["modifier_lines"]:
             self.assertNotIn("cost", line)
         for section in body["sections"]:

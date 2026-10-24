@@ -232,11 +232,15 @@ def expand_order(crm_order) -> Needs:
     return needs
 
 
-def needs_cost(needs: Needs) -> Decimal:
+def _raw_cost(needs: Needs) -> Decimal:
     total = Decimal("0")
     for component, quantity in needs.items():
         total += quantity * component.avg_cost
-    return total.quantize(_CENT)
+    return total
+
+
+def needs_cost(needs: Needs) -> Decimal:
+    return _raw_cost(needs).quantize(_CENT)
 
 
 def _recipe_needs(component: Component, quantity: Decimal, needs: Needs, path: frozenset[int]) -> None:
@@ -279,6 +283,67 @@ def tech_card_cost(
 ) -> Decimal:
     count = 1 if tech_card.kind == TechCard.KIND_WEIGHTED else tech_card.basis_quantity
     return needs_cost(expand_order_item(tech_card, weight_kg, count, modifiers, []))
+
+
+def _modifier_lines_cost(lines, item_quantity: Decimal, weight_factor: Decimal) -> Decimal:
+    needs: Needs = {}
+    for line in lines:
+        factor = item_quantity
+        if line.scales_by_weight:
+            factor = factor * weight_factor
+        _explode(
+            line.component,
+            line_component_quantity(line) * factor,
+            needs,
+            frozenset(),
+        )
+    return _raw_cost(needs)
+
+
+def _selection_cost_bounds(
+    group: ModifierGroup,
+    required: bool,
+    costs: list[Decimal],
+) -> tuple[Decimal, Decimal]:
+    if not costs:
+        return Decimal("0"), Decimal("0")
+    ordered = sorted(costs)
+    available = len(ordered)
+    take_min = min(_min_selections(group, required), available)
+    maximum = _max_selections(group)
+    take_max = available if maximum is None else min(maximum, available)
+    if take_max < take_min:
+        take_max = take_min
+    low = sum(ordered[:take_min], Decimal("0"))
+    high = sum(ordered[-take_max:], Decimal("0")) if take_max else Decimal("0")
+    return low, high
+
+
+def tech_card_cost_range(
+    tech_card: TechCard,
+    weight_kg: Decimal | None,
+) -> tuple[Decimal, Decimal]:
+    count = 1 if tech_card.kind == TechCard.KIND_WEIGHTED else tech_card.basis_quantity
+    if tech_card.kind == TechCard.KIND_WEIGHTED:
+        weight_factor = weight_kg / tech_card.basis_weight_kg
+    else:
+        weight_factor = _ONE
+    item_quantity = Decimal(count)
+    base = _raw_cost(expand_order_item(tech_card, weight_kg, count, [], []))
+    lines_by_modifier: dict[int, list] = defaultdict(list)
+    for line in tech_card.modifier_lines.select_related("ingredient", "semi_product"):
+        lines_by_modifier[line.modifier_id].append(line)
+    low = base
+    high = base
+    for link in tech_card.modifier_groups.select_related("group"):
+        costs = [
+            _modifier_lines_cost(lines_by_modifier[modifier.pk], item_quantity, weight_factor)
+            for modifier in link.group.modifiers.filter(is_active=True)
+        ]
+        group_low, group_high = _selection_cost_bounds(link.group, link.effective_is_required, costs)
+        low += group_low
+        high += group_high
+    return low.quantize(_CENT), high.quantize(_CENT)
 
 
 def order_cost(crm_order) -> Decimal:

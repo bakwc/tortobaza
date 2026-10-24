@@ -47,7 +47,7 @@ function RsgeMonthBar({ period }: { period: FinancePeriod }) {
   const isCurrentMonth = period.month === today.slice(0, 7);
 
   return (
-    <div className="rounded-3xl border border-[var(--line)] bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <Button
           variant="outline"

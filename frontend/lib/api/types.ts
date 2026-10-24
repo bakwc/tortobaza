@@ -869,6 +869,8 @@ export const TechCardSchema = z.object({
   products: z.array(z.object({ id: z.number(), name: z.string() })),
   images: z.array(MenuImageSchema),
   base_cost: z.string().optional(),
+  cost_min: z.string().optional(),
+  cost_max: z.string().optional(),
 });
 
 export const TechCardCostSchema = z.object({ cost: z.string() });
