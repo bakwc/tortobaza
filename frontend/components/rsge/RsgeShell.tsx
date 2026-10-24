@@ -13,7 +13,7 @@ export function RsgeShell({ section, children }: { section: RsgeSection; childre
     { key: "invoices", href: "/rsge/invoices", label: t("invoices") },
   ];
   return (
-    <SectionShell active={section} tabs={tabs}>
+    <SectionShell active={section} financeOnly tabs={tabs}>
       {children}
     </SectionShell>
   );

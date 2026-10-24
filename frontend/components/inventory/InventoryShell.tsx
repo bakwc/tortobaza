@@ -28,7 +28,7 @@ export function InventoryShell({ section, children }: { section: InventorySectio
   ];
   const visibleTabs = currentUser.data?.is_finance_admin ? tabs : tabs.filter((tab) => !FINANCE_ADMIN_SECTIONS.includes(tab.key));
   return (
-    <SectionShell active={section} tabs={visibleTabs}>
+    <SectionShell active={section} financeOnly={false} tabs={visibleTabs}>
       {children}
     </SectionShell>
   );

@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
+from accounts.models import UserProfile
 from rsge.models import Invoice, InvoiceLine, InvoiceSync, Waybill, WaybillGood, WaybillSync
 from rsge.sync import sync_invoices, sync_waybills, window_start
 
@@ -253,7 +254,8 @@ class WaybillApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.staff = User.objects.create_user("boss", password="x", is_staff=True)
-        self.worker = User.objects.create_user("worker", password="x")
+        self.finance = User.objects.create_user("finance", password="x", is_staff=True)
+        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
         older = datetime(2026, 10, 1, 12, 0, tzinfo=TB)
         newer = datetime(2026, 10, 14, 21, 17, 49, tzinfo=TB)
         first = Waybill.objects.create(
@@ -312,8 +314,8 @@ class WaybillApiTests(TestCase):
         )
         self.first = first
 
-    def test_staff_lists_waybills_newest_first(self):
-        self.client.force_authenticate(self.staff)
+    def test_finance_admin_lists_waybills_newest_first(self):
+        self.client.force_authenticate(self.finance)
         response = self.client.get("/api/rsge/waybills/")
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
@@ -326,8 +328,8 @@ class WaybillApiTests(TestCase):
         self.assertEqual(payload[1]["goods"], [])
         self.assertEqual(payload[1]["id"], self.first.pk)
 
-    def test_non_staff_is_forbidden(self):
-        self.client.force_authenticate(self.worker)
+    def test_staff_without_finance_admin_is_forbidden(self):
+        self.client.force_authenticate(self.staff)
         response = self.client.get("/api/rsge/waybills/")
         self.assertEqual(response.status_code, 403)
 
@@ -546,7 +548,8 @@ class InvoiceApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.staff = User.objects.create_user("boss", password="x", is_staff=True)
-        self.worker = User.objects.create_user("worker", password="x")
+        self.finance = User.objects.create_user("finance", password="x", is_staff=True)
+        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
         older = datetime(2026, 10, 2, 18, 29, 21, tzinfo=TB)
         newer = datetime(2026, 10, 11, 21, 51, 47, tzinfo=TB)
         first = Invoice.objects.create(
@@ -599,8 +602,8 @@ class InvoiceApiTests(TestCase):
         )
         self.first = first
 
-    def test_staff_lists_invoices_newest_first(self):
-        self.client.force_authenticate(self.staff)
+    def test_finance_admin_lists_invoices_newest_first(self):
+        self.client.force_authenticate(self.finance)
         response = self.client.get("/api/rsge/invoices/")
         self.assertEqual(response.status_code, 200, response.content)
         payload = response.json()
@@ -617,7 +620,7 @@ class InvoiceApiTests(TestCase):
         self.assertIsNotNone(payload[1]["agree_date"])
         self.assertEqual(payload[1]["id"], self.first.pk)
 
-    def test_non_staff_is_forbidden(self):
-        self.client.force_authenticate(self.worker)
+    def test_staff_without_finance_admin_is_forbidden(self):
+        self.client.force_authenticate(self.staff)
         response = self.client.get("/api/rsge/invoices/")
         self.assertEqual(response.status_code, 403)

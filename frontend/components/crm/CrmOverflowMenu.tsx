@@ -60,6 +60,13 @@ export function CrmOverflowMenu() {
             icon: Banknote,
             active: isSalaries,
           },
+          {
+            key: "rsge",
+            href: "/rsge",
+            label: t("rsgeSection"),
+            icon: Receipt,
+            active: isUnder(pathname, "/rsge"),
+          },
         ]
       : []),
     ...(isStaff
@@ -77,13 +84,6 @@ export function CrmOverflowMenu() {
             label: t("inventorySection"),
             icon: Warehouse,
             active: isUnder(pathname, "/inventory"),
-          },
-          {
-            key: "rsge",
-            href: "/rsge",
-            label: t("rsgeSection"),
-            icon: Receipt,
-            active: isUnder(pathname, "/rsge"),
           },
         ]
       : []),
