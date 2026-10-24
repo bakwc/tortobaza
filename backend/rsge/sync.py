@@ -119,7 +119,7 @@ def good_from(waybill: Waybill, element: ET.Element) -> WaybillGood:
         price=Decimal(require_child(element, "PRICE")),
         amount=Decimal(require_child(element, "AMOUNT")),
         bar_code=blank(element, "BAR_CODE"),
-        a_id=int(require_child(element, "A_ID")),
+        a_id=optional_int(element, "A_ID"),
         vat_type=int(require_child(element, "VAT_TYPE")),
         quantity_ext=None if quantity_ext is None else Decimal(quantity_ext),
         status=int(require_child(element, "STATUS")),

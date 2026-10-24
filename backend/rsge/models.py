@@ -77,7 +77,7 @@ class WaybillGood(models.Model):
     price = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("Price"))
     amount = models.DecimalField(max_digits=14, decimal_places=4, verbose_name=_("Amount"))
     bar_code = models.CharField(max_length=128, blank=True, verbose_name=_("Barcode"))
-    a_id = models.BigIntegerField(verbose_name=_("A id"))
+    a_id = models.BigIntegerField(null=True, verbose_name=_("A id"))
     vat_type = models.IntegerField(verbose_name=_("VAT type"))
     quantity_ext = models.DecimalField(
         max_digits=14,

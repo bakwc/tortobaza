@@ -1156,7 +1156,7 @@ export const RsWaybillGoodSchema = z.object({
   price: z.string(),
   amount: z.string(),
   bar_code: z.string(),
-  a_id: z.number(),
+  a_id: z.number().nullable(),
   vat_type: z.number(),
   quantity_ext: z.string().nullable(),
   status: z.number(),

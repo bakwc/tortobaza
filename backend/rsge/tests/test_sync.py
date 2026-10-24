@@ -88,6 +88,26 @@ def goods_xml() -> ET.Element:
     )
 
 
+def goods_without_a_id() -> ET.Element:
+    return ET.fromstring(
+        """
+        <Result>
+          <GOODS>
+            <ID>6146472321</ID>
+            <W_NAME>Safe</W_NAME>
+            <UNIT_ID>1</UNIT_ID>
+            <QUANTITY>1</QUANTITY>
+            <PRICE>100</PRICE>
+            <AMOUNT>100</AMOUNT>
+            <VAT_TYPE>0</VAT_TYPE>
+            <STATUS>1</STATUS>
+            <QUANTITY_F>1</QUANTITY_F>
+          </GOODS>
+        </Result>
+        """
+    )
+
+
 def stored_waybill(rs_id: int) -> Waybill:
     moment = datetime(2026, 10, 1, 12, 0, tzinfo=TB)
     return Waybill.objects.create(
@@ -228,6 +248,18 @@ class WaybillSyncTests(TestCase):
         self.assertEqual(tape.price, Decimal("0.4"))
         self.assertEqual(tape.quantity_ext, Decimal("0"))
         self.assertEqual(WaybillSync.objects.get().synced_at, NOW)
+
+    @patch("rsge.sync.timezone.now", return_value=NOW)
+    @patch("rsge.client.call_get_waybill")
+    @patch("rsge.client.call_get_buyer_waybills")
+    def test_good_without_a_id_is_saved(self, buyer, detail, _now):
+        WaybillSync.objects.create(synced_at=datetime(2026, 10, 23, 8, 0, tzinfo=TB))
+        buyer.return_value = list_result(waybill_xml(3, 1))
+        detail.return_value = goods_without_a_id()
+        sync_waybills()
+        good = Waybill.objects.get(rs_id=3).goods.get()
+        self.assertIsNone(good.a_id)
+        self.assertEqual(good.name, "Safe")
 
     @patch("rsge.sync.timezone.now", return_value=NOW)
     @patch("rsge.client.call_get_waybill")
