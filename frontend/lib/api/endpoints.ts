@@ -225,6 +225,16 @@ export function endpoints(fetcher: Fetcher) {
       return parse(z.array(RsWaybillSchema), raw);
     },
 
+    async confirmRsgeWaybill(id: number): Promise<RsWaybill> {
+      const raw = await fetcher<unknown>(`/api/rsge/waybills/${id}/confirm/`, { method: "POST" });
+      return parse(RsWaybillSchema, raw);
+    },
+
+    async rejectRsgeWaybill(id: number): Promise<RsWaybill> {
+      const raw = await fetcher<unknown>(`/api/rsge/waybills/${id}/reject/`, { method: "POST" });
+      return parse(RsWaybillSchema, raw);
+    },
+
     async getRsgeInvoices(month: string): Promise<RsInvoice[]> {
       const raw = await fetcher<unknown>("/api/rsge/invoices/", { searchParams: { month } });
       return parse(z.array(RsInvoiceSchema), raw);

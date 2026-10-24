@@ -113,6 +113,27 @@ def call_get_waybill(su: str, sp: str, waybill_id: str) -> ET.Element:
     return soap_call("get_waybill", body)
 
 
+def call_waybill_decision(action: str, su: str, sp: str, waybill_id: str) -> None:
+    body = "".join([
+        soap_value("su", su),
+        soap_value("sp", sp),
+        soap_value("waybill_id", waybill_id),
+    ])
+    result = soap_call(action, body)
+    if result.text is None or result.text.strip().lower() != "true":
+        raise RuntimeError(
+            f"RS.ge {action} rejected waybill {waybill_id}\n" + result_text(result)
+        )
+
+
+def call_confirm_waybill(su: str, sp: str, waybill_id: str) -> None:
+    call_waybill_decision("confirm_waybill", su, sp, waybill_id)
+
+
+def call_reject_waybill(su: str, sp: str, waybill_id: str) -> None:
+    call_waybill_decision("reject_waybill", su, sp, waybill_id)
+
+
 def fetch_buyer_waybills(su: str, sp: str, create_date_s: str, create_date_e: str) -> ET.Element:
     result = call_get_buyer_waybills(su, sp, create_date_s, create_date_e)
     if result.find("WAYBILL_LIST") is not None:

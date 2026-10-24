@@ -344,6 +344,60 @@ class WaybillApiTests(TestCase):
         response = self.client.get("/api/rsge/waybills/")
         self.assertEqual(response.status_code, 403)
 
+    @override_settings(RS_SU="su", RS_SP="sp")
+    @patch("rsge.views.call_confirm_waybill")
+    def test_confirm_sets_is_confirmed(self, confirm):
+        self.client.force_authenticate(self.finance)
+        response = self.client.post(f"/api/rsge/waybills/{self.first.pk}/confirm/")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["is_confirmed"], 1)
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, 1)
+        confirm.assert_called_once_with("su", "sp", "1")
+
+    @override_settings(RS_SU="su", RS_SP="sp")
+    @patch("rsge.views.call_reject_waybill")
+    def test_reject_sets_is_confirmed(self, reject):
+        self.client.force_authenticate(self.finance)
+        response = self.client.post(f"/api/rsge/waybills/{self.first.pk}/reject/")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["is_confirmed"], -1)
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, -1)
+        reject.assert_called_once_with("su", "sp", "1")
+
+    @patch("rsge.views.call_confirm_waybill")
+    def test_staff_cannot_confirm(self, confirm):
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(f"/api/rsge/waybills/{self.first.pk}/confirm/")
+        self.assertEqual(response.status_code, 403)
+        confirm.assert_not_called()
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, 0)
+
+    @patch("rsge.views.call_reject_waybill")
+    def test_staff_cannot_reject(self, reject):
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(f"/api/rsge/waybills/{self.first.pk}/reject/")
+        self.assertEqual(response.status_code, 403)
+        reject.assert_not_called()
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, 0)
+
+    @override_settings(RS_SU="", RS_SP="")
+    @patch("rsge.views.call_confirm_waybill")
+    def test_confirm_empty_credentials_raise(self, confirm):
+        self.client.force_authenticate(self.finance)
+        with self.assertRaises(RuntimeError):
+            self.client.post(f"/api/rsge/waybills/{self.first.pk}/confirm/")
+        confirm.assert_not_called()
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, 0)
+
+    @override_settings(RS_SU="", RS_SP="")
+    @patch("rsge.views.call_reject_waybill")
+    def test_reject_empty_credentials_raise(self, reject):
+        self.client.force_authenticate(self.finance)
+        with self.assertRaises(RuntimeError):
+            self.client.post(f"/api/rsge/waybills/{self.first.pk}/reject/")
+        reject.assert_not_called()
+        self.assertEqual(Waybill.objects.get(pk=self.first.pk).is_confirmed, 0)
+
 
 DIFFGRAM_NS = "urn:schemas-microsoft-com:xml-diffgram-v1"
 
