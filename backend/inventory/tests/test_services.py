@@ -139,6 +139,30 @@ class OrderWriteOffTests(TestCase):
         self.assertEqual(stock(self.menu.flour), Decimal("-1000"))
 
 
+class ManualCostWithoutSupplyTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.order = make_crm_order(CrmOrder.STATUS_NEW)
+        add_item(self.order, self.menu.bento, None, 1, [])
+
+    def test_order_write_off_keeps_manual_cost(self):
+        self.order.status = CrmOrder.STATUS_READY
+        self.order.save()
+        sync_order_write_off(self.order)
+        self.menu.flour.refresh_from_db()
+        self.assertEqual(self.menu.flour.avg_cost, Decimal("0.01"))
+        movement = StockMovement.objects.get(crm_order=self.order)
+        self.assertEqual(movement.unit_cost, Decimal("0.01"))
+
+    def test_other_supply_keeps_manual_cost(self):
+        self.order.status = CrmOrder.STATUS_READY
+        self.order.save()
+        sync_order_write_off(self.order)
+        supply(self.menu.sugar, "1000", "10.00", date(2026, 10, 21))
+        self.menu.flour.refresh_from_db()
+        self.assertEqual(self.menu.flour.avg_cost, Decimal("0.01"))
+
+
 class InventoryCountTests(TestCase):
     def test_closing_count_adjusts_stock_to_actual(self):
         menu = MenuFixture()

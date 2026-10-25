@@ -62,7 +62,14 @@ def is_stocked(component: Component) -> bool:
     return isinstance(component, Ingredient) or component.is_produced
 
 
+def _stored_costs() -> dict[tuple[str, int], Decimal]:
+    costs = {("ingredient", pk): cost for pk, cost in Ingredient.objects.values_list("pk", "avg_cost")}
+    costs.update({("semi_product", pk): cost for pk, cost in SemiProduct.objects.values_list("pk", "avg_cost")})
+    return costs
+
+
 def recompute_costs() -> None:
+    stored_costs = _stored_costs()
     quantities: dict[tuple[str, int], Decimal] = {}
     averages: dict[tuple[str, int], Decimal] = {}
     production_costs: dict[int, Decimal] = {}
@@ -70,7 +77,7 @@ def recompute_costs() -> None:
     for movement in StockMovement.objects.select_related("inventory_count_line").order_by("date", "id"):
         key = _key(movement.ingredient_id, movement.semi_product_id)
         quantity = quantities.get(key, _ZERO)
-        average = averages.get(key, _ZERO)
+        average = averages[key] if key in averages else stored_costs[key]
         if movement.kind == StockMovement.KIND_SUPPLY:
             incoming_cost = movement.unit_cost
         elif movement.kind == StockMovement.KIND_PRODUCTION_IN:
