@@ -57,7 +57,19 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"date": "2026-06-30", "salary": "3.43", "rent": "0.00"},
+            {
+                "date": "2026-06-30",
+                "salary": "3.43",
+                "rent": "0.00",
+                "employees": [
+                    {
+                        "id": fixed.id,
+                        "name": "fixed",
+                        "hours": "0.00",
+                        "money": "3.43",
+                    }
+                ],
+            },
         )
 
     def test_day_salary(self):
@@ -68,7 +80,19 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"date": "2026-06-15", "salary": "80.00", "rent": "0.00"},
+            {
+                "date": "2026-06-15",
+                "salary": "80.00",
+                "rent": "0.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "8.00",
+                        "money": "80.00",
+                    }
+                ],
+            },
         )
 
     def test_month_salary(self):
@@ -86,8 +110,38 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["month"], "2026-06")
         self.assertEqual(data["salary"], "160.00")
         self.assertEqual(data["rent"], "0.00")
-        self.assertEqual(data["by_date"]["2026-06-15"], {"salary": "80.00", "rent": "0.00"})
-        self.assertEqual(data["by_date"]["2026-06-16"], {"salary": "80.00", "rent": "0.00"})
+        self.assertEqual(
+            data["employees"],
+            [
+                {"id": other.id, "name": "other", "hours": "4.00", "money": "80.00"},
+                {"id": self.worker.id, "name": "worker", "hours": "8.00", "money": "80.00"},
+            ],
+        )
+        self.assertEqual(
+            data["by_date"]["2026-06-15"],
+            {
+                "salary": "80.00",
+                "rent": "0.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "8.00",
+                        "money": "80.00",
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            data["by_date"]["2026-06-16"],
+            {
+                "salary": "80.00",
+                "rent": "0.00",
+                "employees": [
+                    {"id": other.id, "name": "other", "hours": "4.00", "money": "80.00"}
+                ],
+            },
+        )
 
     def test_default_today_tbilisi(self):
         today = timezone.now().astimezone(_TB).date()
@@ -100,6 +154,17 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["date"], today.isoformat())
         self.assertEqual(data["salary"], "80.00")
         self.assertEqual(data["rent"], "0.00")
+        self.assertEqual(
+            data["employees"],
+            [
+                {
+                    "id": self.worker.id,
+                    "name": "worker",
+                    "hours": "8.00",
+                    "money": "80.00",
+                }
+            ],
+        )
 
     def test_day_rent(self):
         settings = CrmSettings.load()
@@ -112,7 +177,19 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"date": "2026-06-15", "salary": "80.00", "rent": "100.00"},
+            {
+                "date": "2026-06-15",
+                "salary": "80.00",
+                "rent": "100.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "8.00",
+                        "money": "80.00",
+                    }
+                ],
+            },
         )
 
     def test_month_rent(self):
@@ -128,4 +205,29 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["month"], "2026-06")
         self.assertEqual(data["salary"], "80.00")
         self.assertEqual(data["rent"], "3000.00")
-        self.assertEqual(data["by_date"]["2026-06-15"], {"salary": "80.00", "rent": "100.00"})
+        self.assertEqual(
+            data["employees"],
+            [
+                {
+                    "id": self.worker.id,
+                    "name": "worker",
+                    "hours": "8.00",
+                    "money": "80.00",
+                }
+            ],
+        )
+        self.assertEqual(
+            data["by_date"]["2026-06-15"],
+            {
+                "salary": "80.00",
+                "rent": "100.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "8.00",
+                        "money": "80.00",
+                    }
+                ],
+            },
+        )

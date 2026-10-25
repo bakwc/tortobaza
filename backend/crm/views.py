@@ -505,8 +505,13 @@ class CrmExpensesView(APIView):
                     "month": month,
                     "salary": result["total_money"],
                     "rent": monthly_rent(),
+                    "employees": result["employees"],
                     "by_date": {
-                        day.isoformat(): {"salary": money, "rent": rent_day}
+                        day.isoformat(): {
+                            "salary": money,
+                            "rent": rent_day,
+                            "employees": result["employees_by_date"].get(day, []),
+                        }
                         for day, money in result["by_date"].items()
                     },
                 }
@@ -521,6 +526,7 @@ class CrmExpensesView(APIView):
                 "date": target_date,
                 "salary": result["total_money"],
                 "rent": daily_rent(target_date),
+                "employees": result["employees"],
             }
         )
         return Response(serializer.data)

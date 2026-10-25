@@ -139,19 +139,53 @@ def _salary_users(start_date: date, end_date: date):
     return User.objects.filter(id__in=user_ids)
 
 
+def _employee_sort_key(row: dict) -> tuple[str, int]:
+    return (row["name"].casefold(), row["id"])
+
+
 def compute_all_salaries(start_date: date, end_date: date) -> dict:
     users = _salary_users(start_date, end_date)
     total_money = Decimal("0.00")
     by_date: dict[date, Decimal] = {}
+    employees: list[dict] = []
+    employees_by_date: dict[date, list[dict]] = {}
     for user in users:
         result = compute_salary(user, start_date, end_date)
         total_money += result["total_money"]
+        name = chef_identity(user)[0]
+        hours = Decimal("0.00")
+        money = Decimal("0.00")
         for row in result["rows"]:
             day = row["date"]
             by_date[day] = by_date.get(day, Decimal("0.00")) + row["money"]
+            hours += row["hours"]
+            money += row["money"]
+            if row["hours"] > 0 or row["money"] > 0:
+                employees_by_date.setdefault(day, []).append(
+                    {
+                        "id": user.id,
+                        "name": name,
+                        "hours": row["hours"],
+                        "money": row["money"],
+                    }
+                )
+        if hours > 0 or money > 0:
+            employees.append(
+                {
+                    "id": user.id,
+                    "name": name,
+                    "hours": hours,
+                    "money": money,
+                }
+            )
+    employees.sort(key=_employee_sort_key)
+    for day_employees in employees_by_date.values():
+        day_employees.sort(key=_employee_sort_key)
     return {
         "total_money": total_money,
         "by_date": by_date,
+        "employees": employees,
+        "employees_by_date": employees_by_date,
     }
 
 

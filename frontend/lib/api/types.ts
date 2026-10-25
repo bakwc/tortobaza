@@ -427,30 +427,32 @@ export const CrmMapOrdersResponseSchema = z.object({
   orders: z.array(CrmMapOrderSchema),
 });
 
+export const CrmSalaryEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  hours: z.string(),
+  money: z.string(),
+});
+
+export const CrmExpensesBreakdownSchema = z.object({
+  salary: z.string(),
+  rent: z.string(),
+  employees: z.array(CrmSalaryEmployeeSchema),
+});
+
 export const CrmExpensesDaySchema = z.object({
   date: z.string(),
   salary: z.string(),
   rent: z.string(),
+  employees: z.array(CrmSalaryEmployeeSchema),
 });
 
 export const CrmExpensesMonthSchema = z.object({
   month: z.string(),
   salary: z.string(),
   rent: z.string(),
-  by_date: z.record(
-    z.string(),
-    z.object({
-      salary: z.string(),
-      rent: z.string(),
-    }),
-  ),
-});
-
-export const CrmSalaryEmployeeSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  hours: z.string(),
-  money: z.string(),
+  employees: z.array(CrmSalaryEmployeeSchema),
+  by_date: z.record(z.string(), CrmExpensesBreakdownSchema),
 });
 
 export const CrmSalaryPeriodSchema = z.object({
