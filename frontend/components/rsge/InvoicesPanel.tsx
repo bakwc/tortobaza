@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { QueryState, formatQuantity } from "@/components/menu/ui";
@@ -12,6 +13,7 @@ import {
   RsgeSummary,
   groupRsgeByDate,
   rsgeDateKey,
+  rsgeMonth,
   rsgeTone,
   sumGel,
   type RsgeColumn,
@@ -122,10 +124,12 @@ function InvoiceNotes({ invoice, locale }: { invoice: RsInvoice; locale: string 
 export function InvoicesPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
+  const searchParams = useSearchParams();
   const period = useFinancePeriod();
   const invoices = useInvoices(period.month);
   const decide = useDecideInvoice();
   const [decision, setDecision] = useState<{ id: number; action: "confirm" | "reject" } | null>(null);
+  const focusedInvoiceId = searchParams.get("invoice");
 
   function openDecision(id: number, action: "confirm" | "reject") {
     decide.reset();
@@ -142,6 +146,14 @@ export function InvoicesPanel() {
 
   const documents = invoices.data ?? [];
   const groups = groupRsgeByDate(documents, (invoice) => rsgeDateKey(invoice.reg_dt), invoicePending);
+
+  useEffect(() => {
+    if (focusedInvoiceId === null || invoices.isLoading) return;
+    const el = document.getElementById(`rsge-invoice-${focusedInvoiceId}`);
+    if (el === null) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedInvoiceId, invoices.isLoading, documents.length]);
+
   const pendingCount = documents.filter(invoicePending).length;
 
   let list: ReactNode = <RsgeEmpty>{t("invoicesEmpty")}</RsgeEmpty>;
@@ -168,6 +180,7 @@ export function InvoicesPanel() {
               return (
                 <RsgeDocumentRow
                   key={invoice.id}
+                  id={`rsge-invoice-${invoice.id}`}
                   tone={tone}
                   icon={<FileText className="h-4 w-4" />}
                   title={number}
@@ -175,28 +188,36 @@ export function InvoicesPanel() {
                   amount={formatMoney(invoice.amount, "GEL")}
                   chips={
                     <>
-                      <RsgeChip className={tone.chip}>{invoiceStatus(invoice.status, t)}</RsgeChip>
+                      <RsgeChip href={null} className={tone.chip}>{invoiceStatus(invoice.status, t)}</RsgeChip>
                       {invoice.status === 2 || invoice.status === 8 ? (
-                        <RsgeChip className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
+                        <RsgeChip href={null} className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
                       ) : null}
                       {invoice.was_ref === 1 ? (
-                        <RsgeChip className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
+                        <RsgeChip href={null} className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
                       ) : null}
-                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
+                      <RsgeChip href={null} className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("vat")} {formatMoney(invoice.vat, "GEL")}
                       </RsgeChip>
-                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
+                      <RsgeChip href={null} className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: invoice.lines.length })}
                       </RsgeChip>
                       {invoice.waybills.map((waybill) => (
-                        <RsgeChip key={waybill.id} className="bg-emerald-100 text-emerald-900">
+                        <RsgeChip
+                          key={waybill.id}
+                          href={`/rsge?month=${rsgeMonth(waybill.create_date)}&waybill=${waybill.id}`}
+                          className="bg-emerald-100 text-emerald-900"
+                        >
                           {t("waybillBadge")} {waybill.waybill_number}{" "}
                           {localized(locale, waybill.seller_name, waybill.seller_name_ru)}{" "}
                           {formatMoney(waybill.full_amount, "GEL")}
                         </RsgeChip>
                       ))}
                       {invoice.financial_transactions.map((transaction) => (
-                        <RsgeChip key={transaction.id} className="bg-violet-100 text-violet-900">
+                        <RsgeChip
+                          key={transaction.id}
+                          href={`/finance?month=${transaction.date.slice(0, 7)}&transaction=${transaction.id}`}
+                          className="bg-violet-100 text-violet-900"
+                        >
                           {t("paymentBadge")} {formatCrmCompactDate(transaction.date, locale)}{" "}
                           {formatMoney(transaction.amount, "GEL")} {transaction.counterparty_name}
                         </RsgeChip>

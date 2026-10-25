@@ -15,6 +15,7 @@ import {
   Truck,
 } from "lucide-react";
 import { FinanceTransactionForm } from "@/components/finance/FinanceTransactionForm";
+import { rsgeMonth } from "@/components/rsge/RsgeDocumentRow";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -323,6 +324,28 @@ export function FinanceTransactionList({
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  const focusedTransactionId = searchParams.get("transaction");
+
+  useEffect(() => {
+    if (focusedTransactionId === null) return;
+    const tx = transactions.find((item) => item.id === Number(focusedTransactionId));
+    if (tx === undefined || tx.flowwow_order_number === null) return;
+    const orderNumber = tx.flowwow_order_number;
+    setOpenGroups((current) => {
+      if (current.has(orderNumber)) return current;
+      const next = new Set(current);
+      next.add(orderNumber);
+      return next;
+    });
+  }, [focusedTransactionId, transactions]);
+
+  useEffect(() => {
+    if (focusedTransactionId === null) return;
+    const el = document.getElementById(`finance-tx-${focusedTransactionId}`);
+    if (el === null) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedTransactionId, transactions, openGroups]);
 
   function replaceFilters(next: {
     account: number[];
@@ -760,6 +783,7 @@ function FilterPill({
 }
 
 function RowShell({
+  id,
   tone,
   icon,
   title,
@@ -769,6 +793,7 @@ function RowShell({
   action,
   onClick,
 }: {
+  id: string | null;
   tone: Tone;
   icon: ReactNode;
   title: string;
@@ -780,6 +805,7 @@ function RowShell({
 }) {
   return (
     <div
+      id={id ?? undefined}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick ?? undefined}
@@ -862,6 +888,7 @@ function TransactionRow({
   const typeLabel = operationTypeLabel(tx, t);
   return (
     <RowShell
+      id={`finance-tx-${tx.id}`}
       tone={tone}
       icon={<TxIcon tx={tx} />}
       title={tx.counterparty_name || t(`kinds.${tx.kind}`)}
@@ -920,6 +947,7 @@ function FlowwowGroupRow({
   return (
     <div className="grid gap-1">
       <RowShell
+        id={null}
         tone={tone}
         icon={<Flower className="h-4 w-4" />}
         title={t("flowwowOrder", { id: orderNumber })}
@@ -953,6 +981,7 @@ function FlowwowGroupRow({
             return (
               <button
                 key={tx.id}
+                id={`finance-tx-${tx.id}`}
                 type="button"
                 onClick={() => onSelect(tx)}
                 className={cn(
@@ -994,10 +1023,11 @@ function DocumentChips({
   return (
     <>
       {waybills.map((waybill) => (
-        <span
+        <Link
           key={`waybill-${waybill.id}`}
+          href={`/rsge?month=${rsgeMonth(waybill.create_date)}&waybill=${waybill.id}`}
           onClick={(event) => event.stopPropagation()}
-          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:opacity-90"
         >
           <Truck className="h-3 w-3 shrink-0" />
           <span className="shrink-0">{waybill.waybill_number}</span>
@@ -1005,20 +1035,21 @@ function DocumentChips({
             {sellerLabel(waybill.seller_name, waybill.seller_name_ru, locale)}
           </span>
           <span className="shrink-0">{formatAed(waybill.full_amount)}</span>
-        </span>
+        </Link>
       ))}
       {invoices.map((invoice) => (
-        <span
+        <Link
           key={`invoice-${invoice.id}`}
+          href={`/rsge/invoices?month=${rsgeMonth(invoice.reg_dt)}&invoice=${invoice.id}`}
           onClick={(event) => event.stopPropagation()}
-          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-sky-700 px-1.5 py-0.5 text-[10px] font-semibold text-white"
+          className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-sky-700 px-1.5 py-0.5 text-[10px] font-semibold text-white hover:opacity-90"
         >
           <FileText className="h-3 w-3 shrink-0" />
           <span className="shrink-0">
             {invoice.series} {invoice.number}
           </span>
           <span className="shrink-0">{formatAed(invoice.amount)}</span>
-        </span>
+        </Link>
       ))}
     </>
   );

@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { formatCrmCompactDate, formatCrmDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,10 @@ export function rsgeDateKey(iso: string): string {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(iso));
+}
+
+export function rsgeMonth(iso: string): string {
+  return rsgeDateKey(iso).slice(0, 7);
 }
 
 export function sumGel(values: string[]): number {
@@ -143,20 +148,32 @@ export function RsgeDayHeader({ date, count, sum }: { date: string; count: numbe
   );
 }
 
-export function RsgeChip({ className, children }: { className: string; children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-        className,
-      )}
-    >
-      {children}
-    </span>
+export function RsgeChip({
+  className,
+  href,
+  children,
+}: {
+  className: string;
+  href: string | null;
+  children: ReactNode;
+}) {
+  const chipClass = cn(
+    "flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+    href !== null && "hover:opacity-90",
+    className,
   );
+  if (href !== null) {
+    return (
+      <Link href={href} onClick={(event) => event.stopPropagation()} className={chipClass}>
+        {children}
+      </Link>
+    );
+  }
+  return <span className={chipClass}>{children}</span>;
 }
 
 export function RsgeDocumentRow({
+  id,
   tone,
   icon,
   title,
@@ -170,6 +187,7 @@ export function RsgeDocumentRow({
   rowKeys,
   rows,
 }: {
+  id: string;
   tone: RsgeTone;
   icon: ReactNode;
   title: string;
@@ -187,7 +205,10 @@ export function RsgeDocumentRow({
   const pending = onConfirm !== null && onReject !== null;
 
   return (
-    <div className={cn("grid gap-3 rounded-2xl border border-l-4 p-3 shadow-sm md:p-4", tone.card, tone.accent)}>
+    <div
+      id={id}
+      className={cn("grid gap-3 rounded-2xl border border-l-4 p-3 shadow-sm md:p-4", tone.card, tone.accent)}
+    >
       <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <div
           className={cn(

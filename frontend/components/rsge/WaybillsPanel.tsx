@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Truck } from "lucide-react";
 import { QueryState, formatQuantity } from "@/components/menu/ui";
@@ -12,6 +13,7 @@ import {
   RsgeSummary,
   groupRsgeByDate,
   rsgeDateKey,
+  rsgeMonth,
   rsgeTone,
   sumGel,
   type RsgeColumn,
@@ -126,10 +128,12 @@ function WaybillMeta({ waybill, locale }: { waybill: RsWaybill; locale: string }
 export function WaybillsPanel() {
   const t = useTranslations("rsge");
   const locale = useLocale();
+  const searchParams = useSearchParams();
   const period = useFinancePeriod();
   const waybills = useWaybills(period.month);
   const decide = useDecideWaybill();
   const [decision, setDecision] = useState<{ id: number; action: "confirm" | "reject" } | null>(null);
+  const focusedWaybillId = searchParams.get("waybill");
 
   function openDecision(id: number, action: "confirm" | "reject") {
     decide.reset();
@@ -147,6 +151,14 @@ export function WaybillsPanel() {
 
   const documents = waybills.data ?? [];
   const groups = groupRsgeByDate(documents, (waybill) => rsgeDateKey(waybill.create_date), waybillPending);
+
+  useEffect(() => {
+    if (focusedWaybillId === null || waybills.isLoading) return;
+    const el = document.getElementById(`rsge-waybill-${focusedWaybillId}`);
+    if (el === null) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedWaybillId, waybills.isLoading, documents.length]);
+
   const pendingCount = documents.filter(waybillPending).length;
 
   let list: ReactNode = <RsgeEmpty>{t("empty")}</RsgeEmpty>;
@@ -172,6 +184,7 @@ export function WaybillsPanel() {
               return (
                 <RsgeDocumentRow
                   key={waybill.id}
+                  id={`rsge-waybill-${waybill.id}`}
                   tone={tone}
                   icon={<Truck className="h-4 w-4" />}
                   title={localized(locale, waybill.seller_name, waybill.seller_name_ru)}
@@ -179,24 +192,32 @@ export function WaybillsPanel() {
                   amount={formatMoney(waybill.full_amount, "GEL")}
                   chips={
                     <>
-                      <RsgeChip className={tone.chip}>{waybillStatus(waybill.status, t)}</RsgeChip>
+                      <RsgeChip href={null} className={tone.chip}>{waybillStatus(waybill.status, t)}</RsgeChip>
                       {waybill.is_confirmed === 1 ? (
-                        <RsgeChip className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
+                        <RsgeChip href={null} className="bg-black/[0.04] text-emerald-700">{t("confirmed")}</RsgeChip>
                       ) : null}
                       {waybill.is_confirmed === -1 ? (
-                        <RsgeChip className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
+                        <RsgeChip href={null} className="bg-black/[0.04] text-rose-700">{t("rejected")}</RsgeChip>
                       ) : null}
-                      <RsgeChip className="bg-black/[0.04] text-[var(--muted-2)]">
+                      <RsgeChip href={null} className="bg-black/[0.04] text-[var(--muted-2)]">
                         {t("positions", { count: waybill.goods.length })}
                       </RsgeChip>
                       {waybill.invoices.map((invoice) => (
-                        <RsgeChip key={invoice.id} className="bg-sky-100 text-sky-900">
+                        <RsgeChip
+                          key={invoice.id}
+                          href={`/rsge/invoices?month=${rsgeMonth(invoice.reg_dt)}&invoice=${invoice.id}`}
+                          className="bg-sky-100 text-sky-900"
+                        >
                           {t("invoiceBadge")} {invoice.series} {invoice.number}{" "}
                           {formatMoney(invoice.amount, "GEL")}
                         </RsgeChip>
                       ))}
                       {waybill.financial_transactions.map((transaction) => (
-                        <RsgeChip key={transaction.id} className="bg-violet-100 text-violet-900">
+                        <RsgeChip
+                          key={transaction.id}
+                          href={`/finance?month=${transaction.date.slice(0, 7)}&transaction=${transaction.id}`}
+                          className="bg-violet-100 text-violet-900"
+                        >
                           {t("paymentBadge")} {formatCrmCompactDate(transaction.date, locale)}{" "}
                           {formatMoney(transaction.amount, "GEL")} {transaction.counterparty_name}
                         </RsgeChip>
