@@ -11,7 +11,7 @@ import {
   CrmExpensesMonthSchema,
   AnalyticsClientsSchema,
   AnalyticsLoadSchema,
-  AnalyticsPulseSchema,
+  AnalyticsOverviewSchema,
   CrmSalariesSchema,
   ExchangeRatesSchema,
   FinanceAccountSchema,
@@ -51,7 +51,7 @@ import {
   type CrmExpensesMonth,
   type AnalyticsClients,
   type AnalyticsLoad,
-  type AnalyticsPulse,
+  type AnalyticsOverview,
   type CrmSalaries,
   type ExchangeRates,
   type FinanceAccount,
@@ -524,11 +524,9 @@ export function endpoints(fetcher: Fetcher) {
       return parse(CrmSalariesSchema, raw);
     },
 
-    async getAnalyticsPulse(month: string): Promise<AnalyticsPulse> {
-      const raw = await fetcher<unknown>("/api/crm/analytics/pulse/", {
-        searchParams: { month },
-      });
-      return parse(AnalyticsPulseSchema, raw);
+    async getAnalyticsOverview(): Promise<AnalyticsOverview> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/overview/");
+      return parse(AnalyticsOverviewSchema, raw);
     },
 
     async getAnalyticsLoad(month: string): Promise<AnalyticsLoad> {

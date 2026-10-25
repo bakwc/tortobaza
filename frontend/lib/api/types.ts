@@ -460,31 +460,47 @@ export const AnalyticsTotalsSchema = z.object({
   weight_unknown: z.number(),
 });
 
-export const AnalyticsWeekSchema = z.object({
-  start: z.string(),
-  end: z.string(),
-  orders: z.number(),
-  revenue: z.string(),
-  kilograms: z.string(),
+export const AnalyticsOverviewTotalsSchema = AnalyticsTotalsSchema.extend({
+  months: z.number(),
 });
 
-export const AnalyticsWeekdaySchema = z.object({
-  weekday: z.number(),
-  orders: z.number(),
-  revenue: z.string(),
-  kilograms: z.string(),
-});
-
-export const AnalyticsPulseSchema = z.object({
+export const AnalyticsOverviewMonthSchema = z.object({
   month: z.string(),
-  start: z.string(),
-  end: z.string(),
-  previous_start: z.string(),
-  previous_end: z.string(),
-  current: AnalyticsTotalsSchema,
-  previous: AnalyticsTotalsSchema,
-  weeks: z.array(AnalyticsWeekSchema),
-  weekdays: z.array(AnalyticsWeekdaySchema),
+  orders: z.number(),
+  revenue: z.string(),
+  average_check: z.string().nullable(),
+  kilograms: z.string(),
+  weight_unknown: z.number(),
+  price_per_kg: z.string().nullable(),
+  partial: z.boolean(),
+});
+
+export const AnalyticsChannelSliceSchema = z.object({
+  orders: z.number(),
+  revenue: z.string(),
+});
+
+export const AnalyticsOverviewChannelSchema = z.object({
+  month: z.string(),
+  flowwow: AnalyticsChannelSliceSchema,
+  website: AnalyticsChannelSliceSchema,
+  direct: AnalyticsChannelSliceSchema,
+});
+
+export const AnalyticsOverviewPaymentSchema = z.object({
+  type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
+  orders: z.number(),
+  revenue: z.string(),
+});
+
+export const AnalyticsOverviewSchema = z.object({
+  first_date: z.string().nullable(),
+  today: z.string(),
+  current_month: z.string(),
+  totals: AnalyticsOverviewTotalsSchema,
+  months: z.array(AnalyticsOverviewMonthSchema),
+  channels: z.array(AnalyticsOverviewChannelSchema),
+  payments: z.array(AnalyticsOverviewPaymentSchema),
 });
 
 export const AnalyticsBaselineSchema = z.object({
@@ -797,7 +813,8 @@ export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type CrmSalaryEmployee = z.infer<typeof CrmSalaryEmployeeSchema>;
 export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
 export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
-export type AnalyticsPulse = z.infer<typeof AnalyticsPulseSchema>;
+export type AnalyticsOverview = z.infer<typeof AnalyticsOverviewSchema>;
+export type AnalyticsOverviewPayment = z.infer<typeof AnalyticsOverviewPaymentSchema>;
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;

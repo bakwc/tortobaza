@@ -89,19 +89,20 @@ def windows(month: str, today: date) -> tuple[date, date, date, date]:
     return start, end, prev_start, prev_end
 
 
-def pulse(month: str, today: date) -> dict:
-    start, end, prev_start, prev_end = windows(month, today)
+def overview(today: date) -> dict:
     orders = _live_orders()
+    months = _month_span(orders)
+    current_month = f"{today.year:04d}-{today.month:02d}"
+    totals = _totals(orders)
+    totals["months"] = len(months)
     return {
-        "month": month,
-        "start": start.isoformat(),
-        "end": end.isoformat(),
-        "previous_start": prev_start.isoformat(),
-        "previous_end": prev_end.isoformat(),
-        "current": _totals(_between(orders, start, end)),
-        "previous": _totals(_between(orders, prev_start, prev_end)),
-        "weeks": _weeks(orders, start, end),
-        "weekdays": _weekdays(orders, start, end),
+        "first_date": None if not orders else orders[0].date.isoformat(),
+        "today": today.isoformat(),
+        "current_month": current_month,
+        "totals": totals,
+        "months": _overview_months(orders, months, current_month),
+        "channels": _overview_channels(orders, months),
+        "payments": _overview_payments(orders),
     }
 
 
@@ -238,51 +239,85 @@ def _totals(orders: list[CrmOrder]) -> dict:
     }
 
 
-def _week_slices(start: date, end: date) -> list[tuple[date, date]]:
-    slices: list[tuple[date, date]] = []
-    cursor = start
-    while cursor <= end:
-        week_end = cursor + timedelta(days=6 - cursor.weekday())
-        if week_end > end:
-            week_end = end
-        slices.append((cursor, week_end))
-        cursor = week_end + timedelta(days=1)
-    return slices
+def _month_key(day: date) -> str:
+    return f"{day.year:04d}-{day.month:02d}"
 
 
-def _weeks(orders: list[CrmOrder], start: date, end: date) -> list[dict]:
-    rows = []
-    for week_start, week_end in _week_slices(start, end):
-        totals = _totals(_between(orders, week_start, week_end))
-        rows.append(
-            {
-                "start": week_start.isoformat(),
-                "end": week_end.isoformat(),
-                "orders": totals["orders"],
-                "revenue": totals["revenue"],
-                "kilograms": totals["kilograms"],
-            }
-        )
-    return rows
+def _channel(order: CrmOrder) -> str:
+    if order.flowwow_order_id is not None or order.payment_type == CrmOrder.PAYMENT_FLOWWOW:
+        return "flowwow"
+    if order.website_order_id is not None:
+        return "website"
+    return "direct"
 
 
-def _weekdays(orders: list[CrmOrder], start: date, end: date) -> list[dict]:
-    grouped: list[list[CrmOrder]] = [[], [], [], [], [], [], []]
+def _price_per_kg(orders: list[CrmOrder]) -> str | None:
+    revenue = Decimal("0")
+    kilograms = Decimal("0")
     for order in orders:
-        if start <= order.date <= end:
-            grouped[order.date.weekday()].append(order)
+        parsed = weight_kg(order.weight)
+        if parsed is None:
+            continue
+        revenue += _order_revenue(order)
+        kilograms += parsed
+    if kilograms == 0:
+        return None
+    return _money(revenue / kilograms)
+
+
+def _overview_months(orders: list[CrmOrder], months: list[str], current_month: str) -> list[dict]:
+    grouped: dict[str, list[CrmOrder]] = defaultdict(list)
+    for order in orders:
+        grouped[_month_key(order.date)].append(order)
     rows = []
-    for weekday, items in enumerate(grouped):
+    for month in months:
+        items = grouped[month]
         totals = _totals(items)
         rows.append(
             {
-                "weekday": weekday,
+                "month": month,
                 "orders": totals["orders"],
                 "revenue": totals["revenue"],
+                "average_check": totals["average_check"],
                 "kilograms": totals["kilograms"],
+                "weight_unknown": totals["weight_unknown"],
+                "price_per_kg": _price_per_kg(items),
+                "partial": month == current_month,
             }
         )
     return rows
+
+
+def _overview_channels(orders: list[CrmOrder], months: list[str]) -> list[dict]:
+    names = ("flowwow", "website", "direct")
+    counts: dict[str, dict[str, int]] = {name: defaultdict(int) for name in names}
+    revenue: dict[str, dict[str, Decimal]] = {name: defaultdict(lambda: Decimal("0")) for name in names}
+    for order in orders:
+        month = _month_key(order.date)
+        channel = _channel(order)
+        counts[channel][month] += 1
+        revenue[channel][month] += _order_revenue(order)
+    rows = []
+    for month in months:
+        row: dict[str, str | dict] = {"month": month}
+        for name in names:
+            row[name] = {"orders": counts[name][month], "revenue": _money(revenue[name][month])}
+        rows.append(row)
+    return rows
+
+
+def _overview_payments(orders: list[CrmOrder]) -> list[dict]:
+    grouped: dict[str, list[CrmOrder]] = defaultdict(list)
+    for order in orders:
+        grouped[order.payment_type].append(order)
+    rows = [
+        {"type": payment_type, "orders": len(items), "revenue": _revenue(items)}
+        for payment_type, items in grouped.items()
+    ]
+    rows.sort(key=lambda row: (-row["revenue"], -row["orders"], row["type"]))
+    return [
+        {"type": row["type"], "orders": row["orders"], "revenue": _money(row["revenue"])} for row in rows
+    ]
 
 
 def _daily_series(orders: list[CrmOrder]) -> tuple[list[Decimal], list[Decimal]]:

@@ -25,8 +25,8 @@ from accounts.models import UserProfile
 from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
 from crm.analytics import clients as analytics_clients
+from crm.analytics import overview as analytics_overview
 from crm.analytics import production as analytics_production
-from crm.analytics import pulse as analytics_pulse
 from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
@@ -565,18 +565,12 @@ class FinanceTransactionSearchView(APIView):
         return Response(FinanceTransactionSearchSerializer(transactions, many=True).data)
 
 
-class AnalyticsPulseView(APIView):
+class AnalyticsOverviewView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, IsFinanceAdmin]
 
     def get(self, request):
-        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
-        query_serializer.is_valid(raise_exception=True)
-        today = _tbilisi_now().date()
-        month = query_serializer.validated_data.get("month")
-        if month is None:
-            month = f"{today.year:04d}-{today.month:02d}"
-        return Response(analytics_pulse(month, today))
+        return Response(analytics_overview(_tbilisi_now().date()))
 
 
 class AnalyticsLoadView(APIView):

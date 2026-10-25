@@ -1,12 +1,12 @@
 "use client";
 
 import { AnalyticsShell } from "@/components/analytics/AnalyticsShell";
-import { PulsePanel } from "@/components/analytics/PulsePanel";
+import { OverviewPanel } from "@/components/analytics/OverviewPanel";
 
-export default function AnalyticsPulsePage() {
+export default function AnalyticsOverviewPage() {
   return (
-    <AnalyticsShell section="pulse">
-      <PulsePanel />
+    <AnalyticsShell section="overview">
+      <OverviewPanel />
     </AnalyticsShell>
   );
 }
