@@ -869,6 +869,7 @@
     "overview": "Общее",
     "load": "Загрузка",
     "clients": "Клиенты",
+    "products": "Состав",
     "loadError": "Не удалось загрузить аналитику.",
     "orders": "Заказы",
     "revenue": "Выручка",
@@ -952,6 +953,20 @@
     "phone": "Телефон",
     "first": "Первый",
     "last": "Последний",
-    "date": "Дата"
+    "date": "Дата",
+    "coverage": "Разобрано",
+    "productsEmpty": "В этом периоде нет разобранных заказов.",
+    "productKinds": "Виды",
+    "productPositions": "Позиции",
+    "productFillings": "Начинки",
+    "productWeights": "Веса",
+    "quantity": "Количество",
+    "weightUnknown": "{count} без веса",
+    "kindCake": "Торт",
+    "kindBento": "Бенто",
+    "kindCupcake": "Капкейк",
+    "kindMacaron": "Макарон",
+    "kindAddon": "Дополнение",
+    "kindOther": "Другое"
   }
 }

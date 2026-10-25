@@ -869,6 +869,7 @@
     "overview": "Overview",
     "load": "Production",
     "clients": "Clients",
+    "products": "Composition",
     "loadError": "Could not load analytics.",
     "orders": "Orders",
     "revenue": "Revenue",
@@ -952,6 +953,20 @@
     "phone": "Phone",
     "first": "First",
     "last": "Last",
-    "date": "Date"
+    "date": "Date",
+    "coverage": "Parsed orders",
+    "productsEmpty": "No parsed orders in this period.",
+    "productKinds": "Kinds",
+    "productPositions": "Positions",
+    "productFillings": "Fillings",
+    "productWeights": "Weights",
+    "quantity": "Quantity",
+    "weightUnknown": "{count} without a weight",
+    "kindCake": "Cake",
+    "kindBento": "Bento",
+    "kindCupcake": "Cupcake",
+    "kindMacaron": "Macaron",
+    "kindAddon": "Add-on",
+    "kindOther": "Other"
   }
 }

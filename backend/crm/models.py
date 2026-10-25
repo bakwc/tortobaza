@@ -714,6 +714,83 @@ class FinancialTransactionRuleCondition(models.Model):
         return f"{self.field} {self.pattern}"
 
 
+class AnalyticsOrderComposition(models.Model):
+    PARSER_RULES = "rules"
+    PARSER_LLM = "llm"
+    PARSER_CHOICES = [
+        (PARSER_RULES, _("Rules")),
+        (PARSER_LLM, _("LLM")),
+    ]
+
+    order = models.OneToOneField(
+        CrmOrder,
+        related_name="analytics_composition",
+        on_delete=models.CASCADE,
+        verbose_name=_("Order"),
+    )
+    source_hash = models.CharField(max_length=64, verbose_name=_("Source hash"))
+    parser = models.CharField(max_length=16, choices=PARSER_CHOICES, verbose_name=_("Parser"))
+    parsed_at = models.DateTimeField(auto_now=True, verbose_name=_("Parsed at"))
+
+    class Meta:
+        verbose_name = _("Analytics order composition")
+        verbose_name_plural = _("Analytics order compositions")
+
+    def __str__(self) -> str:
+        return f"Analytics composition for CrmOrder #{self.order_id}"
+
+
+class AnalyticsOrderCompositionItem(models.Model):
+    KIND_CAKE = "cake"
+    KIND_BENTO = "bento"
+    KIND_CUPCAKE = "cupcake"
+    KIND_MACARON = "macaron"
+    KIND_ADDON = "addon"
+    KIND_OTHER = "other"
+    KIND_CHOICES = [
+        (KIND_CAKE, _("Cake")),
+        (KIND_BENTO, _("Bento")),
+        (KIND_CUPCAKE, _("Cupcake")),
+        (KIND_MACARON, _("Macaron")),
+        (KIND_ADDON, _("Addon")),
+        (KIND_OTHER, _("Other")),
+    ]
+
+    composition = models.ForeignKey(
+        AnalyticsOrderComposition,
+        related_name="items",
+        on_delete=models.CASCADE,
+        verbose_name=_("Composition"),
+    )
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES, verbose_name=_("Kind"))
+    name = models.CharField(max_length=255, verbose_name=_("Name"))
+    quantity = models.PositiveIntegerField(verbose_name=_("Quantity"))
+    weight_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Weight, kg"),
+    )
+    filling = models.CharField(max_length=255, blank=True, verbose_name=_("Filling"))
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Price"),
+    )
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("Analytics order composition item")
+        verbose_name_plural = _("Analytics order composition items")
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class WhatsAppNumberCheck(CrmOrder):
     class Meta:
         proxy = True

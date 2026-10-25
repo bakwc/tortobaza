@@ -869,6 +869,7 @@
     "overview": "ზოგადი",
     "load": "დატვირთვა",
     "clients": "კლიენტები",
+    "products": "შემადგენლობა",
     "loadError": "ანალიტიკა ვერ ჩაიტვირთა.",
     "orders": "შეკვეთები",
     "revenue": "შემოსავალი",
@@ -952,6 +953,20 @@
     "phone": "ტელეფონი",
     "first": "პირველი",
     "last": "ბოლო",
-    "date": "თარიღი"
+    "date": "თარიღი",
+    "coverage": "დაშლილია",
+    "productsEmpty": "ამ პერიოდში დაშლილი შეკვეთები არ არის.",
+    "productKinds": "სახეობები",
+    "productPositions": "პოზიციები",
+    "productFillings": "შიგთავსები",
+    "productWeights": "წონა",
+    "quantity": "რაოდენობა",
+    "weightUnknown": "{count} წონის გარეშე",
+    "kindCake": "ტორტი",
+    "kindBento": "ბენტო",
+    "kindCupcake": "კაპკეიკი",
+    "kindMacaron": "მაკარონი",
+    "kindAddon": "დამატება",
+    "kindOther": "სხვა"
   }
 }

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { AnalyticsClients, AnalyticsLoad, AnalyticsOverview } from "@/lib/api/types";
+import type { AnalyticsClients, AnalyticsLoad, AnalyticsOverview, AnalyticsProducts } from "@/lib/api/types";
 
 export function useAnalyticsOverview() {
   return useQuery<AnalyticsOverview>({
@@ -24,6 +24,14 @@ export function useAnalyticsClients() {
   return useQuery<AnalyticsClients>({
     queryKey: ["analytics-clients"] as const,
     queryFn: () => api.getAnalyticsClients(),
+    staleTime: 0,
+  });
+}
+
+export function useAnalyticsProducts(month: string) {
+  return useQuery<AnalyticsProducts>({
+    queryKey: ["analytics-products", month] as const,
+    queryFn: () => api.getAnalyticsProducts(month),
     staleTime: 0,
   });
 }

@@ -12,6 +12,7 @@ import {
   AnalyticsClientsSchema,
   AnalyticsLoadSchema,
   AnalyticsOverviewSchema,
+  AnalyticsProductsSchema,
   CrmSalariesSchema,
   ExchangeRatesSchema,
   FinanceAccountSchema,
@@ -52,6 +53,7 @@ import {
   type AnalyticsClients,
   type AnalyticsLoad,
   type AnalyticsOverview,
+  type AnalyticsProducts,
   type CrmSalaries,
   type ExchangeRates,
   type FinanceAccount,
@@ -539,6 +541,13 @@ export function endpoints(fetcher: Fetcher) {
     async getAnalyticsClients(): Promise<AnalyticsClients> {
       const raw = await fetcher<unknown>("/api/crm/analytics/clients/");
       return parse(AnalyticsClientsSchema, raw);
+    },
+
+    async getAnalyticsProducts(month: string): Promise<AnalyticsProducts> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/products/", {
+        searchParams: { month },
+      });
+      return parse(AnalyticsProductsSchema, raw);
     },
 
     async getFinanceTransactions(date: string): Promise<FinanceTransactionsResponse> {

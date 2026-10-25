@@ -6,7 +6,7 @@ from decimal import Decimal
 from statistics import median, quantiles
 from zoneinfo import ZoneInfo
 
-from crm.models import CrmOrder
+from crm.models import AnalyticsOrderComposition, CrmOrder
 from crm.phone import extract_phones
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -728,6 +728,89 @@ def _frequency(customers: dict[str, Customer]) -> dict:
         "once": {"clients": len(once), "revenue": _money(_group_revenue(once))},
         "twice": {"clients": len(twice), "revenue": _money(_group_revenue(twice))},
         "more": {"clients": len(more), "revenue": _money(_group_revenue(more))},
+    }
+
+
+def products(month: str, today: date) -> dict:
+    start, end = windows(month, today)[:2]
+    orders = list(
+        CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end).order_by("date", "id")
+    )
+    compositions = {
+        composition.order_id: composition
+        for composition in AnalyticsOrderComposition.objects.filter(order__in=orders).prefetch_related("items")
+    }
+    kinds: dict[str, _Count] = {}
+    positions: dict[tuple[str, str], _Count] = {}
+    fillings: dict[str, _Count] = {}
+    weights: dict[Decimal, _Count] = {}
+    weight_unknown = 0
+    parsed = 0
+    for order in orders:
+        composition = compositions.get(order.id)
+        if composition is None:
+            continue
+        parsed += 1
+        for item in composition.items.all():
+            kilograms = None if item.weight_kg is None else item.weight_kg * item.quantity
+            _bump(kinds, item.kind, order.id, item.quantity, kilograms)
+            _bump(positions, (item.kind, item.name), order.id, item.quantity, kilograms)
+            if item.filling:
+                _bump(fillings, item.filling, order.id, item.quantity, kilograms)
+            if item.weight_kg is None:
+                weight_unknown += item.quantity
+            else:
+                _bump(weights, item.weight_kg, order.id, item.quantity, kilograms)
+    return {
+        "month": month,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "coverage": {"orders": len(orders), "parsed": parsed},
+        "kinds": [
+            {"kind": kind, **_metrics(bucket)}
+            for kind, bucket in sorted(kinds.items(), key=lambda item: (-item[1].quantity, item[0]))
+        ],
+        "positions": [
+            {"kind": kind, "name": name, **_metrics(bucket)}
+            for (kind, name), bucket in sorted(
+                positions.items(), key=lambda item: (-item[1].quantity, item[0][1], item[0][0])
+            )
+        ],
+        "fillings": [
+            {"filling": filling, **_metrics(bucket)}
+            for filling, bucket in sorted(fillings.items(), key=lambda item: (-item[1].quantity, item[0]))
+        ],
+        "weights": [
+            {"kg": _num(kg), **_metrics(bucket)}
+            for kg, bucket in sorted(weights.items(), key=lambda item: item[0])
+        ],
+        "weight_unknown": weight_unknown,
+    }
+
+
+class _Count:
+    def __init__(self) -> None:
+        self.quantity = 0
+        self.order_ids: set[int] = set()
+        self.kilograms = Decimal("0")
+
+
+def _bump(buckets: dict, key, order_id: int, quantity: int, kilograms: Decimal | None) -> None:
+    bucket = buckets.get(key)
+    if bucket is None:
+        bucket = _Count()
+        buckets[key] = bucket
+    bucket.quantity += quantity
+    bucket.order_ids.add(order_id)
+    if kilograms is not None:
+        bucket.kilograms += kilograms
+
+
+def _metrics(bucket: _Count) -> dict:
+    return {
+        "quantity": bucket.quantity,
+        "orders": len(bucket.order_ids),
+        "kilograms": _num(bucket.kilograms),
     }
 
 

@@ -594,6 +594,46 @@ export const AnalyticsFrequencyBucketSchema = z.object({
   revenue: z.string(),
 });
 
+export const AnalyticsProductMetricsSchema = z.object({
+  quantity: z.number(),
+  orders: z.number(),
+  kilograms: z.string(),
+});
+
+export const AnalyticsProductKindSchema = z.enum(["cake", "bento", "cupcake", "macaron", "addon", "other"]);
+
+export const AnalyticsProductsSchema = z.object({
+  month: z.string(),
+  start: z.string(),
+  end: z.string(),
+  coverage: z.object({
+    orders: z.number(),
+    parsed: z.number(),
+  }),
+  kinds: z.array(
+    AnalyticsProductMetricsSchema.extend({
+      kind: AnalyticsProductKindSchema,
+    }),
+  ),
+  positions: z.array(
+    AnalyticsProductMetricsSchema.extend({
+      kind: AnalyticsProductKindSchema,
+      name: z.string(),
+    }),
+  ),
+  fillings: z.array(
+    AnalyticsProductMetricsSchema.extend({
+      filling: z.string(),
+    }),
+  ),
+  weights: z.array(
+    AnalyticsProductMetricsSchema.extend({
+      kg: z.string(),
+    }),
+  ),
+  weight_unknown: z.number(),
+});
+
 export const AnalyticsClientsSchema = z.object({
   orders: z.number(),
   known_orders: z.number(),
@@ -817,6 +857,8 @@ export type AnalyticsOverview = z.infer<typeof AnalyticsOverviewSchema>;
 export type AnalyticsOverviewPayment = z.infer<typeof AnalyticsOverviewPaymentSchema>;
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
+export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;
+export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;
 export type AnalyticsLapsed = z.infer<typeof AnalyticsLapsedSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
