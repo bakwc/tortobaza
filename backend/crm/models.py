@@ -45,6 +45,9 @@ class CrmSettings(models.Model):
         return "CRM settings"
 
 
+LEGACY_CRM_ORDER_ID_START = 1_000_000
+
+
 class CrmOrder(models.Model):
     FULFILLMENT_DELIVERY = "delivery"
     FULFILLMENT_PICKUP = "pickup"
@@ -264,6 +267,11 @@ class CrmOrder(models.Model):
         return f"{self.date} {time_display} - {self.contact[:30]}"
 
     def save(self, *args, **kwargs):
+        if self._state.adding and self.pk is None:
+            max_id = CrmOrder.objects.filter(pk__lt=LEGACY_CRM_ORDER_ID_START).aggregate(
+                max_id=models.Max("id")
+            )["max_id"]
+            self.pk = (max_id or 0) + 1
         update_fields = kwargs.get("update_fields")
         if update_fields is None or "contact" in update_fields or "nickname" in update_fields:
             self.phones = phones_from_fields(self.contact, self.nickname)
