@@ -4,7 +4,7 @@ import {
   newDraftKey,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
-import type { CrmOrderItem, CrmOrderItemBody, TechCard } from "@/lib/api/types";
+import type { CrmOrderItem, CrmOrderItemBody, CrmOrderItemCostBody, TechCard } from "@/lib/api/types";
 
 export type CrmItemModifierDraft = { modifier: number; quantity: string };
 
@@ -73,7 +73,7 @@ export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrder
   const card = findCard(techCards, item.tech_card);
   return {
     tech_card: item.tech_card,
-    name: item.name,
+    name: "",
     quantity: Number(item.quantity || "1"),
     weight_kg: card?.kind === "weighted" ? decimalOrNull(item.weight_kg) : null,
     price: decimalOrNull(item.price),
@@ -84,6 +84,32 @@ export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrder
       ...componentRef(line.component),
       quantity: line.quantity.replace(",", "."),
     })),
+  };
+}
+
+export function crmItemCostBody(item: CrmItemDraft, card: TechCard): CrmOrderItemCostBody | null {
+  const quantity = Number(item.quantity);
+  if (!Number.isInteger(quantity) || quantity < 1) return null;
+  const weight = card.kind === "weighted" ? decimalOrNull(item.weight_kg) : null;
+  if (card.kind === "weighted" && weight === null) return null;
+  const modifiers: { modifier: number; quantity: number }[] = [];
+  for (const row of item.modifiers) {
+    const modifierQuantity = Number(row.quantity);
+    if (!Number.isInteger(modifierQuantity) || modifierQuantity < 1) return null;
+    modifiers.push({ modifier: row.modifier, quantity: modifierQuantity });
+  }
+  const lines: CrmOrderItemCostBody["lines"] = [];
+  for (const line of item.lines) {
+    const lineQuantity = decimalOrNull(line.quantity);
+    if (line.component === "" || lineQuantity === null) return null;
+    lines.push({ ...componentRef(line.component), quantity: lineQuantity });
+  }
+  return {
+    tech_card: card.id,
+    quantity,
+    weight_kg: weight,
+    modifiers,
+    lines,
   };
 }
 
@@ -104,11 +130,12 @@ export function crmItemsWeightText(
   const parts: string[] = [];
   for (const item of items) {
     const card = findCard(techCards, item.tech_card);
+    if (card === undefined) continue;
     const quantity = Number(item.quantity || "1");
     const prefix = quantity > 1 ? `${quantity} × ` : "";
-    if (card?.kind === "weighted" && item.weight_kg.trim() !== "") {
+    if (card.kind === "weighted" && item.weight_kg.trim() !== "") {
       parts.push(`${prefix}${formatNumber(item.weight_kg)} ${labels.kg}`);
-    } else if (card?.kind === "piece" || card === undefined) {
+    } else if (card.kind === "piece") {
       parts.push(`${quantity} ${labels.pcs}`);
     }
   }

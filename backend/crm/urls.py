@@ -11,6 +11,7 @@ from crm.views import (
     CrmOrderClientView,
     CrmOrderDetailView,
     CrmOrderEventsView,
+    CrmOrderItemCostView,
     CrmOrderListView,
     CrmOrderPaymentLinkView,
     CrmOrderMapView,
@@ -59,6 +60,7 @@ urlpatterns = [
     ),
     path("crm/orders/map/", CrmOrderMapView.as_view(), name="crm-order-map"),
     path("crm/orders/", CrmOrderListView.as_view(), name="crm-order-list"),
+    path("crm/order-item-cost/", CrmOrderItemCostView.as_view(), name="crm-order-item-cost"),
     path(
         "crm/orders/client/<str:token>/map/",
         CrmOrderClientMapView.as_view(),

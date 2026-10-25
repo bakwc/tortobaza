@@ -265,3 +265,73 @@ class CrmOrderItemsApiTests(TestCase):
         self.client.force_authenticate(self.finance)
         data = self.client.get(f"/api/crm/orders/{self.order.pk}/").json()
         self.assertEqual(data["food_cost"], "26.00")
+
+    def test_order_item_cost_for_staff(self):
+        self.client.force_authenticate(self.admin)
+        response = self.client.post(
+            "/api/crm/order-item-cost/",
+            {
+                "tech_card": self.menu.cake.pk,
+                "quantity": 1,
+                "weight_kg": "1",
+                "modifiers": [],
+                "lines": [],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["cost"], "10.00")
+
+    def test_order_item_cost_includes_modifier_weight_and_extra_line(self):
+        self.client.force_authenticate(self.admin)
+        response = self.client.post(
+            "/api/crm/order-item-cost/",
+            {
+                "tech_card": self.menu.cake.pk,
+                "quantity": 1,
+                "weight_kg": "2",
+                "modifiers": [{"modifier": self.menu.raspberry_filling.pk, "quantity": 1}],
+                "lines": [
+                    {
+                        "ingredient": self.menu.flour.pk,
+                        "semi_product": None,
+                        "quantity": "100",
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["cost"], "27.00")
+
+    def test_order_item_cost_without_required_modifier(self):
+        self.client.force_authenticate(self.admin)
+        response = self.client.post(
+            "/api/crm/order-item-cost/",
+            {
+                "tech_card": self.menu.cake.pk,
+                "quantity": 2,
+                "weight_kg": "1",
+                "modifiers": [],
+                "lines": [],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["cost"], "20.00")
+
+    def test_order_item_cost_forbidden_for_non_staff(self):
+        user = User.objects.create_user(username="manager", password="password")
+        self.client.force_authenticate(user)
+        response = self.client.post(
+            "/api/crm/order-item-cost/",
+            {
+                "tech_card": self.menu.cake.pk,
+                "quantity": 1,
+                "weight_kg": "1",
+                "modifiers": [],
+                "lines": [],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)

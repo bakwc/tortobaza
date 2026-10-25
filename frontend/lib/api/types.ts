@@ -1252,6 +1252,14 @@ export type TechCardBody = {
   modifier_lines: (RecipeLineBody & { modifier: number; scales_by_weight: boolean })[];
 };
 
+export type CrmOrderItemCostBody = {
+  tech_card: number;
+  quantity: number;
+  weight_kg: string | null;
+  modifiers: { modifier: number; quantity: number }[];
+  lines: (ComponentRefBody & { quantity: string })[];
+};
+
 export type CrmOrderItemBody = {
   tech_card: number | null;
   name: string;

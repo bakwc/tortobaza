@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type {
+  CrmOrderItemCostBody,
   CrmExpensesDay,
   CrmExpensesMonth,
   CrmSalaries,
@@ -155,6 +156,14 @@ export function useCreateCrmPaymentLink() {
       qc.invalidateQueries({ queryKey: ["crm-orders"] });
       qc.invalidateQueries({ queryKey: crmOrderQueryKey(id) });
     },
+  });
+}
+
+export function useCrmItemCost(body: CrmOrderItemCostBody | null) {
+  return useQuery({
+    queryKey: ["crm", "order-item-cost", body],
+    queryFn: () => api.getCrmOrderItemCost(body as CrmOrderItemCostBody),
+    enabled: body !== null,
   });
 }
 

@@ -5,10 +5,12 @@ import { Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ComponentLinesEditor, componentOptions } from "@/components/menu/ComponentLinesEditor";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Field, NativeSelect } from "@/components/menu/ui";
-import { useIngredients, useSemiProducts, useTechCardCategories, useTechCards } from "@/hooks/useStock";
+import { useCrmItemCost } from "@/hooks/useCrmOrders";
+import { useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import type { TechCard, TechCardGroup } from "@/lib/api/types";
-import { emptyCrmItem, type CrmItemDraft, type CrmItemModifierDraft } from "@/lib/crmItems";
+import { crmItemCostBody, emptyCrmItem, type CrmItemDraft, type CrmItemModifierDraft } from "@/lib/crmItems";
 import { cn } from "@/lib/utils";
 
 function GroupPicker({
@@ -126,18 +128,12 @@ function ItemEditor({
   const tStock = useTranslations("stock");
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
-  const categories = useTechCardCategories();
   const card = item.tech_card === null ? undefined : techCards.find((row) => row.id === item.tech_card);
-  const selectable = techCards.filter((row) => row.is_active || row.id === item.tech_card);
-  const cardGroups = [
-    ...(categories.list.data ?? []).map((category) => ({
-      key: String(category.id),
-      label: category.name,
-      cards: selectable.filter((row) => row.category === category.id),
-    })),
-    { key: "none", label: tStock("noCategory"), cards: selectable.filter((row) => row.category === null) },
-  ].filter((group) => group.cards.length > 0);
+  const techCardOptions = techCards
+    .filter((row) => row.is_active || row.id === item.tech_card)
+    .map((row) => ({ value: String(row.id), label: row.name }));
   const update = (patch: Partial<CrmItemDraft>) => onChange({ ...item, ...patch, needs_review: false });
+  const cost = useCrmItemCost(card === undefined ? null : crmItemCostBody(item, card));
   const options = componentOptions(
     ingredients.list.data ?? [],
     semiProducts.list.data ?? [],
@@ -164,35 +160,25 @@ function ItemEditor({
           </Button>
         </div>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <Field label={t("techCard")}>
-          <NativeSelect
-            value={item.tech_card ?? ""}
-            onChange={(event) =>
+          <SearchSelect
+            options={techCardOptions}
+            value={item.tech_card === null ? "" : String(item.tech_card)}
+            onChange={(value) => {
+              const techCardId = Number(value);
+              const nextCard = techCards.find((row) => row.id === techCardId);
               update({
-                tech_card: event.target.value === "" ? null : Number(event.target.value),
+                tech_card: techCardId,
                 modifiers: [],
-              })
-            }
-          >
-            <option value="">{t("freeItem")}</option>
-            {cardGroups.map((group) => (
-              <optgroup key={group.key} label={group.label}>
-                {group.cards.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </NativeSelect>
-        </Field>
-        <Field label={card ? t("nameOptional") : t("name")}>
-          <Input
-            required={!card}
-            value={item.name}
-            placeholder={card?.name ?? ""}
-            onChange={(event) => update({ name: event.target.value })}
+                name: "",
+                weight_kg:
+                  nextCard !== undefined && nextCard.kind === "weighted" ? (nextCard.basis_weight_kg ?? "") : "",
+              });
+            }}
+            placeholder={t("chooseTechCard")}
+            required={true}
+            className=""
           />
         </Field>
         <div className="flex items-end">
@@ -222,6 +208,11 @@ function ItemEditor({
         </Field>
         <Field label={t("price")}>
           <Input inputMode="decimal" value={item.price} onChange={(event) => update({ price: event.target.value })} />
+          {cost.data !== undefined ? (
+            <span className="text-sm font-medium text-[var(--ink)]">
+              {t("foodCost", { value: Number(cost.data).toFixed(2) })}
+            </span>
+          ) : null}
         </Field>
       </div>
       {card && card.modifier_groups.length > 0 ? (

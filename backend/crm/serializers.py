@@ -149,6 +149,23 @@ class CrmOrderItemInputSerializer(serializers.Serializer):
         return attrs
 
 
+class CrmOrderItemCostSerializer(serializers.Serializer):
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all())
+    quantity = serializers.IntegerField(min_value=1)
+    weight_kg = serializers.DecimalField(max_digits=6, decimal_places=3, allow_null=True)
+    modifiers = CrmOrderItemModifierInputSerializer(many=True)
+    lines = CrmOrderItemLineInputSerializer(many=True)
+
+    def validate(self, attrs):
+        tech_card = attrs["tech_card"]
+        weight_kg = attrs["weight_kg"]
+        if tech_card.kind == TechCard.KIND_WEIGHTED and (weight_kg is None or weight_kg <= 0):
+            raise serializers.ValidationError(
+                {"weight_kg": "Weight is required for a per kilogram tech card."}
+            )
+        return attrs
+
+
 def replace_crm_order_items(order: CrmOrder, items: list[dict]) -> None:
     order.items.all().delete()
     for position, item in enumerate(items):

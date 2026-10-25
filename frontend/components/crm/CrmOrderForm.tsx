@@ -176,12 +176,11 @@ export function CrmOrderForm(
 
   const onItemsChange = (next: CrmItemDraft[]) => {
     setItems(next);
-    if (next.length === 0) return;
     const weightText = crmItemsWeightText(next, cards, { kg: t("items.kg"), pcs: t("items.pcs") });
-    const fillingText = crmItemsFillingText(next, cards);
+    const fillingText = next.length === 0 ? "" : crmItemsFillingText(next, cards);
     setFields((prev) => ({
       ...prev,
-      weight: !weightTouched && weightText !== "" ? weightText : prev.weight,
+      weight: !weightTouched ? weightText : prev.weight,
       filling: !fillingTouched && fillingText !== "" ? fillingText : prev.filling,
     }));
   };

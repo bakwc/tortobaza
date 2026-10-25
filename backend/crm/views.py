@@ -55,6 +55,7 @@ from crm.serializers import (
     CrmMapOrderSerializer,
     CrmOrderClientSerializer,
     CrmOrderEventSerializer,
+    CrmOrderItemCostSerializer,
     CrmOrderMapQuerySerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
@@ -77,6 +78,7 @@ from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
 from inventory.services import sync_order_write_off
+from menu.recipes import expand_order_item, needs_cost
 from orders.paypal import paypal_enabled
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -94,6 +96,11 @@ def is_finance_admin(user) -> bool:
 class IsFinanceAdmin(BasePermission):
     def has_permission(self, request, view):
         return is_finance_admin(request.user)
+
+
+class IsStaff(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_staff
 
 
 class CrmOrderWritePermission(BasePermission):
@@ -210,6 +217,26 @@ def crm_order_write_payload(request):
     payload["images"] = request.FILES.getlist("images")
     payload["delete_image_ids"] = request.data.getlist("delete_image_ids")
     return payload
+
+
+class CrmOrderItemCostView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def post(self, request):
+        serializer = CrmOrderItemCostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        item = serializer.validated_data
+        cost = needs_cost(
+            expand_order_item(
+                item["tech_card"],
+                item["weight_kg"],
+                item["quantity"],
+                [(row["modifier"], row["quantity"]) for row in item["modifiers"]],
+                [(line["ingredient"] or line["semi_product"], line["quantity"]) for line in item["lines"]],
+            )
+        )
+        return Response({"cost": str(cost)})
 
 
 class CrmOrderListView(APIView):

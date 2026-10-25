@@ -70,6 +70,7 @@ import {
   type CrmUnconfirmedOrdersResponse,
   type CrmOrder,
   type CrmOrderEvent,
+  type CrmOrderItemCostBody,
   type CrmOrdersResponse,
   type ResolveGoogleAddressResponse,
   type ResolveYandexAddressResponse,
@@ -631,6 +632,14 @@ export function endpoints(fetcher: Fetcher) {
     async getExchangeRates(): Promise<ExchangeRates> {
       const raw = await fetcher<unknown>("/api/crm/finance/exchange-rates/");
       return parse(ExchangeRatesSchema, raw);
+    },
+
+    async getCrmOrderItemCost(body: CrmOrderItemCostBody): Promise<string> {
+      const raw = await fetcher<unknown>("/api/crm/order-item-cost/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(TechCardCostSchema, raw).cost;
     },
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {
