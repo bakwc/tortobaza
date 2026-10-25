@@ -67,6 +67,65 @@ def create_paypal_order(payment: PayPalPayment, order: Order) -> dict:
     return response.json()
 
 
+def payment_link_body(order_id: int, amount_usd: Decimal, return_url: str) -> dict:
+    return {
+        "integration_mode": "LINK",
+        "type": "BUY_NOW",
+        "reusable": "SINGLE",
+        "return_url": return_url,
+        "line_items": [
+            {
+                "name": f"Sweet Chill #{order_id}",
+                "unit_amount": {
+                    "currency_code": "USD",
+                    "value": format(amount_usd, "f"),
+                },
+                "collect_shipping_address": False,
+            }
+        ],
+    }
+
+
+def payment_link_href(payload: dict) -> str:
+    for link in payload["links"]:
+        if link["rel"] == "payment_link":
+            return link["href"]
+    raise KeyError("payment_link")
+
+
+def create_payment_link(order_id: int, amount_usd: Decimal, return_url: str) -> tuple[str, str]:
+    token = access_token()
+    response = requests.post(
+        f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "PayPal-Request-Id": f"crm-order-{order_id}",
+        },
+        json=payment_link_body(order_id, amount_usd, return_url),
+        timeout=30,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    return payload["id"], payment_link_href(payload)
+
+
+def update_payment_link(link_id: str, order_id: int, amount_usd: Decimal, return_url: str) -> None:
+    token = access_token()
+    response = requests.put(
+        f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources/{link_id}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        json=payment_link_body(order_id, amount_usd, return_url),
+        timeout=30,
+    )
+    response.raise_for_status()
+
+
 def capture_paypal_order(paypal_order_id: str) -> dict:
     token = access_token()
     response = requests.post(

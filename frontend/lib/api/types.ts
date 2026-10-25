@@ -364,6 +364,7 @@ export const CrmOrderSchema = z.object({
   is_paid: z.boolean(),
   payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
   payment_date: z.string().nullable(),
+  payment_url: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
   images: z.array(CrmOrderImageSchema),

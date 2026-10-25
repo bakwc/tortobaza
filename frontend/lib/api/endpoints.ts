@@ -672,6 +672,13 @@ export function endpoints(fetcher: Fetcher) {
       return parse(CrmOrderSchema, raw);
     },
 
+    async createCrmPaymentLink(id: number): Promise<CrmOrder> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/payment-link/`, {
+        method: "POST",
+      });
+      return parse(CrmOrderSchema, raw);
+    },
+
     async getCrmOrder(id: number): Promise<CrmOrder> {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`);
       return parse(CrmOrderSchema, raw);

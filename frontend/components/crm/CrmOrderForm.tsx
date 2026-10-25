@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { CrmOrderItemsEditor } from "@/components/crm/CrmOrderItemsEditor";
+import { CrmPaymentLinkField } from "@/components/crm/CrmPaymentLinkField";
 import { ImageBatchUploader } from "@/components/crm/ImageBatchUploader";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { apiErrorMessage } from "@/components/menu/ui";
@@ -630,6 +631,18 @@ export function CrmOrderForm(
               ))}
             </RadioGroup>
           </div>
+          {props.mode === "edit" ? (
+            <div className="sm:col-span-2">
+              <CrmPaymentLinkField
+                orderId={props.order.id}
+                paymentUrl={props.order.payment_url}
+                remaining={Math.max(
+                  0,
+                  Number(fields.cake_price) + Number(fields.delivery_price) - Number(fields.prepayment),
+                )}
+              />
+            </div>
+          ) : null}
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
               {t("paymentDate")}

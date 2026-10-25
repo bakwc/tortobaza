@@ -39,6 +39,7 @@ import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
+import { CrmPaymentLinkField } from "@/components/crm/CrmPaymentLinkField";
 import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -1051,6 +1052,11 @@ function CrmOrderCard({
                 </p>
               </div>
             </div>
+            <CrmPaymentLinkField
+              orderId={order.id}
+              paymentUrl={order.payment_url}
+              remaining={remainingNum}
+            />
           </div>
 
           <div className="flex flex-col gap-2 pt-1 sm:gap-3 lg:pt-2">

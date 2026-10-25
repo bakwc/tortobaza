@@ -147,6 +147,17 @@ export function usePatchCrmOrder() {
   });
 }
 
+export function useCreateCrmPaymentLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.createCrmPaymentLink(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ["crm-orders"] });
+      qc.invalidateQueries({ queryKey: crmOrderQueryKey(id) });
+    },
+  });
+}
+
 export function useCreateCrmOrder() {
   const qc = useQueryClient();
   return useMutation({

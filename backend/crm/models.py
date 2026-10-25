@@ -180,6 +180,20 @@ class CrmOrder(models.Model):
         verbose_name=_("Payment type"),
     )
     payment_date = models.DateField(null=True, blank=True, verbose_name=_("Payment date"))
+    paypal_link_id = models.CharField(max_length=50, blank=True, default="", verbose_name=_("PayPal link id"))
+    paypal_payment_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name=_("PayPal payment URL"),
+    )
+    paypal_amount_usd = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("PayPal amount USD"),
+    )
     website_order = models.OneToOneField(
         "orders.Order",
         related_name="crm_order",

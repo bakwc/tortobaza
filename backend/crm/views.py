@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -45,6 +46,7 @@ from crm.models import (
     FlowwowWebhookEvent,
     ResolvedGoogleAddress,
 )
+from crm.paypal_link import assign_crm_payment_link
 from crm.rent import daily_rent, monthly_rent
 from crm.serializers import (
     AnalyticsMonthQuerySerializer,
@@ -75,6 +77,7 @@ from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
 from inventory.services import sync_order_write_off
+from orders.paypal import paypal_enabled
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -335,6 +338,38 @@ class CrmOrderDetailView(APIView):
         )
         schedule_crm_order_telegram_sync(order.pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CrmOrderPaymentLinkView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        order = get_object_or_404(live_orders(), pk=pk)
+        if not paypal_enabled():
+            return Response(
+                {"detail": _("PayPal is not available.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if order.total_price - order.prepayment <= 0:
+            return Response(
+                {"detail": _("Nothing left to pay.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        link_id = order.paypal_link_id
+        amount_usd = order.paypal_amount_usd
+        assign_crm_payment_link(order)
+        if order.paypal_link_id != link_id or order.paypal_amount_usd != amount_usd:
+            order.save(
+                update_fields=[
+                    "paypal_link_id",
+                    "paypal_payment_url",
+                    "paypal_amount_usd",
+                    "updated_at",
+                ]
+            )
+        order = with_order_relations(live_orders()).get(pk=order.pk)
+        return Response(CrmOrderSerializer(order, context=order_detail_context(request)).data)
 
 
 class CrmOrderEventsView(APIView):

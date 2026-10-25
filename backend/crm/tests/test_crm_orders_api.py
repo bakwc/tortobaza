@@ -1,12 +1,12 @@
 import io
 from datetime import date, datetime, time
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from PIL import Image
 from rest_framework.test import APIClient
@@ -1526,6 +1526,163 @@ class CrmOrdersApiTests(TestCase):
         )
         response = self.client.get(f"/api/crm/orders/client/{order.client_token}/map/")
         self.assertEqual(response.status_code, 404)
+
+    @override_settings(PAYPAL_ENABLED="1", SITE_URL="https://sweet-chill.ge")
+    @patch("crm.paypal_link.nbg_usd_rate", return_value=Decimal("2.70"))
+    @patch("orders.paypal.requests.put")
+    @patch("orders.paypal.requests.post")
+    def test_payment_link_is_created_once_and_listed(self, post, put, _rate):
+        def paypal_post(url, **kwargs):
+            response = MagicMock()
+            if url.endswith("/v1/oauth2/token"):
+                response.json.return_value = {"access_token": "token"}
+            else:
+                response.json.return_value = {
+                    "id": "PLB-TEST",
+                    "links": [
+                        {
+                            "rel": "payment_link",
+                            "href": "https://www.paypal.com/ncp/payment/PLB-TEST",
+                            "method": "GET",
+                        }
+                    ],
+                }
+            return response
+
+        post.side_effect = paypal_post
+        today = timezone.now().astimezone(_TB).date()
+        order = CrmOrder.objects.create(
+            date=today,
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("20.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        plain = CrmOrder.objects.create(
+            date=today,
+            time_start=time(13, 0),
+            contact="Other",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Chocolate",
+            cake_price=Decimal("50.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        denied = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
+        create_calls = [
+            call
+            for call in post.call_args_list
+            if call.args[0].endswith("/v1/checkout/payment-resources")
+        ]
+        self.assertEqual(len(create_calls), 1)
+        body = create_calls[0].kwargs["json"]
+        self.assertEqual(body["reusable"], "SINGLE")
+        self.assertEqual(body["return_url"], "https://sweet-chill.ge")
+        self.assertEqual(body["line_items"][0]["name"], f"Sweet Chill #{order.id}")
+        self.assertEqual(body["line_items"][0]["unit_amount"], {"currency_code": "USD", "value": "29.63"})
+        self.assertIs(body["line_items"][0]["collect_shipping_address"], False)
+        self.assertEqual(
+            create_calls[0].kwargs["headers"]["PayPal-Request-Id"],
+            f"crm-order-{order.id}",
+        )
+        put.assert_not_called()
+
+        post.reset_mock()
+        again = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(again.status_code, 200)
+        self.assertEqual(again.json()["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
+        post.assert_not_called()
+        put.assert_not_called()
+
+        listed = self.client.get("/api/crm/orders/", {"date": today.isoformat()})
+        self.assertEqual(listed.status_code, 200)
+        by_id = {row["id"]: row for row in listed.json()["orders"]}
+        self.assertEqual(by_id[order.id]["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
+        self.assertIsNone(by_id[plain.id]["payment_url"])
+        client_order = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
+        self.assertNotIn("payment_url", client_order.json())
+
+    @override_settings(PAYPAL_ENABLED="")
+    def test_payment_link_rejects_when_paypal_disabled(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(response.status_code, 400)
+
+    @override_settings(PAYPAL_ENABLED="1")
+    @patch("crm.paypal_link.nbg_usd_rate")
+    def test_payment_link_rejects_when_nothing_left_to_pay(self, rate):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("100.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(response.status_code, 400)
+        rate.assert_not_called()
+
+    @override_settings(SITE_URL="https://sweet-chill.ge")
+    @patch("crm.paypal_link.update_payment_link")
+    @patch("crm.paypal_link.nbg_usd_rate", return_value=Decimal("2.70"))
+    def test_price_change_updates_paypal_link_amount(self, _rate, update_link):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("20.00"),
+            payment_type=CrmOrder.PAYMENT_CASH,
+            paypal_link_id="PLB-TEST",
+            paypal_payment_url="https://www.paypal.com/ncp/payment/PLB-TEST",
+            paypal_amount_usd=Decimal("29.63"),
+        )
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.put(
+            f"/api/crm/orders/{order.id}/",
+            self._order_payload(cake_price="130.00", prepayment="20.00"),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
+        update_link.assert_called_once_with(
+            "PLB-TEST",
+            order.id,
+            Decimal("40.74"),
+            "https://sweet-chill.ge",
+        )
+        order.refresh_from_db()
+        self.assertEqual(order.paypal_amount_usd, Decimal("40.74"))
 
 
 class CrmOrderMapApiTests(TestCase):

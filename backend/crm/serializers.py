@@ -20,6 +20,7 @@ from crm.models import (
     FinancialTransaction,
     ResolvedTelegramPhone,
 )
+from crm.paypal_link import assign_crm_payment_link
 from crm.phone import links_for_stored
 from menu.models import Ingredient, Modifier, SemiProduct, TechCard
 from menu.recipes import order_cost, order_item_errors
@@ -189,6 +190,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
     delivered_by_name = serializers.CharField(read_only=True, allow_null=True)
     delivered_by_telegram_url = serializers.CharField(read_only=True, allow_null=True)
     delivered_by_gender = serializers.CharField(read_only=True, allow_null=True)
+    payment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = CrmOrder
@@ -227,11 +229,17 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "is_paid",
             "payment_type",
             "payment_date",
+            "payment_url",
             "created_at",
             "updated_at",
             "images",
             "items",
         ]
+
+    def get_payment_url(self, instance: CrmOrder) -> str | None:
+        if instance.paypal_payment_url == "":
+            return None
+        return instance.paypal_payment_url
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -539,11 +547,21 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         before = snapshot_crm_order(instance)
         previous_status = instance.status
+        previous_cake_price = instance.cake_price
+        previous_delivery_price = instance.delivery_price
+        previous_prepayment = instance.prepayment
         images = validated_data.pop("images", [])
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         items = validated_data.pop("items", None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        prices_changed = (
+            instance.cake_price != previous_cake_price
+            or instance.delivery_price != previous_delivery_price
+            or instance.prepayment != previous_prepayment
+        )
+        if instance.paypal_link_id and prices_changed and instance.total_price - instance.prepayment > 0:
+            assign_crm_payment_link(instance)
         if (
             previous_status == CrmOrder.STATUS_UNCONFIRMED
             and instance.status == CrmOrder.STATUS_NEW
