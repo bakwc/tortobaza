@@ -209,6 +209,21 @@ export const StartPaymentResponseSchema = z.object({
   fields: z.record(z.string(), z.string()),
 });
 
+export const PayPalConfigSchema = z.object({
+  enabled: z.boolean(),
+  client_id: z.string(),
+});
+
+export const PayPalCreateResponseSchema = z.object({
+  paypal_order_id: z.string(),
+  amount_usd: z.string(),
+  exchange_rate: z.string(),
+});
+
+export const PayPalCaptureResponseSchema = z.object({
+  status: z.string(),
+});
+
 export const OrderSchema = z.object({
   number: z.string(),
   lookup_token: z.string(),
@@ -929,7 +944,7 @@ export type LoginBody = {
 export type AttendanceEventType = "arrival" | "departure";
 
 export type FulfillmentType = "delivery" | "pickup";
-export type PaymentMethod = "card" | "cash" | "bank_transfer";
+export type PaymentMethod = "paypal" | "card" | "cash" | "bank_transfer";
 
 export type AddCartItemBody = {
   product_id: number;
@@ -978,6 +993,32 @@ export type StartPaymentBody = {
 export type StartPaymentResponse = {
   action_url: string;
   fields: Record<string, string>;
+};
+
+export type PayPalConfig = {
+  enabled: boolean;
+  client_id: string;
+};
+
+export type PayPalCreateBody = {
+  number: string;
+  token: string;
+};
+
+export type PayPalCreateResponse = {
+  paypal_order_id: string;
+  amount_usd: string;
+  exchange_rate: string;
+};
+
+export type PayPalCaptureBody = {
+  number: string;
+  token: string;
+  paypal_order_id: string;
+};
+
+export type PayPalCaptureResponse = {
+  status: string;
 };
 
 export type PreviewOrderBody = {

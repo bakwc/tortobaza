@@ -66,7 +66,8 @@ def _order_details(order: Order) -> str:
         Order.FULFILLMENT_PICKUP: _("Pickup"),
     }
     payment_method_labels = {
-        Order.PAYMENT_CARD: _("Card"),
+        Order.PAYMENT_PAYPAL: _("International card"),
+        Order.PAYMENT_CARD: _("Card (Georgian banks)"),
         Order.PAYMENT_CASH: _("Cash"),
         Order.PAYMENT_BANK_TRANSFER: _("Bank transfer"),
     }

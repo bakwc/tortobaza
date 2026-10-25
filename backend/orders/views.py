@@ -1,4 +1,6 @@
+import json
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.http import HttpResponse
@@ -19,13 +21,22 @@ from orders.liberty import (
     order_amount_tetri,
     order_environment_for_request,
 )
-from orders.models import LibertyPayment, Order, PickupLocation
+from orders.models import LibertyPayment, Order, PayPalPayment, PickupLocation
+from orders.paypal import (
+    capture_paypal_order,
+    create_paypal_order,
+    gel_to_usd,
+    nbg_usd_rate,
+    paypal_enabled,
+)
 from orders.schedule import build_fulfillment_options
 from orders.serializers import (
     LibertyPaymentStartInputSerializer,
     OrderCreateInputSerializer,
     OrderPreviewInputSerializer,
     OrderReadSerializer,
+    PayPalCaptureInputSerializer,
+    PayPalCreateInputSerializer,
     PickupLocationSerializer,
     PromoValidateInputSerializer,
 )
@@ -266,3 +277,100 @@ class LibertyCallbackView(APIView):
         payment.save()
         xml = callback_response_xml("0", "Ok", transactioncode)
         return HttpResponse(xml, content_type="text/xml")
+
+
+class PayPalConfigView(APIView):
+    def get(self, request):
+        enabled = paypal_enabled()
+        return Response(
+            {
+                "enabled": enabled,
+                "client_id": settings.PAYPAL_CLIENT_ID if enabled else "",
+            }
+        )
+
+
+class PayPalCreateView(APIView):
+    def post(self, request):
+        if not paypal_enabled():
+            return Response(
+                {"detail": _("Card payment is not available.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = PayPalCreateInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        order = get_object_or_404(Order, number=data["number"], lookup_token=data["token"])
+        if order.payment_method != Order.PAYMENT_PAYPAL:
+            return Response(
+                {"detail": _("This order does not use card payment.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if order.payment_status == Order.PAYMENT_PAID:
+            return Response(
+                {"detail": _("This order is already paid.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        rate = nbg_usd_rate()
+        amount_usd = gel_to_usd(order.total, rate)
+        payment = PayPalPayment.objects.create(
+            order=order,
+            amount_gel=order.total,
+            amount_usd=amount_usd,
+            exchange_rate=rate,
+        )
+        paypal_order = create_paypal_order(payment, order)
+        payment.paypal_order_id = paypal_order["id"]
+        payment.raw_response = json.dumps(paypal_order)
+        payment.save()
+        return Response(
+            {
+                "paypal_order_id": payment.paypal_order_id,
+                "amount_usd": str(payment.amount_usd),
+                "exchange_rate": str(payment.exchange_rate),
+            }
+        )
+
+
+class PayPalCaptureView(APIView):
+    def post(self, request):
+        serializer = PayPalCaptureInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        order = get_object_or_404(Order, number=data["number"], lookup_token=data["token"])
+        payment = get_object_or_404(
+            PayPalPayment,
+            paypal_order_id=data["paypal_order_id"],
+            order=order,
+        )
+        if payment.status == PayPalPayment.STATUS_COMPLETED:
+            return Response({"status": payment.status})
+        captured = capture_paypal_order(payment.paypal_order_id)
+        payment.raw_response = json.dumps(captured)
+        if captured.get("status") == "COMPLETED":
+            capture = captured["purchase_units"][0]["payments"]["captures"][0]
+            amount = capture["amount"]
+            amount_matches = (
+                amount["currency_code"] == payment.currency
+                and Decimal(amount["value"]) == payment.amount_usd
+            )
+            if not amount_matches:
+                payment.status = PayPalPayment.STATUS_ERROR
+                payment.save()
+                return Response(
+                    {"detail": _("Payment amount mismatch.")},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            payment.status = PayPalPayment.STATUS_COMPLETED
+            payment.capture_id = capture["id"]
+            payment.save()
+            Order.objects.filter(pk=payment.order_id).update(payment_status=Order.PAYMENT_PAID)
+            mark_crm_order_paid_for_website_order(payment.order)
+            notify_order_paid_by_card(payment.order_id)
+            return Response({"status": payment.status})
+        payment.status = PayPalPayment.STATUS_ERROR
+        payment.save()
+        return Response(
+            {"detail": _("Payment was not completed.")},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Building2, CreditCard, Wallet } from "lucide-react";
+import { Building2, CreditCard, Globe, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
@@ -39,7 +39,12 @@ export function CheckoutConfirm() {
     queryKey: ["liberty-payment-enabled"],
     queryFn: () => api.getLibertyPaymentEnabled(),
   });
+  const paypalPayment = useQuery({
+    queryKey: ["paypal-config"],
+    queryFn: () => api.getPayPalConfig(),
+  });
   const cardPaymentEnabled = cardPayment.data?.enabled ?? false;
+  const paypalEnabled = paypalPayment.data?.enabled ?? false;
 
   useEffect(() => {
     const loaded = loadDraft();
@@ -62,13 +67,29 @@ export function CheckoutConfirm() {
   }, [router]);
 
   useEffect(() => {
-    if (!hydrated || cardPayment.isLoading) return;
+    if (!hydrated || cardPayment.isLoading || paypalPayment.isLoading) return;
+    if (!paypalEnabled && draft.payment_method === "paypal") {
+      const next = {
+        ...draft,
+        payment_method: cardPaymentEnabled ? ("card" as const) : ("bank_transfer" as const),
+      };
+      setDraft(next);
+      saveDraft(next);
+      return;
+    }
     if (!cardPaymentEnabled && draft.payment_method === "card") {
       const next = { ...draft, payment_method: "bank_transfer" as const };
       setDraft(next);
       saveDraft(next);
     }
-  }, [hydrated, cardPayment.isLoading, cardPaymentEnabled, draft]);
+  }, [
+    hydrated,
+    cardPayment.isLoading,
+    paypalPayment.isLoading,
+    cardPaymentEnabled,
+    paypalEnabled,
+    draft,
+  ]);
 
   const update = (patch: Partial<CheckoutDraft>) => {
     setDraft((prev) => {
@@ -161,6 +182,9 @@ export function CheckoutConfirm() {
 
   const placeOrderLabel =
     draft.payment_method === "bank_transfer" && bankTransferStep ? t("confirmPayment") : t("placeOrder");
+  const paymentTileCount = (paypalEnabled ? 1 : 0) + (cardPaymentEnabled ? 1 : 0) + 2;
+  const paymentGridClass =
+    paymentTileCount >= 4 ? "sm:grid-cols-4" : paymentTileCount === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2";
 
   if (!hydrated) {
     return <div className="mt-8 h-96 animate-pulse rounded-3xl bg-white/40" />;
@@ -170,12 +194,18 @@ export function CheckoutConfirm() {
     <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
       <div className="min-w-0 space-y-6">
         <Section title={t("paymentMethod")}>
-          <div
-            className={cn(
-              "grid grid-cols-1 gap-3",
-              cardPaymentEnabled ? "sm:grid-cols-3" : "sm:grid-cols-2",
-            )}
-          >
+          <div className={cn("grid grid-cols-1 gap-3", paymentGridClass)}>
+            {paypalEnabled ? (
+              <PaymentTile
+                icon={<Globe className="h-5 w-5" />}
+                label={t("cardInternational")}
+                active={draft.payment_method === "paypal"}
+                onClick={() => {
+                  setBankTransferStep(false);
+                  update({ payment_method: "paypal" });
+                }}
+              />
+            ) : null}
             {cardPaymentEnabled ? (
               <PaymentTile
                 icon={<CreditCard className="h-5 w-5" />}
@@ -206,7 +236,10 @@ export function CheckoutConfirm() {
               }}
             />
           </div>
-          {cardPaymentEnabled ? (
+          {paypalEnabled && draft.payment_method === "paypal" ? (
+            <p className="text-sm leading-relaxed text-[var(--ink)]/60">{t("paypalHint")}</p>
+          ) : null}
+          {cardPaymentEnabled && draft.payment_method === "card" ? (
             <p className="text-sm leading-relaxed text-[var(--ink)]/60">{t("cardHint")}</p>
           ) : null}
         </Section>
@@ -394,7 +427,7 @@ function PaymentTile({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-14 items-center justify-center gap-2 rounded-2xl border text-sm transition",
+        "flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-3 py-2 text-center text-sm leading-snug transition",
         active
           ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--brand-foreground)]"
           : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--muted-2)]",

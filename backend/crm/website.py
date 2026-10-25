@@ -18,6 +18,7 @@ _WEIGHT_GROUPS = frozenset({"weight", "size", "вес", "размер"})
 _FILLING_GROUPS = frozenset({"filling", "начинка", "flavor", "flovers bento"})
 
 _PAYMENT_MAP = {
+    Order.PAYMENT_PAYPAL: CrmOrder.PAYMENT_ONLINE,
     Order.PAYMENT_CARD: CrmOrder.PAYMENT_ONLINE,
     Order.PAYMENT_CASH: CrmOrder.PAYMENT_CASH,
     Order.PAYMENT_BANK_TRANSFER: CrmOrder.PAYMENT_UNKNOWN,

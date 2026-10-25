@@ -2,6 +2,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from orders.liberty import liberty_pay_enabled_for_request
+from orders.paypal import paypal_enabled
 from orders.models import (
     DeliveryAddress,
     Order,
@@ -129,6 +130,10 @@ class OrderCreateInputSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"payment_method": _("Card payment is not available.")}
             )
+        if attrs.get("payment_method") == Order.PAYMENT_PAYPAL and not paypal_enabled():
+            raise serializers.ValidationError(
+                {"payment_method": _("Card payment is not available.")}
+            )
         return attrs
 
 
@@ -139,3 +144,14 @@ class PromoValidateInputSerializer(serializers.Serializer):
 class LibertyPaymentStartInputSerializer(serializers.Serializer):
     number = serializers.CharField(max_length=20)
     token = serializers.UUIDField()
+
+
+class PayPalCreateInputSerializer(serializers.Serializer):
+    number = serializers.CharField(max_length=20)
+    token = serializers.UUIDField()
+
+
+class PayPalCaptureInputSerializer(serializers.Serializer):
+    number = serializers.CharField(max_length=20)
+    token = serializers.UUIDField()
+    paypal_order_id = serializers.CharField(max_length=50)

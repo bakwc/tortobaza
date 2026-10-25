@@ -39,6 +39,9 @@ import {
   SessionUserSchema,
   StartPaymentResponseSchema,
   LibertyPaymentEnabledSchema,
+  PayPalCaptureResponseSchema,
+  PayPalConfigSchema,
+  PayPalCreateResponseSchema,
   type AddCartItemBody,
   type AttendanceEvent,
   type AttendanceEventType,
@@ -86,6 +89,11 @@ import {
   type SessionUser,
   type StartPaymentBody,
   type StartPaymentResponse,
+  type PayPalCaptureBody,
+  type PayPalCaptureResponse,
+  type PayPalConfig,
+  type PayPalCreateBody,
+  type PayPalCreateResponse,
   type UpdateCartItemBody,
   type UpdateCrmOrderBody,
   CatalogOptionSchema,
@@ -469,6 +477,27 @@ export function endpoints(fetcher: Fetcher) {
       return { enabled: true };
       const raw = await fetcher<unknown>("/api/payments/liberty/enabled/");
       return parse(LibertyPaymentEnabledSchema, raw);
+    },
+
+    async getPayPalConfig(): Promise<PayPalConfig> {
+      const raw = await fetcher<unknown>("/api/payments/paypal/config/");
+      return parse(PayPalConfigSchema, raw);
+    },
+
+    async createPayPalOrder(body: PayPalCreateBody): Promise<PayPalCreateResponse> {
+      const raw = await fetcher<unknown>("/api/payments/paypal/create/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(PayPalCreateResponseSchema, raw);
+    },
+
+    async capturePayPalOrder(body: PayPalCaptureBody): Promise<PayPalCaptureResponse> {
+      const raw = await fetcher<unknown>("/api/payments/paypal/capture/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(PayPalCaptureResponseSchema, raw);
     },
 
     async ensureCsrf(): Promise<void> {

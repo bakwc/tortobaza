@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api/client";
+import { PayPalPayButtons } from "@/components/checkout/PayPalPayButtons";
 import { submitLibertyPaymentForm } from "@/lib/liberty-pay";
 import { rememberOrder } from "@/lib/order-history";
 import { formatAed, formatOrderTimeslot } from "@/lib/format";
@@ -30,9 +31,15 @@ export function OrderStatusView({
   const locale = useLocale();
   const t = useTranslations("orders");
   const [payError, setPayError] = useState<string | null>(null);
+  const [paypalResult, setPaypalResult] = useState<"success" | "error" | "cancel" | null>(null);
   const cardPayment = useQuery({
     queryKey: ["liberty-payment-enabled"],
     queryFn: () => api.getLibertyPaymentEnabled(),
+  });
+  const paypalConfig = useQuery({
+    queryKey: ["paypal-config"],
+    queryFn: () => api.getPayPalConfig(),
+    enabled: order.payment_method === "paypal" && order.payment_status !== "paid",
   });
   const cardPaymentEnabled = cardPayment.data?.enabled ?? false;
 
@@ -50,6 +57,7 @@ export function OrderStatusView({
 
   const paymentLabelMap = useMemo(
     () => ({
+      paypal: t("paymentPayPal"),
       card: t("paymentCard"),
       cash: t("paymentCash"),
       bank_transfer: t("paymentBank"),
@@ -85,24 +93,32 @@ export function OrderStatusView({
     },
   });
 
+  const shownPaymentResult = paypalResult ?? paymentResult;
+
   const paymentResultMessage = useMemo(() => {
-    if (paymentResult === "success") return t("paymentSuccess");
-    if (paymentResult === "error") return t("paymentError");
-    if (paymentResult === "cancel") return t("paymentCancel");
+    if (shownPaymentResult === "success") return t("paymentSuccess");
+    if (shownPaymentResult === "error") return t("paymentError");
+    if (shownPaymentResult === "cancel") return t("paymentCancel");
     return null;
-  }, [paymentResult, t]);
+  }, [shownPaymentResult, t]);
 
   const paymentResultTone = useMemo(() => {
-    if (paymentResult === "success") return "bg-emerald-100 text-emerald-900";
-    if (paymentResult === "error") return "bg-rose-100 text-rose-900";
-    if (paymentResult === "cancel") return "bg-amber-100 text-amber-900";
+    if (shownPaymentResult === "success") return "bg-emerald-100 text-emerald-900";
+    if (shownPaymentResult === "error") return "bg-rose-100 text-rose-900";
+    if (shownPaymentResult === "cancel") return "bg-amber-100 text-amber-900";
     return "";
-  }, [paymentResult]);
+  }, [shownPaymentResult]);
 
   const showPayButton =
     cardPaymentEnabled &&
     order.payment_method === "card" &&
     order.payment_status !== "paid";
+  const paypalClientId = paypalConfig.data?.enabled ? paypalConfig.data.client_id : "";
+  const showPayPalButtons =
+    order.payment_method === "paypal" &&
+    order.payment_status !== "paid" &&
+    paypalResult !== "success" &&
+    paypalClientId.length > 0;
 
   const tone = STATUS_TONE[order.status] ?? "bg-amber-100 text-amber-900";
   const label =
@@ -186,6 +202,18 @@ export function OrderStatusView({
           <Field label={t("paymentLabel")}>
             {paymentMethodLabel} · <span className="text-[var(--ink)]/60">{order.payment_status}</span>
           </Field>
+          {showPayPalButtons ? (
+            <div className="sm:col-span-2">
+              <PayPalPayButtons
+                orderNumber={order.number}
+                lookupToken={order.lookup_token}
+                clientId={paypalClientId}
+                onPaid={() => setPaypalResult("success")}
+                onError={() => setPaypalResult("error")}
+                onCancel={() => setPaypalResult("cancel")}
+              />
+            </div>
+          ) : null}
           {showPayButton ? (
             <div className="sm:col-span-2">
               <button

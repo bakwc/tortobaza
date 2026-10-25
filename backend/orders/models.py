@@ -100,10 +100,12 @@ class Order(models.Model):
         (STATUS_CANCELLED, _("Cancelled")),
     ]
 
+    PAYMENT_PAYPAL = "paypal"
     PAYMENT_CARD = "card"
     PAYMENT_CASH = "cash"
     PAYMENT_BANK_TRANSFER = "bank_transfer"
     PAYMENT_METHOD_CHOICES = [
+        (PAYMENT_PAYPAL, _("International card")),
         (PAYMENT_CARD, _("Card")),
         (PAYMENT_CASH, _("Cash")),
         (PAYMENT_BANK_TRANSFER, _("Bank transfer")),
@@ -306,6 +308,53 @@ class LibertyPayment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.ordercode} ({self.status})"
+
+
+class PayPalPayment(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_COMPLETED = "completed"
+    STATUS_ERROR = "error"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, _("Pending")),
+        (STATUS_COMPLETED, _("Completed")),
+        (STATUS_ERROR, _("Error")),
+    ]
+
+    order = models.ForeignKey(
+        Order,
+        related_name="paypal_payments",
+        on_delete=models.CASCADE,
+        verbose_name=_("Order"),
+    )
+    paypal_order_id = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name=_("PayPal order id"),
+    )
+    capture_id = models.CharField(max_length=50, blank=True, verbose_name=_("Capture id"))
+    amount_gel = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Amount in GEL"))
+    amount_usd = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Amount in USD"))
+    exchange_rate = models.DecimalField(max_digits=12, decimal_places=6, verbose_name=_("Exchange rate"))
+    currency = models.CharField(max_length=3, default="USD", verbose_name=_("Currency"))
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        verbose_name=_("Status"),
+    )
+    raw_response = models.TextField(blank=True, verbose_name=_("Raw response"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("PayPal payment")
+        verbose_name_plural = _("PayPal payments")
+
+    def __str__(self) -> str:
+        return f"{self.paypal_order_id} ({self.status})"
 
 
 class DeliveryAddress(models.Model):

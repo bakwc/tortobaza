@@ -7,6 +7,7 @@ from orders.models import (
     Order,
     OrderItem,
     OrderItemOption,
+    PayPalPayment,
     PickupLocation,
     PromoCode,
 )
@@ -117,6 +118,44 @@ class LibertyPaymentAdmin(admin.ModelAdmin):
         "status",
         "testmode",
         "raw_callback",
+        "created_at",
+        "updated_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PayPalPayment)
+class PayPalPaymentAdmin(admin.ModelAdmin):
+    list_display = [
+        "paypal_order_id",
+        "order",
+        "status",
+        "amount_gel",
+        "amount_usd",
+        "exchange_rate",
+        "capture_id",
+        "created_at",
+    ]
+    list_filter = ["status"]
+    search_fields = ["paypal_order_id", "capture_id", "order__number"]
+    readonly_fields = [
+        "order",
+        "paypal_order_id",
+        "capture_id",
+        "amount_gel",
+        "amount_usd",
+        "exchange_rate",
+        "currency",
+        "status",
+        "raw_response",
         "created_at",
         "updated_at",
     ]

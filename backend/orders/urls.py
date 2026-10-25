@@ -8,6 +8,9 @@ from orders.views import (
     OrderCreateView,
     OrderDetailView,
     OrderPreviewView,
+    PayPalCaptureView,
+    PayPalConfigView,
+    PayPalCreateView,
     PickupLocationListView,
     PromoCodeValidateView,
 )
@@ -22,4 +25,7 @@ urlpatterns = [
     path("payments/liberty/enabled/", LibertyPaymentEnabledView.as_view(), name="liberty-payment-enabled"),
     path("payments/liberty/start/", LibertyPaymentStartView.as_view(), name="liberty-payment-start"),
     path("payments/liberty/callback/", LibertyCallbackView.as_view(), name="liberty-payment-callback"),
+    path("payments/paypal/config/", PayPalConfigView.as_view(), name="paypal-config"),
+    path("payments/paypal/create/", PayPalCreateView.as_view(), name="paypal-create"),
+    path("payments/paypal/capture/", PayPalCaptureView.as_view(), name="paypal-capture"),
 ]
