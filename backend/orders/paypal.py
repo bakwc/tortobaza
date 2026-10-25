@@ -27,6 +27,18 @@ def gel_to_usd(amount: Decimal, rate: Decimal) -> Decimal:
     return (amount / rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+_PAYMENT_RESOURCES_SCOPE = "https://uri.paypal.com/services/checkout/payment-resources"
+
+
+def _raise_for_status(response: requests.Response) -> None:
+    if response.ok:
+        return
+    raise requests.HTTPError(
+        f"{response.status_code} {response.reason} for url: {response.url} {response.text}",
+        response=response,
+    )
+
+
 def access_token() -> str:
     response = requests.post(
         f"{settings.PAYPAL_API_URL}/v1/oauth2/token",
@@ -36,6 +48,21 @@ def access_token() -> str:
         timeout=30,
     )
     response.raise_for_status()
+    return response.json()["access_token"]
+
+
+def payment_resources_access_token() -> str:
+    response = requests.post(
+        f"{settings.PAYPAL_API_URL}/v1/oauth2/token",
+        auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
+        data={
+            "grant_type": "client_credentials",
+            "scope": _PAYMENT_RESOURCES_SCOPE,
+        },
+        headers={"Accept": "application/json"},
+        timeout=30,
+    )
+    _raise_for_status(response)
     return response.json()["access_token"]
 
 
@@ -71,7 +98,7 @@ def payment_link_body(order_id: int, amount_usd: Decimal, return_url: str) -> di
     return {
         "integration_mode": "LINK",
         "type": "BUY_NOW",
-        "reusable": "SINGLE",
+        "reusable": "MULTIPLE",
         "return_url": return_url,
         "line_items": [
             {
@@ -94,25 +121,26 @@ def payment_link_href(payload: dict) -> str:
 
 
 def create_payment_link(order_id: int, amount_usd: Decimal, return_url: str) -> tuple[str, str]:
-    token = access_token()
+    token = payment_resources_access_token()
+    amount_key = format(amount_usd, "f").replace(".", "")
     response = requests.post(
         f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources",
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "PayPal-Request-Id": f"crm-order-{order_id}",
+            "PayPal-Request-Id": f"crm-order-{order_id}-{amount_key}",
         },
         json=payment_link_body(order_id, amount_usd, return_url),
         timeout=30,
     )
-    response.raise_for_status()
+    _raise_for_status(response)
     payload = response.json()
     return payload["id"], payment_link_href(payload)
 
 
 def update_payment_link(link_id: str, order_id: int, amount_usd: Decimal, return_url: str) -> None:
-    token = access_token()
+    token = payment_resources_access_token()
     response = requests.put(
         f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources/{link_id}",
         headers={
@@ -123,7 +151,7 @@ def update_payment_link(link_id: str, order_id: int, amount_usd: Decimal, return
         json=payment_link_body(order_id, amount_usd, return_url),
         timeout=30,
     )
-    response.raise_for_status()
+    _raise_for_status(response)
 
 
 def capture_paypal_order(paypal_order_id: str) -> dict:

@@ -1587,14 +1587,21 @@ class CrmOrdersApiTests(TestCase):
         ]
         self.assertEqual(len(create_calls), 1)
         body = create_calls[0].kwargs["json"]
-        self.assertEqual(body["reusable"], "SINGLE")
+        self.assertEqual(body["reusable"], "MULTIPLE")
         self.assertEqual(body["return_url"], "https://sweet-chill.ge")
         self.assertEqual(body["line_items"][0]["name"], f"Sweet Chill #{order.id}")
         self.assertEqual(body["line_items"][0]["unit_amount"], {"currency_code": "USD", "value": "29.63"})
         self.assertIs(body["line_items"][0]["collect_shipping_address"], False)
         self.assertEqual(
             create_calls[0].kwargs["headers"]["PayPal-Request-Id"],
-            f"crm-order-{order.id}",
+            f"crm-order-{order.id}-2963",
+        )
+        token_calls = [
+            call for call in post.call_args_list if call.args[0].endswith("/v1/oauth2/token")
+        ]
+        self.assertEqual(
+            token_calls[0].kwargs["data"]["scope"],
+            "https://uri.paypal.com/services/checkout/payment-resources",
         )
         put.assert_not_called()
 
