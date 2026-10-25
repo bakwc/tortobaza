@@ -33,6 +33,7 @@ elif [ -d "$LIVE_DIR/cache" ]; then
 fi
 
 export NEXT_DIST_DIR="$BUILD_DIR"
+export SKIP_TYPECHECK=1
 npm run build
 
 copy_cache "$BUILD_DIR/cache" "$CACHE_DIR"

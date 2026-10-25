@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:deploy": "bash scripts/deploy-build.sh",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "lint": "eslint"
   },

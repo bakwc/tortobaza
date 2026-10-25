@@ -7,6 +7,9 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const backendOrigin = process.env.BACKEND_ORIGIN ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: process.env.SKIP_TYPECHECK === "1",
+  },
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   turbopack: {
     root: path.resolve(__dirname),
