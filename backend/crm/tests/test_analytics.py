@@ -211,7 +211,7 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 1, 1), contact="555666666", cake_price=Decimal("200.00"))
         _order(date=date(2026, 2, 1), contact="555777777", cake_price=Decimal("80.00"))
         _order(date=date(2026, 10, 1), contact="555888888", cake_price=Decimal("30.00"))
-        report = clients(date(2026, 10, 25))
+        report = clients()
         self.assertEqual(report["unknown_orders"], 2)
         self.assertEqual(report["clients"], 7)
         self.assertEqual(report["repeat_clients"], 2)
@@ -224,7 +224,8 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(named[0]["revenue"], "155.00")
         phoned = [row for row in report["top_orders"] if row["phones"] == ["555333333"]]
         self.assertEqual(phoned[0]["orders"], 2)
-        self.assertEqual([row["revenue"] for row in report["lapsed"]], ["200.00", "80.00", "8.00", "7.00"])
+        self.assertTrue(all(row["orders"] >= 2 for row in report["top_orders"]))
+        self.assertTrue(all(row["orders"] >= 2 for row in report["top_revenue"]))
         june = next(row for row in report["months"] if row["month"] == "2026-06")
         july = next(row for row in report["months"] if row["month"] == "2026-07")
         self.assertEqual(june["new_orders"], 1)
@@ -234,7 +235,7 @@ class AnalyticsClientTests(TestCase):
     def test_same_nickname_without_phone_is_one_client(self):
         _order(date=date(2026, 6, 1), contact="-", nickname="oxxrana", cake_price=Decimal("10.00"))
         _order(date=date(2026, 7, 1), contact="-", nickname="Oxxrana", cake_price=Decimal("20.00"))
-        report = clients(date(2026, 10, 25))
+        report = clients()
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 1)
         self.assertEqual(report["repeat_clients"], 1)
@@ -246,7 +247,7 @@ class AnalyticsClientTests(TestCase):
     def test_nickname_joins_single_phone(self):
         _order(date=date(2026, 6, 1), contact="555111111", nickname="jastdexter", cake_price=Decimal("10.00"))
         _order(date=date(2026, 7, 1), contact="-", nickname="jastdexter", cake_price=Decimal("15.00"))
-        report = clients(date(2026, 10, 25))
+        report = clients()
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 1)
         row = report["top_orders"][0]
@@ -258,7 +259,7 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 6, 1), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 2), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 3), contact="-", nickname="Аля", cake_price=Decimal("10.00"))
-        report = clients(date(2026, 10, 25))
+        report = clients()
         self.assertEqual(report["unknown_orders"], 3)
         self.assertEqual(report["clients"], 0)
 
@@ -267,16 +268,14 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 6, 2), contact="555222222", nickname="sofia", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 3), contact="-", nickname="sofia", cake_price=Decimal("12.00"))
         _order(date=date(2026, 6, 4), contact="-", nickname="Sofia", cake_price=Decimal("13.00"))
-        report = clients(date(2026, 10, 25))
+        report = clients()
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 3)
-        phone_rows = [row for row in report["top_orders"] if row["phones"]]
-        self.assertEqual(sorted(row["phones"] for row in phone_rows), [["555111111"], ["555222222"]])
-        self.assertTrue(all(row["orders"] == 1 for row in phone_rows))
-        nick_only = [row for row in report["top_orders"] if not row["phones"]]
-        self.assertEqual(len(nick_only), 1)
-        self.assertEqual(nick_only[0]["orders"], 2)
-        self.assertEqual(nick_only[0]["revenue"], "25.00")
+        self.assertEqual(len(report["top_orders"]), 1)
+        row = report["top_orders"][0]
+        self.assertEqual(row["phones"], [])
+        self.assertEqual(row["orders"], 2)
+        self.assertEqual(row["revenue"], "25.00")
 
 
 class AnalyticsApiTests(TestCase):

@@ -599,14 +599,6 @@ export const AnalyticsCustomerSchema = z.object({
   order_id: z.number(),
 });
 
-export const AnalyticsLapsedSchema = z.object({
-  name: z.string(),
-  phones: z.array(z.string()),
-  revenue: z.string(),
-  date: z.string(),
-  order_id: z.number(),
-});
-
 export const AnalyticsFrequencyBucketSchema = z.object({
   clients: z.number(),
   revenue: z.string(),
@@ -679,7 +671,6 @@ export const AnalyticsClientsSchema = z.object({
   }),
   top_revenue: z.array(AnalyticsCustomerSchema),
   top_orders: z.array(AnalyticsCustomerSchema),
-  lapsed: z.array(AnalyticsLapsedSchema),
 });
 
 export const FinanceTransactionSchema = z.object({
@@ -878,7 +869,6 @@ export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;
 export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;
-export type AnalyticsLapsed = z.infer<typeof AnalyticsLapsedSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
 export type FinanceAccount = z.infer<typeof FinanceAccountSchema>;

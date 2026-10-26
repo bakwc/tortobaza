@@ -6,7 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticsClients } from "@/hooks/useAnalytics";
 import { Link } from "@/i18n/navigation";
 import { formatAmount, formatMoney } from "@/lib/format";
-import type { AnalyticsCustomer, AnalyticsLapsed } from "@/lib/api/types";
+import type { AnalyticsCustomer } from "@/lib/api/types";
 import {
   AXIS_TICK,
   COLOR_NEW,
@@ -191,35 +191,11 @@ export function ClientsPanel() {
           </BarChart>
         </ChartFrame>
       </Section>
-      <Section title={t("topRevenue")}>
+      <Section title={t("topRepeat")}>
+        <h3 className="text-sm font-medium text-[var(--muted)]">{t("topRevenue")}</h3>
         <CustomerTable rows={report.top_revenue} />
-      </Section>
-      <Section title={t("topOrders")}>
+        <h3 className="text-sm font-medium text-[var(--muted)]">{t("topOrders")}</h3>
         <CustomerTable rows={report.top_orders} />
-      </Section>
-      <Section title={t("lapsed")}>
-        <Note>{t("lapsedNote")}</Note>
-        {report.lapsed.length === 0 ? (
-          <Note>{t("lapsedEmpty")}</Note>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                  <th className="py-2 pr-3 font-medium">{t("name")}</th>
-                  <th className="py-2 pr-3 font-medium">{t("phone")}</th>
-                  <th className="py-2 pr-3 text-right font-medium">{t("revenue")}</th>
-                  <th className="py-2 font-medium">{t("date")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.lapsed.map((row) => (
-                  <LapsedRow key={row.order_id} row={row} locale={locale} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </Section>
     </div>
   );
@@ -258,19 +234,6 @@ function CustomerTable({ rows }: { rows: AnalyticsCustomer[] }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-function LapsedRow({ row, locale }: { row: AnalyticsLapsed; locale: string }) {
-  return (
-    <tr className="border-t border-[var(--line)]">
-      <td className="py-2 pr-3">
-        <ClientLink row={row} />
-      </td>
-      <td className="py-2 pr-3 tabular-nums">{row.phones.join(", ")}</td>
-      <td className="py-2 pr-3 text-right tabular-nums">{formatMoney(row.revenue, "GEL")}</td>
-      <td className="py-2">{dayLabel(row.date, locale)}</td>
-    </tr>
   );
 }
 

@@ -661,7 +661,7 @@ class AnalyticsClientsView(APIView):
     permission_classes = [IsAuthenticated, IsFinanceAdmin]
 
     def get(self, request):
-        return Response(analytics_clients(_tbilisi_now().date()))
+        return Response(analytics_clients())
 
 
 class AnalyticsProductsView(APIView):

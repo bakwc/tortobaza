@@ -13,8 +13,7 @@ _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
 _DISTINCTIVE_LENGTH = 10
 _NICKNAME_LENGTH = 4
-_TOP_LIMIT = 20
-_LAPSED_DAYS = 60
+_TOP_LIMIT = 10
 _GAP_BINS = (
     (0, 0, "0"),
     (1, 7, "1–7"),
@@ -127,7 +126,7 @@ def production(month: str, today: date) -> dict:
     }
 
 
-def clients(today: date) -> dict:
+def clients() -> dict:
     orders = _live_orders()
     customers, unknown = _link_customers(orders)
     known_orders = len(orders) - unknown
@@ -154,7 +153,6 @@ def clients(today: date) -> dict:
         "frequency": _frequency(customers),
         "top_revenue": [_customer_row(customer) for customer in _top_revenue(customers)],
         "top_orders": [_customer_row(customer) for customer in _top_orders(customers)],
-        "lapsed": [_lapsed_row(customer) for customer in _lapsed(customers, today)],
     }
 
 
@@ -597,20 +595,13 @@ def _customer_row(customer: Customer) -> dict:
     }
 
 
-def _lapsed_row(customer: Customer) -> dict:
-    order = customer.orders[0]
-    return {
-        "name": _display_name(customer.orders),
-        "phones": sorted(customer.phones),
-        "revenue": _money(_order_revenue(order)),
-        "date": order.date.isoformat(),
-        "order_id": order.id,
-    }
+def _repeat(customers: dict[str, Customer]) -> list[Customer]:
+    return [customer for customer in customers.values() if len(customer.orders) >= 2]
 
 
 def _top_revenue(customers: dict[str, Customer]) -> list[Customer]:
     return sorted(
-        customers.values(),
+        _repeat(customers),
         key=lambda customer: (_revenue(customer.orders), len(customer.orders), customer.key),
         reverse=True,
     )[:_TOP_LIMIT]
@@ -618,24 +609,10 @@ def _top_revenue(customers: dict[str, Customer]) -> list[Customer]:
 
 def _top_orders(customers: dict[str, Customer]) -> list[Customer]:
     return sorted(
-        customers.values(),
+        _repeat(customers),
         key=lambda customer: (len(customer.orders), _revenue(customer.orders), customer.key),
         reverse=True,
     )[:_TOP_LIMIT]
-
-
-def _lapsed(customers: dict[str, Customer], today: date) -> list[Customer]:
-    cutoff = today - timedelta(days=_LAPSED_DAYS)
-    rows = [
-        customer
-        for customer in customers.values()
-        if len(customer.orders) == 1 and customer.orders[0].date < cutoff
-    ]
-    return sorted(
-        rows,
-        key=lambda customer: (_order_revenue(customer.orders[0]), customer.orders[0].id),
-        reverse=True,
-    )
 
 
 def _month_span(orders: list[CrmOrder]) -> list[str]:
