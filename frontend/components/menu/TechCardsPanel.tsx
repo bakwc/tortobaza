@@ -85,6 +85,7 @@ type TechCardDraft = {
   kind: "weighted" | "piece";
   basis_weight_kg: string;
   basis_quantity: string;
+  sale_price: string;
   method: string;
   is_active: boolean;
   lines: ComponentLineDraft[];
@@ -114,6 +115,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       kind: "weighted",
       basis_weight_kg: "1",
       basis_quantity: "1",
+      sale_price: "",
       method: "",
       is_active: true,
       lines: [],
@@ -134,6 +136,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     kind: row.kind,
     basis_weight_kg: row.basis_weight_kg ?? "",
     basis_quantity: row.basis_quantity === null ? "" : String(row.basis_quantity),
+    sale_price: row.sale_price ?? "",
     method: row.method,
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
@@ -266,6 +269,11 @@ function TechCardRow({
         <KindIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
         {basis}
       </span>
+      {row.sale_price !== null ? (
+        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+          {formatMoney(row.sale_price)}
+        </span>
+      ) : null}
       {isFinanceAdmin && row.cost_min !== undefined && row.cost_max !== undefined ? (
         <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
           {formatCostRange(row.cost_min, row.cost_max, (values) => t("costRange", values))}
@@ -421,6 +429,7 @@ export function TechCardsPanel() {
           kind: draft.kind,
           basis_weight_kg: draft.kind === "weighted" ? draft.basis_weight_kg.replace(",", ".") : null,
           basis_quantity: draft.kind === "piece" ? Number(draft.basis_quantity) : null,
+          sale_price: draft.sale_price.trim() === "" ? null : draft.sale_price.replace(",", "."),
           method: draft.method,
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
@@ -618,6 +627,17 @@ export function TechCardsPanel() {
                   value: `${current.kind === "weighted" ? t("kindWeighted") : t("kindPiece")} · ${basisLabel(current)}`,
                 },
                 { label: t("componentsLabel"), value: String(componentsTotal(current)) },
+                ...(current.sale_price !== null
+                  ? [
+                      {
+                        label:
+                          current.kind === "weighted"
+                            ? t("salePricePerKg", { weight: current.basis_weight_kg ?? "" })
+                            : t("salePricePerPiece", { count: current.basis_quantity ?? 0 }),
+                        value: formatMoney(current.sale_price),
+                      },
+                    ]
+                  : []),
                 ...(isFinanceAdmin && current.cost_min !== undefined && current.cost_max !== undefined
                   ? [
                       {
@@ -779,6 +799,20 @@ export function TechCardsPanel() {
                 />
               </Field>
             )}
+            <Field
+              label={
+                draft.kind === "weighted"
+                  ? t("salePricePerKg", { weight: draft.basis_weight_kg })
+                  : t("salePricePerPiece", { count: draft.basis_quantity })
+              }
+              className="sm:col-span-3"
+            >
+              <Input
+                inputMode="decimal"
+                value={draft.sale_price}
+                onChange={(event) => setDraft({ ...draft, sale_price: event.target.value })}
+              />
+            </Field>
             <div className="flex items-end pb-3">
               <CheckboxField
                 label={t("isActive")}

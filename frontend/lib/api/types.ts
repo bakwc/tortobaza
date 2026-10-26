@@ -1047,6 +1047,7 @@ export const IngredientSchema = z.object({
   avg_cost: z.string().optional(),
   cost_quantity: z.string(),
   grams_per_unit: z.string().nullable(),
+  sale_price: z.string().nullable(),
   is_active: z.boolean(),
 });
 
@@ -1142,6 +1143,7 @@ export const TechCardSchema = z.object({
   kind: z.enum(["weighted", "piece"]),
   basis_weight_kg: z.string().nullable(),
   basis_quantity: z.number().int().nullable(),
+  sale_price: z.string().nullable(),
   method: z.string(),
   is_active: z.boolean(),
   lines: z.array(RecipeLineSchema),
@@ -1209,6 +1211,7 @@ export type IngredientBody = {
   avg_cost: string | null;
   cost_quantity: string | null;
   grams_per_unit: string | null;
+  sale_price: string | null;
 };
 
 export type SemiProductBody = {
@@ -1246,6 +1249,7 @@ export type TechCardBody = {
   kind: "weighted" | "piece";
   basis_weight_kg: string | null;
   basis_quantity: number | null;
+  sale_price: string | null;
   method: string;
   is_active: boolean;
   lines: RecipeLineBody[];

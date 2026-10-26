@@ -69,6 +69,13 @@ class IngredientSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    sale_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0"),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Ingredient
@@ -81,6 +88,7 @@ class IngredientSerializer(serializers.ModelSerializer):
             "avg_cost",
             "cost_quantity",
             "grams_per_unit",
+            "sale_price",
             "is_active",
         ]
 
@@ -431,6 +439,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             "kind",
             "basis_weight_kg",
             "basis_quantity",
+            "sale_price",
             "method",
             "is_active",
             "lines",
@@ -441,6 +450,7 @@ class TechCardSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "basis_weight_kg": {"required": True, "allow_null": True},
             "basis_quantity": {"required": True, "allow_null": True},
+            "sale_price": {"required": False, "allow_null": True, "min_value": Decimal("0")},
             "method": {"required": True, "allow_blank": True},
         }
 

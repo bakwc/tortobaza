@@ -51,6 +51,13 @@ class Ingredient(models.Model):
         validators=[MinValueValidator(Decimal("0.001"))],
         verbose_name=_("Cost quantity"),
     )
+    sale_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Sale price"),
+    )
     grams_per_unit = models.DecimalField(
         max_digits=12,
         decimal_places=3,
@@ -309,6 +316,13 @@ class TechCard(models.Model):
         blank=True,
         validators=[MinValueValidator(1)],
         verbose_name=_("Basis quantity"),
+    )
+    sale_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Sale price"),
     )
     method = models.TextField(blank=True, default="", verbose_name=_("Method"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))

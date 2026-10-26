@@ -15,6 +15,7 @@ import {
   Field,
   NativeSelect,
   QueryState,
+  formatMoney,
   formatUnitCost,
 } from "@/components/menu/ui";
 import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
@@ -35,6 +36,7 @@ function emptyIngredient(): IngredientBody {
     avg_cost: null,
     cost_quantity: null,
     grams_per_unit: null,
+    sale_price: null,
   };
 }
 
@@ -47,6 +49,7 @@ function ingredientDraft(row: Ingredient): IngredientBody {
     avg_cost: row.avg_cost === undefined ? null : packPrice(row.avg_cost, row.cost_quantity),
     cost_quantity: row.avg_cost === undefined ? null : unitCostDraft(row.cost_quantity),
     grams_per_unit: row.grams_per_unit === null ? null : unitCostDraft(row.grams_per_unit),
+    sale_price: row.sale_price === null ? null : unitCostDraft(row.sale_price),
   };
 }
 
@@ -70,6 +73,10 @@ function priceForQuantity(avgCost: string, costQuantity: string, unitLabel: stri
   return `${formatUnitCost(packPrice(avgCost, costQuantity))} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
 
+function salePriceForQuantity(salePrice: string, costQuantity: string, unitLabel: string): string {
+  return `${formatMoney(salePrice)} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
+}
+
 function ingredientRequest(draft: IngredientBody): IngredientBody {
   const body: IngredientBody = {
     name: draft.name,
@@ -79,6 +86,7 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     avg_cost: null,
     cost_quantity: null,
     grams_per_unit: draft.unit === "g" || draft.grams_per_unit === null ? null : draft.grams_per_unit.replace(",", "."),
+    sale_price: draft.sale_price === null ? null : draft.sale_price.replace(",", "."),
   };
   if (draft.avg_cost !== null && draft.cost_quantity !== null) {
     const quantity = draft.cost_quantity.replace(",", ".");
@@ -226,6 +234,11 @@ function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel:
       {row.avg_cost !== undefined ? (
         <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
           {priceForQuantity(row.avg_cost, row.cost_quantity, unitLabel)}
+        </span>
+      ) : null}
+      {row.sale_price !== null ? (
+        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+          {salePriceForQuantity(row.sale_price, row.cost_quantity, unitLabel)}
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -536,6 +549,20 @@ export function IngredientsPanel() {
                 />
               </Field>
             ) : null}
+            <Field
+              label={t("salePriceForQuantity", {
+                quantity: unitCostDraft(draft.cost_quantity ?? viewing?.cost_quantity ?? "1"),
+                unit: units(draft.unit),
+              })}
+            >
+              <Input
+                inputMode="decimal"
+                value={draft.sale_price ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...draft, sale_price: event.target.value === "" ? null : event.target.value })
+                }
+              />
+            </Field>
             <div className="flex items-end pb-3">
               <CheckboxField
                 label={t("isActive")}

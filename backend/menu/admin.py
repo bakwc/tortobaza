@@ -27,7 +27,7 @@ class IngredientCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "unit", "avg_cost", "cost_quantity", "is_active"]
+    list_display = ["name", "category", "unit", "avg_cost", "cost_quantity", "sale_price", "is_active"]
     list_filter = ["category", "unit", "is_active"]
     search_fields = ["name"]
 
@@ -116,7 +116,7 @@ class TechCardCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(TechCard)
 class TechCardAdmin(admin.ModelAdmin):
-    list_display = ["name", "category", "kind", "basis_weight_kg", "basis_quantity", "is_active", "created_at"]
+    list_display = ["name", "category", "kind", "basis_weight_kg", "basis_quantity", "sale_price", "is_active", "created_at"]
     list_filter = ["category", "kind", "is_active"]
     search_fields = ["name"]
     inlines = [

@@ -118,3 +118,103 @@ class IngredientCostApiTests(TestCase):
         response = self.client.post("/api/menu/ingredients/", payload, format="json")
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Decimal(response.json()["grams_per_unit"]), Decimal("0.920"))
+
+    def test_staff_sets_and_clears_sale_price(self):
+        self.client.force_authenticate(self.staff)
+        payload = self._payload(None)
+        payload["sale_price"] = "8.50"
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertNotIn("avg_cost", response.json())
+        self.assertEqual(Decimal(response.json()["sale_price"]), Decimal("8.50"))
+        self.flour.refresh_from_db()
+        self.assertEqual(self.flour.sale_price, Decimal("8.50"))
+        self.assertEqual(self.flour.avg_cost, Decimal("0.01"))
+
+        payload["sale_price"] = None
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIsNone(response.json()["sale_price"])
+        self.assertNotIn("avg_cost", response.json())
+        self.flour.refresh_from_db()
+        self.assertIsNone(self.flour.sale_price)
+
+    def test_put_without_sale_price_keeps_it(self):
+        self.flour.sale_price = Decimal("8.50")
+        self.flour.save(update_fields=["sale_price"])
+        self.client.force_authenticate(self.staff)
+        response = self.client.put(
+            f"/api/menu/ingredients/{self.flour.pk}/",
+            self._payload(None),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(Decimal(response.json()["sale_price"]), Decimal("8.50"))
+        self.flour.refresh_from_db()
+        self.assertEqual(self.flour.sale_price, Decimal("8.50"))
+
+    def _bento_payload(self) -> dict:
+        return {
+            "name": "Bento",
+            "category": None,
+            "kind": "piece",
+            "basis_weight_kg": None,
+            "basis_quantity": 1,
+            "method": "",
+            "is_active": True,
+            "lines": [
+                {
+                    "ingredient": self.menu.flour.pk,
+                    "semi_product": None,
+                    "quantity": "100",
+                    "quantity_unit": "g",
+                    "loss_percent": "0",
+                }
+            ],
+            "sections": [],
+            "modifier_groups": [],
+            "modifier_lines": [],
+        }
+
+    def test_tech_card_sale_price(self):
+        self.client.force_authenticate(self.staff)
+        payload = self._bento_payload()
+        payload["sale_price"] = "25.00"
+        response = self.client.put(
+            f"/api/menu/tech-cards/{self.menu.bento.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(Decimal(response.json()["sale_price"]), Decimal("25.00"))
+        self.menu.bento.refresh_from_db()
+        self.assertEqual(self.menu.bento.sale_price, Decimal("25.00"))
+
+        del payload["sale_price"]
+        response = self.client.put(
+            f"/api/menu/tech-cards/{self.menu.bento.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.menu.bento.refresh_from_db()
+        self.assertEqual(self.menu.bento.sale_price, Decimal("25.00"))
+
+        payload["sale_price"] = None
+        response = self.client.put(
+            f"/api/menu/tech-cards/{self.menu.bento.pk}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIsNone(response.json()["sale_price"])
+        self.menu.bento.refresh_from_db()
+        self.assertIsNone(self.menu.bento.sale_price)
