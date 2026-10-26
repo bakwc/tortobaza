@@ -178,6 +178,7 @@ FLOWWOW_API_TOKEN = os.environ.get("FLOWWOW_API_TOKEN")
 FLOWWOW_SHOP_ID = os.environ.get("FLOWWOW_SHOP_ID")
 RS_SU = os.environ.get("RS_SU", "")
 RS_SP = os.environ.get("RS_SP", "")
+DB_BACKUP_DIR = os.environ.get("DB_BACKUP_DIR", "")
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 465

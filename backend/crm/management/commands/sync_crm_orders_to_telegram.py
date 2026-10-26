@@ -37,6 +37,7 @@ from crm.telegram_user import pending_telegram_phones, resolve_phone
 from crm.yandex_maps import resolve_yandex_maps_url
 from rsge.sync import sync_invoices, sync_waybills
 from rsge.translate import translate_invoices, translate_waybills
+from tortobaza.db_backup import backup_database
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -212,3 +213,4 @@ class Command(BaseCommand):
         translate_invoices()
         sync_rsge_document_links()
         notify_courier_departures(timezone.now())
+        backup_database(now)
