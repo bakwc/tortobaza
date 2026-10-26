@@ -13,7 +13,7 @@ _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
 _DISTINCTIVE_LENGTH = 10
 _NICKNAME_LENGTH = 4
-_TOP_LIMIT = 10
+_TOP_LIMIT = 20
 _GAP_BINS = (
     (0, 0, "0"),
     (1, 7, "1–7"),

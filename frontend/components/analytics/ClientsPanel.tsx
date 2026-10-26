@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, LabelList, Legend, Tooltip, XAxis, YAxis } from "recharts";
 import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticsClients } from "@/hooks/useAnalytics";
 import { Link } from "@/i18n/navigation";
@@ -20,6 +20,11 @@ import {
   dayLabel,
   monthLabel,
 } from "@/components/analytics/widgets";
+
+function returnShare(part: number, total: number): number | null {
+  if (part === 0 || total === 0) return null;
+  return Math.round((part / total) * 100);
+}
 
 export function ClientsPanel() {
   const t = useTranslations("analytics");
@@ -42,12 +47,18 @@ export function ClientsPanel() {
     label: monthLabel(row.month, locale),
     newOrders: row.new_orders,
     returnOrders: row.return_orders,
+    returnShare: returnShare(row.return_orders, row.new_orders + row.return_orders),
   }));
-  const revenue = report.months.map((row) => ({
-    label: monthLabel(row.month, locale),
-    newRevenue: Number(row.new_revenue),
-    returnRevenue: Number(row.return_revenue),
-  }));
+  const revenue = report.months.map((row) => {
+    const newRevenue = Number(row.new_revenue);
+    const returnRevenue = Number(row.return_revenue);
+    return {
+      label: monthLabel(row.month, locale),
+      newRevenue,
+      returnRevenue,
+      returnShare: returnShare(returnRevenue, newRevenue + returnRevenue),
+    };
+  });
   const gaps = report.gaps.bins.map((bin) => ({ label: bin.label, count: bin.count }));
   const frequency = [
     { label: t("once"), clients: report.frequency.once.clients },
@@ -73,27 +84,31 @@ export function ClientsPanel() {
       <Note>{t("clientsNote", { count: report.unknown_orders })}</Note>
       <Section title={t("byMonthOrders")}>
         <ChartFrame>
-          <BarChart data={orders} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <BarChart data={orders} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#e8ddcd" vertical={false} />
             <XAxis dataKey="label" tick={AXIS_TICK} />
             <YAxis tick={AXIS_TICK} width={36} />
             <Tooltip contentStyle={TOOLTIP_STYLE} />
             <Legend />
             <Bar dataKey="newOrders" name={t("newClients")} stackId="orders" fill={COLOR_NEW} />
-            <Bar dataKey="returnOrders" name={t("returning")} stackId="orders" fill={COLOR_REVENUE} />
+            <Bar dataKey="returnOrders" name={t("returning")} stackId="orders" fill={COLOR_REVENUE}>
+              <LabelList dataKey="returnShare" position="top" fill="#666666" fontSize={12} formatter={(value) => (typeof value === "number" ? `${value}%` : "")} />
+            </Bar>
           </BarChart>
         </ChartFrame>
       </Section>
       <Section title={t("byMonthRevenue")}>
         <ChartFrame>
-          <BarChart data={revenue} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <BarChart data={revenue} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#e8ddcd" vertical={false} />
             <XAxis dataKey="label" tick={AXIS_TICK} />
             <YAxis tick={AXIS_TICK} width={48} />
             <Tooltip contentStyle={TOOLTIP_STYLE} />
             <Legend />
             <Bar dataKey="newRevenue" name={t("newClients")} stackId="revenue" fill={COLOR_NEW} />
-            <Bar dataKey="returnRevenue" name={t("returning")} stackId="revenue" fill={COLOR_REVENUE} />
+            <Bar dataKey="returnRevenue" name={t("returning")} stackId="revenue" fill={COLOR_REVENUE}>
+              <LabelList dataKey="returnShare" position="top" fill="#666666" fontSize={12} formatter={(value) => (typeof value === "number" ? `${value}%` : "")} />
+            </Bar>
           </BarChart>
         </ChartFrame>
       </Section>

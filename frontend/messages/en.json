@@ -954,7 +954,7 @@
     "once": "1 order",
     "twice": "2 orders",
     "more": "3 or more",
-    "topRepeat": "Top 10 repeat clients",
+    "topRepeat": "Top 20 repeat clients",
     "topRevenue": "By revenue",
     "topOrders": "By order count",
     "name": "Name",
