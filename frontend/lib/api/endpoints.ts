@@ -103,6 +103,8 @@ import {
   InventoryCountSchema,
   MenuImageSchema,
   MissingModifierLineSchema,
+  FinishedGoodSchema,
+  FinishedProductionSchema,
   ModifierGroupSchema,
   ProductionSchema,
   SemiProductSchema,
@@ -129,6 +131,9 @@ import {
   type MissingModifierLine,
   type ModifierGroup,
   type ModifierGroupBody,
+  type FinishedGood,
+  type FinishedProduction,
+  type FinishedProductionBody,
   type Production,
   type ProductionBody,
   type SemiProduct,
@@ -225,6 +230,16 @@ export function endpoints(fetcher: Fetcher) {
       fetcher,
       "/api/inventory/productions/",
       ProductionSchema,
+    ),
+    inventoryFinishedProductions: resource<FinishedProduction, FinishedProductionBody>(
+      fetcher,
+      "/api/inventory/finished-productions/",
+      FinishedProductionSchema,
+    ),
+    inventoryFinishedGoods: resource<FinishedGood, never>(
+      fetcher,
+      "/api/inventory/finished-goods/",
+      FinishedGoodSchema,
     ),
     inventoryWriteOffReasons: resource<WriteOffReason, WriteOffReasonBody>(
       fetcher,
@@ -343,7 +358,9 @@ export function endpoints(fetcher: Fetcher) {
       return parse(z.array(StockRowSchema), raw);
     },
 
-    async getStockMovements(component: ComponentRefBody): Promise<StockMovement[]> {
+    async getStockMovements(
+      component: ComponentRefBody & { finished_good: number | null },
+    ): Promise<StockMovement[]> {
       const raw = await fetcher<unknown>("/api/inventory/movements/", { searchParams: component });
       return parse(z.array(StockMovementSchema), raw);
     },

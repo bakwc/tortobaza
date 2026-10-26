@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Resource } from "@/lib/api/endpoints";
-import type { ComponentRefBody } from "@/lib/api/types";
+import type { StockComponentBody } from "@/lib/api/types";
 
 const STOCK_KEYS = [["menu"], ["inventory"]] as const;
 
@@ -99,6 +99,17 @@ export function useProductions() {
   return useResource(["inventory", "productions"], api.inventoryProductions);
 }
 
+export function useFinishedProductions() {
+  return useResource(["inventory", "finished-productions"], api.inventoryFinishedProductions);
+}
+
+export function useFinishedGoods() {
+  return useQuery({
+    queryKey: ["inventory", "finished-goods"],
+    queryFn: () => api.inventoryFinishedGoods.list(),
+  });
+}
+
 export function useWriteOffReasons() {
   return useResource(["inventory", "write-off-reasons"], api.inventoryWriteOffReasons);
 }
@@ -126,10 +137,16 @@ export function useStockLevels(date: string | null) {
   });
 }
 
-export function useStockMovements(component: ComponentRefBody | null) {
+export function useStockMovements(component: StockComponentBody | null) {
   return useQuery({
-    queryKey: ["inventory", "movements", component?.ingredient ?? null, component?.semi_product ?? null],
-    queryFn: () => api.getStockMovements(component as ComponentRefBody),
+    queryKey: [
+      "inventory",
+      "movements",
+      component?.ingredient ?? null,
+      component?.semi_product ?? null,
+      component?.finished_good ?? null,
+    ],
+    queryFn: () => api.getStockMovements(component as StockComponentBody),
     enabled: component !== null,
   });
 }

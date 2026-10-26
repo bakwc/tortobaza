@@ -25,15 +25,28 @@ export function newDraftKey(): string {
   return `draft-${draftCounter}`;
 }
 
-export function componentValue(ref: ComponentRefBody): string {
+export function componentValue(ref: {
+  ingredient: number | null;
+  semi_product: number | null;
+  finished_good?: number | null;
+}): string {
+  if (ref.finished_good != null) {
+    return `finished_good:${ref.finished_good}`;
+  }
   return ref.ingredient !== null ? `ingredient:${ref.ingredient}` : `semi_product:${ref.semi_product}`;
 }
 
-export function componentRef(value: string): ComponentRefBody {
-  const [kind, id] = value.split(":");
-  return kind === "ingredient"
-    ? { ingredient: Number(id), semi_product: null }
-    : { ingredient: null, semi_product: Number(id) };
+export function componentRef(value: string): ComponentRefBody & { finished_good: number | null } {
+  const separator = value.indexOf(":");
+  const kind = value.slice(0, separator);
+  const pk = Number(value.slice(separator + 1));
+  if (kind === "ingredient") {
+    return { ingredient: pk, semi_product: null, finished_good: null };
+  }
+  if (kind === "finished_good") {
+    return { ingredient: null, semi_product: null, finished_good: pk };
+  }
+  return { ingredient: null, semi_product: pk, finished_good: null };
 }
 
 export function emptyLine(): ComponentLineDraft {
@@ -41,7 +54,12 @@ export function emptyLine(): ComponentLineDraft {
 }
 
 export function draftFromLine(
-  line: ComponentRefBody & { quantity: string; loss_percent?: string; quantity_unit: MenuUnit },
+  line: ComponentRefBody & {
+    quantity: string;
+    loss_percent?: string;
+    quantity_unit: MenuUnit;
+    finished_good?: number | null;
+  },
 ): ComponentLineDraft {
   return {
     key: newDraftKey(),
@@ -81,6 +99,18 @@ export function componentOptions(
     }
   }
   return options;
+}
+
+export function finishedGoodOptions(
+  goods: { id: number; name: string }[],
+  label: string,
+): ComponentOption[] {
+  return goods.map((row) => ({
+    value: `finished_good:${row.id}`,
+    label: `${label}: ${row.name}`,
+    unit: "pcs",
+    ingredient: false,
+  }));
 }
 
 export function ComponentLinesEditor({

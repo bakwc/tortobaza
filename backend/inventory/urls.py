@@ -1,6 +1,9 @@
 from django.urls import path
 
 from inventory.views import (
+    FinishedGoodListView,
+    FinishedProductionDetailView,
+    FinishedProductionListView,
     InventoryCountCloseView,
     InventoryCountDetailView,
     InventoryCountListView,
@@ -31,6 +34,9 @@ urlpatterns = [
     path("inventory/supply-transactions/", SupplyTransactionListView.as_view()),
     path("inventory/productions/", ProductionListView.as_view()),
     path("inventory/productions/<int:pk>/", ProductionDetailView.as_view()),
+    path("inventory/finished-productions/", FinishedProductionListView.as_view()),
+    path("inventory/finished-productions/<int:pk>/", FinishedProductionDetailView.as_view()),
+    path("inventory/finished-goods/", FinishedGoodListView.as_view()),
     path("inventory/write-off-reasons/", WriteOffReasonListView.as_view()),
     path("inventory/write-off-reasons/<int:pk>/", WriteOffReasonDetailView.as_view()),
     path("inventory/write-offs/", WriteOffListView.as_view()),

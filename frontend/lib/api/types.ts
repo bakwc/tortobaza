@@ -1272,6 +1272,7 @@ export const InventoryComponentLineSchema = z.object({
   id: z.number(),
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
+  finished_good: z.number().nullable(),
   name: z.string(),
   unit: MenuUnitSchema,
   quantity: z.string(),
@@ -1359,11 +1360,12 @@ export const StockMovementSchema = z.object({
   kind: StockMovementKindSchema,
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
+  finished_good: z.number().nullable(),
   name: z.string(),
   unit: MenuUnitSchema,
   quantity: z.string(),
   document: z.object({
-    type: z.enum(["supply", "production", "crm_order", "write_off", "inventory_count"]),
+    type: z.enum(["supply", "production", "finished_production", "crm_order", "write_off", "inventory_count"]),
     id: z.number(),
   }),
   unit_cost: z.string().optional(),
@@ -1408,6 +1410,7 @@ export const InventoryCountSchema = z.object({
       id: z.number(),
       ingredient: z.number().nullable(),
       semi_product: z.number().nullable(),
+      finished_good: z.number().nullable(),
       name: z.string(),
       unit: MenuUnitSchema,
       actual_quantity: z.string(),
@@ -1417,9 +1420,43 @@ export const InventoryCountSchema = z.object({
   ),
 });
 
+export const FinishedGoodSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  unit: MenuUnitSchema,
+});
+
+export const FinishedProductionLineSchema = z.object({
+  id: z.number(),
+  finished_good: z.number(),
+  name: z.string(),
+  tech_card: z.number(),
+  weight_kg: z.string().nullable(),
+  modifiers: z.array(
+    z.object({
+      modifier: z.number(),
+      name: z.string(),
+      quantity: z.number(),
+    }),
+  ),
+  quantity: z.number(),
+  unit_cost: z.string().nullable().optional(),
+});
+
+export const FinishedProductionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  comment: z.string(),
+  created_at: z.string(),
+  created_by_name: z.string().nullable(),
+  lines: z.array(FinishedProductionLineSchema),
+  consumed: z.array(StockMovementSchema),
+});
+
 export const StockRowSchema = z.object({
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
+  finished_good: z.number().nullable(),
   name: z.string(),
   unit: MenuUnitSchema,
   category_name: z.string().nullable(),
@@ -1576,6 +1613,8 @@ export type Supply = z.infer<typeof SupplySchema>;
 export type StockMovementKind = z.infer<typeof StockMovementKindSchema>;
 export type StockMovement = z.infer<typeof StockMovementSchema>;
 export type Production = z.infer<typeof ProductionSchema>;
+export type FinishedGood = z.infer<typeof FinishedGoodSchema>;
+export type FinishedProduction = z.infer<typeof FinishedProductionSchema>;
 export type WriteOff = z.infer<typeof WriteOffSchema>;
 export type InventoryCount = z.infer<typeof InventoryCountSchema>;
 export type StockRow = z.infer<typeof StockRowSchema>;
@@ -1599,15 +1638,28 @@ export type ProductionBody = {
   comment: string;
 };
 
+export type StockComponentBody = ComponentRefBody & { finished_good: number | null };
+
+export type FinishedProductionBody = {
+  date: string;
+  comment: string;
+  lines: {
+    tech_card: number;
+    weight_kg: string | null;
+    modifiers: { modifier: number; quantity: number }[];
+    quantity: number;
+  }[];
+};
+
 export type WriteOffBody = {
   date: string;
   reason: number;
   comment: string;
-  lines: (ComponentRefBody & { quantity: string })[];
+  lines: (StockComponentBody & { quantity: string })[];
 };
 
 export type InventoryCountBody = {
   date: string;
   comment: string;
-  lines: (ComponentRefBody & { actual_quantity: string; unit_cost: string | null })[];
+  lines: (StockComponentBody & { actual_quantity: string; unit_cost: string | null })[];
 };

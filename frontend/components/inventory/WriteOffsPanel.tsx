@@ -10,6 +10,7 @@ import {
   ComponentLinesEditor,
   componentOptions,
   draftFromLine,
+  finishedGoodOptions,
   linesToQuantityBody,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
@@ -24,7 +25,7 @@ import {
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
-import { useIngredients, useSemiProducts, useWriteOffReasons, useWriteOffs } from "@/hooks/useStock";
+import { useFinishedGoods, useIngredients, useSemiProducts, useWriteOffReasons, useWriteOffs } from "@/hooks/useStock";
 import type { WriteOff } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
 
@@ -49,17 +50,21 @@ export function WriteOffsPanel() {
   const reasons = useWriteOffReasons();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
+  const finishedGoods = useFinishedGoods();
   const [editing, setEditing] = useState<WriteOff | null>(null);
   const [draft, setDraft] = useState<WriteOffDraft | null>(null);
   const [newReason, setNewReason] = useState("");
 
-  const options = componentOptions(
-    ingredients.list.data ?? [],
-    semiProducts.list.data ?? [],
-    "all",
-    t("ingredient"),
-    t("semiProduct"),
-  );
+  const options = [
+    ...componentOptions(
+      ingredients.list.data ?? [],
+      semiProducts.list.data ?? [],
+      "all",
+      t("ingredient"),
+      t("semiProduct"),
+    ),
+    ...finishedGoodOptions(finishedGoods.data ?? [], t("finishedGood")),
+  ];
 
   const open = (row: WriteOff | null) => {
     writeOffs.save.reset();

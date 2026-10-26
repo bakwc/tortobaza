@@ -13,7 +13,11 @@ function MovementsDialog({ row, onClose }: { row: StockRow; onClose: () => void 
   const t = useTranslations("stock");
   const kinds = useTranslations("stock.movementKinds");
   const units = useTranslations("stock.units");
-  const movements = useStockMovements({ ingredient: row.ingredient, semi_product: row.semi_product });
+  const movements = useStockMovements({
+    ingredient: row.ingredient,
+    semi_product: row.semi_product,
+    finished_good: row.finished_good,
+  });
   return (
     <Dialog open onOpenChange={(value) => (value ? null : onClose())}>
       <DialogContent className="w-[min(800px,calc(100vw-1.5rem))] overflow-y-auto p-6">
@@ -91,12 +95,18 @@ export function StockPanel() {
             <tbody>
               {rows.map((row) => (
                 <tr
-                  key={`${row.ingredient ?? "s"}-${row.semi_product ?? "i"}`}
+                  key={`${row.ingredient ?? "i"}-${row.semi_product ?? "s"}-${row.finished_good ?? "f"}`}
                   onClick={() => setSelected(row)}
                   className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
                 >
                   <td className="py-2">{row.name}</td>
-                  <td className="py-2">{row.semi_product !== null ? t("semiProduct") : (row.category_name ?? "—")}</td>
+                  <td className="py-2">
+                    {row.finished_good !== null
+                      ? t("finishedGood")
+                      : row.semi_product !== null
+                        ? t("semiProduct")
+                        : (row.category_name ?? "—")}
+                  </td>
                   <td className={cn("py-2 text-right", Number(row.quantity) < 0 ? "text-[var(--danger)]" : "")}>
                     {formatQuantity(row.quantity)} {units(row.unit)}
                   </td>

@@ -769,6 +769,12 @@
     "createIngredient": "Create ingredient",
     "receiptTotalDiffers": "receipt total is {total}, lines add up to {lines}",
     "newProduction": "New production",
+    "finishedGood": "Finished good",
+    "techCard": "Tech card",
+    "weightKg": "Weight, kg",
+    "pieces": "Pieces",
+    "newFinishedProduction": "New finished goods",
+    "finishedProductionHint": "Record items that are already made and kept for sale. Pick the tech card and modifiers, and for a cake sold by weight, the weight of one piece. Quantity is the number of pieces.",
     "createdBy": "Made by",
     "noProducedSemiProducts": "Mark a semi-product as produced in advance to record its production.",
     "consumed": "Consumed",
@@ -816,6 +822,7 @@
       "supplies": "Supplies",
       "suppliers": "Suppliers",
       "productions": "Production",
+      "finishedGoods": "Finished goods",
       "writeOffs": "Write-offs",
       "inventoryCounts": "Inventory counts"
     }

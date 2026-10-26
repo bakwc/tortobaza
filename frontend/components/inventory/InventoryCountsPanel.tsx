@@ -12,6 +12,7 @@ import {
   componentOptions,
   componentRef,
   componentValue,
+  finishedGoodOptions,
   newDraftKey,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
@@ -20,6 +21,7 @@ import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components
 import { useCurrentUser } from "@/hooks/useAuth";
 import {
   useCloseInventoryCount,
+  useFinishedGoods,
   useIngredients,
   useInventoryCounts,
   useSemiProducts,
@@ -96,19 +98,23 @@ export function InventoryCountsPanel() {
   const closeCount = useCloseInventoryCount();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
+  const finishedGoods = useFinishedGoods();
   const [editing, setEditing] = useState<InventoryCount | null>(null);
   const [draft, setDraft] = useState<CountDraft | null>(null);
   const stock = useStockLevels(draft?.date ?? null);
   const currentUser = useCurrentUser();
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
 
-  const options = componentOptions(
-    ingredients.list.data ?? [],
-    semiProducts.list.data ?? [],
-    "produced",
-    t("ingredient"),
-    t("semiProduct"),
-  );
+  const options = [
+    ...componentOptions(
+      ingredients.list.data ?? [],
+      semiProducts.list.data ?? [],
+      "produced",
+      t("ingredient"),
+      t("semiProduct"),
+    ),
+    ...finishedGoodOptions(finishedGoods.data ?? [], t("finishedGood")),
+  ];
 
   const open = (row: InventoryCount | null) => {
     counts.save.reset();
@@ -125,7 +131,7 @@ export function InventoryCountsPanel() {
     const extra: ComponentLineDraft[] = [];
     for (const row of stock.data ?? []) {
       if (!row.is_active) continue;
-      const value = componentValue({ ingredient: row.ingredient, semi_product: row.semi_product });
+      const value = componentValue(row);
       if (present.has(value)) continue;
       extra.push({
         key: newDraftKey(),

@@ -769,6 +769,12 @@
     "createIngredient": "ინგრედიენტის შექმნა",
     "receiptTotalDiffers": "ჩეკში {total}, ხაზებში {lines}",
     "newProduction": "ახალი წარმოება",
+    "finishedGood": "მზა პროდუქცია",
+    "techCard": "ტექ. ბარათი",
+    "weightKg": "წონა, კგ",
+    "pieces": "ცალი",
+    "newFinishedProduction": "ახალი მზა პროდუქცია",
+    "finishedProductionHint": "ჩაწერეთ უკვე დამზადებული ნაწარმი, რომელიც გაყიდვამდე ინახება. აირჩიეთ ტექ. ბარათი და მოდიფიკატორები, წონითი ბარათისთვის კი — ერთი ცალის წონა. რაოდენობა ცალების რიცხვია.",
     "createdBy": "ვინ გააკეთა",
     "noProducedSemiProducts": "მონიშნეთ ნახევარფაბრიკატი როგორც «მზადდება წინასწარ», რომ ჩაწეროთ მისი წარმოება.",
     "consumed": "ჩამოწერილია",
@@ -816,6 +822,7 @@
       "supplies": "მიწოდებები",
       "suppliers": "მომწოდებლები",
       "productions": "წარმოება",
+      "finishedGoods": "მზა პროდუქცია",
       "writeOffs": "ჩამოწერები",
       "inventoryCounts": "ინვენტარიზაციები"
     }

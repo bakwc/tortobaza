@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from menu.models import ComponentRef
+from menu.models import UNIT_PIECE, ComponentRef, Ingredient, SemiProduct
 
 
 class Supplier(models.Model):
@@ -127,6 +129,120 @@ class Production(models.Model):
         return f"{self.date} {self.semi_product}"
 
 
+class FinishedGood(models.Model):
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="finished_goods",
+        on_delete=models.PROTECT,
+        verbose_name=_("Tech card"),
+    )
+    weight_kg = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Weight, kg"),
+    )
+    signature = models.CharField(max_length=1000, unique=True, verbose_name=_("Signature"))
+    avg_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=6,
+        default=Decimal("0"),
+        verbose_name=_("Average cost"),
+    )
+
+    class Meta:
+        ordering = ["tech_card__name", "id"]
+        verbose_name = _("Finished good")
+        verbose_name_plural = _("Finished goods")
+
+    def __str__(self) -> str:
+        return self.name
+
+    @property
+    def name(self) -> str:
+        parts = [self.tech_card.name]
+        if self.weight_kg is not None:
+            parts.append(f"{format(self.weight_kg, 'f')} kg")
+        labels = []
+        for row in sorted(self.modifiers.all(), key=lambda item: item.modifier_id):
+            if row.quantity == 1:
+                labels.append(row.modifier.name)
+            else:
+                labels.append(f"{row.modifier.name} ×{row.quantity}")
+        if labels:
+            parts.append(", ".join(labels))
+        return " · ".join(parts)
+
+    @property
+    def unit(self) -> str:
+        return UNIT_PIECE
+
+
+class FinishedGoodModifier(models.Model):
+    finished_good = models.ForeignKey(
+        FinishedGood,
+        related_name="modifiers",
+        on_delete=models.CASCADE,
+        verbose_name=_("Finished good"),
+    )
+    modifier = models.ForeignKey(
+        "menu.Modifier",
+        related_name="finished_goods",
+        on_delete=models.PROTECT,
+        verbose_name=_("Modifier"),
+    )
+    quantity = models.PositiveIntegerField(verbose_name=_("Quantity"))
+
+    class Meta:
+        ordering = ["modifier_id", "id"]
+        verbose_name = _("Finished good modifier")
+        verbose_name_plural = _("Finished good modifiers")
+
+
+class FinishedProduction(models.Model):
+    date = models.DateField(verbose_name=_("Date"))
+    comment = models.TextField(blank=True, verbose_name=_("Comment"))
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="+",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Created by"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+
+    class Meta:
+        ordering = ["-date", "-id"]
+        verbose_name = _("Finished production")
+        verbose_name_plural = _("Finished productions")
+
+    def __str__(self) -> str:
+        return f"{self.date} #{self.pk}"
+
+
+class FinishedProductionLine(models.Model):
+    production = models.ForeignKey(
+        FinishedProduction,
+        related_name="lines",
+        on_delete=models.CASCADE,
+        verbose_name=_("Finished production"),
+    )
+    finished_good = models.ForeignKey(
+        FinishedGood,
+        related_name="production_lines",
+        on_delete=models.PROTECT,
+        verbose_name=_("Finished good"),
+    )
+    quantity = models.PositiveIntegerField(verbose_name=_("Quantity"))
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = _("Finished production line")
+        verbose_name_plural = _("Finished production lines")
+
+
 class WriteOffReason(models.Model):
     name = models.CharField(max_length=120, unique=True, verbose_name=_("Name"))
 
@@ -167,7 +283,38 @@ class WriteOff(models.Model):
         return f"{self.date} {self.reason}"
 
 
-class WriteOffLine(ComponentRef):
+class StockComponent(ComponentRef):
+    finished_good = models.ForeignKey(
+        FinishedGood,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Finished good"),
+    )
+
+    class Meta(ComponentRef.Meta):
+        abstract = True
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(ingredient__isnull=False, semi_product__isnull=True, finished_good__isnull=True)
+                    | models.Q(ingredient__isnull=True, semi_product__isnull=False, finished_good__isnull=True)
+                    | models.Q(ingredient__isnull=True, semi_product__isnull=True, finished_good__isnull=False)
+                ),
+                name="%(app_label)s_%(class)s_one_component",
+            ),
+        ]
+
+    @property
+    def component(self) -> Ingredient | SemiProduct | FinishedGood:
+        if self.finished_good_id is not None:
+            return self.finished_good
+        if self.ingredient_id is not None:
+            return self.ingredient
+        return self.semi_product
+
+
+class WriteOffLine(StockComponent):
     write_off = models.ForeignKey(
         WriteOff,
         related_name="lines",
@@ -176,7 +323,7 @@ class WriteOffLine(ComponentRef):
     )
     quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
 
-    class Meta(ComponentRef.Meta):
+    class Meta(StockComponent.Meta):
         ordering = ["id"]
         verbose_name = _("Write-off line")
         verbose_name_plural = _("Write-off lines")
@@ -218,7 +365,7 @@ class InventoryCount(models.Model):
         return f"{self.date} #{self.pk}"
 
 
-class InventoryCountLine(ComponentRef):
+class InventoryCountLine(StockComponent):
     count = models.ForeignKey(
         InventoryCount,
         related_name="lines",
@@ -245,13 +392,13 @@ class InventoryCountLine(ComponentRef):
         verbose_name=_("Expected quantity"),
     )
 
-    class Meta(ComponentRef.Meta):
+    class Meta(StockComponent.Meta):
         ordering = ["id"]
         verbose_name = _("Inventory count line")
         verbose_name_plural = _("Inventory count lines")
 
 
-class StockMovement(ComponentRef):
+class StockMovement(StockComponent):
     KIND_SUPPLY = "supply"
     KIND_PRODUCTION_IN = "production_in"
     KIND_PRODUCTION_OUT = "production_out"
@@ -287,6 +434,14 @@ class StockMovement(ComponentRef):
         blank=True,
         verbose_name=_("Production"),
     )
+    finished_production_line = models.ForeignKey(
+        FinishedProductionLine,
+        related_name="movements",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Finished production line"),
+    )
     crm_order = models.ForeignKey(
         "crm.CrmOrder",
         related_name="stock_movements",
@@ -313,7 +468,7 @@ class StockMovement(ComponentRef):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
 
-    class Meta(ComponentRef.Meta):
+    class Meta(StockComponent.Meta):
         ordering = ["date", "id"]
         verbose_name = _("Stock movement")
         verbose_name_plural = _("Stock movements")

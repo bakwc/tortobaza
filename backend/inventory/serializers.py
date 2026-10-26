@@ -3,7 +3,11 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from crm.models import FinancialTransaction
+from inventory.finished import finished_signature, stored_weight
 from inventory.models import (
+    FinishedGood,
+    FinishedProduction,
+    FinishedProductionLine,
     InventoryCount,
     InventoryCountLine,
     Production,
@@ -16,8 +20,9 @@ from inventory.models import (
     WriteOffLine,
     WriteOffReason,
 )
-from menu.models import Ingredient, SemiProduct
-from menu.serializers import ComponentLineSerializer, component_payload
+from inventory.services import ensure_finished_good
+from menu.models import Ingredient, Modifier, SemiProduct, TechCard
+from menu.recipes import order_item_errors
 
 
 def show_costs(context: dict) -> bool:
@@ -199,14 +204,156 @@ class ProductionSerializer(serializers.ModelSerializer):
         return Production.objects.create(**validated_data)
 
 
+class FinishedModifierInputSerializer(serializers.Serializer):
+    modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all())
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class FinishedProductionLineInputSerializer(serializers.Serializer):
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all())
+    weight_kg = serializers.DecimalField(max_digits=8, decimal_places=3, allow_null=True)
+    modifiers = FinishedModifierInputSerializer(many=True)
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class FinishedProductionSerializer(serializers.ModelSerializer):
+    lines = FinishedProductionLineInputSerializer(many=True, write_only=True)
+
+    class Meta:
+        model = FinishedProduction
+        fields = ["id", "date", "comment", "lines", "created_at"]
+        read_only_fields = ["created_at"]
+        extra_kwargs = {"comment": {"required": True}}
+
+    def validate_lines(self, value: list[dict]) -> list[dict]:
+        if not value:
+            raise serializers.ValidationError("Add at least one line.")
+        signatures = []
+        for line in value:
+            tech_card = line["tech_card"]
+            modifiers = [(row["modifier"], row["quantity"]) for row in line["modifiers"]]
+            if tech_card.kind == TechCard.KIND_PIECE and line["weight_kg"] is not None:
+                raise serializers.ValidationError("A piece tech card cannot have a weight.")
+            weight = None if tech_card.kind == TechCard.KIND_PIECE else line["weight_kg"]
+            errors = order_item_errors(tech_card, weight, modifiers)
+            if errors:
+                raise serializers.ValidationError(errors)
+            stored = stored_weight(tech_card, line["weight_kg"])
+            line["weight_kg"] = stored
+            pairs = [(row["modifier"].pk, row["quantity"]) for row in line["modifiers"]]
+            signatures.append(finished_signature(tech_card.pk, stored, pairs))
+        if len(signatures) != len(set(signatures)):
+            raise serializers.ValidationError("Each assembly can be added only once.")
+        return value
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["created_by_name"] = user_name(instance.created_by)
+        rows = instance.lines.select_related("finished_good__tech_card").prefetch_related(
+            "finished_good__modifiers__modifier",
+            "movements",
+        )
+        lines = []
+        for line in rows:
+            good = line.finished_good
+            payload = {
+                "id": line.pk,
+                "finished_good": good.pk,
+                "name": good.name,
+                "tech_card": good.tech_card_id,
+                "weight_kg": None if good.weight_kg is None else str(good.weight_kg),
+                "modifiers": [
+                    {"modifier": row.modifier_id, "name": row.modifier.name, "quantity": row.quantity}
+                    for row in good.modifiers.all()
+                ],
+                "quantity": line.quantity,
+            }
+            if show_costs(self.context):
+                output = next(
+                    (movement for movement in line.movements.all() if movement.kind == StockMovement.KIND_PRODUCTION_IN),
+                    None,
+                )
+                payload["unit_cost"] = None if output is None else str(output.unit_cost)
+            lines.append(payload)
+        data["lines"] = lines
+        consumed = StockMovement.objects.filter(
+            finished_production_line__production=instance,
+            kind=StockMovement.KIND_PRODUCTION_OUT,
+        )
+        data["consumed"] = movement_payloads(consumed, self.context)
+        return data
+
+    def create(self, validated_data):
+        lines = validated_data.pop("lines")
+        validated_data["created_by"] = self.context["request"].user
+        instance = FinishedProduction.objects.create(**validated_data)
+        self._save_lines(instance, lines)
+        return instance
+
+    def update(self, instance, validated_data):
+        lines = validated_data.pop("lines")
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        self._save_lines(instance, lines)
+        return instance
+
+    def _save_lines(self, instance: FinishedProduction, lines: list[dict]) -> None:
+        instance.lines.all().delete()
+        for line in lines:
+            good = ensure_finished_good(
+                line["tech_card"],
+                line["weight_kg"],
+                [(row["modifier"], row["quantity"]) for row in line["modifiers"]],
+            )
+            FinishedProductionLine.objects.create(production=instance, finished_good=good, quantity=line["quantity"])
+
+
+class FinishedGoodSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    unit = serializers.CharField()
+
+    def to_representation(self, instance):
+        return {"id": instance.pk, "name": instance.name, "unit": instance.unit}
+
+
 def user_name(user) -> str | None:
     if user is None:
         return None
     return user.get_full_name() or user.username
 
 
+class StockLineSerializer(serializers.Serializer):
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
+    semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
+    finished_good = serializers.PrimaryKeyRelatedField(queryset=FinishedGood.objects.all(), allow_null=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+
+    def validate(self, attrs):
+        chosen = [attrs["ingredient"], attrs["semi_product"], attrs["finished_good"]]
+        if sum(item is not None for item in chosen) != 1:
+            raise serializers.ValidationError("Pass exactly one of ingredient, semi_product, or finished_good.")
+        if attrs["finished_good"] is not None and attrs["quantity"] != attrs["quantity"].to_integral_value():
+            raise serializers.ValidationError("Finished good quantity must be a whole number of pieces.")
+        return attrs
+
+
+def stock_component_payload(line) -> dict:
+    component = line.component
+    return {
+        "id": line.pk,
+        "ingredient": line.ingredient_id,
+        "semi_product": line.semi_product_id,
+        "finished_good": line.finished_good_id,
+        "name": component.name,
+        "unit": component.unit,
+        "quantity": str(line.quantity),
+    }
+
+
 class WriteOffSerializer(serializers.ModelSerializer):
-    lines = ComponentLineSerializer(many=True, write_only=True)
+    lines = StockLineSerializer(many=True, write_only=True)
 
     class Meta:
         model = WriteOff
@@ -224,8 +371,12 @@ class WriteOffSerializer(serializers.ModelSerializer):
         data["reason_name"] = instance.reason.name
         data["created_by_name"] = user_name(instance.created_by)
         data["lines"] = [
-            component_payload(line)
-            for line in instance.lines.select_related("ingredient", "semi_product")
+            stock_component_payload(line)
+            for line in instance.lines.select_related(
+                "ingredient",
+                "semi_product",
+                "finished_good__tech_card",
+            ).prefetch_related("finished_good__modifiers__modifier")
         ]
         if show_costs(self.context):
             total = Decimal("0")
@@ -261,6 +412,7 @@ class InventoryCountLineInputSerializer(serializers.Serializer):
         queryset=SemiProduct.objects.filter(is_produced=True),
         allow_null=True,
     )
+    finished_good = serializers.PrimaryKeyRelatedField(queryset=FinishedGood.objects.all(), allow_null=True)
     actual_quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0"))
     unit_cost = serializers.DecimalField(
         max_digits=14,
@@ -270,8 +422,11 @@ class InventoryCountLineInputSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        if (attrs["ingredient"] is None) == (attrs["semi_product"] is None):
-            raise serializers.ValidationError("Pass either ingredient or semi_product.")
+        chosen = [attrs["ingredient"], attrs["semi_product"], attrs["finished_good"]]
+        if sum(item is not None for item in chosen) != 1:
+            raise serializers.ValidationError("Pass exactly one of ingredient, semi_product, or finished_good.")
+        if attrs["finished_good"] is not None and attrs["actual_quantity"] != attrs["actual_quantity"].to_integral_value():
+            raise serializers.ValidationError("Finished good quantity must be a whole number of pieces.")
         return attrs
 
 
@@ -287,10 +442,14 @@ class InventoryCountSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if self.instance is not None and self.instance.status == InventoryCount.STATUS_CLOSED:
             raise serializers.ValidationError("A closed inventory count cannot be edited.")
-        keys = [
-            ("ingredient", line["ingredient"].pk) if line["ingredient"] is not None else ("semi", line["semi_product"].pk)
-            for line in attrs["lines"]
-        ]
+        keys = []
+        for line in attrs["lines"]:
+            if line["ingredient"] is not None:
+                keys.append(("ingredient", line["ingredient"].pk))
+            elif line["semi_product"] is not None:
+                keys.append(("semi", line["semi_product"].pk))
+            else:
+                keys.append(("finished", line["finished_good"].pk))
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("Each item can be counted only once.")
         if not show_costs(self.context) and any(line["unit_cost"] is not None for line in attrs["lines"]):
@@ -301,8 +460,12 @@ class InventoryCountSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["created_by_name"] = user_name(instance.created_by)
         lines = []
-        for line in instance.lines.select_related("ingredient", "semi_product"):
-            payload = component_payload(line)
+        for line in instance.lines.select_related(
+            "ingredient",
+            "semi_product",
+            "finished_good__tech_card",
+        ).prefetch_related("finished_good__modifiers__modifier"):
+            payload = stock_component_payload(line)
             payload.pop("quantity")
             payload["actual_quantity"] = str(line.actual_quantity)
             payload["expected_quantity"] = (
@@ -338,6 +501,8 @@ class InventoryCountSerializer(serializers.ModelSerializer):
 def movement_document(movement: StockMovement) -> dict:
     if movement.supply_line_id is not None:
         return {"type": "supply", "id": movement.supply_line.supply_id}
+    if movement.finished_production_line_id is not None:
+        return {"type": "finished_production", "id": movement.finished_production_line.production_id}
     if movement.production_id is not None:
         return {"type": "production", "id": movement.production_id}
     if movement.crm_order_id is not None:
@@ -352,10 +517,12 @@ def movement_payloads(movements, context: dict) -> list[dict]:
     for movement in movements.select_related(
         "ingredient",
         "semi_product",
+        "finished_good__tech_card",
         "supply_line",
+        "finished_production_line",
         "write_off_line",
         "inventory_count_line",
-    ):
+    ).prefetch_related("finished_good__modifiers__modifier"):
         component = movement.component
         row = {
             "id": movement.pk,
@@ -363,6 +530,7 @@ def movement_payloads(movements, context: dict) -> list[dict]:
             "kind": movement.kind,
             "ingredient": movement.ingredient_id,
             "semi_product": movement.semi_product_id,
+            "finished_good": movement.finished_good_id,
             "name": component.name,
             "unit": component.unit,
             "quantity": str(movement.quantity),
@@ -381,10 +549,12 @@ class StockQuerySerializer(serializers.Serializer):
 class MovementQuerySerializer(serializers.Serializer):
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), required=False)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), required=False)
+    finished_good = serializers.PrimaryKeyRelatedField(queryset=FinishedGood.objects.all(), required=False)
 
     def validate(self, attrs):
-        if ("ingredient" in attrs) == ("semi_product" in attrs):
-            raise serializers.ValidationError("Pass either ingredient or semi_product.")
+        present = [key for key in ("ingredient", "semi_product", "finished_good") if key in attrs]
+        if len(present) != 1:
+            raise serializers.ValidationError("Pass exactly one of ingredient, semi_product, or finished_good.")
         return attrs
 
 

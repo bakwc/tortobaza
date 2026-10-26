@@ -1,6 +1,8 @@
 from django.contrib import admin
 
 from inventory.models import (
+    FinishedProduction,
+    FinishedProductionLine,
     InventoryCount,
     InventoryCountLine,
     Production,
@@ -58,6 +60,27 @@ class SupplyAdmin(admin.ModelAdmin):
         return False
 
 
+class FinishedProductionLineInline(admin.TabularInline):
+    model = FinishedProductionLine
+    extra = 0
+    fields = ["finished_good", "quantity"]
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(FinishedProduction)
+class FinishedProductionAdmin(admin.ModelAdmin):
+    list_display = ["id", "date", "created_by"]
+    list_filter = ["date"]
+    readonly_fields = ["date", "comment", "created_by", "created_at"]
+    inlines = [FinishedProductionLineInline]
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(Production)
 class ProductionAdmin(admin.ModelAdmin):
     list_display = ["id", "date", "semi_product", "quantity", "created_by"]
@@ -71,7 +94,7 @@ class ProductionAdmin(admin.ModelAdmin):
 class WriteOffLineInline(admin.TabularInline):
     model = WriteOffLine
     extra = 0
-    fields = ["ingredient", "semi_product", "quantity"]
+    fields = ["ingredient", "semi_product", "finished_good", "quantity"]
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):
@@ -92,7 +115,7 @@ class WriteOffAdmin(admin.ModelAdmin):
 class InventoryCountLineInline(admin.TabularInline):
     model = InventoryCountLine
     extra = 0
-    fields = ["ingredient", "semi_product", "expected_quantity", "actual_quantity", "unit_cost"]
+    fields = ["ingredient", "semi_product", "finished_good", "expected_quantity", "actual_quantity", "unit_cost"]
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):
@@ -112,9 +135,9 @@ class InventoryCountAdmin(admin.ModelAdmin):
 
 @admin.register(StockMovement)
 class StockMovementAdmin(admin.ModelAdmin):
-    list_display = ["id", "date", "kind", "ingredient", "semi_product", "quantity", "unit_cost", "crm_order"]
+    list_display = ["id", "date", "kind", "ingredient", "semi_product", "finished_good", "quantity", "unit_cost", "crm_order"]
     list_filter = ["kind", "date"]
-    search_fields = ["ingredient__name", "semi_product__name"]
+    search_fields = ["ingredient__name", "semi_product__name", "finished_good__tech_card__name"]
 
     def has_add_permission(self, request):
         return False

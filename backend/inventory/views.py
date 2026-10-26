@@ -17,6 +17,8 @@ from rest_framework.views import APIView
 from crm.models import FinancialTransaction
 from crm.views import IsFinanceAdmin
 from inventory.models import (
+    FinishedGood,
+    FinishedProduction,
     InventoryCount,
     Production,
     StockMovement,
@@ -29,6 +31,8 @@ from inventory.models import (
 from inventory.receipts import recognize_receipt, to_jpeg
 from inventory.serializers import (
     FinancialTransactionQuerySerializer,
+    FinishedGoodSerializer,
+    FinishedProductionSerializer,
     InventoryCountSerializer,
     MovementQuerySerializer,
     ProductionSerializer,
@@ -43,11 +47,13 @@ from inventory.serializers import (
     transaction_payload,
 )
 from inventory.services import (
+    apply_finished_production,
     apply_production,
     apply_supply,
     apply_write_off,
     close_inventory_count,
     delete_document,
+    drop_orphan_finished_goods,
     stock_levels,
     stock_of,
 )
@@ -240,6 +246,35 @@ class ProductionListView(InventoryListView):
         apply_production(instance)
 
 
+class FinishedProductionListView(InventoryListView):
+    serializer_class = FinishedProductionSerializer
+
+    def get_queryset(self):
+        return FinishedProduction.objects.select_related("created_by")
+
+    def apply(self, instance) -> None:
+        apply_finished_production(instance)
+
+
+class FinishedProductionDetailView(InventoryDetailView):
+    serializer_class = FinishedProductionSerializer
+
+    def get_queryset(self):
+        return FinishedProduction.objects.select_related("created_by")
+
+    def apply(self, instance) -> None:
+        apply_finished_production(instance)
+
+
+class FinishedGoodListView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        goods = FinishedGood.objects.select_related("tech_card").prefetch_related("modifiers__modifier")
+        return Response(FinishedGoodSerializer(goods, many=True).data)
+
+
 class ProductionDetailView(InventoryDetailView):
     serializer_class = ProductionSerializer
 
@@ -276,12 +311,18 @@ class InventoryCountListView(InventoryListView):
     def get_queryset(self):
         return InventoryCount.objects.select_related("created_by")
 
+    def apply(self, instance) -> None:
+        drop_orphan_finished_goods()
+
 
 class InventoryCountDetailView(InventoryDetailView):
     serializer_class = InventoryCountSerializer
 
     def get_queryset(self):
         return InventoryCount.objects.select_related("created_by")
+
+    def apply(self, instance) -> None:
+        drop_orphan_finished_goods()
 
 
 class InventoryCountCloseView(APIView):
@@ -320,6 +361,7 @@ class StockView(APIView):
             row = {
                 "ingredient": component.pk if is_ingredient else None,
                 "semi_product": None if is_ingredient else component.pk,
+                "finished_good": None,
                 "name": component.name,
                 "unit": component.unit,
                 "category_name": (
@@ -331,6 +373,23 @@ class StockView(APIView):
             if show_costs(context):
                 row["avg_cost"] = str(component.avg_cost)
                 row["value"] = str((quantity * component.avg_cost).quantize(Decimal("0.01")))
+            rows.append(row)
+        goods = FinishedGood.objects.select_related("tech_card").prefetch_related("modifiers__modifier")
+        for good in goods:
+            quantity = stock_of(good, levels)
+            row = {
+                "ingredient": None,
+                "semi_product": None,
+                "finished_good": good.pk,
+                "name": good.name,
+                "unit": good.unit,
+                "category_name": None,
+                "is_active": good.tech_card.is_active,
+                "quantity": str(quantity),
+            }
+            if show_costs(context):
+                row["avg_cost"] = str(good.avg_cost)
+                row["value"] = str((quantity * good.avg_cost).quantize(Decimal("0.01")))
             rows.append(row)
         return Response(rows)
 

@@ -10,6 +10,7 @@ export type InventorySection =
   | "supplies"
   | "suppliers"
   | "productions"
+  | "finished"
   | "write-offs"
   | "inventory-counts";
 
@@ -23,6 +24,7 @@ export function InventoryShell({ section, children }: { section: InventorySectio
     { key: "supplies", href: "/inventory/supplies", label: t("supplies") },
     { key: "suppliers", href: "/inventory/suppliers", label: t("suppliers") },
     { key: "productions", href: "/inventory/productions", label: t("productions") },
+    { key: "finished", href: "/inventory/finished", label: t("finishedGoods") },
     { key: "write-offs", href: "/inventory/write-offs", label: t("writeOffs") },
     { key: "inventory-counts", href: "/inventory/inventory-counts", label: t("inventoryCounts") },
   ];
