@@ -12,12 +12,14 @@ export const COLOR_HEAVY = "#b34a3a";
 export const AXIS_TICK = { fontSize: 12, fill: "#666666" };
 export const TOOLTIP_STYLE = { borderRadius: 12, borderColor: "#e8ddcd", fontSize: 13 };
 
-export function ChartFrame({ children }: { children: ReactElement }) {
+export function ChartFrame({ children, minWidth }: { children: ReactElement; minWidth?: number }) {
   return (
-    <div className="h-72 w-full min-w-0">
-      <ResponsiveContainer width="100%" height="100%">
-        {children}
-      </ResponsiveContainer>
+    <div className={minWidth ? "h-72 w-full min-w-0 overflow-x-auto" : "h-72 w-full min-w-0"}>
+      <div className="h-full w-full" style={minWidth ? { minWidth } : undefined}>
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticsOverview } from "@/hooks/useAnalytics";
@@ -47,6 +47,42 @@ type MonthPoint = {
   kilograms: number;
   pricePerKg: number | null;
 };
+
+function ordersBarLabel(value: number): string {
+  return formatAmount(value);
+}
+
+function revenueBarLabel(value: number): string {
+  return formatMoney(value, "GEL").replace(".00", "");
+}
+
+function barTopCenter(viewBox: unknown): { x: number; y: number } | null {
+  if (typeof viewBox !== "object" || viewBox === null) return null;
+  const box = viewBox as { x?: unknown; y?: unknown; width?: unknown; upperWidth?: unknown };
+  const x = Number(box.x);
+  const y = Number(box.y);
+  const width = Number(box.upperWidth ?? box.width);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width)) return null;
+  return { x: x + width / 2, y: y - 8 };
+}
+
+function BarValueLabel({
+  viewBox,
+  value,
+  format,
+}: {
+  viewBox?: unknown;
+  value?: unknown;
+  format: (value: number) => string;
+}) {
+  const point = barTopCenter(viewBox);
+  if (point === null || typeof value !== "number" || Number.isNaN(value)) return null;
+  return (
+    <text x={point.x} y={point.y} fill="#666666" fontSize={12} textAnchor="middle">
+      {format(value)}
+    </text>
+  );
+}
 
 function linePoints(points: MonthPoint[], key: "average" | "pricePerKg") {
   const lastPartial = points.length > 0 && points[points.length - 1].partial;
@@ -109,6 +145,7 @@ export function OverviewPanel() {
     report.totals.average_check === null ? t("emptyValue") : formatMoney(report.totals.average_check, "GEL");
   const since = report.first_date === null ? null : t("since", { date: dayLabel(report.first_date, locale) });
   const partial = report.months.some((row) => row.partial);
+  const monthChartWidth = points.length * 72 + 56;
 
   return (
     <div className="grid gap-6">
@@ -121,8 +158,8 @@ export function OverviewPanel() {
       </div>
       {partial ? <Note>{t("partialNote")}</Note> : null}
       <Section title={t("byMonthOrders")}>
-        <ChartFrame>
-          <BarChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <ChartFrame minWidth={monthChartWidth}>
+          <BarChart data={points} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#e8ddcd" vertical={false} />
             <XAxis dataKey="label" tick={AXIS_TICK} interval="preserveStartEnd" />
             <YAxis tick={AXIS_TICK} width={36} />
@@ -131,13 +168,19 @@ export function OverviewPanel() {
               {points.map((point) => (
                 <Cell key={point.label} fillOpacity={point.partial ? 0.45 : 1} />
               ))}
+              <LabelList
+                dataKey="orders"
+                content={(props) => (
+                  <BarValueLabel viewBox={props.viewBox} value={props.value} format={ordersBarLabel} />
+                )}
+              />
             </Bar>
           </BarChart>
         </ChartFrame>
       </Section>
       <Section title={t("byMonthRevenue")}>
-        <ChartFrame>
-          <BarChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <ChartFrame minWidth={monthChartWidth}>
+          <BarChart data={points} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke="#e8ddcd" vertical={false} />
             <XAxis dataKey="label" tick={AXIS_TICK} interval="preserveStartEnd" />
             <YAxis tick={AXIS_TICK} width={48} />
@@ -146,6 +189,12 @@ export function OverviewPanel() {
               {points.map((point) => (
                 <Cell key={point.label} fillOpacity={point.partial ? 0.45 : 1} />
               ))}
+              <LabelList
+                dataKey="revenue"
+                content={(props) => (
+                  <BarValueLabel viewBox={props.viewBox} value={props.value} format={revenueBarLabel} />
+                )}
+              />
             </Bar>
           </BarChart>
         </ChartFrame>
