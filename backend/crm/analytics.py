@@ -12,6 +12,7 @@ from crm.phone import extract_phones
 _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
 _DISTINCTIVE_LENGTH = 10
+_NICKNAME_LENGTH = 4
 _TOP_LIMIT = 20
 _LAPSED_DAYS = 60
 _GAP_BINS = (
@@ -480,6 +481,13 @@ def name_key(value: str) -> str:
     return normalized
 
 
+def nickname_key(value: str) -> str:
+    normalized = re.sub(r"[^a-zа-я0-9]+", "", value.lower().replace("ё", "е"))
+    if normalized in _GENERIC_NAMES or len(normalized) < _NICKNAME_LENGTH:
+        return ""
+    return normalized
+
+
 def _find(parent: dict[str, str], phone: str) -> str:
     root = phone
     while parent[root] != root:
@@ -506,10 +514,14 @@ def _union(parent: dict[str, str], left: str, right: str) -> None:
 def _link_customers(orders: list[CrmOrder]) -> tuple[dict[str, Customer], int]:
     parent: dict[str, str] = {}
     name_phones: dict[str, set[str]] = defaultdict(set)
+    nick_phones: dict[str, set[str]] = defaultdict(set)
     phones_by_id: dict[int, list[str]] = {}
+    nick_by_id: dict[int, str] = {}
     for order in orders:
         phones = order_phones(order)
         phones_by_id[order.id] = phones
+        nick = nickname_key(order.nickname)
+        nick_by_id[order.id] = nick
         for phone in phones:
             parent.setdefault(phone, phone)
         if len(phones) >= 2:
@@ -521,6 +533,8 @@ def _link_customers(orders: list[CrmOrder]) -> tuple[dict[str, Customer], int]:
                 key = name_key(source)
                 if key:
                     name_phones[key].update(phones)
+            if nick:
+                nick_phones[nick].update(phones)
     for phones in name_phones.values():
         ordered = sorted(phones)
         for phone in ordered:
@@ -533,10 +547,18 @@ def _link_customers(orders: list[CrmOrder]) -> tuple[dict[str, Customer], int]:
     unknown = 0
     for order in orders:
         phones = phones_by_id[order.id]
-        if not phones:
-            unknown += 1
-            continue
-        key = "p:" + _find(parent, phones[0])
+        if phones:
+            key = "p:" + _find(parent, phones[0])
+        else:
+            nick = nick_by_id[order.id]
+            if not nick:
+                unknown += 1
+                continue
+            roots = {_find(parent, phone) for phone in nick_phones[nick]}
+            if len(roots) == 1:
+                key = "p:" + next(iter(roots))
+            else:
+                key = "n:" + nick
         if key not in customers:
             customers[key] = Customer(key)
         customers[key].orders.append(order)

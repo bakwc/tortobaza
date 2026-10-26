@@ -18,6 +18,7 @@ import {
   formatMoney,
   formatUnitCost,
 } from "@/components/menu/ui";
+import { useCurrentUser } from "@/hooks/useAuth";
 import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Ingredient, IngredientBody, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
@@ -27,14 +28,14 @@ const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 
 const UNIT_ICONS = { g: Scale, ml: Droplets, pcs: Hash };
 
-function emptyIngredient(): IngredientBody {
+function emptyIngredient(withCost: boolean): IngredientBody {
   return {
     name: "",
     category: null,
     unit: "g",
     is_active: true,
-    avg_cost: null,
-    cost_quantity: null,
+    avg_cost: withCost ? "" : null,
+    cost_quantity: withCost ? "1" : null,
     grams_per_unit: null,
     sale_price: null,
   };
@@ -249,6 +250,7 @@ function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel:
 export function IngredientsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const currentUser = useCurrentUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const ingredients = useIngredients();
@@ -297,7 +299,7 @@ export function IngredientsPanel() {
     ingredients.remove.reset();
     setIgnoreIngredientParam(true);
     setViewing(null);
-    setDraft(emptyIngredient());
+    setDraft(emptyIngredient(Boolean(currentUser.data?.is_finance_admin)));
     router.replace("/menu/ingredients", { scroll: false });
   };
   const close = () => {

@@ -231,6 +231,53 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(july["return_orders"], 1)
         self.assertEqual(july["return_revenue"], "50.00")
 
+    def test_same_nickname_without_phone_is_one_client(self):
+        _order(date=date(2026, 6, 1), contact="-", nickname="oxxrana", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 7, 1), contact="-", nickname="Oxxrana", cake_price=Decimal("20.00"))
+        report = clients(date(2026, 10, 25))
+        self.assertEqual(report["unknown_orders"], 0)
+        self.assertEqual(report["clients"], 1)
+        self.assertEqual(report["repeat_clients"], 1)
+        row = report["top_orders"][0]
+        self.assertEqual(row["orders"], 2)
+        self.assertEqual(row["phones"], [])
+        self.assertEqual(row["revenue"], "30.00")
+
+    def test_nickname_joins_single_phone(self):
+        _order(date=date(2026, 6, 1), contact="555111111", nickname="jastdexter", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 7, 1), contact="-", nickname="jastdexter", cake_price=Decimal("15.00"))
+        report = clients(date(2026, 10, 25))
+        self.assertEqual(report["unknown_orders"], 0)
+        self.assertEqual(report["clients"], 1)
+        row = report["top_orders"][0]
+        self.assertEqual(row["orders"], 2)
+        self.assertEqual(row["phones"], ["555111111"])
+        self.assertEqual(row["revenue"], "25.00")
+
+    def test_generic_and_short_nickname_stay_unknown(self):
+        _order(date=date(2026, 6, 1), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 6, 2), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 6, 3), contact="-", nickname="Аля", cake_price=Decimal("10.00"))
+        report = clients(date(2026, 10, 25))
+        self.assertEqual(report["unknown_orders"], 3)
+        self.assertEqual(report["clients"], 0)
+
+    def test_shared_nickname_does_not_merge_different_phones(self):
+        _order(date=date(2026, 6, 1), contact="555111111", nickname="sofia", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 6, 2), contact="555222222", nickname="sofia", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 6, 3), contact="-", nickname="sofia", cake_price=Decimal("12.00"))
+        _order(date=date(2026, 6, 4), contact="-", nickname="Sofia", cake_price=Decimal("13.00"))
+        report = clients(date(2026, 10, 25))
+        self.assertEqual(report["unknown_orders"], 0)
+        self.assertEqual(report["clients"], 3)
+        phone_rows = [row for row in report["top_orders"] if row["phones"]]
+        self.assertEqual(sorted(row["phones"] for row in phone_rows), [["555111111"], ["555222222"]])
+        self.assertTrue(all(row["orders"] == 1 for row in phone_rows))
+        nick_only = [row for row in report["top_orders"] if not row["phones"]]
+        self.assertEqual(len(nick_only), 1)
+        self.assertEqual(nick_only[0]["orders"], 2)
+        self.assertEqual(nick_only[0]["revenue"], "25.00")
+
 
 class AnalyticsApiTests(TestCase):
     def setUp(self):
