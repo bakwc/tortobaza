@@ -419,6 +419,7 @@ export function CrmOrderForm(
                 required
                 value={fields.contact}
                 onChange={(event) => setField("contact", event.target.value)}
+                className={fields.is_gift ? "border-red-200 bg-red-100" : undefined}
               />
             </label>
             <label className="flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-2xl border border-[var(--line)] px-4 text-sm">

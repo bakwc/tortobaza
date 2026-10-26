@@ -350,7 +350,14 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="flex min-w-0 flex-1 items-center gap-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
               {order.is_gift ? <Gift className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : null}
-              <span className="min-w-0 truncate">{order.contact}</span>
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  order.is_gift && "rounded-md bg-red-100 px-1.5",
+                )}
+              >
+                {order.contact}
+              </span>
             </p>
             <span
               className={cn(
