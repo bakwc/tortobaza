@@ -10,6 +10,7 @@ from crm.models import FinancialTransaction
 from rsge.models import Invoice, InvoiceLine, Waybill
 
 WINDOW_DAYS = 4
+AMOUNT_TOLERANCE = Decimal("0.01")
 _CENT = Decimal("0.01")
 _IBAN = re.compile(r"GE\d{2}[A-Z0-9]{18}")
 _LEGAL = {"შპს", "llc", "shps", "ie", "im", "pos", "wallet"}
@@ -165,14 +166,20 @@ def _link_expenses_to_waybills() -> None:
         _waybill_name_match,
         _waybill_distance,
     )
-    splits, _waybills, _transactions = _split(
+    splits, waybills, transactions = _split(
         waybills,
         transactions,
         _waybill_amount,
         _waybill_ibans,
         _waybill_distance_from_day,
     )
-    pairs = by_iban + by_name
+    by_amount, _waybills, _transactions = _assign(
+        waybills,
+        transactions,
+        _waybill_amount_match,
+        _waybill_distance,
+    )
+    pairs = by_iban + by_name + by_amount
     for group, waybill in splits:
         for transaction in group:
             pairs.append((transaction, waybill))
@@ -336,6 +343,10 @@ def _split(
     return linked, remaining_documents, remaining_transactions
 
 
+def _waybill_amount_match(waybill: Waybill, transaction: FinancialTransaction) -> bool:
+    return _within_amount_tolerance(waybill.full_amount, transaction.amount)
+
+
 def _waybill_iban_match(waybill: Waybill, transaction: FinancialTransaction) -> bool:
     iban = normalize_iban(transaction.counterparty_iban)
     if iban == "":
@@ -456,6 +467,14 @@ def _letters(value: str) -> str:
 
 def _same_tx_amount(document_amount: Decimal, tx_amount: Decimal) -> bool:
     return _money(document_amount) == _money(abs(tx_amount))
+
+
+def _within_amount_tolerance(document_amount: Decimal, tx_amount: Decimal) -> bool:
+    document = _money(document_amount)
+    if document == 0:
+        return False
+    paid = _money(abs(tx_amount))
+    return abs(document - paid) <= document * AMOUNT_TOLERANCE
 
 
 def _same_document_amount(left: Decimal, right: Decimal) -> bool:

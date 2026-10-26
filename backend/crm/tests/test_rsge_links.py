@@ -207,6 +207,70 @@ class SyncRsgeDocumentLinksTests(TestCase):
         self.assertEqual(biko.waybills.get().pk, waybill.pk)
         self.assertEqual(aliud.waybills.count(), 0)
 
+    def test_links_same_day_amounts_within_one_percent(self):
+        account = _account()
+        gagra = _waybill(
+            1,
+            "220",
+            date(2026, 10, 23),
+            Decimal("220.00"),
+            "შპს გაგრა+",
+            "ООО Гагра+",
+            "250724284",
+            "ტერ",
+            None,
+        )
+        kokoladze = _waybill(
+            2,
+            "656",
+            date(2026, 10, 23),
+            Decimal("656.55"),
+            "ია ქოქოლაძე",
+            "Ия Коколадзе",
+            "61006029098",
+            "GE64BG0000000600293470GEL",
+            None,
+        )
+        buona = _expense(account, date(2026, 10, 23), Decimal("220.00"), "BUONA SERA, Batumi", "")
+        sabitumo = _expense(account, date(2026, 10, 23), Decimal("659.80"), "SABITUMO MARKETI, Batumi", "")
+
+        sync_rsge_document_links()
+
+        self.assertEqual(buona.waybills.get().pk, gagra.pk)
+        self.assertEqual(sabitumo.waybills.get().pk, kokoladze.pk)
+
+    def test_amount_beyond_one_percent_stays_unlinked(self):
+        account = _account()
+        waybill = _waybill(
+            1,
+            "100",
+            date(2026, 10, 23),
+            Decimal("100.00"),
+            "შპს გაგრა+",
+            "ООО Гагра+",
+            "250724284",
+            "",
+            None,
+        )
+        transaction = _expense(account, date(2026, 10, 23), Decimal("102.00"), "BUONA SERA, Batumi", "")
+
+        sync_rsge_document_links()
+
+        self.assertEqual(transaction.waybills.count(), 0)
+        self.assertEqual(waybill.financial_transactions.count(), 0)
+
+    def test_two_waybills_within_one_percent_stay_unlinked(self):
+        account = _account()
+        first = _waybill(1, "100a", date(2026, 10, 23), Decimal("100.00"), "შპს გაგრა+", "ООО Гагра+", "250724284", "", None)
+        second = _waybill(2, "100b", date(2026, 10, 23), Decimal("100.50"), "ია ქოქოლაძე", "Ия Коколадзе", "61006029098", "", None)
+        transaction = _expense(account, date(2026, 10, 23), Decimal("100.00"), "SABITUMO MARKETI, Batumi", "")
+
+        sync_rsge_document_links()
+
+        self.assertEqual(transaction.waybills.count(), 0)
+        self.assertEqual(first.financial_transactions.count(), 0)
+        self.assertEqual(second.financial_transactions.count(), 0)
+
     def test_biko_card_payment_does_not_link_to_later_gagra_waybill(self):
         account = _account()
         waybill = _waybill(
