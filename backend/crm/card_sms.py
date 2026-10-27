@@ -205,6 +205,13 @@ def _cards_of(account: FinancialAccount) -> set[str]:
 def _insert_expense(alias: str, account_id: int, row: CardSmsMessage) -> int:
     with use_finance_db(alias):
         with transaction.atomic(using=alias):
+            if row.transaction_id is not None:
+                linked = FinancialTransaction.objects.filter(
+                    pk=row.transaction_id,
+                    account_id=account_id,
+                ).first()
+                if linked is not None:
+                    return linked.pk
             existing = FinancialTransaction.objects.filter(
                 account_id=account_id,
                 external_id=row.message_id,

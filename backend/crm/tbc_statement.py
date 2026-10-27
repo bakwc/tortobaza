@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 
 from crm.bog_statement import column_value, decimal_amount, is_filled, parse_date, text_value
 from crm.models import FinancialAccount, FinancialTransaction
+from crm.sms_statement_merge import STATEMENT_UPDATE_FIELDS, absorb_open_sms
 from crm.transaction_rules import assign_expense_types
 from tortobaza.finance_db import current_finance_db
 
@@ -78,6 +79,7 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
         to_create: list[FinancialTransaction] = []
         to_update: list[FinancialTransaction] = []
         skipped = 0
+        pending: list[ParsedTbcRow] = []
         for row in rows:
             if row.external_id in seen:
                 current = existing.get(row.external_id)
@@ -87,6 +89,15 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
                 skipped += 1
                 continue
             seen.add(row.external_id)
+            pending.append(row)
+        absorbed = absorb_open_sms([(account.id, row) for row in pending])
+        sms_updates: list[FinancialTransaction] = []
+        for index, row in enumerate(pending):
+            match = absorbed.get(index)
+            if match is not None:
+                sms_updates.append(match)
+                skipped += 1
+                continue
             to_create.append(
                 FinancialTransaction(
                     account=account,
@@ -104,6 +115,8 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
         FinancialTransaction.objects.bulk_create(to_create)
         if to_update:
             FinancialTransaction.objects.bulk_update(to_update, ["counterparty_name"])
+        if sms_updates:
+            FinancialTransaction.objects.bulk_update(sms_updates, STATEMENT_UPDATE_FIELDS)
     return TbcStatementImportResult(created=len(to_create), skipped=skipped, error="")
 
 

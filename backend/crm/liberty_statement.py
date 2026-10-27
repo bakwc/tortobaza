@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 
 from crm.bog_statement import decimal_amount, is_filled, parse_date, text_value
 from crm.models import FinancialAccount, FinancialTransaction
+from crm.sms_statement_merge import STATEMENT_UPDATE_FIELDS, absorb_open_sms
 from crm.transaction_rules import assign_expense_types
 from tortobaza.finance_db import current_finance_db
 
@@ -82,6 +83,7 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
         )
         to_create: list[FinancialTransaction] = []
         skipped = 0
+        pending: list[tuple[FinancialAccount, ParsedLibertyRow]] = []
         for row in rows:
             account = accounts[row.account_iban]
             key = (account.id, row.external_id)
@@ -89,6 +91,15 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
                 skipped += 1
                 continue
             existing.add(key)
+            pending.append((account, row))
+        absorbed = absorb_open_sms([(account.id, row) for account, row in pending])
+        to_update: list[FinancialTransaction] = []
+        for index, (account, row) in enumerate(pending):
+            match = absorbed.get(index)
+            if match is not None:
+                to_update.append(match)
+                skipped += 1
+                continue
             to_create.append(
                 FinancialTransaction(
                     account=account,
@@ -104,6 +115,8 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
             )
         assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
+        if to_update:
+            FinancialTransaction.objects.bulk_update(to_update, STATEMENT_UPDATE_FIELDS)
     return LibertyStatementImportResult(created=len(to_create), skipped=skipped, error="")
 
 
