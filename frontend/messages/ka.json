@@ -409,7 +409,8 @@
     "salaryEmployee": "თანამშრომელი",
     "salaryHours": "საათები",
     "salaryEarned": "თანხა",
-    "salaryPeriodTotal": "სულ",
+    "salaryHourlyTotal": "სულ საათობრივი",
+    "salaryMonthlyTotal": "სულ თვიური",
     "salaryMonthTotal": "სულ თვეში",
     "salaryLoadError": "ხელფასების ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "salaryEmpty": "ამ პერიოდში ცვლები არ ყოფილა",
@@ -473,6 +474,7 @@
     "menuSection": "მენიუ",
     "inventorySection": "საწყობი",
     "rsgeSection": "RS.GE",
+    "historySection": "ოპერაციების ისტორია",
     "items": {
       "section": "პოზიციები",
       "hint": "არასავალდებულოა. პოზიციები საჭიროა ინგრედიენტების ჩამოწერისა და თვითღირებულებისთვის. წონა და შიგთავსი ივსება პოზიციებიდან, სანამ ხელით არ შეცვლით.",
@@ -986,5 +988,31 @@
     "kindMacaron": "მაკარონი",
     "kindAddon": "დამატება",
     "kindOther": "სხვა"
+  },
+  "operationHistory": {
+    "title": "ოპერაციების ისტორია",
+    "empty": "ოპერაციები ჯერ არ არის.",
+    "loadError": "ოპერაციების ისტორია ვერ ჩაიტვირთა.",
+    "search": "ძებნა",
+    "app": "განყოფილება",
+    "allApps": "ყველა განყოფილება",
+    "start": "დან",
+    "end": "მდე",
+    "apply": "ჩვენება",
+    "previous": "წინა",
+    "next": "შემდეგი",
+    "page": "გვერდი {page} / {pages}",
+    "personal": "პირადი",
+    "system": "სისტემა",
+    "apps": {
+      "menu": "მენიუ",
+      "inventory": "საწყობი",
+      "crm": "CRM",
+      "rsge": "RS.GE",
+      "catalog": "კატალოგი",
+      "orders": "საიტის შეკვეთები",
+      "accounts": "მომხმარებლები",
+      "attendance": "დასწრება"
+    }
   }
 }

@@ -388,6 +388,27 @@ export const CrmOrderEventSchema = z.object({
   changes: z.record(z.string(), CrmOrderEventChangeSchema),
 });
 
+export const AuditEventSchema = z.object({
+  id: z.number(),
+  created_at: z.string(),
+  actor_id: z.number().nullable(),
+  actor_name: z.string().nullable(),
+  action: z.enum(["created", "updated", "deleted"]),
+  app_label: z.string(),
+  model: z.string(),
+  object_id: z.string(),
+  object_label: z.string(),
+  database: z.string(),
+  source: z.enum(["user", "crm", "admin", "website", "flowwow"]),
+  changes: z.record(z.string(), CrmOrderEventChangeSchema),
+});
+
+export const AuditEventsResponseSchema = z.object({
+  page: z.number(),
+  pages: z.number(),
+  results: z.array(AuditEventSchema),
+});
+
 export const CrmOrdersResponseSchema = z.object({
   date: z.string(),
   orders: z.array(CrmOrderSchema),
@@ -459,15 +480,19 @@ export const CrmSalaryPeriodSchema = z.object({
   start: z.string(),
   end: z.string(),
   employees: z.array(CrmSalaryEmployeeSchema),
-  total_hours: z.string(),
-  total_money: z.string(),
+  hourly_hours: z.string(),
+  hourly_money: z.string(),
+  monthly_hours: z.string(),
+  monthly_money: z.string(),
 });
 
 export const CrmSalariesSchema = z.object({
   month: z.string(),
   periods: z.array(CrmSalaryPeriodSchema),
-  total_hours: z.string(),
-  total_money: z.string(),
+  hourly_hours: z.string(),
+  hourly_money: z.string(),
+  monthly_hours: z.string(),
+  monthly_money: z.string(),
 });
 
 export const AnalyticsTotalsSchema = z.object({
@@ -850,6 +875,8 @@ export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
+export type AuditEvent = z.infer<typeof AuditEventSchema>;
+export type AuditEventsResponse = z.infer<typeof AuditEventsResponseSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;

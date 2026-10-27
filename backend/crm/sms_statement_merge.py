@@ -2,6 +2,8 @@ from datetime import date
 from decimal import Decimal
 from typing import Protocol
 
+from audit.record import record_updates
+from audit.snapshot import snapshot_fields
 from crm.models import CardSmsMessage, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
 from tortobaza.finance_db import current_finance_db
@@ -38,9 +40,11 @@ def absorb_open_sms(
     account_ids = [account_id for account_id, _row in pending]
     assigned = _assign_sms(pending, _open_sms_by_account(account_ids))
     updated = list(assigned.values())
+    befores = {tx.pk: snapshot_fields(tx) for tx in updated}
     for index, tx in assigned.items():
         _copy_statement(tx, pending[index][1])
     assign_expense_types(updated)
+    record_updates([(tx, befores[tx.pk]) for tx in updated])
     return assigned
 
 

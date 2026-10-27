@@ -22,6 +22,7 @@ import {
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmUnconfirmedOrdersResponseSchema,
+  AuditEventsResponseSchema,
   CrmOrderEventSchema,
   CrmOrderSchema,
   CrmOrdersResponseSchema,
@@ -70,6 +71,7 @@ import {
   type CrmMonthlyOrdersResponse,
   type CrmUnconfirmedOrdersResponse,
   type CrmOrder,
+  type AuditEventsResponse,
   type CrmOrderEvent,
   type CrmOrderItemCostBody,
   type CrmOrdersResponse,
@@ -748,6 +750,25 @@ export function endpoints(fetcher: Fetcher) {
     async getCrmOrder(id: number): Promise<CrmOrder> {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`);
       return parse(CrmOrderSchema, raw);
+    },
+
+    async getAuditEvents(params: {
+      page: number;
+      start: string;
+      end: string;
+      app: string;
+      q: string;
+    }): Promise<AuditEventsResponse> {
+      const raw = await fetcher<unknown>("/api/audit/events/", {
+        searchParams: {
+          page: params.page,
+          start: params.start || undefined,
+          end: params.end || undefined,
+          app: params.app || undefined,
+          q: params.q || undefined,
+        },
+      });
+      return parse(AuditEventsResponseSchema, raw);
     },
 
     async getCrmOrderEvents(id: number): Promise<CrmOrderEvent[]> {

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 
+from audit.record import mirror_order_event
 from crm.models import CrmOrder, CrmOrderEvent
 
 TRACKED_FIELDS = (
@@ -72,13 +73,15 @@ def record_crm_order_event(
                 changes[key] = {"old": old, "new": value}
         if not changes:
             return None
-    return CrmOrderEvent.objects.create(
+    event = CrmOrderEvent.objects.create(
         order=order,
         action=action,
         source=source,
         actor=actor,
         changes=changes,
     )
+    mirror_order_event(event)
+    return event
 
 
 def backfill_existing_crm_order_events(apps, schema_editor) -> None:

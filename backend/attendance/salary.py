@@ -115,6 +115,7 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
 
     return {
         "hourly_rate": hourly_rate,
+        "monthly": monthly_rate > 0,
         "rows": rows,
         "total_hours": total_hours,
         "total_money": total_money,
@@ -189,13 +190,19 @@ def compute_all_salaries(start_date: date, end_date: date) -> dict:
     }
 
 
-def _period_totals(employees: list[dict]) -> tuple[Decimal, Decimal]:
-    hours = Decimal("0.00")
-    money = Decimal("0.00")
+def _period_totals(employees: list[dict]) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    hourly_hours = Decimal("0.00")
+    hourly_money = Decimal("0.00")
+    monthly_hours = Decimal("0.00")
+    monthly_money = Decimal("0.00")
     for employee in employees:
-        hours += employee["hours"]
-        money += employee["money"]
-    return hours, money
+        if employee["monthly"]:
+            monthly_hours += employee["hours"]
+            monthly_money += employee["money"]
+        else:
+            hourly_hours += employee["hours"]
+            hourly_money += employee["money"]
+    return hourly_hours, hourly_money, monthly_hours, monthly_money
 
 
 def compute_month_salaries(year: int, month: int) -> dict:
@@ -228,6 +235,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                     "name": name,
                     "hours": first_hours,
                     "money": first_money,
+                    "monthly": result["monthly"],
                 }
             )
         if second_hours > 0 or second_money > 0:
@@ -237,12 +245,17 @@ def compute_month_salaries(year: int, month: int) -> dict:
                     "name": name,
                     "hours": second_hours,
                     "money": second_money,
+                    "monthly": result["monthly"],
                 }
             )
     first_employees.sort(key=lambda row: (row["name"].casefold(), row["id"]))
     second_employees.sort(key=lambda row: (row["name"].casefold(), row["id"]))
-    first_total_hours, first_total_money = _period_totals(first_employees)
-    second_total_hours, second_total_money = _period_totals(second_employees)
+    first_hourly_hours, first_hourly_money, first_monthly_hours, first_monthly_money = _period_totals(
+        first_employees
+    )
+    second_hourly_hours, second_hourly_money, second_monthly_hours, second_monthly_money = (
+        _period_totals(second_employees)
+    )
     return {
         "month": f"{year:04d}-{month:02d}",
         "periods": [
@@ -250,17 +263,23 @@ def compute_month_salaries(year: int, month: int) -> dict:
                 "start": start_date,
                 "end": first_end,
                 "employees": first_employees,
-                "total_hours": first_total_hours,
-                "total_money": first_total_money,
+                "hourly_hours": first_hourly_hours,
+                "hourly_money": first_hourly_money,
+                "monthly_hours": first_monthly_hours,
+                "monthly_money": first_monthly_money,
             },
             {
                 "start": second_start,
                 "end": end_date,
                 "employees": second_employees,
-                "total_hours": second_total_hours,
-                "total_money": second_total_money,
+                "hourly_hours": second_hourly_hours,
+                "hourly_money": second_hourly_money,
+                "monthly_hours": second_monthly_hours,
+                "monthly_money": second_monthly_money,
             },
         ],
-        "total_hours": first_total_hours + second_total_hours,
-        "total_money": first_total_money + second_total_money,
+        "hourly_hours": first_hourly_hours + second_hourly_hours,
+        "hourly_money": first_hourly_money + second_hourly_money,
+        "monthly_hours": first_monthly_hours + second_monthly_hours,
+        "monthly_money": first_monthly_money + second_monthly_money,
     }

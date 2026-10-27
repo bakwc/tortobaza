@@ -22,6 +22,8 @@ def _is_ledger(model) -> bool:
 
 
 def _db_for(model):
+    if model._meta.app_label == "audit":
+        return "default"
     if route_all_models() or _is_ledger(model):
         return current_finance_db()
     return None
@@ -38,6 +40,8 @@ class FinanceRouter:
         return True
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
+        if app_label == "audit":
+            return db == "default"
         if app_label == "crm" and model_name in _DEFAULT_ONLY_MODELS:
             return db == "default"
         return None

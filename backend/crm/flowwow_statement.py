@@ -9,6 +9,7 @@ from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.bog_statement import column_value, decimal_amount, is_filled, text_value
+from audit.record import record_created
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
 from tortobaza.finance_db import current_finance_db
@@ -105,6 +106,7 @@ def import_flowwow_statement(file) -> FlowwowStatementImportResult:
             )
         assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
+        record_created(to_create)
     return FlowwowStatementImportResult(created=len(to_create), skipped=skipped, error="")
 
 

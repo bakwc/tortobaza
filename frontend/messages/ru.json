@@ -409,7 +409,8 @@
     "salaryEmployee": "Сотрудник",
     "salaryHours": "Часы",
     "salaryEarned": "Сумма",
-    "salaryPeriodTotal": "Итого",
+    "salaryHourlyTotal": "Итого почасовая",
+    "salaryMonthlyTotal": "Итого помесячная",
     "salaryMonthTotal": "Итого за месяц",
     "salaryLoadError": "Не удалось загрузить зарплаты. Попробуйте ещё раз.",
     "salaryEmpty": "В этом периоде смен не было",
@@ -473,6 +474,7 @@
     "menuSection": "Меню",
     "inventorySection": "Склад",
     "rsgeSection": "RS.GE",
+    "historySection": "История операций",
     "items": {
       "section": "Позиции",
       "hint": "Необязательно. Позиции нужны для списания ингредиентов и себестоимости. Вес и начинка заполняются из позиций, пока вы не измените их вручную.",
@@ -986,5 +988,31 @@
     "kindMacaron": "Макарон",
     "kindAddon": "Дополнение",
     "kindOther": "Другое"
+  },
+  "operationHistory": {
+    "title": "История операций",
+    "empty": "Пока нет операций.",
+    "loadError": "Не удалось загрузить историю операций.",
+    "search": "Поиск",
+    "app": "Раздел",
+    "allApps": "Все разделы",
+    "start": "С",
+    "end": "По",
+    "apply": "Показать",
+    "previous": "Назад",
+    "next": "Дальше",
+    "page": "Страница {page} из {pages}",
+    "personal": "Личные",
+    "system": "Система",
+    "apps": {
+      "menu": "Меню",
+      "inventory": "Склад",
+      "crm": "CRM",
+      "rsge": "RS.GE",
+      "catalog": "Каталог",
+      "orders": "Заказы с сайта",
+      "accounts": "Пользователи",
+      "attendance": "Явка"
+    }
   }
 }

@@ -409,7 +409,8 @@
     "salaryEmployee": "Employee",
     "salaryHours": "Hours",
     "salaryEarned": "Amount",
-    "salaryPeriodTotal": "Total",
+    "salaryHourlyTotal": "Hourly total",
+    "salaryMonthlyTotal": "Monthly total",
     "salaryMonthTotal": "Month total",
     "salaryLoadError": "Could not load salaries. Please try again.",
     "salaryEmpty": "No shifts in this period",
@@ -473,6 +474,7 @@
     "menuSection": "Menu",
     "inventorySection": "Inventory",
     "rsgeSection": "RS.GE",
+    "historySection": "Operation history",
     "items": {
       "section": "Items",
       "hint": "Optional. Items are used for ingredient write-off and food cost. Weight and filling are prefilled from the items until you edit them.",
@@ -986,5 +988,31 @@
     "kindMacaron": "Macaron",
     "kindAddon": "Add-on",
     "kindOther": "Other"
+  },
+  "operationHistory": {
+    "title": "Operation history",
+    "empty": "No operations yet.",
+    "loadError": "Could not load the operation history.",
+    "search": "Search",
+    "app": "Section",
+    "allApps": "All sections",
+    "start": "From",
+    "end": "To",
+    "apply": "Show",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}",
+    "personal": "Personal",
+    "system": "System",
+    "apps": {
+      "menu": "Menu",
+      "inventory": "Inventory",
+      "crm": "CRM",
+      "rsge": "RS.GE",
+      "catalog": "Catalog",
+      "orders": "Website orders",
+      "accounts": "Users",
+      "attendance": "Attendance"
+    }
   }
 }

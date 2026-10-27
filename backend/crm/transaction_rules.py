@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from django.utils import timezone
 
+from audit.record import record_updates
+from audit.snapshot import snapshot_fields
 from crm.models import (
     FinancialTransaction,
     FinancialTransactionRule,
@@ -107,7 +109,7 @@ def assign_expense_types(transactions: list[FinancialTransaction]) -> None:
 def categorize_uncategorized_expenses() -> int:
     rules = load_active_rules()
     categorized = 0
-    pending: list[FinancialTransaction] = []
+    pending: list[tuple[FinancialTransaction, dict]] = []
     now = timezone.now()
     queryset = FinancialTransaction.objects.filter(
         kind=FinancialTransaction.KIND_EXPENSE,
@@ -117,14 +119,23 @@ def categorize_uncategorized_expenses() -> int:
         expense_type = matched_expense_type(transaction, rules)
         if expense_type == "":
             continue
+        before = snapshot_fields(transaction)
         transaction.expense_type = expense_type
         transaction.updated_at = now
-        pending.append(transaction)
+        pending.append((transaction, before))
         if len(pending) == 500:
-            FinancialTransaction.objects.bulk_update(pending, ["expense_type", "updated_at"])
+            FinancialTransaction.objects.bulk_update(
+                [row for row, _before in pending],
+                ["expense_type", "updated_at"],
+            )
+            record_updates(pending)
             categorized += len(pending)
             pending = []
     if pending:
-        FinancialTransaction.objects.bulk_update(pending, ["expense_type", "updated_at"])
+        FinancialTransaction.objects.bulk_update(
+            [row for row, _before in pending],
+            ["expense_type", "updated_at"],
+        )
+        record_updates(pending)
         categorized += len(pending)
     return categorized

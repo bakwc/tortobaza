@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Banknote, BookOpen, ChartColumn, ClipboardList, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
+import { Banknote, BookOpen, ChartColumn, ClipboardList, History, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -78,6 +78,13 @@ export function CrmOverflowMenu() {
             label: t("finance"),
             icon: Wallet,
             active: isUnder(pathname, "/finance"),
+          },
+          {
+            key: "history",
+            href: "/history",
+            label: t("historySection"),
+            icon: History,
+            active: isUnder(pathname, "/history"),
           },
           {
             key: "salaries",

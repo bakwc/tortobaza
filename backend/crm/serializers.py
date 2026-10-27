@@ -707,15 +707,19 @@ class CrmSalaryPeriodSerializer(serializers.Serializer):
     start = serializers.DateField()
     end = serializers.DateField()
     employees = CrmSalaryEmployeeSerializer(many=True)
-    total_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
-    total_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+    hourly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    hourly_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly_money = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class CrmSalariesSerializer(serializers.Serializer):
     month = serializers.CharField()
     periods = CrmSalaryPeriodSerializer(many=True)
-    total_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
-    total_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+    hourly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    hourly_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly_money = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class FinanceTransactionsQuerySerializer(serializers.Serializer):

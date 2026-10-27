@@ -7,6 +7,8 @@ from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
 from crm.bog_statement import column_value, decimal_amount, is_filled, parse_date, text_value
+from audit.record import record_created, record_updates
+from audit.snapshot import snapshot_fields
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.sms_statement_merge import STATEMENT_UPDATE_FIELDS, absorb_open_sms
 from crm.transaction_rules import assign_expense_types
@@ -78,14 +80,17 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
         seen = set(existing)
         to_create: list[FinancialTransaction] = []
         to_update: list[FinancialTransaction] = []
+        renames: list[tuple[FinancialTransaction, dict]] = []
         skipped = 0
         pending: list[ParsedTbcRow] = []
         for row in rows:
             if row.external_id in seen:
                 current = existing.get(row.external_id)
                 if current is not None and current.counterparty_name != row.counterparty_name:
+                    before = snapshot_fields(current)
                     current.counterparty_name = row.counterparty_name
                     to_update.append(current)
+                    renames.append((current, before))
                 skipped += 1
                 continue
             seen.add(row.external_id)
@@ -113,8 +118,10 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
             )
         assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
+        record_created(to_create)
         if to_update:
             FinancialTransaction.objects.bulk_update(to_update, ["counterparty_name"])
+            record_updates(renames)
         if sms_updates:
             FinancialTransaction.objects.bulk_update(sms_updates, STATEMENT_UPDATE_FIELDS)
     return TbcStatementImportResult(created=len(to_create), skipped=skipped, error="")

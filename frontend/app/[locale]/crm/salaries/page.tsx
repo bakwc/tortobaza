@@ -139,11 +139,21 @@ function CrmSalariesBoard() {
             <SalaryPeriodTable key={period.start} period={period} />
           ))}
           <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <h2 className="text-base font-semibold text-[var(--ink)]">{t("salaryMonthTotal")}</h2>
-              <div className="flex gap-6 text-sm font-semibold tabular-nums text-[var(--ink)]">
-                <span>{salariesQuery.data.total_hours}</span>
-                <span>{formatAed(salariesQuery.data.total_money)}</span>
+            <h2 className="text-base font-semibold text-[var(--ink)]">{t("salaryMonthTotal")}</h2>
+            <div className="mt-3 grid gap-2 text-sm font-semibold text-[var(--ink)]">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span>{t("salaryHourlyTotal")}</span>
+                <div className="flex gap-6 tabular-nums">
+                  <span>{salariesQuery.data.hourly_hours}</span>
+                  <span>{formatAed(salariesQuery.data.hourly_money)}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span>{t("salaryMonthlyTotal")}</span>
+                <div className="flex gap-6 tabular-nums">
+                  <span>{salariesQuery.data.monthly_hours}</span>
+                  <span>{formatAed(salariesQuery.data.monthly_money)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -192,12 +202,21 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
           )}
           <tfoot>
             <tr className="border-t border-[var(--line)]">
-              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryPeriodTotal")}</td>
+              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryHourlyTotal")}</td>
               <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">
-                {period.total_hours}
+                {period.hourly_hours}
               </td>
               <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">
-                {formatAed(period.total_money)}
+                {formatAed(period.hourly_money)}
+              </td>
+            </tr>
+            <tr>
+              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryMonthlyTotal")}</td>
+              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">
+                {period.monthly_hours}
+              </td>
+              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">
+                {formatAed(period.monthly_money)}
               </td>
             </tr>
           </tfoot>

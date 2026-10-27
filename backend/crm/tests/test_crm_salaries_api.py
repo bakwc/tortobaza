@@ -90,8 +90,10 @@ class CrmSalariesApiTests(TestCase):
                                 "money": "80.00",
                             }
                         ],
-                        "total_hours": "8.00",
-                        "total_money": "80.00",
+                        "hourly_hours": "8.00",
+                        "hourly_money": "80.00",
+                        "monthly_hours": "0.00",
+                        "monthly_money": "0.00",
                     },
                     {
                         "start": "2026-06-15",
@@ -110,12 +112,16 @@ class CrmSalariesApiTests(TestCase):
                                 "money": "40.00",
                             },
                         ],
-                        "total_hours": "8.00",
-                        "total_money": "120.00",
+                        "hourly_hours": "8.00",
+                        "hourly_money": "120.00",
+                        "monthly_hours": "0.00",
+                        "monthly_money": "0.00",
                     },
                 ],
-                "total_hours": "16.00",
-                "total_money": "200.00",
+                "hourly_hours": "16.00",
+                "hourly_money": "200.00",
+                "monthly_hours": "0.00",
+                "monthly_money": "0.00",
             },
         )
 
@@ -127,10 +133,12 @@ class CrmSalariesApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["periods"][0]["employees"], [])
-        self.assertEqual(data["periods"][0]["total_hours"], "0.00")
+        self.assertEqual(data["periods"][0]["hourly_hours"], "0.00")
+        self.assertEqual(data["periods"][0]["monthly_money"], "0.00")
         self.assertEqual(data["periods"][1]["end"], "2026-02-28")
         self.assertEqual(data["periods"][1]["employees"][0]["name"], "Бека")
-        self.assertEqual(data["total_money"], "80.00")
+        self.assertEqual(data["hourly_money"], "80.00")
+        self.assertEqual(data["monthly_money"], "0.00")
 
     def test_default_current_tbilisi_month(self):
         today = timezone.now().astimezone(_TB).date()
@@ -144,5 +152,7 @@ class CrmSalariesApiTests(TestCase):
         period_index = 0 if today.day <= 14 else 1
         self.assertEqual(data["periods"][period_index]["employees"][0]["id"], self.worker.id)
         self.assertEqual(data["periods"][1 - period_index]["employees"], [])
-        self.assertEqual(data["total_hours"], "8.00")
-        self.assertEqual(data["total_money"], "80.00")
+        self.assertEqual(data["hourly_hours"], "8.00")
+        self.assertEqual(data["hourly_money"], "80.00")
+        self.assertEqual(data["monthly_hours"], "0.00")
+        self.assertEqual(data["monthly_money"], "0.00")

@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 from openpyxl import load_workbook
 
+from audit.record import record_created
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.sms_statement_merge import STATEMENT_UPDATE_FIELDS, absorb_open_sms
 from crm.transaction_rules import assign_expense_types
@@ -115,6 +116,7 @@ def import_bog_statement(file) -> BogStatementImportResult:
             )
         assign_expense_types(to_create)
         FinancialTransaction.objects.bulk_create(to_create)
+        record_created(to_create)
         if to_update:
             FinancialTransaction.objects.bulk_update(to_update, STATEMENT_UPDATE_FIELDS)
     return BogStatementImportResult(created=len(to_create), skipped=skipped, error="")

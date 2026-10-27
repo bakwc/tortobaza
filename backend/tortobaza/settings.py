@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "menu",
     "inventory",
     "rsge",
+    "audit",
     "tortobaza",
 ]
 
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "tortobaza.middleware.FinanceScopeMiddleware",
     "tortobaza.middleware.CanLoginMiddleware",
+    "audit.middleware.AuditMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "cart.middleware.CartTokenMiddleware",

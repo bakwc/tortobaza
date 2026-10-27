@@ -127,22 +127,24 @@ export function FinanceAccountList({
               <WalletCards className="h-4 w-4" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="flex min-w-0 items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate text-sm font-semibold text-[var(--ink)]">{account.name}</span>
+                {spend ? (
+                  <span className="flex min-w-0 flex-1 items-center justify-center gap-2 overflow-hidden text-[10px] leading-none text-[var(--muted-2)]">
+                    {SPEND_WINDOWS.map((days) => (
+                      <span key={days} className="whitespace-nowrap">
+                        <span className="font-semibold text-[var(--ink)]">
+                          {formatAed((spend.get(account.id)?.[days] ?? 0) / 100)}
+                        </span>{" "}
+                        {t("spendDays", { days })}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="flex-1" />
+                )}
                 <span className={`shrink-0 text-sm font-bold ${deltaClass}`}>{deltaLabel}</span>
               </span>
-              {spend ? (
-                <span className="mt-1 flex justify-center gap-3">
-                  {SPEND_WINDOWS.map((days) => (
-                    <span key={days} className="flex flex-col items-center leading-tight">
-                      <span className="text-[10px] font-semibold text-[var(--ink)]">
-                        {formatAed((spend.get(account.id)?.[days] ?? 0) / 100)}
-                      </span>
-                      <span className="text-[10px] text-[var(--muted-2)]">{t("spendDays", { days })}</span>
-                    </span>
-                  ))}
-                </span>
-              ) : null}
               {account.plusCents !== 0 || account.minusCents !== 0 ? (
                 <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
                   {account.plusCents !== 0 ? (
