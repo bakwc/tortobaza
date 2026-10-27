@@ -96,30 +96,33 @@ function FinanceBoardContent({
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
-      <div className="flex min-w-0 items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <nav className="flex min-w-0 flex-wrap gap-2">
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <nav className="flex min-w-0 flex-1 flex-wrap gap-2">
+          {SECTIONS.map((item) => (
+            <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
+              <Link href={sectionHref(item.href, item.section === section, currentQuery, period, scope)}>
+                {t(item.label)}
+              </Link>
+            </Button>
+          ))}
+        </nav>
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="inline-flex rounded-full border border-[var(--line)] bg-white p-0.5">
             {SCOPES.map((item) => (
-              <Button
+              <button
                 key={item}
-                variant={item === scope ? "primary" : "outline"}
+                type="button"
                 onClick={() => setScope(item)}
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                  item === scope
+                    ? "bg-[var(--brand)] text-[var(--brand-foreground)]"
+                    : "text-[var(--ink)]"
+                }`}
               >
                 {t(item)}
-              </Button>
+              </button>
             ))}
-          </nav>
-          <nav className="flex min-w-0 flex-wrap gap-2">
-            {SECTIONS.map((item) => (
-              <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
-                <Link href={sectionHref(item.href, item.section === section, currentQuery, period, scope)}>
-                  {t(item.label)}
-                </Link>
-              </Button>
-            ))}
-          </nav>
-        </div>
-        <div className="shrink-0">
+          </div>
           <CrmOverflowMenu />
         </div>
       </div>
