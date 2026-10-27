@@ -7,6 +7,10 @@ _LEDGER_MODELS = {
     "financialtransactionrulecondition",
 }
 
+_DEFAULT_ONLY_MODELS = {
+    "cardsmsmessage",
+}
+
 
 def _is_ledger(model) -> bool:
     if model._meta.app_label != "crm":
@@ -34,4 +38,6 @@ class FinanceRouter:
         return True
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
+        if app_label == "crm" and model_name in _DEFAULT_ONLY_MODELS:
+            return db == "default"
         return None

@@ -3,6 +3,7 @@ from datetime import time
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
@@ -530,13 +531,66 @@ class FinancialAccount(models.Model):
     bank_name = models.CharField(max_length=100, blank=True, verbose_name=_("Bank name"))
     iban = models.CharField(max_length=34, blank=True, verbose_name=_("IBAN"))
     currency = models.CharField(max_length=3, default="GEL", verbose_name=_("Currency"))
+    cards = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Cards"))
 
     class Meta:
         verbose_name = _("Financial account")
         verbose_name_plural = _("Financial accounts")
 
+    def clean(self):
+        super().clean()
+        raw = self.cards.strip()
+        if raw == "":
+            self.cards = ""
+            return
+        parts = [part.strip() for part in raw.split(",")]
+        if any(len(part) != 4 or not part.isdigit() for part in parts):
+            raise ValidationError(
+                {"cards": _("Enter the last 4 digits of each card, separated by commas.")}
+            )
+        self.cards = ",".join(parts)
+
     def __str__(self) -> str:
         return self.name
+
+
+class CardSmsMessage(models.Model):
+    STATUS_UNPARSED = "unparsed"
+    STATUS_UNMATCHED = "unmatched"
+    STATUS_AMBIGUOUS = "ambiguous"
+    STATUS_INSERTED = "inserted"
+    STATUS_CHOICES = [
+        (STATUS_UNPARSED, _("Unparsed")),
+        (STATUS_UNMATCHED, _("Unmatched")),
+        (STATUS_AMBIGUOUS, _("Ambiguous")),
+        (STATUS_INSERTED, _("Inserted")),
+    ]
+
+    message_id = models.CharField(max_length=512, unique=True, verbose_name=_("Message id"))
+    received_at = models.DateTimeField(verbose_name=_("Received at"))
+    raw_body = models.TextField(verbose_name=_("Body"))
+    card_last4 = models.CharField(max_length=4, blank=True, default="", verbose_name=_("Card"))
+    currency = models.CharField(max_length=3, blank=True, default="", verbose_name=_("Currency"))
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Amount"),
+    )
+    merchant = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Merchant"))
+    sms_date = models.DateField(null=True, blank=True, verbose_name=_("SMS date"))
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, verbose_name=_("Status"))
+    finance_db = models.CharField(max_length=16, blank=True, default="", verbose_name=_("Finance database"))
+    transaction_id = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Transaction id"))
+
+    class Meta:
+        verbose_name = _("Card SMS")
+        verbose_name_plural = _("Card SMS")
+        ordering = ["-received_at", "-id"]
+
+    def __str__(self) -> str:
+        return self.message_id
 
 
 class ExchangeRateSnapshot(models.Model):

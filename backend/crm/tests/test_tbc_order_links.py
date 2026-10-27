@@ -246,6 +246,7 @@ class SyncTbcOrderLinksTests(TestCase):
         self.assertEqual(transaction.crm_orders.get().pk, order.pk)
         self.assertEqual(FinancialTransaction.crm_orders.through.objects.count(), 1)
 
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")

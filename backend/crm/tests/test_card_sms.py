@@ -1,0 +1,240 @@
+from datetime import date, datetime
+from decimal import Decimal
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
+
+from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.test import TestCase
+
+from crm.card_sms import (
+    InboxMessage,
+    fetch_recent_test_messages,
+    html_to_text,
+    import_card_sms,
+    parse_card_sms,
+)
+from crm.models import CardSmsMessage, FinancialAccount, FinancialTransaction
+from tortobaza.finance_db import use_finance_db
+
+_TB = ZoneInfo("Asia/Tbilisi")
+GEL_HTML = (
+    "Purchase: GEL66.56<br/>Card:***3319<br/>Wolt<br/>"
+    "you received: 149.76 PLUS<br/>Total: 432,690.94 PLUS<br/>26.10.2026"
+)
+USD_HTML = (
+    "Purchase: USD50.00<br/>Card:***1996<br/>"
+    "FACEBK* D4D8PDAQM4&gt;+35315530550 IE<br/>27.10.2026"
+)
+
+
+class FakeIMAP:
+    def __init__(self, messages: dict[bytes, bytes]):
+        self.messages = messages
+        self.criteria = ()
+
+    def login(self, user: str, password: str):
+        return "OK", []
+
+    def select(self, mailbox: str):
+        return "OK", [b"1"]
+
+    def search(self, charset, *criteria):
+        self.criteria = criteria
+        return "OK", [b" ".join(self.messages)]
+
+    def fetch(self, number: bytes, query: str):
+        raw = self.messages[number]
+        meta = b'1 (INTERNALDATE "26-Oct-2026 03:00:00 +0400" BODY[] {1}'
+        return "OK", [(meta, raw)]
+
+    def logout(self):
+        return "OK", [b"BYE"]
+
+
+def _raw(message_id: str, date_header: str, subject: str, html: str) -> bytes:
+    headers = [
+        f"Date: {date_header}",
+        f"Subject: {subject}",
+        "MIME-Version: 1.0",
+        "Content-Type: text/html; charset=utf-8",
+    ]
+    if message_id != "":
+        headers.insert(0, f"Message-ID: {message_id}")
+    return ("\r\n".join(headers) + "\r\n\r\n" + html).encode()
+
+
+def _message(message_id: str, html: str) -> InboxMessage:
+    return InboxMessage(
+        message_id=message_id,
+        received_at=datetime(2026, 10, 27, 12, 0, tzinfo=_TB),
+        body=html_to_text(html),
+    )
+
+
+def _import(messages: list[InboxMessage]) -> None:
+    with patch("crm.card_sms.fetch_recent_test_messages", return_value=messages):
+        import_card_sms()
+
+
+def _account(name: str, currency: str, cards: str, alias: str) -> FinancialAccount:
+    with use_finance_db(alias):
+        return FinancialAccount.objects.create(
+            name=name,
+            kind=FinancialAccount.KIND_BANK,
+            currency=currency,
+            cards=cards,
+        )
+
+
+def _transactions(alias: str) -> list[FinancialTransaction]:
+    with use_finance_db(alias):
+        return list(FinancialTransaction.objects.order_by("id"))
+
+
+class CardSmsTests(TestCase):
+    databases = {"default", "personal"}
+
+    def test_parse_purchase_examples(self):
+        gel = parse_card_sms(html_to_text(GEL_HTML))
+        self.assertIsNotNone(gel)
+        self.assertEqual(gel.currency, "GEL")
+        self.assertEqual(gel.amount, Decimal("66.56"))
+        self.assertEqual(gel.card_last4, "3319")
+        self.assertEqual(gel.merchant, "Wolt")
+        self.assertEqual(gel.sms_date, date(2026, 10, 26))
+        usd = parse_card_sms(html_to_text(USD_HTML))
+        self.assertIsNotNone(usd)
+        self.assertEqual(usd.currency, "USD")
+        self.assertEqual(usd.amount, Decimal("50.00"))
+        self.assertEqual(usd.card_last4, "1996")
+        self.assertEqual(usd.merchant, "FACEBK* D4D8PDAQM4>+35315530550 IE")
+        self.assertEqual(usd.sms_date, date(2026, 10, 27))
+
+    def test_fetch_keeps_recent_exact_subject(self):
+        now = datetime(2026, 10, 27, 4, 0, tzinfo=_TB)
+        fake = FakeIMAP(
+            {
+                b"1": _raw(
+                    "<recent@gmail.com>",
+                    "Mon, 26 Oct 2026 16:01:16 +0400",
+                    "Test",
+                    GEL_HTML,
+                ),
+                b"2": _raw(
+                    "<old@gmail.com>",
+                    "Mon, 26 Oct 2026 03:00:00 +0400",
+                    "Test",
+                    GEL_HTML,
+                ),
+                b"3": _raw(
+                    "<other@gmail.com>",
+                    "Mon, 26 Oct 2026 16:01:16 +0400",
+                    "Testing",
+                    GEL_HTML,
+                ),
+                b"4": _raw("", "Mon, 26 Oct 2026 16:01:16 +0400", "Test", GEL_HTML),
+            }
+        )
+        with patch("crm.card_sms.imaplib.IMAP4_SSL", return_value=fake):
+            found = fetch_recent_test_messages(now)
+        self.assertEqual([item.message_id for item in found], ["<recent@gmail.com>"])
+        self.assertEqual(fake.criteria, ("SINCE", "26-Oct-2026", "SUBJECT", "Test"))
+        self.assertIn("Wolt", found[0].body)
+
+    def test_matches_business_and_personal(self):
+        _account("Business GEL", "GEL", "3319", "default")
+        _account("Personal USD", "USD", "1996", "personal")
+        _import(
+            [
+                _message("<gel@gmail.com>", GEL_HTML),
+                _message("<usd@gmail.com>", USD_HTML),
+            ]
+        )
+        business = _transactions("default")
+        personal = _transactions("personal")
+        self.assertEqual(len(business), 1)
+        self.assertEqual(business[0].amount, Decimal("-66.56"))
+        self.assertEqual(business[0].kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(business[0].date, date(2026, 10, 26))
+        self.assertEqual(business[0].counterparty_name, "Wolt")
+        self.assertEqual(business[0].description, "Wolt")
+        self.assertEqual(business[0].external_id, "<gel@gmail.com>")
+        self.assertEqual(len(personal), 1)
+        self.assertEqual(personal[0].amount, Decimal("-50.00"))
+        self.assertEqual(personal[0].date, date(2026, 10, 27))
+        self.assertEqual(personal[0].counterparty_name, "FACEBK* D4D8PDAQM4>+35315530550 IE")
+        gel = CardSmsMessage.objects.get(message_id="<gel@gmail.com>")
+        usd = CardSmsMessage.objects.get(message_id="<usd@gmail.com>")
+        self.assertEqual(gel.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(gel.finance_db, "default")
+        self.assertEqual(gel.transaction_id, business[0].pk)
+        self.assertEqual(usd.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(usd.finance_db, "personal")
+        self.assertEqual(usd.transaction_id, personal[0].pk)
+
+    def test_same_card_matches_only_sms_currency(self):
+        gel_account = _account("GEL card", "GEL", "3319", "default")
+        _account("USD card", "USD", "3319", "personal")
+        _import([_message("<gel@gmail.com>", GEL_HTML)])
+        business = _transactions("default")
+        self.assertEqual(len(business), 1)
+        self.assertEqual(business[0].account_id, gel_account.pk)
+        self.assertEqual(_transactions("personal"), [])
+
+    def test_second_run_does_not_duplicate(self):
+        _account("Business GEL", "GEL", "3319", "default")
+        messages = [_message("<gel@gmail.com>", GEL_HTML)]
+        _import(messages)
+        _import(messages)
+        self.assertEqual(len(_transactions("default")), 1)
+        self.assertEqual(CardSmsMessage.objects.count(), 1)
+
+    def test_ambiguous_when_card_and_currency_match_twice(self):
+        _account("One", "GEL", "3319", "default")
+        _account("Two", "GEL", "3319,4411", "default")
+        _import([_message("<gel@gmail.com>", GEL_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_AMBIGUOUS)
+        self.assertIsNone(row.transaction_id)
+
+    def test_unparsed_body_does_not_create_transaction(self):
+        _account("Business GEL", "GEL", "3319", "default")
+        _import([_message("<plain@gmail.com>", "Hello there")])
+        self.assertEqual(_transactions("default"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_UNPARSED)
+
+    def test_unmatched_inserts_after_card_is_added(self):
+        _import([_message("<gel@gmail.com>", GEL_HTML)])
+        self.assertEqual(CardSmsMessage.objects.get().status, CardSmsMessage.STATUS_UNMATCHED)
+        self.assertEqual(_transactions("default"), [])
+        _account("Business GEL", "GEL", "3319", "default")
+        _import([])
+        self.assertEqual(len(_transactions("default")), 1)
+        self.assertEqual(CardSmsMessage.objects.get().status, CardSmsMessage.STATUS_INSERTED)
+
+    def test_cards_field_keeps_last_four_digits(self):
+        account = FinancialAccount(
+            name="Card",
+            kind=FinancialAccount.KIND_BANK,
+            currency="GEL",
+            cards="3319, 19",
+        )
+        with self.assertRaises(ValidationError):
+            account.full_clean()
+        account.cards = "3319, 1996"
+        account.full_clean()
+        self.assertEqual(account.cards, "3319,1996")
+        account.cards = ""
+        account.full_clean()
+        self.assertEqual(account.cards, "")
+
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms")
+    def test_sync_command_imports_card_sms(self, mock_import, _flowwow):
+        call_command("sync_crm_orders_to_telegram")
+        mock_import.assert_called_once_with()

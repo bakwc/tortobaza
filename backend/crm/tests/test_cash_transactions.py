@@ -124,6 +124,7 @@ class SyncCashPaidOrderTransactionsTests(TestCase):
         sync_cash_paid_order_transactions()
         self.assertEqual(FinancialTransaction.objects.count(), 0)
 
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")

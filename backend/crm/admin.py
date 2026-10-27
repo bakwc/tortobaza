@@ -15,6 +15,7 @@ from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.liberty_statement import import_liberty_statement
 from crm.tbc_statement import import_tbc_statement
 from crm.models import (
+    CardSmsMessage,
     CrmOrder,
     CrmOrderEvent,
     CrmOrderImage,
@@ -342,8 +343,28 @@ class TelegramNumberCheckAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialAccount)
 class FinancialAccountAdmin(admin.ModelAdmin):
-    list_display = ["name", "kind", "bank_name", "iban", "currency"]
+    list_display = ["name", "kind", "bank_name", "iban", "currency", "cards"]
     search_fields = ["name", "bank_name", "iban"]
+
+
+@admin.register(CardSmsMessage)
+class CardSmsMessageAdmin(admin.ModelAdmin):
+    list_display = [
+        "received_at",
+        "status",
+        "card_last4",
+        "currency",
+        "amount",
+        "merchant",
+        "sms_date",
+        "finance_db",
+        "transaction_id",
+    ]
+    list_filter = ["status", "currency", "finance_db"]
+    search_fields = ["message_id", "merchant", "card_last4"]
+
+    def has_add_permission(self, request):
+        return False
 
 
 class FinancialTransactionRuleConditionFormSet(BaseInlineFormSet):

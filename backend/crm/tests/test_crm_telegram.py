@@ -77,6 +77,12 @@ class CrmTelegramTests(TestCase):
         )
         self.urlopen_patcher.start()
         self.addCleanup(self.urlopen_patcher.stop)
+        self.card_sms_patcher = patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.import_card_sms",
+            lambda: None,
+        )
+        self.card_sms_patcher.start()
+        self.addCleanup(self.card_sms_patcher.stop)
         self.flowwow_sync_patcher = patch(
             "crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders"
         )

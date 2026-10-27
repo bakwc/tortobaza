@@ -508,6 +508,7 @@ class SyncRsgeDocumentLinksTests(TestCase):
         self.assertEqual(pending.waybills.count(), 0)
         self.assertEqual(FinancialTransaction.waybills.through.objects.count(), 1)
 
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.translate_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.translate_waybills", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)

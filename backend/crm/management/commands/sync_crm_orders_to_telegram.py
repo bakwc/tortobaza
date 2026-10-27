@@ -6,6 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from crm.bog_order_links import sync_bog_order_links
+from crm.card_sms import import_card_sms
 from crm.courier_alerts import notify_courier_departures
 from crm.cash_transactions import sync_cash_paid_order_transactions
 from crm.flowwow import sync_flowwow_orders
@@ -214,3 +215,4 @@ class Command(BaseCommand):
         sync_rsge_document_links()
         notify_courier_departures(timezone.now())
         backup_database(now)
+        import_card_sms()
