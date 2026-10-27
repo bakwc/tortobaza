@@ -1601,10 +1601,17 @@ export const RsInvoiceSchema = z.object({
   financial_transactions: z.array(RsLinkedTransactionSchema),
 });
 
+export const RsgePendingCountSchema = z.object({
+  count: z.number(),
+  section: z.enum(["waybills", "invoices", ""]),
+  month: z.string(),
+});
+
 export type RsWaybillGood = z.infer<typeof RsWaybillGoodSchema>;
 export type RsWaybill = z.infer<typeof RsWaybillSchema>;
 export type RsInvoiceLine = z.infer<typeof RsInvoiceLineSchema>;
 export type RsInvoice = z.infer<typeof RsInvoiceSchema>;
+export type RsgePendingCount = z.infer<typeof RsgePendingCountSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;

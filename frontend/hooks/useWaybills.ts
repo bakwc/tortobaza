@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { rsgePendingCountQueryKey } from "@/hooks/useRsgePendingCount";
 import { api } from "@/lib/api";
 import type { RsWaybill } from "@/lib/api/types";
 
@@ -18,6 +19,7 @@ export function useDecideWaybill() {
       action === "confirm" ? api.confirmRsgeWaybill(id) : api.rejectRsgeWaybill(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rsge", "waybills"] });
+      qc.invalidateQueries({ queryKey: rsgePendingCountQueryKey });
     },
   });
 }

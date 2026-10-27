@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { rsgePendingCountQueryKey } from "@/hooks/useRsgePendingCount";
 import { api } from "@/lib/api";
 import type { RsInvoice } from "@/lib/api/types";
 
@@ -22,6 +23,7 @@ export function useDecideInvoice() {
         : api.rejectRsgeInvoice(input.id, input.refText),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rsge", "invoices"] });
+      qc.invalidateQueries({ queryKey: rsgePendingCountQueryKey });
     },
   });
 }

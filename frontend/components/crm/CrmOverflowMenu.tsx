@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Banknote, BookOpen, ChartColumn, ClipboardList, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
+import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
 import { Link, usePathname } from "@/i18n/navigation";
 
 type MenuItem = {
@@ -18,6 +19,15 @@ type MenuItem = {
 
 function isUnder(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+function PendingBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <span className="inline-flex min-w-5 animate-pulse items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+      {count}
+    </span>
+  );
 }
 
 export function CrmOverflowMenu() {
@@ -36,6 +46,14 @@ export function CrmOverflowMenu() {
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
   const isStaff = Boolean(currentUser.data?.is_staff);
   const isSalaries = isUnder(pathname, "/crm/salaries");
+  const pendingQuery = useRsgePendingCount(isFinanceAdmin);
+  const pendingCount = pendingQuery.data?.count ?? 0;
+  const rsgeHref =
+    pendingQuery.data !== undefined && pendingQuery.data.count > 0
+      ? pendingQuery.data.section === "invoices"
+        ? `/rsge/invoices?month=${pendingQuery.data.month}`
+        : `/rsge?month=${pendingQuery.data.month}`
+      : "/rsge";
 
   const items: MenuItem[] = [
     {
@@ -70,7 +88,7 @@ export function CrmOverflowMenu() {
           },
           {
             key: "rsge",
-            href: "/rsge",
+            href: rsgeHref,
             label: t("rsgeSection"),
             icon: Receipt,
             active: isUnder(pathname, "/rsge"),
@@ -98,55 +116,63 @@ export function CrmOverflowMenu() {
   ];
 
   return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label={t("menu")}
-        aria-expanded={open}
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </Button>
-      {open ? (
-        <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
-                  item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
-                }`}
-                onClick={() => setOpen(false)}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-          <div className="my-1 border-t border-[var(--line)]" />
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
-            onClick={() => {
-              setOpen(false);
-              logout.mutate(undefined, {
-                onSuccess: () => {
-                  window.location.reload();
-                },
-              });
-            }}
-            disabled={logout.isPending}
-          >
-            <LogOut className="h-4 w-4" />
-            {t("signOut")}
-          </button>
-        </div>
-      ) : null}
+    <div className="flex items-center gap-2">
+      <PendingBadge count={pendingCount} />
+      <div className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={t("menu")}
+          aria-expanded={open}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+        {open ? (
+          <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  aria-current={item.active ? "page" : undefined}
+                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
+                    item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                  {item.key === "rsge" && pendingCount > 0 ? (
+                    <span className="ml-auto">
+                      <PendingBadge count={pendingCount} />
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+            <div className="my-1 border-t border-[var(--line)]" />
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
+              onClick={() => {
+                setOpen(false);
+                logout.mutate(undefined, {
+                  onSuccess: () => {
+                    window.location.reload();
+                  },
+                });
+              }}
+              disabled={logout.isPending}
+            >
+              <LogOut className="h-4 w-4" />
+              {t("signOut")}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

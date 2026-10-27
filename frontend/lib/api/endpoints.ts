@@ -28,6 +28,7 @@ import {
   ResolveGoogleAddressResponseSchema,
   ResolveYandexAddressResponseSchema,
   RsInvoiceSchema,
+  RsgePendingCountSchema,
   RsWaybillSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
@@ -86,6 +87,7 @@ import {
   type ProductsPage,
   type PromoValidation,
   type RsInvoice,
+  type RsgePendingCount,
   type RsWaybill,
   type SessionUser,
   type StartPaymentBody,
@@ -285,6 +287,11 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ ref_text: refText }),
       });
       return parse(RsInvoiceSchema, raw);
+    },
+
+    async getRsgePendingCount(): Promise<RsgePendingCount> {
+      const raw = await fetcher<unknown>("/api/rsge/pending-count/");
+      return parse(RsgePendingCountSchema, raw);
     },
 
     async getTechCardCost(

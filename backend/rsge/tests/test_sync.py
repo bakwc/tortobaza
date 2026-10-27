@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import call, patch
 from xml.etree import ElementTree as ET
@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
@@ -747,4 +748,106 @@ class InvoiceApiTests(TestCase):
     def test_staff_without_finance_admin_is_forbidden(self):
         self.client.force_authenticate(self.staff)
         response = self.client.get("/api/rsge/invoices/")
+        self.assertEqual(response.status_code, 403)
+
+
+def pending_waybill(rs_id: int, create_date: datetime, is_confirmed: int) -> Waybill:
+    return Waybill.objects.create(
+        rs_id=rs_id,
+        waybill_number=str(rs_id),
+        type=2,
+        status=1,
+        create_date=create_date,
+        activate_date=create_date,
+        begin_date=create_date,
+        buyer_tin="1",
+        buyer_name="Buyer",
+        seller_tin="2",
+        seller_name="Seller",
+        transport_coast=Decimal("0"),
+        full_amount=Decimal("10"),
+        s_user_id=1,
+        is_confirmed=is_confirmed,
+        is_corrected=0,
+        seller_st=0,
+        is_med=0,
+    )
+
+
+def pending_invoice(rs_id: int, reg_dt: datetime, status: int, was_ref: int) -> Invoice:
+    return Invoice.objects.create(
+        rs_id=rs_id,
+        seller_un_id=1,
+        status=status,
+        was_ref=was_ref,
+        series="ა",
+        number=str(rs_id),
+        reg_dt=reg_dt,
+        operation_dt=reg_dt,
+        s_user_id=0,
+        b_s_user_id=0,
+        seller_tin="1",
+        org_name="Org",
+        amount=Decimal("1"),
+        vat=Decimal("0"),
+        k_id=-1,
+    )
+
+
+def tbilisi_month(moment: datetime) -> str:
+    local = moment.astimezone(TB)
+    return f"{local.year:04d}-{local.month:02d}"
+
+
+class PendingCountApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.staff = User.objects.create_user("boss", password="x", is_staff=True)
+        self.finance = User.objects.create_user("finance", password="x", is_staff=True)
+        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        self.now = timezone.now()
+
+    def test_finance_admin_counts_pending_in_window(self):
+        recent = self.now - timedelta(days=2)
+        older = self.now - timedelta(days=20)
+        stale = self.now - timedelta(days=40)
+        pending_waybill(1, recent, 0)
+        pending_waybill(2, older, 0)
+        pending_waybill(3, recent, 1)
+        pending_waybill(4, stale, 0)
+        pending_invoice(10, recent, 1, 0)
+        pending_invoice(11, recent, 2, 0)
+        pending_invoice(12, recent, 1, 1)
+        pending_invoice(13, stale, 5, 0)
+        pending_invoice(14, recent, 6, 0)
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/pending-count/")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json(),
+            {"count": 4, "section": "waybills", "month": tbilisi_month(older)},
+        )
+
+    def test_invoices_only_points_at_oldest_invoice(self):
+        recent = self.now - timedelta(days=1)
+        older = self.now - timedelta(days=10)
+        pending_invoice(10, recent, 1, 0)
+        pending_invoice(11, older, 5, 0)
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/pending-count/")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json(),
+            {"count": 2, "section": "invoices", "month": tbilisi_month(older)},
+        )
+
+    def test_empty(self):
+        self.client.force_authenticate(self.finance)
+        response = self.client.get("/api/rsge/pending-count/")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json(), {"count": 0, "section": "", "month": ""})
+
+    def test_staff_without_finance_admin_is_forbidden(self):
+        self.client.force_authenticate(self.staff)
+        response = self.client.get("/api/rsge/pending-count/")
         self.assertEqual(response.status_code, 403)

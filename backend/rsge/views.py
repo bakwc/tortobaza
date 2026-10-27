@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -27,6 +27,8 @@ from rsge.serializers import (
 
 _TB = ZoneInfo("Asia/Tbilisi")
 ACCEPT_TARGET = {1: 2, 5: 8, 6: 7}
+PENDING_INVOICE_STATUSES = (1, 5, 6)
+PENDING_WINDOW = timedelta(days=30)
 
 
 def _month_bounds(month: str) -> tuple[datetime, datetime]:
@@ -146,6 +148,33 @@ class InvoiceConfirmView(APIView):
         invoice.agree_date = timezone.now()
         invoice.save(update_fields=["status", "agree_date"])
         return Response(InvoiceSerializer(invoice).data)
+
+
+class PendingCountView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    def get(self, request):
+        cutoff = timezone.now() - PENDING_WINDOW
+        waybills = Waybill.objects.filter(is_confirmed=0, create_date__gte=cutoff)
+        invoices = Invoice.objects.filter(
+            status__in=PENDING_INVOICE_STATUSES,
+            was_ref=0,
+            reg_dt__gte=cutoff,
+        )
+        oldest_waybill = waybills.order_by("create_date").values_list("create_date", flat=True).first()
+        if oldest_waybill is not None:
+            moment = oldest_waybill
+            section = "waybills"
+        else:
+            oldest_invoice = invoices.order_by("reg_dt").values_list("reg_dt", flat=True).first()
+            if oldest_invoice is None:
+                return Response({"count": 0, "section": "", "month": ""})
+            moment = oldest_invoice
+            section = "invoices"
+        local = moment.astimezone(_TB)
+        month = f"{local.year:04d}-{local.month:02d}"
+        return Response({"count": waybills.count() + invoices.count(), "section": section, "month": month})
 
 
 class InvoiceRejectView(APIView):
