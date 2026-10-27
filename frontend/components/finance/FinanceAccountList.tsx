@@ -3,8 +3,10 @@
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronRight, WalletCards } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { useFinanceScope } from "@/hooks/useFinanceScope";
+import { useFinanceTransactionsRange } from "@/hooks/useFinanceTransactions";
 import type { FinanceTransaction } from "@/lib/api/types";
-import { formatAed, toGel } from "@/lib/format";
+import { formatAed, getTbilisiTodayIsoDate, toGel } from "@/lib/format";
 
 type AccountSummary = {
   id: number;
@@ -14,8 +16,43 @@ type AccountSummary = {
   deltaCents: number;
 };
 
+const SPEND_WINDOWS = [7, 30, 60] as const;
+
+type SpendWindow = (typeof SPEND_WINDOWS)[number];
+
 function gelCents(tx: FinanceTransaction, rates: Record<string, string>): number {
   return Math.round(toGel(tx.amount, tx.account.currency, rates) * 100);
+}
+
+function isoDateMinusDays(iso: string, days: number): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function spendByAccount(
+  transactions: FinanceTransaction[],
+  rates: Record<string, string>,
+  today: string,
+): Map<number, Record<SpendWindow, number>> {
+  const cuts: Record<SpendWindow, string> = {
+    7: isoDateMinusDays(today, 7),
+    30: isoDateMinusDays(today, 30),
+    60: isoDateMinusDays(today, 60),
+  };
+  const byId = new Map<number, Record<SpendWindow, number>>();
+  for (const tx of transactions) {
+    const cents = gelCents(tx, rates);
+    if (cents >= 0) continue;
+    const spent = -cents;
+    const row = byId.get(tx.account.id) ?? { 7: 0, 30: 0, 60: 0 };
+    if (tx.date >= cuts[60]) row[60] += spent;
+    if (tx.date >= cuts[30]) row[30] += spent;
+    if (tx.date >= cuts[7]) row[7] += spent;
+    byId.set(tx.account.id, row);
+  }
+  return byId;
 }
 
 function summarize(transactions: FinanceTransaction[], rates: Record<string, string>): AccountSummary[] {
@@ -53,19 +90,27 @@ export function FinanceAccountList({
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
+  const { scope } = useFinanceScope();
+  const today = getTbilisiTodayIsoDate();
+  const range = useFinanceTransactionsRange(isoDateMinusDays(today, 60), today, scope);
 
   if (transactions.length === 0) {
     return (
-      <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
-        {t("empty")}
-      </div>
+      <>
+        {range.isError ? <p className="text-sm text-[var(--danger)]">{t("loadError")}</p> : null}
+        <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
+          {t("empty")}
+        </div>
+      </>
     );
   }
 
   const accounts = summarize(transactions, rates).sort((a, b) => a.name.localeCompare(b.name, locale));
+  const spend = range.data ? spendByAccount(range.data.transactions, rates, today) : null;
 
   return (
     <div className="grid gap-2">
+      {range.isError ? <p className="text-sm text-[var(--danger)]">{t("loadError")}</p> : null}
       {accounts.map((account) => {
         const delta = account.deltaCents / 100;
         const deltaClass =
@@ -86,6 +131,18 @@ export function FinanceAccountList({
                 <span className="truncate text-sm font-semibold text-[var(--ink)]">{account.name}</span>
                 <span className={`shrink-0 text-sm font-bold ${deltaClass}`}>{deltaLabel}</span>
               </span>
+              {spend ? (
+                <span className="mt-1 flex justify-center gap-3">
+                  {SPEND_WINDOWS.map((days) => (
+                    <span key={days} className="flex flex-col items-center leading-tight">
+                      <span className="text-[10px] font-semibold text-[var(--ink)]">
+                        {formatAed((spend.get(account.id)?.[days] ?? 0) / 100)}
+                      </span>
+                      <span className="text-[10px] text-[var(--muted-2)]">{t("spendDays", { days })}</span>
+                    </span>
+                  ))}
+                </span>
+              ) : null}
               {account.plusCents !== 0 || account.minusCents !== 0 ? (
                 <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5">
                   {account.plusCents !== 0 ? (

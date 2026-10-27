@@ -520,6 +520,7 @@
     "nextMonth": "Следующий месяц",
     "thisMonth": "Этот месяц",
     "jumpToThisMonth": "К текущему месяцу",
+    "spendDays": "{days} дней",
     "total": "Итого",
     "inflow": "Приход",
     "outflow": "Уход",

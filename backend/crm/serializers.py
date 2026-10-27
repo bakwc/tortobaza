@@ -721,10 +721,21 @@ class CrmSalariesSerializer(serializers.Serializer):
 class FinanceTransactionsQuerySerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
+    start = serializers.DateField(required=False)
+    end = serializers.DateField(required=False)
 
     def validate(self, attrs):
-        if attrs.get("date") is not None and attrs.get("month") is not None:
-            raise serializers.ValidationError("Pass either date or month, not both.")
+        has_date = attrs.get("date") is not None
+        has_month = attrs.get("month") is not None
+        has_start = attrs.get("start") is not None
+        has_end = attrs.get("end") is not None
+        if has_start != has_end:
+            raise serializers.ValidationError("Pass both start and end.")
+        modes = sum([has_date, has_month, has_start])
+        if modes > 1:
+            raise serializers.ValidationError("Pass either date, month, or start and end.")
+        if has_start and attrs["start"] > attrs["end"]:
+            raise serializers.ValidationError("start must be on or before end.")
         return attrs
 
 

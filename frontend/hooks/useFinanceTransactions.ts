@@ -19,6 +19,14 @@ export function useFinanceTransactions(period: FinancePeriod, scope: FinanceScop
   });
 }
 
+export function useFinanceTransactionsRange(start: string, end: string, scope: FinanceScope) {
+  return useQuery<FinanceTransactionsResponse>({
+    queryKey: ["finance-transactions", scope, "range", start, end] as const,
+    queryFn: () => api.getFinanceTransactionsByRange(start, end, scope),
+    staleTime: 0,
+  });
+}
+
 export function useFinanceAccounts(enabled: boolean, scope: FinanceScope) {
   return useQuery<FinanceAccount[]>({
     queryKey: ["finance-accounts", scope] as const,

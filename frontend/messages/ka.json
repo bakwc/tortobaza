@@ -520,6 +520,7 @@
     "nextMonth": "შემდეგი თვე",
     "thisMonth": "ეს თვე",
     "jumpToThisMonth": "მიმდინარე თვეზე",
+    "spendDays": "{days} დღე",
     "total": "სულ",
     "inflow": "შემოსავალი",
     "outflow": "გასავალი",

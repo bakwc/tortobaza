@@ -561,11 +561,16 @@ class FinanceTransactionsView(APIView):
         query_serializer = FinanceTransactionsQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
         month = query_serializer.validated_data.get("month")
+        start = query_serializer.validated_data.get("start")
+        end = query_serializer.validated_data.get("end")
         transactions = FinancialTransaction.objects.select_related(
             "account",
             "matched_transaction__account",
         ).prefetch_related("crm_orders", "waybills", "invoices")
-        if month:
+        if start is not None and end is not None:
+            transactions = transactions.filter(date__gte=start, date__lte=end)
+            payload = {"date": None, "month": None, "transactions": transactions}
+        elif month:
             year_str, month_str = month.split("-")
             year = int(year_str)
             month_num = int(month_str)

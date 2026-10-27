@@ -626,6 +626,17 @@ export function endpoints(fetcher: Fetcher) {
       return parse(FinanceTransactionsResponseSchema, raw);
     },
 
+    async getFinanceTransactionsByRange(
+      start: string,
+      end: string,
+      scope: FinanceScope,
+    ): Promise<FinanceTransactionsResponse> {
+      const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
+        searchParams: { start, end, scope },
+      });
+      return parse(FinanceTransactionsResponseSchema, raw);
+    },
+
     async getFinanceAccounts(scope: FinanceScope): Promise<FinanceAccount[]> {
       const raw = await fetcher<unknown>("/api/crm/finance/accounts/", {
         searchParams: { scope },

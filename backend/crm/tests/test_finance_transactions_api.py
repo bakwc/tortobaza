@@ -222,6 +222,26 @@ class FinanceTransactionsApiTests(TestCase):
         self.assertIsNone(data["transactions"][0]["flowwow_order_number"])
         self.assertEqual(data["transactions"][0]["crm_orders"], [])
 
+    def test_range_filter(self):
+        inside = _tx(
+            self.account,
+            date(2026, 6, 10),
+            Decimal("-40.00"),
+            FinancialTransaction.KIND_EXPENSE,
+        )
+        _tx(self.account, date(2026, 6, 9), Decimal("-5.00"), FinancialTransaction.KIND_EXPENSE)
+        _tx(self.account, date(2026, 6, 20), Decimal("-5.00"), FinancialTransaction.KIND_EXPENSE)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(
+            "/api/crm/finance/transactions/",
+            {"start": "2026-06-10", "end": "2026-06-15"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsNone(data["date"])
+        self.assertIsNone(data["month"])
+        self.assertEqual([row["id"] for row in data["transactions"]], [inside.pk])
+
     def test_flowwow_order_number_and_linked_crm_order(self):
         flowwow = FinancialAccount.objects.create(name="Flowwow", kind=FinancialAccount.KIND_VIRTUAL)
         order = CrmOrder.objects.create(

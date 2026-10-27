@@ -343,7 +343,7 @@ def _crm_fields(item: dict) -> dict:
         (Decimal(product["price"]) * product["count"] for product in products),
         Decimal("0.00"),
     )
-    return {
+    fields = {
         "date": start.date(),
         "time_start": time_start,
         "time_end": time_end,
@@ -360,6 +360,20 @@ def _crm_fields(item: dict) -> dict:
         "is_paid": True,
         "payment_type": CrmOrder.PAYMENT_FLOWWOW,
     }
+    delivery_price = _delivery_price(item)
+    if delivery_price is not None:
+        fields["delivery_price"] = delivery_price
+    return fields
+
+
+def _delivery_price(item: dict) -> Decimal | None:
+    cost_details = item.get("costDetails")
+    if not isinstance(cost_details, dict):
+        return None
+    delivery = cost_details.get("delivery")
+    if not isinstance(delivery, dict) or "value" not in delivery or delivery["value"] is None:
+        return None
+    return Decimal(str(delivery["value"]))
 
 
 def _contact(item: dict) -> str:

@@ -201,6 +201,7 @@ class FlowwowOrderSyncTests(TestCase):
         self.assertEqual(order.weight, "900 грамм")
         self.assertEqual(order.filling, "vanilla with strawberries")
         self.assertEqual(order.cake_price, Decimal("80.00"))
+        self.assertEqual(order.delivery_price, Decimal("0.00"))
         self.assertEqual(order.prepayment, Decimal("80.00"))
         self.assertTrue(order.is_paid)
         self.assertEqual(order.payment_type, CrmOrder.PAYMENT_FLOWWOW)
@@ -217,6 +218,44 @@ class FlowwowOrderSyncTests(TestCase):
         images = list(order.images.order_by("position"))
         self.assertEqual([image.source_url for image in images], [_CAKE_IMAGE, _CARD_IMAGE])
         self.assertEqual(self.image_calls, [_CAKE_IMAGE, _CARD_IMAGE])
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_sets_delivery_price_from_cost_details(self, mock_get, _mock_now):
+        self.items = [
+            _flowwow_order(
+                costDetails={
+                    "delivery": {"name": "Доставка", "value": 249},
+                }
+            )
+        ]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertEqual(order.delivery_price, Decimal("249"))
+        self.assertEqual(order.cake_price, Decimal("80.00"))
+        self.assertEqual(order.prepayment, Decimal("80.00"))
+
+    @patch("crm.flowwow.timezone.now", return_value=_NOW)
+    @patch("crm.flowwow.requests.get")
+    def test_resync_without_cost_details_keeps_delivery_price(self, mock_get, _mock_now):
+        self.items = [
+            _flowwow_order(
+                costDetails={
+                    "delivery": {"name": "Доставка", "value": 249},
+                }
+            )
+        ]
+        mock_get.side_effect = self._get
+        from crm.flowwow import sync_flowwow_orders
+
+        sync_flowwow_orders()
+        self.items = [_flowwow_order()]
+        sync_flowwow_orders()
+        order = CrmOrder.objects.get(flowwow_order_id=25836184)
+        self.assertEqual(order.delivery_price, Decimal("249"))
 
     @patch("crm.flowwow.timezone.now", return_value=_NOW)
     @patch("crm.flowwow.requests.get")

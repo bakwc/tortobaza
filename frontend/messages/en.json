@@ -520,6 +520,7 @@
     "nextMonth": "Next month",
     "thisMonth": "This month",
     "jumpToThisMonth": "Jump to this month",
+    "spendDays": "{days} days",
     "total": "Total",
     "inflow": "Inflow",
     "outflow": "Outflow",
