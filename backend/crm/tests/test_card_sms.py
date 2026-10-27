@@ -26,6 +26,14 @@ USD_HTML = (
     "Purchase: USD50.00<br/>Card:***1996<br/>"
     "FACEBK* D4D8PDAQM4&gt;+35315530550 IE<br/>27.10.2026"
 )
+GASAVLI_HTML = (
+    "gasavali<br/>individualuri mecarme pilipp bakanov<br/>GEL151.20<br/>"
+    "SWEET CHILL<br/>nashti: GEL1,629.34<br/>24/10/2026"
+)
+CHARICXVA_HTML = (
+    "charicxva<br/>individualuri mecarme pilipp bakanov<br/>GEL325.84<br/>"
+    "SWEET CHILL<br/>visgan: LTD WISE PAYMENTS<br/>nashti: GEL1,780.54<br/>23/10/2026"
+)
 
 
 class FakeIMAP:
@@ -110,6 +118,29 @@ class CardSmsTests(TestCase):
         self.assertEqual(usd.card_last4, "1996")
         self.assertEqual(usd.merchant, "FACEBK* D4D8PDAQM4>+35315530550 IE")
         self.assertEqual(usd.sms_date, date(2026, 10, 27))
+        self.assertEqual(gel.kind, CardSmsMessage.KIND_EXPENSE)
+
+    def test_parse_account_operations(self):
+        expense = parse_card_sms(html_to_text(GASAVLI_HTML))
+        self.assertIsNotNone(expense)
+        self.assertEqual(expense.card_last4, "")
+        self.assertEqual(expense.currency, "GEL")
+        self.assertEqual(expense.amount, Decimal("151.20"))
+        self.assertEqual(expense.merchant, "SWEET CHILL")
+        self.assertEqual(expense.sms_date, date(2026, 10, 24))
+        self.assertEqual(expense.kind, CardSmsMessage.KIND_EXPENSE)
+        income = parse_card_sms(html_to_text(CHARICXVA_HTML))
+        self.assertIsNotNone(income)
+        self.assertEqual(income.card_last4, "")
+        self.assertEqual(income.currency, "GEL")
+        self.assertEqual(income.amount, Decimal("325.84"))
+        self.assertEqual(income.merchant, "LTD WISE PAYMENTS")
+        self.assertEqual(income.sms_date, date(2026, 10, 23))
+        self.assertEqual(income.kind, CardSmsMessage.KIND_INCOME)
+        dotted = parse_card_sms(html_to_text(GASAVLI_HTML.replace("24/10/2026", "24.10.2026")))
+        self.assertIsNotNone(dotted)
+        self.assertEqual(dotted.sms_date, date(2026, 10, 24))
+        self.assertEqual(dotted.amount, Decimal("151.20"))
 
     def test_fetch_keeps_recent_exact_subject(self):
         now = datetime(2026, 10, 27, 4, 0, tzinfo=_TB)
@@ -198,6 +229,56 @@ class CardSmsTests(TestCase):
         row = CardSmsMessage.objects.get()
         self.assertEqual(row.status, CardSmsMessage.STATUS_AMBIGUOUS)
         self.assertIsNone(row.transaction_id)
+
+    def test_account_sms_matches_bog_business_gel(self):
+        account = _account("BOG business GEL", "GEL", "", "default")
+        _import(
+            [
+                _message("<out@gmail.com>", GASAVLI_HTML),
+                _message("<in@gmail.com>", CHARICXVA_HTML),
+            ]
+        )
+        rows = _transactions("default")
+        self.assertEqual(len(rows), 2)
+        by_external_id = {row.external_id: row for row in rows}
+        expense = by_external_id["<out@gmail.com>"]
+        income = by_external_id["<in@gmail.com>"]
+        self.assertEqual(expense.account_id, account.pk)
+        self.assertEqual(expense.amount, Decimal("-151.20"))
+        self.assertEqual(expense.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.income_type, "")
+        self.assertEqual(expense.counterparty_name, "SWEET CHILL")
+        self.assertEqual(expense.description, "SWEET CHILL")
+        self.assertEqual(expense.date, date(2026, 10, 24))
+        self.assertEqual(income.account_id, account.pk)
+        self.assertEqual(income.amount, Decimal("325.84"))
+        self.assertEqual(income.kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(income.income_type, FinancialTransaction.INCOME_TRANSFER)
+        self.assertEqual(income.counterparty_name, "LTD WISE PAYMENTS")
+        self.assertEqual(income.description, "LTD WISE PAYMENTS")
+        self.assertEqual(income.date, date(2026, 10, 23))
+        self.assertEqual(_transactions("personal"), [])
+        stored_expense = CardSmsMessage.objects.get(message_id="<out@gmail.com>")
+        stored_income = CardSmsMessage.objects.get(message_id="<in@gmail.com>")
+        self.assertEqual(stored_expense.amount, Decimal("151.20"))
+        self.assertEqual(stored_expense.kind, CardSmsMessage.KIND_EXPENSE)
+        self.assertEqual(stored_expense.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored_expense.finance_db, "default")
+        self.assertEqual(stored_expense.transaction_id, expense.pk)
+        self.assertEqual(stored_income.amount, Decimal("325.84"))
+        self.assertEqual(stored_income.kind, CardSmsMessage.KIND_INCOME)
+        self.assertEqual(stored_income.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored_income.transaction_id, income.pk)
+
+    def test_account_sms_ignores_other_account(self):
+        _account("Business GEL", "GEL", "", "default")
+        _import([_message("<out@gmail.com>", GASAVLI_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        self.assertEqual(_transactions("personal"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_UNMATCHED)
+        self.assertEqual(row.amount, Decimal("151.20"))
+        self.assertEqual(row.kind, CardSmsMessage.KIND_EXPENSE)
 
     def test_unparsed_body_does_not_create_transaction(self):
         _account("Business GEL", "GEL", "3319", "default")

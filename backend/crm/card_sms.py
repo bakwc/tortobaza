@@ -1,6 +1,7 @@
 import calendar
 import imaplib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -38,9 +39,15 @@ _MONTHS = {
     "Nov": 11,
     "Dec": 12,
 }
+BOG_BUSINESS_GEL = "BOG business GEL"
 _PURCHASE_RE = re.compile(r"Purchase:\s*([A-Z]{3})(\d+\.\d{2})")
 _CARD_RE = re.compile(r"Card:\*+(\d{4})")
-_DATE_RE = re.compile(r"(\d{2})\.(\d{2})\.(\d{4})")
+_DATE_RE = re.compile(r"(\d{2})[./](\d{2})[./](\d{4})")
+_OPERATION_RE = re.compile(r"gasavali|charicxva", re.IGNORECASE)
+_ACCOUNT_AMOUNT_RE = re.compile(r"([A-Z]{3})([\d,]+\.\d{2})")
+_DECIMAL_AMOUNT_RE = re.compile(r"\d+\.\d{2}")
+_NASHTI_RE = re.compile(r"nashti:\s*[A-Z]{3}[\d,]+\.\d{2}", re.IGNORECASE)
+_VISGAN_RE = re.compile(r"visgan:\s*(.+)", re.IGNORECASE)
 _INTERNALDATE_RE = re.compile(rb'INTERNALDATE "([^"]+)"')
 
 
@@ -51,6 +58,7 @@ class ParsedCardSms:
     amount: Decimal
     merchant: str
     sms_date: date
+    kind: str
 
 
 @dataclass(frozen=True)
@@ -88,31 +96,17 @@ def parse_card_sms(body: str) -> ParsedCardSms | None:
     lines = [line.strip() for line in body.splitlines() if line.strip() != ""]
     if len(lines) < 3:
         return None
-    purchase = _PURCHASE_RE.fullmatch(lines[0])
-    sms_date = _sms_date(lines[-1])
-    if purchase is None or sms_date is None:
-        return None
-    card_index = _card_index(lines)
-    if card_index is None or card_index == 0 or card_index == len(lines) - 1:
-        return None
-    card_match = _CARD_RE.fullmatch(lines[card_index])
-    merchant_lines = _merchant_lines(lines[card_index + 1 : -1])
-    if card_match is None or len(merchant_lines) == 0:
-        return None
-    amount = Decimal(purchase.group(2)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return ParsedCardSms(
-        card_last4=card_match.group(1),
-        currency=purchase.group(1),
-        amount=amount,
-        merchant=" ".join(merchant_lines),
-        sms_date=sms_date,
-    )
+    purchase = _parse_purchase(lines)
+    if purchase is not None:
+        return purchase
+    return _parse_account_operation(lines)
 
 
 def import_card_sms() -> None:
     now = timezone.now()
     for item in fetch_recent_test_messages(now):
         _store_message(item)
+    _parse_unparsed()
     _match_pending()
 
 
@@ -145,16 +139,7 @@ def _store_message(item: InboxMessage) -> None:
     )
     if not created:
         return
-    parsed = parse_card_sms(item.body)
-    if parsed is None:
-        return
-    row.card_last4 = parsed.card_last4
-    row.currency = parsed.currency
-    row.amount = parsed.amount
-    row.merchant = parsed.merchant
-    row.sms_date = parsed.sms_date
-    row.status = CardSmsMessage.STATUS_UNMATCHED
-    row.save()
+    _apply_parsed(row, item.body)
 
 
 def _match_pending() -> None:
@@ -168,7 +153,10 @@ def _match_pending() -> None:
 
 
 def _match_row(row: CardSmsMessage) -> None:
-    found = _matching_accounts(row.card_last4, row.currency)
+    if row.card_last4 == "":
+        found = _matching_named_accounts(BOG_BUSINESS_GEL, row.currency)
+    else:
+        found = _matching_accounts(row.card_last4, row.currency)
     if len(found) == 0:
         row.status = CardSmsMessage.STATUS_UNMATCHED
         row.finance_db = ""
@@ -182,7 +170,7 @@ def _match_row(row: CardSmsMessage) -> None:
         row.save()
         return
     alias, account_id = found[0]
-    row.transaction_id = _insert_expense(alias, account_id, row)
+    row.transaction_id = _insert_transaction(alias, account_id, row)
     row.finance_db = alias
     row.status = CardSmsMessage.STATUS_INSERTED
     row.save()
@@ -202,7 +190,7 @@ def _cards_of(account: FinancialAccount) -> set[str]:
     return {part.strip() for part in account.cards.split(",") if part.strip() != ""}
 
 
-def _insert_expense(alias: str, account_id: int, row: CardSmsMessage) -> int:
+def _insert_transaction(alias: str, account_id: int, row: CardSmsMessage) -> int:
     with use_finance_db(alias):
         with transaction.atomic(using=alias):
             if row.transaction_id is not None:
@@ -219,16 +207,26 @@ def _insert_expense(alias: str, account_id: int, row: CardSmsMessage) -> int:
             if existing is not None:
                 return existing.pk
             account = FinancialAccount.objects.get(pk=account_id)
+            if row.kind == CardSmsMessage.KIND_INCOME:
+                amount = row.amount
+                kind = FinancialTransaction.KIND_INCOME
+                income_type = FinancialTransaction.INCOME_TRANSFER
+            else:
+                amount = -row.amount
+                kind = FinancialTransaction.KIND_EXPENSE
+                income_type = ""
             created = FinancialTransaction(
                 account=account,
                 date=row.sms_date,
-                amount=-row.amount,
-                kind=FinancialTransaction.KIND_EXPENSE,
+                amount=amount,
+                kind=kind,
+                income_type=income_type,
                 counterparty_name=row.merchant,
                 description=row.merchant,
                 external_id=row.message_id,
             )
-            assign_expense_types([created])
+            if kind == FinancialTransaction.KIND_EXPENSE:
+                assign_expense_types([created])
             created.save()
             return created.pk
 
@@ -318,6 +316,129 @@ def _header_text(message: Message, name: str) -> str:
         else:
             chunks.append(part)
     return "".join(chunks).strip()
+
+
+def _parse_purchase(lines: list[str]) -> ParsedCardSms | None:
+    purchase = _PURCHASE_RE.fullmatch(lines[0])
+    sms_date = _sms_date(lines[-1])
+    if purchase is None or sms_date is None:
+        return None
+    card_index = _card_index(lines)
+    if card_index is None or card_index == 0 or card_index == len(lines) - 1:
+        return None
+    card_match = _CARD_RE.fullmatch(lines[card_index])
+    merchant_lines = _merchant_lines(lines[card_index + 1 : -1])
+    if card_match is None or len(merchant_lines) == 0:
+        return None
+    amount = Decimal(purchase.group(2)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return ParsedCardSms(
+        card_last4=card_match.group(1),
+        currency=purchase.group(1),
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_EXPENSE,
+    )
+
+
+def _parse_account_operation(lines: list[str]) -> ParsedCardSms | None:
+    operation = _OPERATION_RE.fullmatch(lines[0])
+    sms_date = _sms_date(lines[-1])
+    if operation is None or sms_date is None:
+        return None
+    amount_index = _single_index(lines, _account_amount_line)
+    balance_index = _single_index(lines, _NASHTI_RE.fullmatch)
+    if amount_index is None or balance_index is None:
+        return None
+    if amount_index < 2 or balance_index <= amount_index or balance_index >= len(lines) - 1:
+        return None
+    parsed_amount = _account_amount(lines[amount_index])
+    merchant = _account_merchant(lines[amount_index + 1 : balance_index])
+    if parsed_amount is None or merchant is None:
+        return None
+    currency, amount = parsed_amount
+    if operation.group(0).lower() == "charicxva":
+        kind = CardSmsMessage.KIND_INCOME
+    else:
+        kind = CardSmsMessage.KIND_EXPENSE
+    return ParsedCardSms(
+        card_last4="",
+        currency=currency,
+        amount=amount,
+        merchant=merchant,
+        sms_date=sms_date,
+        kind=kind,
+    )
+
+
+def _parse_unparsed() -> None:
+    pending = list(CardSmsMessage.objects.filter(status=CardSmsMessage.STATUS_UNPARSED))
+    for row in pending:
+        _apply_parsed(row, row.raw_body)
+
+
+def _apply_parsed(row: CardSmsMessage, body: str) -> None:
+    parsed = parse_card_sms(body)
+    if parsed is None:
+        return
+    row.card_last4 = parsed.card_last4
+    row.currency = parsed.currency
+    row.amount = parsed.amount
+    row.merchant = parsed.merchant
+    row.sms_date = parsed.sms_date
+    row.kind = parsed.kind
+    row.status = CardSmsMessage.STATUS_UNMATCHED
+    row.save()
+
+
+def _matching_named_accounts(name: str, currency: str) -> list[tuple[str, int]]:
+    found: list[tuple[str, int]] = []
+    for alias in _FINANCE_DBS:
+        with use_finance_db(alias):
+            for account in FinancialAccount.objects.filter(name=name, currency=currency):
+                found.append((alias, account.pk))
+    return found
+
+
+def _account_amount_line(line: str) -> bool:
+    return _account_amount(line) is not None
+
+
+def _account_amount(line: str) -> tuple[str, Decimal] | None:
+    match = _ACCOUNT_AMOUNT_RE.fullmatch(line)
+    if match is None:
+        return None
+    raw = match.group(2).replace(",", "")
+    if _DECIMAL_AMOUNT_RE.fullmatch(raw) is None:
+        return None
+    amount = Decimal(raw).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return match.group(1), amount
+
+
+def _account_merchant(lines: list[str]) -> str | None:
+    visgan: list[str] = []
+    details: list[str] = []
+    for line in lines:
+        match = _VISGAN_RE.fullmatch(line)
+        if match is None:
+            details.append(line)
+            continue
+        name = match.group(1).strip()
+        if name == "":
+            return None
+        visgan.append(name)
+    if len(visgan) == 1:
+        return visgan[0]
+    if len(visgan) == 0 and len(details) > 0:
+        return " ".join(details)
+    return None
+
+
+def _single_index(lines: list[str], matches: Callable[[str], object]) -> int | None:
+    found = [index for index, line in enumerate(lines) if matches(line)]
+    if len(found) != 1:
+        return None
+    return found[0]
 
 
 def _sms_date(line: str) -> date | None:

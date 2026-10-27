@@ -565,6 +565,12 @@ class CardSmsMessage(models.Model):
         (STATUS_AMBIGUOUS, _("Ambiguous")),
         (STATUS_INSERTED, _("Inserted")),
     ]
+    KIND_EXPENSE = "expense"
+    KIND_INCOME = "income"
+    KIND_CHOICES = [
+        (KIND_EXPENSE, _("Expense")),
+        (KIND_INCOME, _("Income")),
+    ]
 
     message_id = models.CharField(max_length=512, unique=True, verbose_name=_("Message id"))
     received_at = models.DateTimeField(verbose_name=_("Received at"))
@@ -577,6 +583,12 @@ class CardSmsMessage(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Amount"),
+    )
+    kind = models.CharField(
+        max_length=20,
+        choices=KIND_CHOICES,
+        default=KIND_EXPENSE,
+        verbose_name=_("Kind"),
     )
     merchant = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Merchant"))
     sms_date = models.DateField(null=True, blank=True, verbose_name=_("SMS date"))
