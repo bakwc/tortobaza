@@ -25,7 +25,9 @@ export function SiteChrome({
     pathname === "/rsge" ||
     pathname.startsWith("/rsge/") ||
     pathname === "/analytics" ||
-    pathname.startsWith("/analytics/");
+    pathname.startsWith("/analytics/") ||
+    pathname === "/history" ||
+    pathname.startsWith("/history/");
 
   return (
     <>

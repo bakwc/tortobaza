@@ -80,13 +80,6 @@ export function CrmOverflowMenu() {
             active: isUnder(pathname, "/finance"),
           },
           {
-            key: "history",
-            href: "/history",
-            label: t("historySection"),
-            icon: History,
-            active: isUnder(pathname, "/history"),
-          },
-          {
             key: "salaries",
             href: salariesHref,
             label: t("salaries"),
@@ -117,6 +110,17 @@ export function CrmOverflowMenu() {
             label: t("inventorySection"),
             icon: Warehouse,
             active: isUnder(pathname, "/inventory"),
+          },
+        ]
+      : []),
+    ...(isFinanceAdmin
+      ? [
+          {
+            key: "history",
+            href: "/history",
+            label: t("historySection"),
+            icon: History,
+            active: isUnder(pathname, "/history"),
           },
         ]
       : []),
