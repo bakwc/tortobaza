@@ -443,6 +443,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         return urls + super().get_urls()
 
     def apply_rules_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_change_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -451,7 +452,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                 request,
                 _("Categorized %(count)s transactions.") % {"count": categorized},
             )
-            return redirect("admin:crm_financialtransaction_changelist")
+            return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         context = {
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
@@ -464,6 +465,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         )
 
     def upload_bog_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_add_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -478,7 +480,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                         _("Imported %(created)s, skipped %(skipped)s duplicates.")
                         % {"created": result.created, "skipped": result.skipped},
                     )
-                    return redirect("admin:crm_financialtransaction_changelist")
+                    return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         else:
             form = BogStatementUploadForm()
         context = {
@@ -494,6 +496,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         )
 
     def upload_bog_personal_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_add_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -508,7 +511,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                         _("Imported %(created)s, skipped %(skipped)s duplicates.")
                         % {"created": result.created, "skipped": result.skipped},
                     )
-                    return redirect("admin:crm_financialtransaction_changelist")
+                    return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         else:
             form = BogStatementUploadForm()
         context = {
@@ -524,6 +527,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         )
 
     def upload_liberty_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_add_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -538,7 +542,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                         _("Imported %(created)s, skipped %(skipped)s duplicates.")
                         % {"created": result.created, "skipped": result.skipped},
                     )
-                    return redirect("admin:crm_financialtransaction_changelist")
+                    return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         else:
             form = BogStatementUploadForm()
         context = {
@@ -554,6 +558,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         )
 
     def upload_flowwow_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_add_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -568,7 +573,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                         _("Imported %(created)s, skipped %(skipped)s duplicates.")
                         % {"created": result.created, "skipped": result.skipped},
                     )
-                    return redirect("admin:crm_financialtransaction_changelist")
+                    return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         else:
             form = BogStatementUploadForm()
         context = {
@@ -584,6 +589,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
         )
 
     def upload_tbc_view(self, request):
+        request.current_app = self.admin_site.name
         if not self.has_add_permission(request):
             raise PermissionDenied
         if request.method == "POST":
@@ -598,7 +604,7 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
                         _("Imported %(created)s, skipped %(skipped)s duplicates.")
                         % {"created": result.created, "skipped": result.skipped},
                     )
-                    return redirect("admin:crm_financialtransaction_changelist")
+                    return redirect(f"{self.admin_site.name}:crm_financialtransaction_changelist")
         else:
             form = BogStatementUploadForm()
         context = {
@@ -612,3 +618,29 @@ class FinancialTransactionAdmin(admin.ModelAdmin):
             "admin/crm/financialtransaction/upload_bog.html",
             context,
         )
+
+
+class PersonalFinancialTransactionAdmin(FinancialTransactionAdmin):
+    list_display = [
+        "date",
+        "account",
+        "amount",
+        "kind",
+        "income_type",
+        "expense_type",
+        "matched_transaction",
+    ]
+    autocomplete_fields = ["account", "matched_transaction"]
+    exclude = ["crm_orders", "waybills", "invoices"]
+
+
+class PersonalAdminSite(admin.AdminSite):
+    site_header = _("Personal finance")
+    site_title = _("Personal finance")
+    index_title = _("Personal finance")
+
+
+personal_admin_site = PersonalAdminSite(name="personal_admin")
+personal_admin_site.register(FinancialAccount, FinancialAccountAdmin)
+personal_admin_site.register(FinancialTransactionRule, FinancialTransactionRuleAdmin)
+personal_admin_site.register(FinancialTransaction, PersonalFinancialTransactionAdmin)

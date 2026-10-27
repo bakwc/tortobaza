@@ -11,6 +11,7 @@ from openpyxl import load_workbook
 from crm.bog_statement import column_value, decimal_amount, is_filled, text_value
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
+from tortobaza.finance_db import current_finance_db
 
 ACCOUNT_NAME = "Flowwow"
 COUNTERPARTY_NAME = "Flowwow"
@@ -77,7 +78,7 @@ def import_flowwow_statement(file) -> FlowwowStatementImportResult:
     account = accounts[0]
 
     external_ids = [row.external_id for row in rows]
-    with transaction.atomic():
+    with transaction.atomic(using=current_finance_db()):
         existing = set(
             FinancialTransaction.objects.filter(
                 account=account,

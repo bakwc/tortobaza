@@ -8,6 +8,7 @@ from openpyxl import load_workbook
 
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
+from tortobaza.finance_db import current_finance_db
 
 SHEET_NAME = "Statement of Account"
 REQUIRED_COLUMNS = (
@@ -72,7 +73,7 @@ def import_bog_statement(file) -> BogStatementImportResult:
 
     external_ids = [row.external_id for row in rows]
     account_ids = [account.id for account in accounts.values()]
-    with transaction.atomic():
+    with transaction.atomic(using=current_finance_db()):
         existing = set(
             FinancialTransaction.objects.filter(
                 account_id__in=account_ids,

@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 from crm.bog_statement import column_value, decimal_amount, is_filled, parse_date, text_value
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
+from tortobaza.finance_db import current_finance_db
 
 SHEET_NAME = "Операции"
 BANK_NAME = "TBC"
@@ -65,7 +66,7 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
     account = accounts[0]
 
     external_ids = [row.external_id for row in rows]
-    with transaction.atomic():
+    with transaction.atomic(using=current_finance_db()):
         existing = {
             item.external_id: item
             for item in FinancialTransaction.objects.filter(

@@ -505,6 +505,8 @@
     "income": "Income",
     "expenses": "Expenses",
     "accounts": "Accounts",
+    "business": "Business",
+    "personal": "Personal",
     "plus": "Plus",
     "minus": "Minus",
     "balanceChange": "Balance change",

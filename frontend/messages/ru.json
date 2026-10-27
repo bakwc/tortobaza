@@ -505,6 +505,8 @@
     "income": "Доходы",
     "expenses": "Расходы",
     "accounts": "Счета",
+    "business": "Бизнес",
+    "personal": "Личные",
     "plus": "Плюс",
     "minus": "Минус",
     "balanceChange": "Изменение баланса",

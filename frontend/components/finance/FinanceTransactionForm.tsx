@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { useFinanceScope } from "@/hooks/useFinanceScope";
 import {
   useCreateFinanceTransaction,
   useDeleteFinanceTransaction,
@@ -155,7 +156,8 @@ export function FinanceTransactionForm({
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
-  const accountsQuery = useFinanceAccounts(open);
+  const { scope } = useFinanceScope();
+  const accountsQuery = useFinanceAccounts(open, scope);
   const [fields, setFields] = useState<Fields>(() => initialFields(transaction));
   const [selectedMatch, setSelectedMatch] = useState<FinanceTransactionSearchResult | null>(() =>
     transaction !== null && transaction.kind === "transfer" ? transaction.matched_transaction : null,
@@ -164,10 +166,10 @@ export function FinanceTransactionForm({
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [counterpartTouched, setCounterpartTouched] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const searchQuery = useFinanceTransactionSearch(submittedQuery);
-  const createMutation = useCreateFinanceTransaction();
-  const updateMutation = useUpdateFinanceTransaction();
-  const deleteMutation = useDeleteFinanceTransaction();
+  const searchQuery = useFinanceTransactionSearch(submittedQuery, scope);
+  const createMutation = useCreateFinanceTransaction(scope);
+  const updateMutation = useUpdateFinanceTransaction(scope);
+  const deleteMutation = useDeleteFinanceTransaction(scope);
   const pending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   function setKind(kind: FinanceTransaction["kind"]) {

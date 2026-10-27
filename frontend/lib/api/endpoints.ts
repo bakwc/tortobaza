@@ -200,6 +200,8 @@ function resource<T, B>(fetcher: Fetcher, path: string, schema: z.ZodType<T>) {
 
 export type Resource<T, B> = ReturnType<typeof resource<T, B>>;
 
+export type FinanceScope = "business" | "personal";
+
 export function endpoints(fetcher: Fetcher) {
   return {
     menuIngredientCategories: resource<IngredientCategory, IngredientCategoryBody>(
@@ -597,35 +599,50 @@ export function endpoints(fetcher: Fetcher) {
       return parse(AnalyticsProductsSchema, raw);
     },
 
-    async getFinanceTransactions(date: string): Promise<FinanceTransactionsResponse> {
+    async getFinanceTransactions(
+      date: string,
+      scope: FinanceScope,
+    ): Promise<FinanceTransactionsResponse> {
       const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
-        searchParams: { date },
+        searchParams: { date, scope },
       });
       return parse(FinanceTransactionsResponseSchema, raw);
     },
 
-    async getFinanceTransactionsByMonth(month: string): Promise<FinanceTransactionsResponse> {
+    async getFinanceTransactionsByMonth(
+      month: string,
+      scope: FinanceScope,
+    ): Promise<FinanceTransactionsResponse> {
       const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
-        searchParams: { month },
+        searchParams: { month, scope },
       });
       return parse(FinanceTransactionsResponseSchema, raw);
     },
 
-    async getFinanceAccounts(): Promise<FinanceAccount[]> {
-      const raw = await fetcher<unknown>("/api/crm/finance/accounts/");
+    async getFinanceAccounts(scope: FinanceScope): Promise<FinanceAccount[]> {
+      const raw = await fetcher<unknown>("/api/crm/finance/accounts/", {
+        searchParams: { scope },
+      });
       return parse(z.array(FinanceAccountSchema), raw);
     },
 
-    async searchFinanceTransactions(q: string): Promise<FinanceTransactionSearchResult[]> {
+    async searchFinanceTransactions(
+      q: string,
+      scope: FinanceScope,
+    ): Promise<FinanceTransactionSearchResult[]> {
       const raw = await fetcher<unknown>("/api/crm/finance/transactions/search/", {
-        searchParams: { q },
+        searchParams: { q, scope },
       });
       return parse(z.array(FinanceTransactionSearchResultSchema), raw);
     },
 
-    async createFinanceTransaction(body: FinanceTransactionWriteBody): Promise<FinanceTransaction> {
+    async createFinanceTransaction(
+      body: FinanceTransactionWriteBody,
+      scope: FinanceScope,
+    ): Promise<FinanceTransaction> {
       const raw = await fetcher<unknown>("/api/crm/finance/transactions/", {
         method: "POST",
+        searchParams: { scope },
         body: JSON.stringify(body),
       });
       return parse(FinanceTransactionSchema, raw);
@@ -634,16 +651,21 @@ export function endpoints(fetcher: Fetcher) {
     async updateFinanceTransaction(
       id: number,
       body: FinanceTransactionWriteBody,
+      scope: FinanceScope,
     ): Promise<FinanceTransaction> {
       const raw = await fetcher<unknown>(`/api/crm/finance/transactions/${id}/`, {
         method: "PUT",
+        searchParams: { scope },
         body: JSON.stringify(body),
       });
       return parse(FinanceTransactionSchema, raw);
     },
 
-    async deleteFinanceTransaction(id: number): Promise<void> {
-      await fetcher<void>(`/api/crm/finance/transactions/${id}/`, { method: "DELETE" });
+    async deleteFinanceTransaction(id: number, scope: FinanceScope): Promise<void> {
+      await fetcher<void>(`/api/crm/finance/transactions/${id}/`, {
+        method: "DELETE",
+        searchParams: { scope },
+      });
     },
 
     async getExchangeRates(): Promise<ExchangeRates> {

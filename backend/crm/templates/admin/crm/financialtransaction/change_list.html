@@ -1,24 +1,24 @@
 {% extends "admin/change_list.html" %}
-{% load i18n %}
+{% load i18n admin_urls %}
 
 {% block object-tools-items %}
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_apply_rules' %}">{% trans "Apply rules to the entire database" %}</a>
+  <a href="{% url opts|admin_urlname:'apply_rules' %}">{% trans "Apply rules to the entire database" %}</a>
 </li>
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_upload_bog' %}">{% trans "Upload Bank of Georgia statement" %}</a>
+  <a href="{% url opts|admin_urlname:'upload_bog' %}">{% trans "Upload Bank of Georgia statement" %}</a>
 </li>
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_upload_bog_personal' %}">{% trans "Upload Bank of Georgia personal statement" %}</a>
+  <a href="{% url opts|admin_urlname:'upload_bog_personal' %}">{% trans "Upload Bank of Georgia personal statement" %}</a>
 </li>
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_upload_liberty' %}">{% trans "Upload Liberty statement" %}</a>
+  <a href="{% url opts|admin_urlname:'upload_liberty' %}">{% trans "Upload Liberty statement" %}</a>
 </li>
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_upload_flowwow' %}">{% trans "Upload Flowwow statement" %}</a>
+  <a href="{% url opts|admin_urlname:'upload_flowwow' %}">{% trans "Upload Flowwow statement" %}</a>
 </li>
 <li>
-  <a href="{% url 'admin:crm_financialtransaction_upload_tbc' %}">{% trans "Upload TBC statement" %}</a>
+  <a href="{% url opts|admin_urlname:'upload_tbc' %}">{% trans "Upload TBC statement" %}</a>
 </li>
 {{ block.super }}
 {% endblock %}

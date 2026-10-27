@@ -17,10 +17,20 @@ def backup_database(now: datetime) -> None:
     local = now.astimezone(_TB)
     if local.time() < _BACKUP_AT:
         return
-    destination = Path(directory) / f"db-{local.date().isoformat()}.sqlite3"
+    date_label = local.date().isoformat()
+    _copy_database(
+        Path(settings.DATABASES["default"]["NAME"]),
+        Path(directory) / f"db-{date_label}.sqlite3",
+    )
+    _copy_database(
+        Path(settings.DATABASES["personal"]["NAME"]),
+        Path(directory) / f"personal-{date_label}.sqlite3",
+    )
+
+
+def _copy_database(source: Path, destination: Path) -> None:
     if destination.exists():
         return
-    source = Path(settings.DATABASES["default"]["NAME"])
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(".sqlite3.tmp")
     shutil.copy2(source, temporary)

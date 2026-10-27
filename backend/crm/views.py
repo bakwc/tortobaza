@@ -80,6 +80,7 @@ from crm.yandex_maps import resolve_yandex_maps_url
 from inventory.services import sync_order_write_off
 from menu.recipes import expand_order_item, needs_cost
 from orders.paypal import paypal_enabled
+from tortobaza.finance_db import current_finance_db
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -581,7 +582,7 @@ class FinanceTransactionsView(APIView):
     def post(self, request):
         serializer = FinanceTransactionWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
+        with transaction.atomic(using=current_finance_db()):
             tx = create_manual_transaction(serializer.validated_data)
         return Response(
             FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data,
@@ -600,13 +601,13 @@ class FinanceTransactionDetailView(APIView):
             context={"transaction_id": tx.pk},
         )
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
+        with transaction.atomic(using=current_finance_db()):
             tx = update_manual_transaction(tx, serializer.validated_data)
         return Response(FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data)
 
     def delete(self, request, pk: int):
         tx = get_object_or_404(FinancialTransaction, pk=pk)
-        with transaction.atomic():
+        with transaction.atomic(using=current_finance_db()):
             delete_manual_transaction(tx)
         return Response(status=status.HTTP_204_NO_CONTENT)
 

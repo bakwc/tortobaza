@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 
 poetry install --no-root
 poetry run python manage.py migrate
+poetry run python manage.py migrate --database=personal
 
 for port in 8101 8102; do
   sudo systemctl restart "tortobaza-backend@${port}"

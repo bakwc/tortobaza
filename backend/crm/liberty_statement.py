@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 from crm.bog_statement import decimal_amount, is_filled, parse_date, text_value
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.transaction_rules import assign_expense_types
+from tortobaza.finance_db import current_finance_db
 
 SUMMARY_SHEET = "Summary"
 STATEMENT_SHEET = "account_statement"
@@ -72,7 +73,7 @@ def import_liberty_statement(file) -> LibertyStatementImportResult:
 
     external_ids = [row.external_id for row in rows]
     account_ids = [account.id for account in accounts.values()]
-    with transaction.atomic():
+    with transaction.atomic(using=current_finance_db()):
         existing = set(
             FinancialTransaction.objects.filter(
                 account_id__in=account_ids,

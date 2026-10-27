@@ -16,38 +16,57 @@ class BackupDatabaseTests(SimpleTestCase):
         with TemporaryDirectory() as source_dir, TemporaryDirectory() as backup_dir:
             source = Path(source_dir) / "db.sqlite3"
             source.write_bytes(b"sqlite")
-            self._backup(source, backup_dir, datetime(2026, 10, 26, 4, 59, tzinfo=_TB))
+            self._backup(
+                source,
+                source,
+                backup_dir,
+                datetime(2026, 10, 26, 4, 59, tzinfo=_TB),
+            )
             self.assertEqual(list(Path(backup_dir).iterdir()), [])
 
     def test_at_five_copies_database(self):
         with TemporaryDirectory() as source_dir, TemporaryDirectory() as backup_dir:
             source = Path(source_dir) / "db.sqlite3"
             source.write_bytes(b"sqlite")
-            self._backup(source, backup_dir, datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
+            personal = Path(source_dir) / "personal.sqlite3"
+            personal.write_bytes(b"personal")
+            self._backup(source, personal, backup_dir, datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
             destination = Path(backup_dir) / "db-2026-10-26.sqlite3"
+            personal_destination = Path(backup_dir) / "personal-2026-10-26.sqlite3"
             self.assertEqual(destination.read_bytes(), b"sqlite")
+            self.assertEqual(personal_destination.read_bytes(), b"personal")
             self.assertFalse(destination.with_suffix(".sqlite3.tmp").exists())
+            self.assertFalse(personal_destination.with_suffix(".sqlite3.tmp").exists())
 
     def test_second_call_same_day_does_not_overwrite(self):
         with TemporaryDirectory() as source_dir, TemporaryDirectory() as backup_dir:
             source = Path(source_dir) / "db.sqlite3"
             source.write_bytes(b"sqlite")
-            self._backup(source, backup_dir, datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
+            personal = Path(source_dir) / "personal.sqlite3"
+            personal.write_bytes(b"personal")
+            self._backup(source, personal, backup_dir, datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
             destination = Path(backup_dir) / "db-2026-10-26.sqlite3"
+            personal_destination = Path(backup_dir) / "personal-2026-10-26.sqlite3"
             destination.write_bytes(b"kept")
+            personal_destination.write_bytes(b"kept-personal")
             source.write_bytes(b"changed")
-            self._backup(source, backup_dir, datetime(2026, 10, 26, 12, 0, tzinfo=_TB))
+            personal.write_bytes(b"changed-personal")
+            self._backup(source, personal, backup_dir, datetime(2026, 10, 26, 12, 0, tzinfo=_TB))
             self.assertEqual(destination.read_bytes(), b"kept")
+            self.assertEqual(personal_destination.read_bytes(), b"kept-personal")
 
     def test_empty_backup_dir_does_nothing(self):
         with TemporaryDirectory() as source_dir:
             source = Path(source_dir) / "db.sqlite3"
             source.write_bytes(b"sqlite")
-            self._backup(source, "", datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
+            self._backup(source, source, "", datetime(2026, 10, 26, 5, 0, tzinfo=_TB))
             self.assertEqual(source.read_bytes(), b"sqlite")
 
-    def _backup(self, source: Path, backup_dir: str, now: datetime) -> None:
+    def _backup(self, source: Path, personal: Path, backup_dir: str, now: datetime) -> None:
         with patch("tortobaza.db_backup.settings") as mock_settings:
             mock_settings.DB_BACKUP_DIR = backup_dir
-            mock_settings.DATABASES = {"default": {"NAME": source}}
+            mock_settings.DATABASES = {
+                "default": {"NAME": source},
+                "personal": {"NAME": personal},
+            }
             backup_database(now)

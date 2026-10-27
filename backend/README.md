@@ -24,6 +24,7 @@ REST API for the Tortobaza cake shop. Public catalog, anonymous server-side cart
 cd backend
 poetry install
 poetry run python manage.py migrate
+poetry run python manage.py migrate --database=personal
 poetry run python manage.py createsuperuser
 poetry run python manage.py runserver
 ```

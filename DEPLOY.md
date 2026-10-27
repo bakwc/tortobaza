@@ -84,6 +84,7 @@ The final layout must be exactly:
 cd /home/ubuntu/koding/tortobaza/backend
 poetry install --no-root
 poetry run python manage.py migrate
+poetry run python manage.py migrate --database=personal
 poetry run python manage.py createsuperuser
 ```
 

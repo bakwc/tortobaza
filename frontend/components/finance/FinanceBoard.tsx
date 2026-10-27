@@ -15,7 +15,9 @@ import {
   useFinancePeriod,
   type FinancePeriod,
 } from "@/hooks/useFinancePeriod";
+import { useFinanceScope } from "@/hooks/useFinanceScope";
 import { useFinanceTransactions } from "@/hooks/useFinanceTransactions";
+import type { FinanceScope } from "@/lib/api/endpoints";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
@@ -27,6 +29,20 @@ const SECTIONS: { section: FinanceSection; href: string; label: FinanceSection }
   { section: "expenses", href: "/finance/expenses", label: "expenses" },
   { section: "accounts", href: "/finance/accounts", label: "accounts" },
 ];
+
+const SCOPES: FinanceScope[] = ["business", "personal"];
+
+function sectionHref(
+  href: string,
+  keepQuery: boolean,
+  currentQuery: string,
+  period: FinancePeriod,
+  scope: FinanceScope,
+): string {
+  const params = new URLSearchParams(keepQuery && currentQuery ? currentQuery : period.query);
+  params.set("scope", scope);
+  return `${href}?${params.toString()}`;
+}
 
 export function FinanceBoard({
   section,
@@ -71,8 +87,9 @@ function FinanceBoardContent({
   const locale = useLocale();
   const searchParams = useSearchParams();
   const period = useFinancePeriod();
+  const { scope, setScope } = useFinanceScope();
   const currentQuery = searchParams.toString();
-  const query = useFinanceTransactions(period);
+  const query = useFinanceTransactions(period, scope);
   const ratesQuery = useExchangeRates();
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
@@ -80,17 +97,28 @@ function FinanceBoardContent({
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       <div className="flex min-w-0 items-start justify-between gap-2">
-        <nav className="flex min-w-0 flex-1 flex-wrap gap-2">
-          {SECTIONS.map((item) => (
-            <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
-              <Link
-                href={`${item.href}?${item.section === section && currentQuery ? currentQuery : period.query}`}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <nav className="flex min-w-0 flex-wrap gap-2">
+            {SCOPES.map((item) => (
+              <Button
+                key={item}
+                variant={item === scope ? "primary" : "outline"}
+                onClick={() => setScope(item)}
               >
-                {t(item.label)}
-              </Link>
-            </Button>
-          ))}
-        </nav>
+                {t(item)}
+              </Button>
+            ))}
+          </nav>
+          <nav className="flex min-w-0 flex-wrap gap-2">
+            {SECTIONS.map((item) => (
+              <Button key={item.section} asChild variant={item.section === section ? "primary" : "outline"}>
+                <Link href={sectionHref(item.href, item.section === section, currentQuery, period, scope)}>
+                  {t(item.label)}
+                </Link>
+              </Button>
+            ))}
+          </nav>
+        </div>
         <div className="shrink-0">
           <CrmOverflowMenu />
         </div>

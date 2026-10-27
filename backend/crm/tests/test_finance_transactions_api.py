@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
+from tortobaza.finance_db import use_finance_db
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -37,9 +38,34 @@ def _tx(
     )
 
 
+class _BusinessScopeClient:
+    def __init__(self, client: APIClient):
+        self._client = client
+
+    def force_authenticate(self, user):
+        self._client.force_authenticate(user=user)
+
+    def get(self, path, data=None, **kwargs):
+        params = {"scope": "business"}
+        if data:
+            params.update(data)
+        return self._client.get(path, params, **kwargs)
+
+    def post(self, path, data=None, **kwargs):
+        return self._client.post(f"{path}?scope=business", data, **kwargs)
+
+    def put(self, path, data=None, **kwargs):
+        return self._client.put(f"{path}?scope=business", data, **kwargs)
+
+    def delete(self, path, data=None, **kwargs):
+        return self._client.delete(f"{path}?scope=business", data, **kwargs)
+
+
 class FinanceTransactionsApiTests(TestCase):
+    databases = {"default", "personal"}
+
     def setUp(self):
-        self.client = APIClient()
+        self.client = _BusinessScopeClient(APIClient())
         self.worker = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
@@ -566,3 +592,98 @@ def _body(
         "matched_transaction_id": matched_transaction_id,
         "counterpart": counterpart,
     }
+
+
+class FinanceScopeIsolationTests(TestCase):
+    databases = {"default", "personal"}
+
+    def setUp(self):
+        self.client = APIClient()
+        self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        self.client.force_authenticate(user=self.admin)
+        self.business_account = FinancialAccount.objects.create(
+            name="Business",
+            kind=FinancialAccount.KIND_BANK,
+        )
+        self.business_tx = FinancialTransaction.objects.create(
+            account=self.business_account,
+            date=date(2026, 6, 15),
+            amount=Decimal("9.00"),
+            kind=FinancialTransaction.KIND_INCOME,
+            income_type=FinancialTransaction.INCOME_CASH,
+        )
+        with use_finance_db("personal"):
+            self.personal_account = FinancialAccount.objects.create(
+                name="Personal",
+                kind=FinancialAccount.KIND_CASH,
+            )
+            self.personal_tx = FinancialTransaction.objects.create(
+                account=self.personal_account,
+                date=date(2026, 6, 15),
+                amount=Decimal("5.00"),
+                kind=FinancialTransaction.KIND_EXPENSE,
+                expense_type=FinancialTransaction.EXPENSE_RENT,
+            )
+
+    def test_business_hides_personal(self):
+        response = self.client.get(
+            "/api/crm/finance/transactions/",
+            {"date": "2026-06-15", "scope": "business"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["account"]["name"] for row in response.json()["transactions"]],
+            ["Business"],
+        )
+
+    def test_personal_hides_business(self):
+        response = self.client.get(
+            "/api/crm/finance/transactions/",
+            {"date": "2026-06-15", "scope": "personal"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["account"]["name"] for row in response.json()["transactions"]],
+            ["Personal"],
+        )
+
+    def test_accounts_are_isolated(self):
+        business = self.client.get("/api/crm/finance/accounts/", {"scope": "business"})
+        personal = self.client.get("/api/crm/finance/accounts/", {"scope": "personal"})
+        self.assertEqual(business.status_code, 200)
+        self.assertEqual(personal.status_code, 200)
+        self.assertEqual([row["name"] for row in business.json()], ["Business"])
+        self.assertEqual([row["name"] for row in personal.json()], ["Personal"])
+
+    def test_create_personal_not_visible_in_business(self):
+        response = self.client.post(
+            "/api/crm/finance/transactions/?scope=personal",
+            _body(self.personal_account.pk, "expense", "-3.00", "", "rent", "none", None, None),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        business = self.client.get(
+            "/api/crm/finance/transactions/",
+            {"date": "2026-06-15", "scope": "business"},
+        )
+        personal = self.client.get(
+            "/api/crm/finance/transactions/",
+            {"date": "2026-06-15", "scope": "personal"},
+        )
+        self.assertEqual(
+            [row["amount"] for row in business.json()["transactions"]],
+            ["9.00"],
+        )
+        self.assertEqual(
+            sorted(row["amount"] for row in personal.json()["transactions"]),
+            ["-3.00", "5.00"],
+        )
+
+    def test_missing_scope(self):
+        response = self.client.get("/api/crm/finance/transactions/")
+        self.assertEqual(response.status_code, 400)
+
+    def test_invalid_scope(self):
+        response = self.client.get("/api/crm/finance/transactions/", {"scope": "other"})
+        self.assertEqual(response.status_code, 400)

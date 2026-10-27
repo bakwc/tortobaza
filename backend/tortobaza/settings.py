@@ -53,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "tortobaza.middleware.FinanceScopeMiddleware",
     "tortobaza.middleware.CanLoginMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -83,8 +84,14 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
-    }
+    },
+    "personal": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "personal.sqlite3",
+    },
 }
+
+DATABASE_ROUTERS = ["tortobaza.db_router.FinanceRouter"]
 
 
 AUTH_PASSWORD_VALIDATORS = [
