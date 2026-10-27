@@ -116,63 +116,62 @@ export function CrmOverflowMenu() {
   ];
 
   return (
-    <div className="flex items-center gap-2">
-      <PendingBadge count={pendingCount} />
-      <div className="relative">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          onClick={() => setOpen((prev) => !prev)}
-          aria-label={t("menu")}
-          aria-expanded={open}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-        {open ? (
-          <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-            {items.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  aria-current={item.active ? "page" : undefined}
-                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
-                    item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
-                  }`}
-                  onClick={() => setOpen(false)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                  {item.key === "rsge" && pendingCount > 0 ? (
-                    <span className="ml-auto">
-                      <PendingBadge count={pendingCount} />
-                    </span>
-                  ) : null}
-                </Link>
-              );
-            })}
-            <div className="my-1 border-t border-[var(--line)]" />
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
-              onClick={() => {
-                setOpen(false);
-                logout.mutate(undefined, {
-                  onSuccess: () => {
-                    window.location.reload();
-                  },
-                });
-              }}
-              disabled={logout.isPending}
-            >
-              <LogOut className="h-4 w-4" />
-              {t("signOut")}
-            </button>
-          </div>
-        ) : null}
-      </div>
+    <div className="relative">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label={t("menu")}
+        aria-expanded={open}
+        className={pendingCount > 0 ? "w-auto gap-1.5 px-2.5" : undefined}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+        <PendingBadge count={pendingCount} />
+      </Button>
+      {open ? (
+        <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                aria-current={item.active ? "page" : undefined}
+                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
+                  item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
+                }`}
+                onClick={() => setOpen(false)}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+                {item.key === "rsge" && pendingCount > 0 ? (
+                  <span className="ml-auto">
+                    <PendingBadge count={pendingCount} />
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
+          <div className="my-1 border-t border-[var(--line)]" />
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
+            onClick={() => {
+              setOpen(false);
+              logout.mutate(undefined, {
+                onSuccess: () => {
+                  window.location.reload();
+                },
+              });
+            }}
+            disabled={logout.isPending}
+          >
+            <LogOut className="h-4 w-4" />
+            {t("signOut")}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
