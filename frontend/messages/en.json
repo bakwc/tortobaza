@@ -885,7 +885,12 @@
     "notes": "Notes",
     "waybillBadge": "Waybill",
     "invoiceBadge": "Invoice",
-    "paymentBadge": "Payment"
+    "paymentBadge": "Payment",
+    "createSupply": "Create supply",
+    "supplyCreated": "Supply",
+    "supplyTitle": "Supply from waybill",
+    "skipLine": "Skip",
+    "gramsPerUnit": "Grams per unit"
   },
   "analytics": {
     "overview": "Overview",

@@ -885,7 +885,12 @@
     "notes": "შენიშვნა",
     "waybillBadge": "ზედნადები",
     "invoiceBadge": "ფაქტურა",
-    "paymentBadge": "გადახდა"
+    "paymentBadge": "გადახდა",
+    "createSupply": "მიწოდების შექმნა",
+    "supplyCreated": "მიწოდება",
+    "supplyTitle": "მიწოდება ზედნადებიდან",
+    "skipLine": "არ მივიღოთ",
+    "gramsPerUnit": "გრამი ერთეულში"
   },
   "analytics": {
     "overview": "ზოგადი",

@@ -1,5 +1,8 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 
+from menu.models import Ingredient
 from rsge.models import Invoice, InvoiceLine, Waybill, WaybillGood
 
 
@@ -60,10 +63,36 @@ class LinkedInvoiceSerializer(serializers.ModelSerializer):
         fields = ["id", "series", "number", "amount", "reg_dt"]
 
 
+class WaybillSupplyLineSerializer(serializers.Serializer):
+    good_id = serializers.IntegerField()
+    ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
+    quantity = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        min_value=Decimal("0.001"),
+        allow_null=True,
+    )
+    skipped = serializers.BooleanField()
+
+    def validate(self, attrs):
+        if attrs["skipped"]:
+            if attrs["ingredient"] is not None or attrs["quantity"] is not None:
+                raise serializers.ValidationError("A skipped line has no ingredient or quantity.")
+            return attrs
+        if attrs["ingredient"] is None or attrs["quantity"] is None:
+            raise serializers.ValidationError("Choose an ingredient and a quantity.")
+        return attrs
+
+
+class WaybillSupplyCreateSerializer(serializers.Serializer):
+    lines = WaybillSupplyLineSerializer(many=True)
+
+
 class WaybillSerializer(serializers.ModelSerializer):
     goods = WaybillGoodSerializer(many=True)
     invoices = LinkedInvoiceSerializer(many=True)
     financial_transactions = LinkedTransactionSerializer(many=True)
+    supply_id = serializers.IntegerField(allow_null=True, read_only=True)
 
     class Meta:
         model = Waybill
@@ -108,6 +137,7 @@ class WaybillSerializer(serializers.ModelSerializer):
             "goods",
             "invoices",
             "financial_transactions",
+            "supply_id",
         ]
 
 

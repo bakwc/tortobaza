@@ -183,6 +183,7 @@ export function RsgeDocumentRow({
   onConfirm,
   onReject,
   details,
+  extra,
   columns,
   rowKeys,
   rows,
@@ -197,6 +198,7 @@ export function RsgeDocumentRow({
   onConfirm: (() => void) | null;
   onReject: (() => void) | null;
   details: ReactNode | null;
+  extra: ReactNode;
   columns: RsgeColumn[];
   rowKeys: number[];
   rows: string[][];
@@ -232,6 +234,7 @@ export function RsgeDocumentRow({
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">{chips}</div>
       {details}
       {rows.length > 0 ? <RsgeGoodsTable columns={columns} rowKeys={rowKeys} rows={rows} /> : null}
+      {extra}
       {pending ? (
         <div className="flex justify-end gap-2 border-t border-black/5 pt-3">
           <Button type="button" size="sm" onClick={onConfirm}>

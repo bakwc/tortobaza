@@ -2,14 +2,22 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
+from django.db import transaction
+from django.db.models import OuterRef, Subquery
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crm.views import IsFinanceAdmin
+from inventory.models import Supply
+from inventory.serializers import SupplySerializer
+from inventory.views import supplies_queryset
+from inventory.waybill_supply import create_waybill_supply, supply_draft
+from menu.views import serializer_context
 from rsge.client import (
     call_accept_invoice,
     call_chek,
@@ -23,6 +31,7 @@ from rsge.serializers import (
     InvoiceSerializer,
     MonthQuerySerializer,
     WaybillSerializer,
+    WaybillSupplyCreateSerializer,
 )
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -43,6 +52,12 @@ def _month_bounds(month: str) -> tuple[datetime, datetime]:
     return start, end
 
 
+def waybill_queryset():
+    return Waybill.objects.annotate(
+        supply_id=Subquery(Supply.objects.filter(waybill_id=OuterRef("pk")).values("pk")[:1])
+    ).prefetch_related("goods", "invoices", "financial_transactions")
+
+
 class WaybillListView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, IsFinanceAdmin]
@@ -51,14 +66,7 @@ class WaybillListView(APIView):
         query = MonthQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         start, end = _month_bounds(query.validated_data["month"])
-        waybills = Waybill.objects.prefetch_related(
-            "goods",
-            "invoices",
-            "financial_transactions",
-        ).filter(
-            create_date__gte=start,
-            create_date__lt=end,
-        )
+        waybills = waybill_queryset().filter(create_date__gte=start, create_date__lt=end)
         return Response(WaybillSerializer(waybills, many=True).data)
 
 
@@ -71,10 +79,7 @@ def rs_credentials() -> tuple[str, str]:
 
 
 def waybill_for_decision(pk: int) -> Waybill:
-    return get_object_or_404(
-        Waybill.objects.prefetch_related("goods", "invoices", "financial_transactions"),
-        pk=pk,
-    )
+    return get_object_or_404(waybill_queryset(), pk=pk)
 
 
 class WaybillConfirmView(APIView):
@@ -101,6 +106,30 @@ class WaybillRejectView(APIView):
         waybill.is_confirmed = -1
         waybill.save(update_fields=["is_confirmed"])
         return Response(WaybillSerializer(waybill).data)
+
+
+class WaybillSupplyDraftView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    def post(self, request, pk: int):
+        waybill = waybill_for_decision(pk)
+        return Response(supply_draft(waybill))
+
+
+class WaybillSupplyCreateView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    @transaction.atomic
+    def post(self, request, pk: int):
+        waybill = waybill_for_decision(pk)
+        serializer = WaybillSupplyCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        supply = create_waybill_supply(waybill, serializer.validated_data["lines"], request.user)
+        stored = supplies_queryset().get(pk=supply.pk)
+        payload = SupplySerializer(stored, context=serializer_context(request))
+        return Response(payload.data, status=status.HTTP_201_CREATED)
 
 
 class InvoiceListView(APIView):

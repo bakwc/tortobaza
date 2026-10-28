@@ -19,8 +19,8 @@ from inventory.models import (
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ["name", "phone"]
-    search_fields = ["name", "phone"]
+    list_display = ["name", "tin", "phone"]
+    search_fields = ["name", "tin", "phone"]
 
 
 @admin.register(WriteOffReason)
@@ -53,7 +53,7 @@ class SupplyLineInline(admin.TabularInline):
 class SupplyAdmin(admin.ModelAdmin):
     list_display = ["id", "date", "supplier", "financial_transaction", "created_by"]
     list_filter = ["date", "supplier"]
-    readonly_fields = ["date", "supplier", "financial_transaction", "comment", "created_by", "created_at"]
+    readonly_fields = ["date", "supplier", "financial_transaction", "comment", "waybill", "created_by", "created_at"]
     inlines = [SupplyReceiptInline, SupplyLineInline]
 
     def has_add_permission(self, request):

@@ -19,9 +19,11 @@ import {
   type RsgeColumn,
   type RsgeToneName,
 } from "@/components/rsge/RsgeDocumentRow";
+import { WaybillSupplyDialog } from "@/components/rsge/WaybillSupplyDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { Link } from "@/i18n/navigation";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideWaybill, useWaybills } from "@/hooks/useWaybills";
 import { formatCrmCompactDate, formatMoney } from "@/lib/format";
@@ -133,6 +135,7 @@ export function WaybillsPanel() {
   const waybills = useWaybills(period.month);
   const decide = useDecideWaybill();
   const [decision, setDecision] = useState<{ id: number; action: "confirm" | "reject" } | null>(null);
+  const [supplyWaybill, setSupplyWaybill] = useState<RsWaybill | null>(null);
   const focusedWaybillId = searchParams.get("waybill");
 
   function openDecision(id: number, action: "confirm" | "reject") {
@@ -227,6 +230,19 @@ export function WaybillsPanel() {
                   onConfirm={pending ? () => openDecision(waybill.id, "confirm") : null}
                   onReject={pending ? () => openDecision(waybill.id, "reject") : null}
                   details={<WaybillMeta waybill={waybill} locale={locale} />}
+                  extra={
+                    <div className="flex justify-end border-t border-black/5 pt-3">
+                      {waybill.supply_id !== null ? (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href="/inventory/supplies">{t("supplyCreated")}</Link>
+                        </Button>
+                      ) : (
+                        <Button type="button" size="sm" variant="outline" onClick={() => setSupplyWaybill(waybill)}>
+                          {t("createSupply")}
+                        </Button>
+                      )}
+                    </div>
+                  }
                   columns={columns}
                   rowKeys={waybill.goods.map((good) => good.id)}
                   rows={waybill.goods.map((good) => [
@@ -269,6 +285,9 @@ export function WaybillsPanel() {
             );
           }}
         />
+      ) : null}
+      {supplyWaybill !== null ? (
+        <WaybillSupplyDialog key={supplyWaybill.id} waybill={supplyWaybill} onClose={() => setSupplyWaybill(null)} />
       ) : null}
     </>
   );

@@ -227,6 +227,7 @@ export function InvoicesPanel() {
                   onConfirm={pending ? () => openDecision(invoice.id, "confirm") : null}
                   onReject={pending ? () => openDecision(invoice.id, "reject") : null}
                   details={<InvoiceNotes invoice={invoice} locale={locale} />}
+                  extra={null}
                   columns={columns}
                   rowKeys={invoice.lines.map((line) => line.id)}
                   rows={invoice.lines.map((line) => [

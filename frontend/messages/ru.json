@@ -885,7 +885,12 @@
     "notes": "Примечание",
     "waybillBadge": "Накладная",
     "invoiceBadge": "Инвойс",
-    "paymentBadge": "Оплата"
+    "paymentBadge": "Оплата",
+    "createSupply": "Создать поставку",
+    "supplyCreated": "Поставка",
+    "supplyTitle": "Поставка из накладной",
+    "skipLine": "Не принимать",
+    "gramsPerUnit": "Грамм в единице"
   },
   "analytics": {
     "overview": "Общее",

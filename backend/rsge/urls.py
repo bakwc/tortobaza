@@ -8,6 +8,8 @@ from rsge.views import (
     WaybillConfirmView,
     WaybillListView,
     WaybillRejectView,
+    WaybillSupplyCreateView,
+    WaybillSupplyDraftView,
 )
 
 urlpatterns = [
@@ -15,6 +17,8 @@ urlpatterns = [
     path("rsge/waybills/", WaybillListView.as_view()),
     path("rsge/waybills/<int:pk>/confirm/", WaybillConfirmView.as_view()),
     path("rsge/waybills/<int:pk>/reject/", WaybillRejectView.as_view()),
+    path("rsge/waybills/<int:pk>/supply-draft/", WaybillSupplyDraftView.as_view()),
+    path("rsge/waybills/<int:pk>/supply/", WaybillSupplyCreateView.as_view()),
     path("rsge/invoices/", InvoiceListView.as_view()),
     path("rsge/invoices/<int:pk>/confirm/", InvoiceConfirmView.as_view()),
     path("rsge/invoices/<int:pk>/reject/", InvoiceRejectView.as_view()),

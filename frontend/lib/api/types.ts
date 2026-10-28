@@ -1577,6 +1577,39 @@ export const RsWaybillSchema = z.object({
   goods: z.array(RsWaybillGoodSchema),
   invoices: z.array(RsLinkedInvoiceSchema),
   financial_transactions: z.array(RsLinkedTransactionSchema),
+  supply_id: z.number().nullable(),
+});
+
+export const WaybillSupplySuggestionSchema = z.object({
+  ingredient_id: z.number().nullable(),
+  factor: z.string(),
+  unit: MenuUnitSchema,
+});
+
+export const WaybillSupplyAliasSchema = z.object({
+  ingredient_id: z.number().nullable(),
+  factor: z.string().nullable(),
+  ignored: z.boolean(),
+});
+
+export const WaybillSupplyDraftLineSchema = z.object({
+  good_id: z.number(),
+  name: z.string(),
+  name_ru: z.string(),
+  unit_txt: z.string(),
+  unit_txt_ru: z.string(),
+  quantity: z.string(),
+  amount: z.string(),
+  bar_code: z.string(),
+  alias: WaybillSupplyAliasSchema.nullable(),
+  suggestions: z.array(WaybillSupplySuggestionSchema),
+});
+
+export const WaybillSupplyDraftSchema = z.object({
+  date: z.string(),
+  supplier: z.object({ id: z.number(), name: z.string() }).nullable(),
+  supplier_name: z.string(),
+  lines: z.array(WaybillSupplyDraftLineSchema),
 });
 
 export const RsInvoiceLineSchema = z.object({
@@ -1636,6 +1669,16 @@ export const RsgePendingCountSchema = z.object({
 
 export type RsWaybillGood = z.infer<typeof RsWaybillGoodSchema>;
 export type RsWaybill = z.infer<typeof RsWaybillSchema>;
+export type WaybillSupplyDraftLine = z.infer<typeof WaybillSupplyDraftLineSchema>;
+export type WaybillSupplyDraft = z.infer<typeof WaybillSupplyDraftSchema>;
+export type WaybillSupplyBody = {
+  lines: {
+    good_id: number;
+    ingredient: number | null;
+    quantity: string | null;
+    skipped: boolean;
+  }[];
+};
 export type RsInvoiceLine = z.infer<typeof RsInvoiceLineSchema>;
 export type RsInvoice = z.infer<typeof RsInvoiceSchema>;
 export type RsgePendingCount = z.infer<typeof RsgePendingCountSchema>;

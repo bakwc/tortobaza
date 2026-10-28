@@ -31,6 +31,7 @@ import {
   RsInvoiceSchema,
   RsgePendingCountSchema,
   RsWaybillSchema,
+  WaybillSupplyDraftSchema,
   FulfillmentOptionsSchema,
   OrderPreviewSchema,
   OrderSchema,
@@ -148,6 +149,8 @@ import {
   type SupplierBody,
   type Supply,
   type SupplyBody,
+  type WaybillSupplyBody,
+  type WaybillSupplyDraft,
   type SupplyReceipt,
   type SupplyTransaction,
   type TechCard,
@@ -271,6 +274,19 @@ export function endpoints(fetcher: Fetcher) {
     async rejectRsgeWaybill(id: number): Promise<RsWaybill> {
       const raw = await fetcher<unknown>(`/api/rsge/waybills/${id}/reject/`, { method: "POST" });
       return parse(RsWaybillSchema, raw);
+    },
+
+    async waybillSupplyDraft(id: number): Promise<WaybillSupplyDraft> {
+      const raw = await fetcher<unknown>(`/api/rsge/waybills/${id}/supply-draft/`, { method: "POST" });
+      return parse(WaybillSupplyDraftSchema, raw);
+    },
+
+    async createWaybillSupply(id: number, body: WaybillSupplyBody): Promise<Supply> {
+      const raw = await fetcher<unknown>(`/api/rsge/waybills/${id}/supply/`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(SupplySchema, raw);
     },
 
     async getRsgeInvoices(month: string): Promise<RsInvoice[]> {

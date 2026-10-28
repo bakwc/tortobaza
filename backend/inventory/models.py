@@ -9,6 +9,7 @@ from menu.models import UNIT_PIECE, ComponentRef, Ingredient, SemiProduct
 
 class Supplier(models.Model):
     name = models.CharField(max_length=200, unique=True, verbose_name=_("Name"))
+    tin = models.CharField(max_length=32, unique=True, null=True, blank=True, verbose_name=_("TIN"))
     phone = models.CharField(max_length=64, blank=True, verbose_name=_("Phone"))
     comment = models.TextField(blank=True, verbose_name=_("Comment"))
 
@@ -40,6 +41,14 @@ class Supply(models.Model):
         verbose_name=_("Bank transaction"),
     )
     comment = models.TextField(blank=True, verbose_name=_("Comment"))
+    waybill = models.OneToOneField(
+        "rsge.Waybill",
+        related_name="supply",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Waybill"),
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="+",
@@ -98,6 +107,52 @@ class SupplyLine(models.Model):
         ordering = ["id"]
         verbose_name = _("Supply line")
         verbose_name_plural = _("Supply lines")
+
+
+class WaybillIngredientAlias(models.Model):
+    seller_tin = models.CharField(max_length=32, verbose_name=_("Seller TIN"))
+    bar_code = models.CharField(max_length=128, blank=True, verbose_name=_("Barcode"))
+    name = models.TextField(verbose_name=_("Name"))
+    unit_txt = models.CharField(max_length=64, blank=True, verbose_name=_("Unit"))
+    ingredient = models.ForeignKey(
+        "menu.Ingredient",
+        related_name="waybill_aliases",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Ingredient"),
+    )
+    factor = models.DecimalField(
+        max_digits=14,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        verbose_name=_("Factor"),
+    )
+    ignored = models.BooleanField(default=False, verbose_name=_("Ignored"))
+
+    class Meta:
+        verbose_name = _("Waybill ingredient alias")
+        verbose_name_plural = _("Waybill ingredient aliases")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["seller_tin", "bar_code"],
+                condition=~models.Q(bar_code=""),
+                name="waybill_alias_seller_barcode",
+            ),
+            models.UniqueConstraint(
+                fields=["seller_tin", "name", "unit_txt"],
+                condition=models.Q(bar_code=""),
+                name="waybill_alias_seller_name_unit",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(ignored=True, ingredient__isnull=True, factor__isnull=True)
+                    | models.Q(ignored=False, ingredient__isnull=False, factor__isnull=False)
+                ),
+                name="waybill_alias_ignored_or_mapped",
+            ),
+        ]
 
 
 class Production(models.Model):
