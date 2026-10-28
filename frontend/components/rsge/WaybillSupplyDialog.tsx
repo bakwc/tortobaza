@@ -17,6 +17,7 @@ type RowDraft = {
   ingredient: string;
   quantity: string;
   skipped: boolean;
+  createName: string;
   createUnit: MenuUnit;
   gramsPerUnit: string;
 };
@@ -31,12 +32,21 @@ function scaledQuantity(quantity: string, factor: string): string {
   return String(Math.round(product * 1000) / 1000);
 }
 
-function seedRows(lines: WaybillSupplyDraftLine[]): RowDraft[] {
+function seedRows(lines: WaybillSupplyDraftLine[], locale: string): RowDraft[] {
   return lines.map((line) => {
     const suggestion = line.suggestions[0];
     const createUnit = suggestion === undefined ? "g" : suggestion.unit;
+    const createName = localized(locale, line.name, line.name_ru);
     if (line.alias !== null && line.alias.ignored) {
-      return { goodId: line.good_id, ingredient: "", quantity: "", skipped: true, createUnit, gramsPerUnit: "" };
+      return {
+        goodId: line.good_id,
+        ingredient: "",
+        quantity: "",
+        skipped: true,
+        createName,
+        createUnit,
+        gramsPerUnit: "",
+      };
     }
     if (line.alias !== null && line.alias.ingredient_id !== null && line.alias.factor !== null) {
       return {
@@ -44,11 +54,20 @@ function seedRows(lines: WaybillSupplyDraftLine[]): RowDraft[] {
         ingredient: String(line.alias.ingredient_id),
         quantity: scaledQuantity(line.quantity, line.alias.factor),
         skipped: false,
+        createName,
         createUnit,
         gramsPerUnit: "",
       };
     }
-    return { goodId: line.good_id, ingredient: "", quantity: "", skipped: false, createUnit, gramsPerUnit: "" };
+    return {
+      goodId: line.good_id,
+      ingredient: "",
+      quantity: "",
+      skipped: false,
+      createName,
+      createUnit,
+      gramsPerUnit: "",
+    };
   });
 }
 
@@ -62,7 +81,7 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
   const ingredients = useIngredients();
   const [rows, setRows] = useState<RowDraft[] | null>(null);
   if (draft.data !== undefined && rows === null) {
-    setRows(seedRows(draft.data.lines));
+    setRows(seedRows(draft.data.lines, locale));
   }
 
   function updateRow(goodId: number, patch: Partial<RowDraft>) {
@@ -216,6 +235,12 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
                       ) : null}
                       {row.ingredient === "" ? (
                         <div className="flex flex-wrap items-end gap-2">
+                          <Input
+                            value={row.createName}
+                            onChange={(event) => updateRow(line.good_id, { createName: event.target.value })}
+                            placeholder={t("name")}
+                            className="h-9 min-w-48 flex-1"
+                          />
                           <NativeSelect
                             value={row.createUnit}
                             onChange={(event) =>
@@ -243,11 +268,12 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
                             size="sm"
                             disabled={
                               ingredients.save.isPending ||
+                              row.createName.trim() === "" ||
                               (row.createUnit !== "g" && row.gramsPerUnit.trim() === "")
                             }
                             onClick={() => {
                               const body: IngredientBody = {
-                                name,
+                                name: row.createName.trim(),
                                 category: null,
                                 unit: row.createUnit,
                                 is_active: true,
