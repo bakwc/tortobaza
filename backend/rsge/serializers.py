@@ -93,6 +93,7 @@ class WaybillSerializer(serializers.ModelSerializer):
     invoices = LinkedInvoiceSerializer(many=True)
     financial_transactions = LinkedTransactionSerializer(many=True)
     supply_id = serializers.IntegerField(allow_null=True, read_only=True)
+    supply = serializers.SerializerMethodField()
 
     class Meta:
         model = Waybill
@@ -138,7 +139,15 @@ class WaybillSerializer(serializers.ModelSerializer):
             "invoices",
             "financial_transactions",
             "supply_id",
+            "supply",
         ]
+
+    def get_supply(self, waybill: Waybill) -> dict | None:
+        if waybill.supply_id is None:
+            return None
+        row = waybill.supply
+        total = sum((line.total for line in row.lines.all()), Decimal("0"))
+        return {"id": row.pk, "date": row.date.isoformat(), "total": str(total)}
 
 
 class InvoiceLineSerializer(serializers.ModelSerializer):

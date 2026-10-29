@@ -7,6 +7,7 @@ import { Check, ChevronRight, Droplets, Hash, Package, Plus, Scale, Search, Tras
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
+import { IngredientHistoryMenu } from "@/components/menu/IngredientHistoryMenu";
 import {
   Card,
   CardTitle,
@@ -485,6 +486,11 @@ export function IngredientsPanel() {
           }
           onDelete={viewing === null ? null : () => ingredients.remove.mutate(viewing.id, { onSuccess: close })}
           deletePending={ingredients.remove.isPending}
+          headerAction={
+            viewing !== null && currentUser.data?.is_finance_admin ? (
+              <IngredientHistoryMenu ingredientId={viewing.id} categories={categories.list.data ?? []} />
+            ) : null
+          }
           below={viewing === null ? null : <IngredientTechCards ingredientId={viewing.id} />}
         >
           <div className="grid gap-4 sm:grid-cols-3">

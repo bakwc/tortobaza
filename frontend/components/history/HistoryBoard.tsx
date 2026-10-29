@@ -116,13 +116,18 @@ function HistoryBoardContent() {
   const end = searchParams.get("end") ?? "";
   const app = searchParams.get("app") ?? "";
   const q = searchParams.get("q") ?? "";
-  const query = useAuditEvents({
-    page: Number.isFinite(page) && page > 0 ? page : 1,
-    start,
-    end,
-    app,
-    q,
-  });
+  const query = useAuditEvents(
+    {
+      page: Number.isFinite(page) && page > 0 ? page : 1,
+      start,
+      end,
+      app,
+      q,
+      model: null,
+      objectId: null,
+    },
+    true,
+  );
   const tabs: SectionTab[] = [{ key: "history", href: "/history", label: t("title") }];
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {

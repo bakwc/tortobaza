@@ -46,6 +46,8 @@ class AuditEventsView(APIView):
         start = request.query_params.get("start")
         end = request.query_params.get("end")
         app_label = request.query_params.get("app")
+        model_name = request.query_params.get("model")
+        object_id = request.query_params.get("object_id")
         query = request.query_params.get("q")
         if start:
             queryset = queryset.filter(created_at__date__gte=date.fromisoformat(start))
@@ -53,6 +55,10 @@ class AuditEventsView(APIView):
             queryset = queryset.filter(created_at__date__lte=date.fromisoformat(end))
         if app_label:
             queryset = queryset.filter(app_label=app_label)
+        if model_name:
+            queryset = queryset.filter(model=model_name)
+        if object_id:
+            queryset = queryset.filter(object_id=object_id)
         if query:
             queryset = queryset.annotate(changes_text=Cast("changes", TextField())).filter(
                 Q(object_label__icontains=query)
@@ -65,7 +71,8 @@ class AuditEventsView(APIView):
             )
         page_param = request.query_params.get("page")
         page_number = 1 if page_param is None else int(page_param)
-        page = Paginator(queryset, PAGE_SIZE).page(page_number)
+        page_size = queryset.count() or 1 if object_id else PAGE_SIZE
+        page = Paginator(queryset, page_size).page(page_number)
         actor_ids = [event.actor_id for event in page.object_list if event.actor_id is not None]
         names = _actor_names(actor_ids)
         return Response(

@@ -131,6 +131,7 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
       onDelete={null}
       deletePending={false}
       submitLabel={ready ? t("createSupply") : null}
+      headerAction={null}
       below={null}
     >
       <p className="text-sm text-[var(--ink)]">

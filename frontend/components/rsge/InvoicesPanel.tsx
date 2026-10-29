@@ -226,6 +226,7 @@ export function InvoicesPanel() {
                   }
                   onConfirm={pending ? () => openDecision(invoice.id, "confirm") : null}
                   onReject={pending ? () => openDecision(invoice.id, "reject") : null}
+                  onClick={null}
                   details={<InvoiceNotes invoice={invoice} locale={locale} />}
                   extra={null}
                   columns={columns}

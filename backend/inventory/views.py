@@ -166,7 +166,9 @@ class WriteOffReasonDetailView(InventoryDetailView):
 
 
 def supplies_queryset():
-    return Supply.objects.select_related("supplier", "financial_transaction__account").prefetch_related("receipts")
+    return Supply.objects.select_related("supplier", "financial_transaction__account", "waybill").prefetch_related(
+        "receipts"
+    )
 
 
 RECEIPT_EXTENSIONS = {"jpg", "jpeg", "png", "heic"}

@@ -384,6 +384,7 @@ export function SemiProductsPanel() {
           onCancel={cancelEdit}
           onDelete={current === null ? null : () => semiProducts.remove.mutate(current.id, { onSuccess: close })}
           deletePending={semiProducts.remove.isPending}
+          headerAction={null}
           below={null}
         >
           <div className="grid gap-4 sm:grid-cols-3">

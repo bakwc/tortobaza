@@ -182,6 +182,7 @@ export function RsgeDocumentRow({
   chips,
   onConfirm,
   onReject,
+  onClick,
   details,
   extra,
   columns,
@@ -197,6 +198,7 @@ export function RsgeDocumentRow({
   chips: ReactNode;
   onConfirm: (() => void) | null;
   onReject: (() => void) | null;
+  onClick: (() => void) | null;
   details: ReactNode | null;
   extra: ReactNode;
   columns: RsgeColumn[];
@@ -209,7 +211,25 @@ export function RsgeDocumentRow({
   return (
     <div
       id={id}
-      className={cn("grid gap-3 rounded-2xl border border-l-4 p-3 shadow-sm md:p-4", tone.card, tone.accent)}
+      role={onClick !== null ? "button" : undefined}
+      tabIndex={onClick !== null ? 0 : undefined}
+      onClick={onClick ?? undefined}
+      onKeyDown={
+        onClick !== null
+          ? (event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              onClick();
+            }
+          : undefined
+      }
+      className={cn(
+        "grid gap-3 rounded-2xl border border-l-4 p-3 shadow-sm md:p-4",
+        tone.card,
+        tone.accent,
+        onClick !== null && "cursor-pointer",
+      )}
     >
       <div className="flex min-w-0 items-center gap-2 md:gap-3">
         <div

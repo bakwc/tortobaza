@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useTranslations } from "next-intl";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Package, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,7 +13,6 @@ import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
-  Card,
   CardTitle,
   ErrorText,
   Field,
@@ -21,6 +21,17 @@ import {
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
+import {
+  RsgeChip,
+  RsgeDayHeader,
+  RsgeDocumentRow,
+  groupRsgeByDate,
+  rsgeMonth,
+  rsgeTone,
+  sumGel,
+  type RsgeColumn,
+} from "@/components/rsge/RsgeDocumentRow";
+import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
 import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
 import type { MenuUnit, Supply, SupplyReceipt } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -188,6 +199,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
       }
       onDelete={supply === null ? null : () => supplies.remove.mutate(supply.id, { onSuccess: onClose })}
       deletePending={supplies.remove.isPending}
+      headerAction={null}
       below={null}
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -433,58 +445,111 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
 
 function SuppliesList() {
   const t = useTranslations("stock");
+  const rsge = useTranslations("rsge");
   const units = useTranslations("stock.units");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
   const supplies = useSupplies();
   const [editing, setEditing] = useState<Supply | null | "new">(null);
+  const focusedSupplyId = searchParams.get("supply");
+  const documents = supplies.list.data ?? [];
+  const groups = groupRsgeByDate(documents, (row) => row.date, () => false);
+
+  const columns: RsgeColumn[] = [
+    { label: rsge("name"), align: "left" },
+    { label: rsge("quantity"), align: "right" },
+    { label: rsge("unit"), align: "left" },
+    { label: rsge("amount"), align: "right" },
+  ];
+
+  useEffect(() => {
+    if (focusedSupplyId === null || supplies.list.isLoading) return;
+    const el = document.getElementById(`supply-${focusedSupplyId}`);
+    if (el === null) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusedSupplyId, supplies.list.isLoading, documents.length]);
 
   return (
     <div className="grid gap-6">
-      <Card>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle>{t("inventory.supplies")}</CardTitle>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              supplies.save.reset();
-              setEditing("new");
-            }}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            {t("add")}
-          </Button>
+      <div className="flex items-center justify-between gap-3">
+        <CardTitle>{t("inventory.supplies")}</CardTitle>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            supplies.save.reset();
+            setEditing("new");
+          }}
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          {t("add")}
+        </Button>
+      </div>
+      <QueryState isLoading={supplies.list.isLoading} isError={supplies.list.isError}>
+        <div className="grid gap-6">
+          {groups.map((day) => (
+            <section key={day.date} className="grid gap-2">
+              <RsgeDayHeader
+                date={day.date}
+                count={day.items.length}
+                sum={formatGel(sumGel(day.items.map((row) => row.total)), "GEL")}
+              />
+              {day.items.map((row) => (
+                <RsgeDocumentRow
+                  key={row.id}
+                  id={`supply-${row.id}`}
+                  tone={rsgeTone("neutral")}
+                  icon={<Package className="h-4 w-4" />}
+                  title={row.supplier_name ?? "—"}
+                  subtitle={formatCrmCompactDate(row.date, locale)}
+                  amount={formatGel(row.total, "GEL")}
+                  chips={
+                    <>
+                      <RsgeChip href={null} className="bg-black/[0.04] text-[var(--muted-2)]">
+                        {t("positionsCount", { count: row.lines.length })}
+                      </RsgeChip>
+                      {row.waybill !== null ? (
+                        <RsgeChip
+                          href={`/rsge?month=${rsgeMonth(row.waybill.create_date)}&waybill=${row.waybill.id}`}
+                          className="bg-emerald-100 text-emerald-900"
+                        >
+                          {rsge("waybillBadge")} {row.waybill.waybill_number}{" "}
+                          {formatGel(row.waybill.full_amount, "GEL")}
+                        </RsgeChip>
+                      ) : null}
+                      {row.financial_transaction !== null ? (
+                        <RsgeChip
+                          href={`/finance?month=${row.financial_transaction.date.slice(0, 7)}&transaction=${row.financial_transaction.id}`}
+                          className="bg-violet-100 text-violet-900"
+                        >
+                          {rsge("paymentBadge")} {formatCrmCompactDate(row.financial_transaction.date, locale)}{" "}
+                          {formatGel(row.financial_transaction.amount, "GEL")} {row.financial_transaction.counterparty_name}
+                        </RsgeChip>
+                      ) : null}
+                    </>
+                  }
+                  onConfirm={null}
+                  onReject={null}
+                  onClick={() => {
+                    supplies.save.reset();
+                    setEditing(row);
+                  }}
+                  details={row.comment !== "" ? <p className="text-sm text-[var(--ink)]">{row.comment}</p> : null}
+                  extra={null}
+                  columns={columns}
+                  rowKeys={row.lines.map((line) => line.id)}
+                  rows={row.lines.map((line) => [
+                    line.name,
+                    formatQuantity(line.quantity),
+                    units(line.unit),
+                    formatGel(line.total, "GEL"),
+                  ])}
+                />
+              ))}
+            </section>
+          ))}
         </div>
-        <QueryState isLoading={supplies.list.isLoading} isError={supplies.list.isError}>
-          <div className="mt-4 grid gap-2">
-            {(supplies.list.data ?? []).map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => {
-                  supplies.save.reset();
-                  setEditing(row);
-                }}
-                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left hover:bg-[var(--cream)]"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-[var(--ink)]">
-                    {row.date} · {row.supplier_name ?? "—"}
-                  </span>
-                  <span className="text-sm font-semibold">{formatMoney(row.total)}</span>
-                </div>
-                <p className="mt-1 text-sm text-[var(--muted-2)]">
-                  {row.lines.map((line) => `${line.name} ${formatQuantity(line.quantity)} ${units(line.unit)}`).join(", ")}
-                </p>
-                {row.financial_transaction ? (
-                  <p className="mt-1 text-xs text-emerald-700">
-                    {t("bankTransaction")}: {row.financial_transaction.date} · {formatMoney(row.financial_transaction.amount)}
-                  </p>
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </QueryState>
-      </Card>
+      </QueryState>
       {editing !== null ? (
         <SupplyEditor supply={editing === "new" ? null : editing} onClose={() => setEditing(null)} />
       ) : null}

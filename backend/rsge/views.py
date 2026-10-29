@@ -53,9 +53,13 @@ def _month_bounds(month: str) -> tuple[datetime, datetime]:
 
 
 def waybill_queryset():
-    return Waybill.objects.annotate(
-        supply_id=Subquery(Supply.objects.filter(waybill_id=OuterRef("pk")).values("pk")[:1])
-    ).prefetch_related("goods", "invoices", "financial_transactions")
+    return (
+        Waybill.objects.annotate(
+            supply_id=Subquery(Supply.objects.filter(waybill_id=OuterRef("pk")).values("pk")[:1])
+        )
+        .select_related("supply")
+        .prefetch_related("goods", "invoices", "financial_transactions", "supply__lines")
+    )
 
 
 class WaybillListView(APIView):

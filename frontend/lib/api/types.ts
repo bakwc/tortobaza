@@ -1350,6 +1350,13 @@ export const SupplyReceiptSchema = z.object({
   recognized: RecognizedReceiptSchema,
 });
 
+export const SupplyWaybillSchema = z.object({
+  id: z.number(),
+  waybill_number: z.string(),
+  create_date: z.string(),
+  full_amount: z.string(),
+});
+
 export const SupplySchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -1359,6 +1366,7 @@ export const SupplySchema = z.object({
   comment: z.string(),
   created_at: z.string(),
   total: z.string(),
+  waybill: SupplyWaybillSchema.nullable(),
   receipts: z.array(z.object({ id: z.number(), image: z.string() })),
   lines: z.array(
     z.object({
@@ -1536,6 +1544,12 @@ export const RsLinkedInvoiceSchema = z.object({
   reg_dt: z.string(),
 });
 
+export const RsLinkedSupplySchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  total: z.string(),
+});
+
 export const RsWaybillSchema = z.object({
   id: z.number(),
   rs_id: z.number(),
@@ -1578,6 +1592,7 @@ export const RsWaybillSchema = z.object({
   invoices: z.array(RsLinkedInvoiceSchema),
   financial_transactions: z.array(RsLinkedTransactionSchema),
   supply_id: z.number().nullable(),
+  supply: RsLinkedSupplySchema.nullable(),
 });
 
 export const WaybillSupplySuggestionSchema = z.object({

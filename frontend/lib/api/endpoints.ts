@@ -774,6 +774,8 @@ export function endpoints(fetcher: Fetcher) {
       end: string;
       app: string;
       q: string;
+      model: string | null;
+      objectId: string | null;
     }): Promise<AuditEventsResponse> {
       const raw = await fetcher<unknown>("/api/audit/events/", {
         searchParams: {
@@ -782,6 +784,8 @@ export function endpoints(fetcher: Fetcher) {
           end: params.end || undefined,
           app: params.app || undefined,
           q: params.q || undefined,
+          model: params.model || undefined,
+          object_id: params.objectId || undefined,
         },
       });
       return parse(AuditEventsResponseSchema, raw);

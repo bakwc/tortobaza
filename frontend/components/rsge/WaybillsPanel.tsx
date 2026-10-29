@@ -23,7 +23,6 @@ import { WaybillSupplyDialog } from "@/components/rsge/WaybillSupplyDialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { Link } from "@/i18n/navigation";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useDecideWaybill, useWaybills } from "@/hooks/useWaybills";
 import { formatCrmCompactDate, formatMoney } from "@/lib/format";
@@ -225,23 +224,29 @@ export function WaybillsPanel() {
                           {formatMoney(transaction.amount, "GEL")} {transaction.counterparty_name}
                         </RsgeChip>
                       ))}
+                      {waybill.supply !== null ? (
+                        <RsgeChip
+                          href={`/inventory/supplies?supply=${waybill.supply.id}`}
+                          className="bg-amber-100 text-amber-900"
+                        >
+                          {t("supplyCreated")} {formatCrmCompactDate(waybill.supply.date, locale)}{" "}
+                          {formatMoney(waybill.supply.total, "GEL")}
+                        </RsgeChip>
+                      ) : null}
                     </>
                   }
                   onConfirm={pending ? () => openDecision(waybill.id, "confirm") : null}
                   onReject={pending ? () => openDecision(waybill.id, "reject") : null}
+                  onClick={null}
                   details={<WaybillMeta waybill={waybill} locale={locale} />}
                   extra={
-                    <div className="flex justify-end border-t border-black/5 pt-3">
-                      {waybill.supply_id !== null ? (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href="/inventory/supplies">{t("supplyCreated")}</Link>
-                        </Button>
-                      ) : (
+                    waybill.supply === null ? (
+                      <div className="flex justify-end border-t border-black/5 pt-3">
                         <Button type="button" size="sm" variant="outline" onClick={() => setSupplyWaybill(waybill)}>
                           {t("createSupply")}
                         </Button>
-                      )}
-                    </div>
+                      </div>
+                    ) : null
                   }
                   columns={columns}
                   rowKeys={waybill.goods.map((good) => good.id)}

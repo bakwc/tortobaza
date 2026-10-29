@@ -198,6 +198,16 @@ class WaybillSupplyApiTests(TestCase):
         self.client.force_authenticate(self.admin)
         response = self.create(self.waybill, [supply_line(self.milk_good, self.milk, "10000", False)])
         self.assertEqual(response.status_code, 201, response.content)
+        self.waybill.refresh_from_db()
+        self.assertEqual(
+            response.json()["waybill"],
+            {
+                "id": self.waybill.pk,
+                "waybill_number": "101",
+                "create_date": self.waybill.create_date.isoformat(),
+                "full_amount": str(self.waybill.full_amount),
+            },
+        )
         supply = Supply.objects.get()
         self.assertEqual(supply.waybill_id, self.waybill.pk)
         self.assertEqual(supply.date.isoformat(), "2026-10-14")
@@ -226,6 +236,9 @@ class WaybillSupplyApiTests(TestCase):
         self.assertFalse(alias.ignored)
         listed = self.client.get("/api/rsge/waybills/", {"month": "2026-10"})
         self.assertEqual(listed.json()[0]["supply_id"], supply.pk)
+        self.assertEqual(listed.json()[0]["supply"]["id"], supply.pk)
+        self.assertEqual(listed.json()[0]["supply"]["date"], "2026-10-14")
+        self.assertEqual(listed.json()[0]["supply"]["total"], "45.50")
 
     @patch("inventory.waybill_supply.OpenAI")
     def test_second_waybill_with_the_same_name_is_prefilled(self, openai_cls):

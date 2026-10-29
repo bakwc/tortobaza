@@ -141,6 +141,15 @@ class SupplySerializer(serializers.ModelSerializer):
             {"id": receipt.pk, "image": public_media_url(receipt.image.url)} for receipt in instance.receipts.all()
         ]
         data["total"] = str(total)
+        data["waybill"] = None
+        if instance.waybill_id is not None:
+            waybill = instance.waybill
+            data["waybill"] = {
+                "id": waybill.pk,
+                "waybill_number": waybill.waybill_number,
+                "create_date": waybill.create_date.isoformat(),
+                "full_amount": str(waybill.full_amount),
+            }
         return data
 
     def create(self, validated_data):

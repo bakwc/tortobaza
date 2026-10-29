@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
@@ -168,3 +169,59 @@ class AuditLogTests(TestCase):
         self.assertEqual(body["results"][0]["object_label"], "Flour")
         self.assertEqual(body["results"][0]["changes"]["name"], {"old": None, "new": "Flour"})
         self.assertEqual(body["results"][0]["actor_name"], "finance")
+
+    def test_object_filter_returns_only_that_ingredient(self):
+        now = timezone.now()
+        AuditEvent.objects.bulk_create(
+            [
+                AuditEvent(
+                    created_at=now,
+                    actor=self.finance,
+                    action=AuditEvent.ACTION_UPDATED,
+                    app_label="menu",
+                    model="ingredient",
+                    object_id="1",
+                    object_label="Flour",
+                    database="default",
+                    source=AuditEvent.SOURCE_USER,
+                    changes={"name": {"old": f"Flour {index}", "new": "Flour"}},
+                )
+                for index in range(51)
+            ]
+        )
+        AuditEvent.objects.create(
+            actor=self.finance,
+            action=AuditEvent.ACTION_UPDATED,
+            app_label="menu",
+            model="ingredient",
+            object_id="2",
+            object_label="Sugar",
+            database="default",
+            source=AuditEvent.SOURCE_USER,
+            changes={"name": {"old": "Sugar", "new": "Cane"}},
+        )
+        AuditEvent.objects.create(
+            actor=self.finance,
+            action=AuditEvent.ACTION_UPDATED,
+            app_label="inventory",
+            model="supply",
+            object_id="1",
+            object_label="Supply",
+            database="default",
+            source=AuditEvent.SOURCE_USER,
+            changes={"comment": {"old": "", "new": "note"}},
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.staff)
+        denied = client.get("/api/audit/events/", {"model": "ingredient", "object_id": "1"})
+        self.assertEqual(denied.status_code, 403)
+        client.force_authenticate(user=self.finance)
+        response = client.get("/api/audit/events/", {"model": "ingredient", "object_id": "1"})
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["page"], 1)
+        self.assertEqual(body["pages"], 1)
+        self.assertEqual(len(body["results"]), 51)
+        self.assertTrue(
+            all(row["model"] == "ingredient" and row["object_id"] == "1" for row in body["results"])
+        )

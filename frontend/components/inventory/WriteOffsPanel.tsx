@@ -177,6 +177,7 @@ export function WriteOffsPanel() {
           }
           onDelete={editing === null ? null : () => writeOffs.remove.mutate(editing.id, { onSuccess: close })}
           deletePending={writeOffs.remove.isPending}
+          headerAction={null}
           below={null}
         >
           <div className="grid gap-4 sm:grid-cols-2">

@@ -742,6 +742,7 @@ export function TechCardsPanel() {
           onCancel={cancelEdit}
           onDelete={current === null ? null : () => techCards.remove.mutate(current.id, { onSuccess: close })}
           deletePending={techCards.remove.isPending}
+          headerAction={null}
           below={null}
         >
           <div className="grid gap-4 sm:grid-cols-3">

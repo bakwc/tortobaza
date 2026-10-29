@@ -180,6 +180,7 @@ export function ModifierGroupsPanel() {
           }
           onDelete={editingId === null ? null : () => groups.remove.mutate(editingId, { onSuccess: close })}
           deletePending={groups.remove.isPending}
+          headerAction={null}
           below={null}
         >
           <div className="grid gap-4 sm:grid-cols-4">
