@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, ChevronRight, Droplets, Hash, Package, Plus, Scale, Search, Trash2, Wheat } from "lucide-react";
@@ -14,6 +14,7 @@ import {
   CheckboxField,
   ErrorText,
   Field,
+  GroupSelect,
   NativeSelect,
   QueryState,
   formatMoney,
@@ -201,34 +202,6 @@ function IngredientTechCards({ ingredientId }: { ingredientId: number }) {
         />
       </div>
     </QueryState>
-  );
-}
-
-function GroupSelect({
-  ids,
-  selected,
-  onChange,
-}: {
-  ids: number[];
-  selected: number[];
-  onChange: (ids: number[], checked: boolean) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  const chosen = ids.filter((id) => selected.includes(id)).length;
-  const checked = ids.length > 0 && chosen === ids.length;
-  const indeterminate = chosen > 0 && !checked;
-  useEffect(() => {
-    if (ref.current !== null) ref.current.indeterminate = indeterminate;
-  }, [indeterminate]);
-  return (
-    <input
-      ref={ref}
-      type="checkbox"
-      checked={checked}
-      aria-checked={indeterminate ? "mixed" : checked}
-      onChange={(event) => onChange(ids, event.target.checked)}
-      className="h-4 w-4 accent-[var(--brand)]"
-    />
   );
 }
 

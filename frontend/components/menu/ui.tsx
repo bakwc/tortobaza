@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode, SelectHTMLAttributes } from "react";
+import { useEffect, useRef, type ReactNode, type SelectHTMLAttributes } from "react";
 import { useTranslations } from "next-intl";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
@@ -31,6 +31,34 @@ export function NativeSelect({ className, ...props }: SelectHTMLAttributes<HTMLS
         "h-12 w-full rounded-full border border-[var(--line)] bg-white px-5 text-sm text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30",
         className,
       )}
+    />
+  );
+}
+
+export function GroupSelect({
+  ids,
+  selected,
+  onChange,
+}: {
+  ids: number[];
+  selected: number[];
+  onChange: (ids: number[], checked: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const chosen = ids.filter((id) => selected.includes(id)).length;
+  const checked = ids.length > 0 && chosen === ids.length;
+  const indeterminate = chosen > 0 && !checked;
+  useEffect(() => {
+    if (ref.current !== null) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      aria-checked={indeterminate ? "mixed" : checked}
+      onChange={(event) => onChange(ids, event.target.checked)}
+      className="h-4 w-4 accent-[var(--brand)]"
     />
   );
 }

@@ -49,6 +49,7 @@ import {
   CheckboxField,
   ErrorText,
   Field,
+  GroupSelect,
   NativeSelect,
   QueryState,
   formatMoney,
@@ -191,12 +192,16 @@ function TechCardRow({
   basis,
   missing,
   isFinanceAdmin,
+  selecting,
+  selected,
   onOpen,
 }: {
   row: TechCard;
   basis: string;
   missing: number;
   isFinanceAdmin: boolean;
+  selecting: boolean;
+  selected: boolean;
   onOpen: () => void;
 }) {
   const t = useTranslations("stock");
@@ -205,12 +210,25 @@ function TechCardRow({
   return (
     <button
       type="button"
+      aria-pressed={selecting ? selected : undefined}
       onClick={onOpen}
       className={cn(
         "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--cream-soft)] focus-visible:bg-[var(--cream-soft)] focus-visible:outline-none",
         !row.is_active && "opacity-60",
+        selecting && selected && "bg-[var(--cream-soft)]",
       )}
     >
+      {selecting ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            selected ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-white",
+          )}
+        >
+          {selected ? <Check className="h-3.5 w-3.5" /> : null}
+        </span>
+      ) : null}
       {cover ? (
         <img
           src={cover.image.src}
@@ -308,6 +326,9 @@ export function TechCardsPanel() {
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [assignCategory, setAssignCategory] = useState("");
   const requestedId = ignoreCardParam
     ? viewing === null
       ? null
@@ -364,6 +385,30 @@ export function TechCardsPanel() {
     setDraft(null);
     if (current === null) close();
     else setMode("view");
+  };
+  const toggleSelecting = () => {
+    setSelecting((value) => !value);
+    setSelected([]);
+    setAssignCategory("");
+    techCards.assignCategory.reset();
+  };
+  const toggleSelected = (id: number) => {
+    setSelected((currentIds) =>
+      currentIds.includes(id) ? currentIds.filter((item) => item !== id) : [...currentIds, id],
+    );
+  };
+  const setGroupSelected = (ids: number[], checked: boolean) => {
+    setSelected((currentIds) => {
+      if (checked) return [...new Set([...currentIds, ...ids])];
+      const drop = new Set(ids);
+      return currentIds.filter((id) => !drop.has(id));
+    });
+  };
+  const assignSelected = () => {
+    techCards.assignCategory.mutate(
+      { ids: selected, category: assignCategory === "none" ? null : Number(assignCategory) },
+      { onSuccess: () => setSelected([]) },
+    );
   };
 
   const options = componentOptions(
@@ -455,14 +500,19 @@ export function TechCardsPanel() {
   };
 
   return (
-    <div className="grid gap-6">
+    <div className={cn("grid gap-6", selected.length > 0 && "pb-28")}>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.techCards")}</h2>
-          <Button type="button" onClick={openNew}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("add")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant={selecting ? "primary" : "outline"} onClick={toggleSelecting}>
+              {t("selectIngredients")}
+            </Button>
+            <Button type="button" onClick={openNew}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("add")}
+            </Button>
+          </div>
         </div>
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
@@ -539,6 +589,13 @@ export function TechCardsPanel() {
                 className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-sm"
               >
                 <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  {selecting ? (
+                    <GroupSelect
+                      ids={group.cards.map((row) => row.id)}
+                      selected={selected}
+                      onChange={setGroupSelected}
+                    />
+                  ) : null}
                   <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
                     {group.label}
                   </h3>
@@ -554,7 +611,9 @@ export function TechCardsPanel() {
                       basis={basisLabel(row)}
                       missing={missingByCard.get(row.id) ?? 0}
                       isFinanceAdmin={isFinanceAdmin}
-                      onOpen={() => openView(row)}
+                      selecting={selecting}
+                      selected={selected.includes(row.id)}
+                      onOpen={() => (selecting ? toggleSelected(row.id) : openView(row))}
                     />
                   ))}
                 </div>
@@ -611,6 +670,33 @@ export function TechCardsPanel() {
           <ErrorText error={categories.save.error ?? categories.remove.error} />
         </div>
       </Card>
+
+      {selected.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-white shadow-lg">
+          <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
+            <p className="text-sm font-semibold text-[var(--ink)]">{t("selectedCount", { count: selected.length })}</p>
+            <div className="min-w-[12rem] flex-1">
+              <NativeSelect value={assignCategory} onChange={(event) => setAssignCategory(event.target.value)}>
+                <option value="">{t("chooseCategory")}</option>
+                <option value="none">{t("noCategory")}</option>
+                {(categories.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <Button
+              type="button"
+              disabled={assignCategory === "" || techCards.assignCategory.isPending}
+              onClick={assignSelected}
+            >
+              {t("assignCategory")}
+            </Button>
+            <ErrorText error={techCards.assignCategory.error} />
+          </div>
+        </div>
+      ) : null}
 
       {mode !== "edit" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>

@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from menu.models import IngredientCategory
+from menu.models import IngredientCategory, TechCardCategory
 from menu.tests.fixtures import MenuFixture
 
 
@@ -229,6 +229,47 @@ class IngredientCostApiTests(TestCase):
         response = self.client.post(
             "/api/menu/ingredients/assign-category/",
             {"ids": [], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+
+    def test_assign_tech_card_category(self):
+        category = TechCardCategory.objects.create(name="Cakes")
+        bento = self.menu.bento
+        cake = self.menu.cake
+        bento.sale_price = Decimal("25.00")
+        bento.save(update_fields=["sale_price"])
+        bento_lines = bento.lines.count()
+        cake_lines = cake.lines.count()
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(
+            "/api/menu/tech-cards/assign-category/",
+            {"ids": [bento.pk, cake.pk], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        bento.refresh_from_db()
+        cake.refresh_from_db()
+        self.assertEqual(bento.category_id, category.pk)
+        self.assertEqual(cake.category_id, category.pk)
+        self.assertEqual(bento.sale_price, Decimal("25.00"))
+        self.assertEqual(bento.lines.count(), bento_lines)
+        self.assertEqual(cake.lines.count(), cake_lines)
+
+        response = self.client.post(
+            "/api/menu/tech-cards/assign-category/",
+            {"ids": [bento.pk], "category": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        bento.refresh_from_db()
+        self.assertIsNone(bento.category_id)
+        self.assertEqual(bento.sale_price, Decimal("25.00"))
+        self.assertEqual(bento.lines.count(), bento_lines)
+
+        response = self.client.post(
+            "/api/menu/tech-cards/assign-category/",
+            {"ids": [999999], "category": category.pk},
             format="json",
         )
         self.assertEqual(response.status_code, 400, response.content)

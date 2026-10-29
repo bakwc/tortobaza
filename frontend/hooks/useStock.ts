@@ -59,7 +59,14 @@ export function useTechCardCategories() {
 }
 
 export function useTechCards() {
-  return useResource(["menu", "tech-cards"], api.menuTechCards);
+  const invalidate = useInvalidateStock();
+  const techCards = useResource(["menu", "tech-cards"], api.menuTechCards);
+  const assignCategory = useMutation({
+    mutationFn: ({ ids, category }: { ids: number[]; category: number | null }) =>
+      api.assignTechCardCategory(ids, category),
+    onSuccess: invalidate,
+  });
+  return { ...techCards, assignCategory };
 }
 
 export function useTechCardImages() {

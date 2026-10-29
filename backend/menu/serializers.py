@@ -118,6 +118,18 @@ class AssignIngredientCategorySerializer(serializers.Serializer):
         return attrs
 
 
+class AssignTechCardCategorySerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=TechCardCategory.objects.all(), allow_null=True)
+
+    def validate(self, attrs):
+        ids = attrs["ids"]
+        found = TechCard.objects.filter(pk__in=ids).count()
+        if found != len(set(ids)):
+            raise serializers.ValidationError({"ids": "Unknown tech card."})
+        return attrs
+
+
 class ComponentLineSerializer(serializers.Serializer):
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)

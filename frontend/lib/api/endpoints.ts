@@ -239,6 +239,12 @@ export function endpoints(fetcher: Fetcher) {
       TechCardCategorySchema,
     ),
     menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    assignTechCardCategory(ids: number[], category: number | null): Promise<void> {
+      return fetcher<void>("/api/menu/tech-cards/assign-category/", {
+        method: "POST",
+        body: JSON.stringify({ ids, category }),
+      });
+    },
     inventorySuppliers: resource<Supplier, SupplierBody>(fetcher, "/api/inventory/suppliers/", SupplierSchema),
     inventorySupplies: resource<Supply, SupplyBody>(fetcher, "/api/inventory/supplies/", SupplySchema),
     inventoryProductions: resource<Production, ProductionBody>(
