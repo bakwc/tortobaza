@@ -39,7 +39,7 @@ class AttendanceSummaryView(APIView):
     def get(self, request):
         end_date = timezone.now().astimezone(_TB).date()
         start_date = end_date - timedelta(days=14)
-        result = compute_salary(request.user, start_date, end_date)
+        result = compute_salary(request.user, start_date, end_date, None)
         rows = [
             {
                 "date": row["date"].isoformat(),

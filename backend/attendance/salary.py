@@ -14,7 +14,10 @@ User = get_user_model()
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
-def compute_day_worked_seconds(events: list[AttendanceEvent]) -> int:
+def compute_day_worked_seconds(
+    events: list[AttendanceEvent],
+    open_until: datetime | None,
+) -> int:
     sorted_events = sorted(events, key=lambda event: event.timestamp)
     collapsed: list[AttendanceEvent] = []
     for event in sorted_events:
@@ -41,6 +44,9 @@ def compute_day_worked_seconds(events: list[AttendanceEvent]) -> int:
             total_seconds += int(delta.total_seconds())
             index += 2
             continue
+        if open_until is not None and open_until > collapsed[index].timestamp:
+            delta = open_until - collapsed[index].timestamp
+            total_seconds += int(delta.total_seconds())
         index += 1
 
     return total_seconds
@@ -54,7 +60,12 @@ def daily_monthly_share(monthly_rate: Decimal, day: date) -> Decimal:
     return base
 
 
-def compute_salary(user, start_date: date, end_date: date) -> dict:
+def compute_salary(
+    user,
+    start_date: date,
+    end_date: date,
+    open_until: datetime | None,
+) -> dict:
     profile = UserProfile.objects.filter(user=user).first()
     hourly_rate = profile.hourly_rate if profile else Decimal("0.00")
     monthly_rate = profile.monthly_rate if profile else Decimal("0.00")
@@ -64,6 +75,8 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
         datetime.combine(end_date + timedelta(days=1), datetime.min.time()),
         _TB,
     )
+
+    open_until_date = open_until.astimezone(_TB).date() if open_until is not None else None
 
     events = AttendanceEvent.objects.filter(
         user=user,
@@ -82,7 +95,10 @@ def compute_salary(user, start_date: date, end_date: date) -> dict:
     current = start_date
     while current <= end_date:
         day_events = by_date.get(current, [])
-        seconds = compute_day_worked_seconds(day_events)
+        seconds = compute_day_worked_seconds(
+            day_events,
+            open_until if current == open_until_date else None,
+        )
         hours = (Decimal(seconds) / Decimal(3600)).quantize(
             Decimal("0.01"),
             rounding=ROUND_HALF_UP,
@@ -151,7 +167,7 @@ def compute_all_salaries(start_date: date, end_date: date) -> dict:
     employees: list[dict] = []
     employees_by_date: dict[date, list[dict]] = {}
     for user in users:
-        result = compute_salary(user, start_date, end_date)
+        result = compute_salary(user, start_date, end_date, timezone.now())
         total_money += result["total_money"]
         name = chef_identity(user)[0]
         hours = Decimal("0.00")
@@ -215,7 +231,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
     first_employees: list[dict] = []
     second_employees: list[dict] = []
     for user in users:
-        result = compute_salary(user, start_date, end_date)
+        result = compute_salary(user, start_date, end_date, None)
         name = chef_identity(user)[0]
         first_hours = Decimal("0.00")
         first_money = Decimal("0.00")

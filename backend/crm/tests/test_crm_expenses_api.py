@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -12,6 +13,7 @@ from attendance.models import AttendanceEvent
 from crm.models import CrmSettings
 
 _TB = ZoneInfo("Asia/Tbilisi")
+_OPEN_NOW = timezone.make_aware(datetime(2026, 10, 29, 12, 0), _TB)
 
 
 def _event(user: User, event_type: str, day: date, hour: int, minute: int) -> AttendanceEvent:
@@ -227,6 +229,74 @@ class CrmExpensesApiTests(TestCase):
                         "name": "worker",
                         "hours": "8.00",
                         "money": "80.00",
+                    }
+                ],
+            },
+        )
+
+    @patch("crm.views.timezone.now", return_value=_OPEN_NOW)
+    @patch("attendance.salary.timezone.now", return_value=_OPEN_NOW)
+    def test_day_open_shift_counts_until_now(self, salary_now, views_now):
+        today = _OPEN_NOW.date()
+        _event(self.worker, AttendanceEvent.ARRIVAL, today, 9, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/expenses/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(salary_now.return_value, _OPEN_NOW)
+        self.assertIs(views_now.return_value, _OPEN_NOW)
+        self.assertEqual(
+            response.json(),
+            {
+                "date": "2026-10-29",
+                "salary": "30.00",
+                "rent": "0.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "3.00",
+                        "money": "30.00",
+                    }
+                ],
+            },
+        )
+
+    @patch("crm.views.timezone.now", return_value=_OPEN_NOW)
+    @patch("attendance.salary.timezone.now", return_value=_OPEN_NOW)
+    def test_month_open_shift_counts_until_now(self, salary_now, views_now):
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 10, 28), 9, 0)
+        _event(self.worker, AttendanceEvent.ARRIVAL, _OPEN_NOW.date(), 9, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/expenses/", {"month": "2026-10"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(salary_now.return_value, _OPEN_NOW)
+        self.assertIs(views_now.return_value, _OPEN_NOW)
+        data = response.json()
+        self.assertEqual(data["salary"], "30.00")
+        self.assertEqual(
+            data["employees"],
+            [
+                {
+                    "id": self.worker.id,
+                    "name": "worker",
+                    "hours": "3.00",
+                    "money": "30.00",
+                }
+            ],
+        )
+        self.assertEqual(data["by_date"]["2026-10-28"]["salary"], "0.00")
+        self.assertEqual(data["by_date"]["2026-10-28"]["employees"], [])
+        self.assertEqual(
+            data["by_date"]["2026-10-29"],
+            {
+                "salary": "30.00",
+                "rent": "0.00",
+                "employees": [
+                    {
+                        "id": self.worker.id,
+                        "name": "worker",
+                        "hours": "3.00",
+                        "money": "30.00",
                     }
                 ],
             },

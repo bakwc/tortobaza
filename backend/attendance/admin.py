@@ -45,6 +45,7 @@ class SalaryCalculationAdmin(admin.ModelAdmin):
                 form.cleaned_data["employee"],
                 form.cleaned_data["start_date"],
                 form.cleaned_data["end_date"],
+                None,
             )
 
         context = {

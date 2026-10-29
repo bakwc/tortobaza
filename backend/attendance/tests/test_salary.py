@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -59,7 +60,7 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 17, 0),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600)
 
     def test_midday_gap(self):
         events = [
@@ -84,7 +85,7 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 18, 0),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600)
 
     def test_double_arrival(self):
         events = [
@@ -104,7 +105,7 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 17, 0),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600)
 
     def test_double_departure(self):
         events = [
@@ -124,7 +125,7 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 17, 30),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600 + 30 * 60)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600 + 30 * 60)
 
     def test_leading_departure(self):
         events = [
@@ -144,7 +145,7 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 17, 0),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600)
 
     def test_trailing_arrival(self):
         events = [
@@ -164,10 +165,53 @@ class ComputeDayWorkedSecondsTests(TestCase):
                 timestamp=_dt(self.day, 18, 0),
             ),
         ]
-        self.assertEqual(compute_day_worked_seconds(events), 8 * 3600)
+        self.assertEqual(compute_day_worked_seconds(events, None), 8 * 3600)
 
     def test_empty_day(self):
-        self.assertEqual(compute_day_worked_seconds([]), 0)
+        self.assertEqual(compute_day_worked_seconds([], None), 0)
+
+    def test_open_shift_until(self):
+        events = [
+            AttendanceEvent(
+                user=self.user,
+                event_type=AttendanceEvent.ARRIVAL,
+                timestamp=_dt(self.day, 9, 0),
+            ),
+        ]
+        self.assertEqual(
+            compute_day_worked_seconds(events, _dt(self.day, 13, 30)),
+            4 * 3600 + 30 * 60,
+        )
+
+    def test_open_second_shift(self):
+        events = [
+            AttendanceEvent(
+                user=self.user,
+                event_type=AttendanceEvent.ARRIVAL,
+                timestamp=_dt(self.day, 9, 0),
+            ),
+            AttendanceEvent(
+                user=self.user,
+                event_type=AttendanceEvent.DEPARTURE,
+                timestamp=_dt(self.day, 13, 0),
+            ),
+            AttendanceEvent(
+                user=self.user,
+                event_type=AttendanceEvent.ARRIVAL,
+                timestamp=_dt(self.day, 14, 0),
+            ),
+        ]
+        self.assertEqual(compute_day_worked_seconds(events, _dt(self.day, 16, 0)), 6 * 3600)
+
+    def test_open_until_before_arrival(self):
+        events = [
+            AttendanceEvent(
+                user=self.user,
+                event_type=AttendanceEvent.ARRIVAL,
+                timestamp=_dt(self.day, 9, 0),
+            ),
+        ]
+        self.assertEqual(compute_day_worked_seconds(events, _dt(self.day, 8, 0)), 0)
 
 
 class ComputeSalaryTests(TestCase):
@@ -180,7 +224,7 @@ class ComputeSalaryTests(TestCase):
     def test_simple_day_with_money(self):
         _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
         _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 17, 0)
-        result = compute_salary(self.user, self.day1, self.day1)
+        result = compute_salary(self.user, self.day1, self.day1, None)
         self.assertEqual(len(result["rows"]), 1)
         self.assertEqual(result["rows"][0]["hours"], Decimal("8.00"))
         self.assertEqual(result["rows"][0]["money"], Decimal("80.00"))
@@ -189,7 +233,7 @@ class ComputeSalaryTests(TestCase):
 
     def test_user_without_profile(self):
         user = User.objects.create_user(username="noprofile", password="pass")
-        result = compute_salary(user, self.day1, self.day2)
+        result = compute_salary(user, self.day1, self.day2, None)
         self.assertEqual(len(result["rows"]), 2)
         self.assertEqual(result["hourly_rate"], Decimal("0.00"))
         self.assertEqual(result["rows"][0]["hours"], Decimal("0.00"))
@@ -200,7 +244,7 @@ class ComputeSalaryTests(TestCase):
         self.assertEqual(result["total_money"], Decimal("0.00"))
 
     def test_empty_day_in_range(self):
-        result = compute_salary(self.user, self.day1, self.day2)
+        result = compute_salary(self.user, self.day1, self.day2, None)
         self.assertEqual(len(result["rows"]), 2)
         self.assertEqual(result["rows"][0]["hours"], Decimal("0.00"))
         self.assertEqual(result["rows"][0]["money"], Decimal("0.00"))
@@ -214,7 +258,7 @@ class ComputeSalaryTests(TestCase):
         _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 17, 0)
         _event(self.user, AttendanceEvent.ARRIVAL, self.day2, 10, 0)
         _event(self.user, AttendanceEvent.DEPARTURE, self.day2, 14, 0)
-        result = compute_salary(self.user, self.day1, self.day2)
+        result = compute_salary(self.user, self.day1, self.day2, None)
         self.assertEqual(result["rows"][0]["hours"], Decimal("8.00"))
         self.assertEqual(result["rows"][1]["hours"], Decimal("4.00"))
         self.assertEqual(result["total_hours"], Decimal("12.00"))
@@ -223,7 +267,7 @@ class ComputeSalaryTests(TestCase):
     def test_sub_hour_money(self):
         _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
         _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 30)
-        result = compute_salary(self.user, self.day1, self.day1)
+        result = compute_salary(self.user, self.day1, self.day1, None)
         self.assertEqual(result["rows"][0]["hours"], Decimal("0.50"))
         self.assertEqual(result["rows"][0]["money"], Decimal("5.00"))
         self.assertEqual(result["total_money"], Decimal("5.00"))
@@ -231,14 +275,14 @@ class ComputeSalaryTests(TestCase):
     def test_money_uses_per_second_not_rounded_hours(self):
         _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
         _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 10)
-        result = compute_salary(self.user, self.day1, self.day1)
+        result = compute_salary(self.user, self.day1, self.day1, None)
         self.assertEqual(result["rows"][0]["money"], Decimal("1.67"))
         self.assertEqual(result["total_money"], Decimal("1.67"))
 
     def test_money_counts_seconds(self):
         _event(self.user, AttendanceEvent.ARRIVAL, self.day1, 9, 0, 0)
         _event(self.user, AttendanceEvent.DEPARTURE, self.day1, 9, 1, 30)
-        result = compute_salary(self.user, self.day1, self.day1)
+        result = compute_salary(self.user, self.day1, self.day1, None)
         self.assertEqual(result["rows"][0]["money"], Decimal("0.25"))
         self.assertEqual(result["total_money"], Decimal("0.25"))
 
@@ -269,6 +313,26 @@ class ComputeAllSalariesTests(TestCase):
         self.assertEqual(result["by_date"][self.day1], Decimal("160.00"))
         self.assertEqual(result["by_date"][self.day2], Decimal("40.00"))
 
+    @patch("attendance.salary.timezone.now", return_value=_dt(date(2026, 6, 15), 13, 0))
+    def test_open_shift_today_counts_until_now(self, now):
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
+        result = compute_all_salaries(self.day1, self.day1)
+        self.assertEqual(now.return_value, _dt(self.day1, 13, 0))
+        self.assertEqual(result["total_money"], Decimal("40.00"))
+        self.assertEqual(result["by_date"][self.day1], Decimal("40.00"))
+        self.assertEqual(result["employees"][0]["hours"], Decimal("4.00"))
+        self.assertEqual(result["employees"][0]["money"], Decimal("40.00"))
+        self.assertEqual(result["employees_by_date"][self.day1][0]["hours"], Decimal("4.00"))
+
+    @patch("attendance.salary.timezone.now", return_value=_dt(date(2026, 10, 29), 12, 0))
+    def test_open_shift_on_past_day_stays_zero(self, now):
+        _event(self.worker, AttendanceEvent.ARRIVAL, self.day1, 9, 0)
+        result = compute_all_salaries(self.day1, self.day1)
+        self.assertEqual(now.return_value.astimezone(_TB).date(), date(2026, 10, 29))
+        self.assertEqual(result["total_money"], Decimal("0.00"))
+        self.assertEqual(result["by_date"][self.day1], Decimal("0.00"))
+        self.assertEqual(result["employees"], [])
+
 
 class MonthlyRateSalaryTests(TestCase):
     def test_daily_share_puts_remainder_on_last_day(self):
@@ -290,7 +354,7 @@ class MonthlyRateSalaryTests(TestCase):
         day = date(2026, 6, 15)
         _event(user, AttendanceEvent.ARRIVAL, day, 9, 0)
         _event(user, AttendanceEvent.DEPARTURE, day, 17, 0)
-        result = compute_salary(user, day, day)
+        result = compute_salary(user, day, day, None)
         self.assertEqual(result["rows"][0]["hours"], Decimal("8.00"))
         self.assertEqual(result["rows"][0]["money"], Decimal("3.33"))
         self.assertEqual(result["total_money"], Decimal("3.33"))
