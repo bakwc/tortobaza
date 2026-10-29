@@ -41,7 +41,10 @@ _MONTHS = {
 }
 BOG_BUSINESS_GEL = "BOG business GEL"
 _PURCHASE_RE = re.compile(r"Purchase:\s*([A-Z]{3})(\d+\.\d{2})")
+_PAYMENT_RE = re.compile(r"Payment:\s*([A-Z]{3})(\d+\.\d{2})")
 _CARD_RE = re.compile(r"Card:\*+(\d{4})")
+_ACCOUNT_MASK_RE = re.compile(r"([A-Z0-9]+)\*+([A-Z0-9]+)([A-Z]{3})")
+_IBAN_LENGTH = 22
 _DATE_RE = re.compile(r"(\d{2})[./](\d{2})[./](\d{4})")
 _OPERATION_RE = re.compile(r"gasavali|charicxva", re.IGNORECASE)
 _ACCOUNT_AMOUNT_RE = re.compile(r"([A-Z]{3})([\d,]+\.\d{2})")
@@ -59,6 +62,8 @@ class ParsedCardSms:
     merchant: str
     sms_date: date
     kind: str
+    account_prefix: str
+    account_suffix: str
 
 
 @dataclass(frozen=True)
@@ -99,6 +104,9 @@ def parse_card_sms(body: str) -> ParsedCardSms | None:
     purchase = _parse_purchase(lines)
     if purchase is not None:
         return purchase
+    payment = _parse_payment(lines)
+    if payment is not None:
+        return payment
     return _parse_account_operation(lines)
 
 
@@ -153,7 +161,10 @@ def _match_pending() -> None:
 
 
 def _match_row(row: CardSmsMessage) -> None:
-    if row.card_last4 == "":
+    parsed = parse_card_sms(row.raw_body)
+    if parsed is not None and parsed.account_prefix != "":
+        found = _matching_masked_accounts(parsed.account_prefix, parsed.account_suffix, row.currency)
+    elif row.card_last4 == "":
         found = _matching_named_accounts(BOG_BUSINESS_GEL, row.currency)
     else:
         found = _matching_accounts(row.card_last4, row.currency)
@@ -184,6 +195,25 @@ def _matching_accounts(card_last4: str, currency: str) -> list[tuple[str, int]]:
                 if card_last4 in _cards_of(account) and account.currency == currency:
                     found.append((alias, account.pk))
     return found
+
+
+def _matching_masked_accounts(prefix: str, suffix: str, currency: str) -> list[tuple[str, int]]:
+    found: list[tuple[str, int]] = []
+    for alias in _FINANCE_DBS:
+        with use_finance_db(alias):
+            for account in FinancialAccount.objects.filter(currency=currency):
+                if _iban_matches(account.iban, prefix, suffix, currency):
+                    found.append((alias, account.pk))
+    return found
+
+
+def _iban_matches(iban: str, prefix: str, suffix: str, currency: str) -> bool:
+    if len(iban) != _IBAN_LENGTH + len(currency):
+        return False
+    if len(prefix) + len(suffix) > _IBAN_LENGTH:
+        return False
+    account_number = iban[:_IBAN_LENGTH]
+    return account_number.startswith(prefix) and account_number.endswith(suffix) and iban.endswith(suffix + currency)
 
 
 def _cards_of(account: FinancialAccount) -> set[str]:
@@ -338,6 +368,35 @@ def _parse_purchase(lines: list[str]) -> ParsedCardSms | None:
         merchant=" ".join(merchant_lines),
         sms_date=sms_date,
         kind=CardSmsMessage.KIND_EXPENSE,
+        account_prefix="",
+        account_suffix="",
+    )
+
+
+def _parse_payment(lines: list[str]) -> ParsedCardSms | None:
+    payment = _PAYMENT_RE.fullmatch(lines[0])
+    sms_date = _sms_date(lines[-1])
+    if payment is None or sms_date is None:
+        return None
+    account_index = _single_index(lines, _account_mask_line)
+    if account_index is None or account_index == 0 or account_index == len(lines) - 1:
+        return None
+    account_match = _ACCOUNT_MASK_RE.fullmatch(lines[account_index])
+    if account_match is None or account_match.group(3) != payment.group(1):
+        return None
+    merchant_lines = _merchant_lines(lines[account_index + 1 : -1])
+    if len(merchant_lines) == 0:
+        return None
+    amount = Decimal(payment.group(2)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return ParsedCardSms(
+        card_last4="",
+        currency=payment.group(1),
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_EXPENSE,
+        account_prefix=account_match.group(1),
+        account_suffix=account_match.group(2),
     )
 
 
@@ -368,6 +427,8 @@ def _parse_account_operation(lines: list[str]) -> ParsedCardSms | None:
         merchant=merchant,
         sms_date=sms_date,
         kind=kind,
+        account_prefix="",
+        account_suffix="",
     )
 
 
@@ -398,6 +459,10 @@ def _matching_named_accounts(name: str, currency: str) -> list[tuple[str, int]]:
             for account in FinancialAccount.objects.filter(name=name, currency=currency):
                 found.append((alias, account.pk))
     return found
+
+
+def _account_mask_line(line: str) -> bool:
+    return _ACCOUNT_MASK_RE.fullmatch(line) is not None
 
 
 def _account_amount_line(line: str) -> bool:

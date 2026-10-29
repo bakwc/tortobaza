@@ -34,6 +34,11 @@ CHARICXVA_HTML = (
     "charicxva<br/>individualuri mecarme pilipp bakanov<br/>GEL325.84<br/>"
     "SWEET CHILL<br/>visgan: LTD WISE PAYMENTS<br/>nashti: GEL1,780.54<br/>23/10/2026"
 )
+PAYMENT_HTML = (
+    "Payment: GEL50.00<br/>GE30***1239GEL<br/>Magti Internet Services<br/>"
+    "You received: 112.50 PLUS<br/>Total: 433,767.95 PLUS<br/>29.10.2026"
+)
+PAYMENT_IBAN = "GE30BG0000000000001239GEL"
 
 
 class FakeIMAP:
@@ -141,6 +146,67 @@ class CardSmsTests(TestCase):
         self.assertIsNotNone(dotted)
         self.assertEqual(dotted.sms_date, date(2026, 10, 24))
         self.assertEqual(dotted.amount, Decimal("151.20"))
+
+    def test_parse_payment(self):
+        parsed = parse_card_sms(html_to_text(PAYMENT_HTML))
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.card_last4, "")
+        self.assertEqual(parsed.currency, "GEL")
+        self.assertEqual(parsed.amount, Decimal("50.00"))
+        self.assertEqual(parsed.merchant, "Magti Internet Services")
+        self.assertEqual(parsed.sms_date, date(2026, 10, 29))
+        self.assertEqual(parsed.kind, CardSmsMessage.KIND_EXPENSE)
+        self.assertEqual(parsed.account_prefix, "GE30")
+        self.assertEqual(parsed.account_suffix, "1239")
+
+    def test_payment_sms_matches_iban_mask(self):
+        account = _account("Masked GEL", "GEL", "", "default")
+        account.iban = PAYMENT_IBAN
+        account.save(update_fields=["iban"])
+        card_only = _account("Card only", "GEL", "1239", "default")
+        _account("BOG business GEL", "GEL", "", "personal")
+        _import([_message("<pay@gmail.com>", PAYMENT_HTML)])
+        rows = _transactions("default")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertNotEqual(rows[0].account_id, card_only.pk)
+        self.assertEqual(rows[0].amount, Decimal("-50.00"))
+        self.assertEqual(rows[0].kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(rows[0].counterparty_name, "Magti Internet Services")
+        self.assertEqual(rows[0].description, "Magti Internet Services")
+        self.assertEqual(rows[0].date, date(2026, 10, 29))
+        self.assertEqual(rows[0].external_id, "<pay@gmail.com>")
+        self.assertEqual(_transactions("personal"), [])
+        stored = CardSmsMessage.objects.get(message_id="<pay@gmail.com>")
+        self.assertEqual(stored.card_last4, "")
+        self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored.finance_db, "default")
+        self.assertEqual(stored.transaction_id, rows[0].pk)
+
+    def test_payment_sms_ignores_card_and_named_account(self):
+        _account("Card only", "GEL", "1239", "default")
+        _account("BOG business GEL", "GEL", "", "default")
+        _import([_message("<pay@gmail.com>", PAYMENT_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        self.assertEqual(_transactions("personal"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_UNMATCHED)
+        self.assertEqual(row.card_last4, "")
+        self.assertEqual(row.amount, Decimal("50.00"))
+        self.assertEqual(row.merchant, "Magti Internet Services")
+
+    def test_payment_sms_ambiguous_when_mask_matches_twice(self):
+        first = _account("One", "GEL", "", "default")
+        second = _account("Two", "GEL", "", "default")
+        first.iban = PAYMENT_IBAN
+        second.iban = "GE30TB0000000000001239GEL"
+        first.save(update_fields=["iban"])
+        second.save(update_fields=["iban"])
+        _import([_message("<pay@gmail.com>", PAYMENT_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_AMBIGUOUS)
+        self.assertIsNone(row.transaction_id)
 
     def test_fetch_keeps_recent_exact_subject(self):
         now = datetime(2026, 10, 27, 4, 0, tzinfo=_TB)
