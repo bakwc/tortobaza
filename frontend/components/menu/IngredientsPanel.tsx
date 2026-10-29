@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Check, ChevronRight, Droplets, Hash, Package, Plus, Scale, Search, Trash2, Wheat } from "lucide-react";
@@ -204,18 +204,71 @@ function IngredientTechCards({ ingredientId }: { ingredientId: number }) {
   );
 }
 
-function IngredientRow({ row, unitLabel, onOpen }: { row: Ingredient; unitLabel: string; onOpen: () => void }) {
+function GroupSelect({
+  ids,
+  selected,
+  onChange,
+}: {
+  ids: number[];
+  selected: number[];
+  onChange: (ids: number[], checked: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const chosen = ids.filter((id) => selected.includes(id)).length;
+  const checked = ids.length > 0 && chosen === ids.length;
+  const indeterminate = chosen > 0 && !checked;
+  useEffect(() => {
+    if (ref.current !== null) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      aria-checked={indeterminate ? "mixed" : checked}
+      onChange={(event) => onChange(ids, event.target.checked)}
+      className="h-4 w-4 accent-[var(--brand)]"
+    />
+  );
+}
+
+function IngredientRow({
+  row,
+  unitLabel,
+  selecting,
+  selected,
+  onOpen,
+}: {
+  row: Ingredient;
+  unitLabel: string;
+  selecting: boolean;
+  selected: boolean;
+  onOpen: () => void;
+}) {
   const t = useTranslations("stock");
   const UnitIcon = UNIT_ICONS[row.unit];
   return (
     <button
       type="button"
+      aria-pressed={selecting ? selected : undefined}
       onClick={onOpen}
       className={cn(
         "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--cream-soft)] focus-visible:bg-[var(--cream-soft)] focus-visible:outline-none",
         !row.is_active && "opacity-60",
+        selecting && selected && "bg-[var(--cream-soft)]",
       )}
     >
+      {selecting ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            selected ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-white",
+          )}
+        >
+          {selected ? <Check className="h-3.5 w-3.5" /> : null}
+        </span>
+      ) : null}
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--brand)]/10 text-[var(--brand)]">
         <UnitIcon className="h-5 w-5" />
       </span>
@@ -264,6 +317,9 @@ export function IngredientsPanel() {
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [assignCategory, setAssignCategory] = useState("");
   const requestedId = ignoreIngredientParam
     ? viewing === null
       ? null
@@ -309,6 +365,28 @@ export function IngredientsPanel() {
     setViewing(null);
     router.replace("/menu/ingredients", { scroll: false });
   };
+  const toggleSelecting = () => {
+    setSelecting((value) => !value);
+    setSelected([]);
+    setAssignCategory("");
+    ingredients.assignCategory.reset();
+  };
+  const toggleSelected = (id: number) => {
+    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+  const setGroupSelected = (ids: number[], checked: boolean) => {
+    setSelected((current) => {
+      if (checked) return [...new Set([...current, ...ids])];
+      const drop = new Set(ids);
+      return current.filter((id) => !drop.has(id));
+    });
+  };
+  const assignSelected = () => {
+    ingredients.assignCategory.mutate(
+      { ids: selected, category: assignCategory === "none" ? null : Number(assignCategory) },
+      { onSuccess: () => setSelected([]) },
+    );
+  };
 
   const rows = ingredients.list.data ?? [];
   const query = search.trim().toLowerCase();
@@ -327,14 +405,19 @@ export function IngredientsPanel() {
   const activeCount = rows.filter((row) => row.is_active).length;
 
   return (
-    <div className="grid gap-6">
+    <div className={cn("grid gap-6", selected.length > 0 && "pb-28")}>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.ingredients")}</h2>
-          <Button type="button" onClick={openNew}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("add")}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant={selecting ? "primary" : "outline"} onClick={toggleSelecting}>
+              {t("selectIngredients")}
+            </Button>
+            <Button type="button" onClick={openNew}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("add")}
+            </Button>
+          </div>
         </div>
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
@@ -403,6 +486,13 @@ export function IngredientsPanel() {
                 className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-sm"
               >
                 <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  {selecting ? (
+                    <GroupSelect
+                      ids={group.rows.map((row) => row.id)}
+                      selected={selected}
+                      onChange={setGroupSelected}
+                    />
+                  ) : null}
                   <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
                     {group.label}
                   </h3>
@@ -412,7 +502,14 @@ export function IngredientsPanel() {
                 </div>
                 <div className="divide-y divide-[var(--line)]">
                   {group.rows.map((row) => (
-                    <IngredientRow key={row.id} row={row} unitLabel={units(row.unit)} onOpen={() => openEdit(row)} />
+                    <IngredientRow
+                      key={row.id}
+                      row={row}
+                      unitLabel={units(row.unit)}
+                      selecting={selecting}
+                      selected={selected.includes(row.id)}
+                      onOpen={() => (selecting ? toggleSelected(row.id) : openEdit(row))}
+                    />
                   ))}
                 </div>
               </section>
@@ -468,6 +565,33 @@ export function IngredientsPanel() {
           <ErrorText error={categories.save.error ?? categories.remove.error} />
         </div>
       </Card>
+
+      {selected.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-white shadow-lg">
+          <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
+            <p className="text-sm font-semibold text-[var(--ink)]">{t("selectedCount", { count: selected.length })}</p>
+            <div className="min-w-[12rem] flex-1">
+              <NativeSelect value={assignCategory} onChange={(event) => setAssignCategory(event.target.value)}>
+                <option value="">{t("chooseCategory")}</option>
+                <option value="none">{t("noCategory")}</option>
+                {(categories.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <Button
+              type="button"
+              disabled={assignCategory === "" || ingredients.assignCategory.isPending}
+              onClick={assignSelected}
+            >
+              {t("assignCategory")}
+            </Button>
+            <ErrorText error={ingredients.assignCategory.error} />
+          </div>
+        </div>
+      ) : null}
 
       {draft ? (
         <EditorDialog

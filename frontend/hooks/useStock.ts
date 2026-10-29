@@ -36,7 +36,14 @@ export function useIngredientCategories() {
 }
 
 export function useIngredients() {
-  return useResource(["menu", "ingredients"], api.menuIngredients);
+  const invalidate = useInvalidateStock();
+  const ingredients = useResource(["menu", "ingredients"], api.menuIngredients);
+  const assignCategory = useMutation({
+    mutationFn: ({ ids, category }: { ids: number[]; category: number | null }) =>
+      api.assignIngredientCategory(ids, category),
+    onSuccess: invalidate,
+  });
+  return { ...ingredients, assignCategory };
 }
 
 export function useSemiProducts() {

@@ -106,6 +106,18 @@ class IngredientSerializer(serializers.ModelSerializer):
         return drop_costs(super().to_representation(instance), self.context, ["avg_cost"])
 
 
+class AssignIngredientCategorySerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=IngredientCategory.objects.all(), allow_null=True)
+
+    def validate(self, attrs):
+        ids = attrs["ids"]
+        found = Ingredient.objects.filter(pk__in=ids).count()
+        if found != len(set(ids)):
+            raise serializers.ValidationError({"ids": "Unknown ingredient."})
+        return attrs
+
+
 class ComponentLineSerializer(serializers.Serializer):
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)

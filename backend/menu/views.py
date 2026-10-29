@@ -23,6 +23,7 @@ from menu.models import (
 from menu.recipes import missing_modifier_compositions, tech_card_cost
 from menu.serializers import (
     CatalogOptionSerializer,
+    AssignIngredientCategorySerializer,
     IngredientCategorySerializer,
     IngredientSerializer,
     MissingModifierLineSerializer,
@@ -137,6 +138,24 @@ class IngredientDetailView(MenuDetailView):
 
     def get_queryset(self):
         return Ingredient.objects.select_related("category")
+
+
+class AssignIngredientCategoryView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = AssignIngredientCategorySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.validated_data["category"]
+        category_id = None if category is None else category.pk
+        for ingredient in Ingredient.objects.filter(pk__in=serializer.validated_data["ids"]):
+            if ingredient.category_id == category_id:
+                continue
+            ingredient.category = category
+            ingredient.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SemiProductListView(MenuListView):

@@ -2,6 +2,7 @@ from django.urls import path
 
 from menu.views import (
     CatalogOptionListView,
+    AssignIngredientCategoryView,
     IngredientCategoryDetailView,
     IngredientCategoryListView,
     IngredientDetailView,
@@ -26,6 +27,7 @@ urlpatterns = [
     path("menu/ingredient-categories/", IngredientCategoryListView.as_view()),
     path("menu/ingredient-categories/<int:pk>/", IngredientCategoryDetailView.as_view()),
     path("menu/ingredients/", IngredientListView.as_view()),
+    path("menu/ingredients/assign-category/", AssignIngredientCategoryView.as_view()),
     path("menu/ingredients/<int:pk>/", IngredientDetailView.as_view()),
     path("menu/semi-products/", SemiProductListView.as_view()),
     path("menu/semi-products/<int:pk>/", SemiProductDetailView.as_view()),

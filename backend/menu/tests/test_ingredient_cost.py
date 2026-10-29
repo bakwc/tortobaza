@@ -5,6 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from menu.models import IngredientCategory
 from menu.tests.fixtures import MenuFixture
 
 
@@ -183,6 +184,54 @@ class IngredientCostApiTests(TestCase):
             "modifier_groups": [],
             "modifier_lines": [],
         }
+
+    def test_assign_category(self):
+        category = IngredientCategory.objects.create(name="Dry")
+        sugar = self.menu.sugar
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(
+            "/api/menu/ingredients/assign-category/",
+            {"ids": [self.flour.pk, sugar.pk], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        self.flour.refresh_from_db()
+        sugar.refresh_from_db()
+        self.assertEqual(self.flour.category_id, category.pk)
+        self.assertEqual(sugar.category_id, category.pk)
+        self.assertEqual(self.flour.avg_cost, Decimal("0.010000"))
+        self.assertEqual(sugar.avg_cost, Decimal("0.005000"))
+
+        response = self.client.post(
+            "/api/menu/ingredients/assign-category/",
+            {"ids": [self.flour.pk], "category": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        self.flour.refresh_from_db()
+        self.assertIsNone(self.flour.category_id)
+        self.assertEqual(self.flour.avg_cost, Decimal("0.010000"))
+
+        response = self.client.post(
+            "/api/menu/ingredients/assign-category/",
+            {"ids": [999999], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+
+        response = self.client.post(
+            "/api/menu/ingredients/assign-category/",
+            {"ids": [self.flour.pk], "category": 999999},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+
+        response = self.client.post(
+            "/api/menu/ingredients/assign-category/",
+            {"ids": [], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
 
     def test_tech_card_sale_price(self):
         self.client.force_authenticate(self.staff)

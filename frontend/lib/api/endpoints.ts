@@ -217,6 +217,12 @@ export function endpoints(fetcher: Fetcher) {
       IngredientCategorySchema,
     ),
     menuIngredients: resource<Ingredient, IngredientBody>(fetcher, "/api/menu/ingredients/", IngredientSchema),
+    assignIngredientCategory(ids: number[], category: number | null): Promise<void> {
+      return fetcher<void>("/api/menu/ingredients/assign-category/", {
+        method: "POST",
+        body: JSON.stringify({ ids, category }),
+      });
+    },
     menuSemiProducts: resource<SemiProduct, SemiProductBody>(
       fetcher,
       "/api/menu/semi-products/",
