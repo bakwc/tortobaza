@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { QueryState } from "@/components/menu/ui";
-import { EmployeesMonthBar, ScheduleGrid, dayTypeClass, shortDayType } from "@/components/employees/ScheduleGrid";
+import { ScheduleGrid, dayTypeClass, shortDayType } from "@/components/employees/ScheduleGrid";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useTimesheet } from "@/hooks/useSchedule";
 import { cn } from "@/lib/utils";
@@ -15,10 +15,10 @@ export function TimesheetPanel() {
 
   return (
     <div className="grid gap-6">
-      <EmployeesMonthBar />
       <QueryState isLoading={timesheet.isLoading} isError={timesheet.isError}>
         {grid ? (
           <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--ink)]">{t("timesheetFactTitle")}</h2>
             {grid.employees.length === 0 ? (
               <p className="text-sm text-[var(--muted-2)]">{t("scheduleEmpty")}</p>
             ) : (

@@ -381,8 +381,7 @@
     "nextMonth": "Следующий месяц",
     "monthlyOrders": "Заказы за месяц",
     "salaries": "Зарплаты",
-    "schedule": "График",
-    "timesheet": "Табель",
+    "scheduleAndTimesheet": "График и табель",
     "finance": "Финансы",
     "dailyBoard": "Дневная доска",
     "unconfirmedOrders": "Неподтверждённые заказы",
@@ -1121,6 +1120,9 @@
     "scheduleSaveError": "Не удалось сохранить график.",
     "scheduleLoadError": "Не удалось загрузить график.",
     "teamSchedule": "График команды",
-    "hours": "Часы"
+    "hours": "Часы",
+    "schedulePlanTitle": "График (план)",
+    "timesheetFactTitle": "Табель (факт)",
+    "date": "Дата"
   }
 }

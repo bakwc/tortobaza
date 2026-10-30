@@ -381,8 +381,7 @@
     "nextMonth": "Next month",
     "monthlyOrders": "Monthly orders",
     "salaries": "Salaries",
-    "schedule": "Schedule",
-    "timesheet": "Timesheet",
+    "scheduleAndTimesheet": "Schedule & timesheet",
     "finance": "Finance",
     "dailyBoard": "Daily board",
     "unconfirmedOrders": "Unconfirmed orders",
@@ -1121,6 +1120,9 @@
     "scheduleSaveError": "Could not save the schedule.",
     "scheduleLoadError": "Could not load the schedule.",
     "teamSchedule": "Team schedule",
-    "hours": "Hours"
+    "hours": "Hours",
+    "schedulePlanTitle": "Schedule (plan)",
+    "timesheetFactTitle": "Timesheet (actual)",
+    "date": "Date"
   }
 }

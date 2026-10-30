@@ -381,8 +381,7 @@
     "nextMonth": "შემდეგი თვე",
     "monthlyOrders": "თვიური შეკვეთები",
     "salaries": "ხელფასები",
-    "schedule": "გრაფიკი",
-    "timesheet": "ტაბელი",
+    "scheduleAndTimesheet": "გრაფიკი და ტაბელი",
     "finance": "ფინანსები",
     "dailyBoard": "დღიური დაფა",
     "unconfirmedOrders": "დაუდასტურებელი შეკვეთები",
@@ -1121,6 +1120,9 @@
     "scheduleSaveError": "გრაფიკის შენახვა ვერ მოხერხდა.",
     "scheduleLoadError": "გრაფიკის ჩატვირთვა ვერ მოხერხდა.",
     "teamSchedule": "გუნდის გრაფიკი",
-    "hours": "საათები"
+    "hours": "საათები",
+    "schedulePlanTitle": "გრაფიკი (გეგმა)",
+    "timesheetFactTitle": "ტაბელი (ფაქტი)",
+    "date": "თარიღი"
   }
 }

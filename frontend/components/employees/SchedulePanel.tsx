@@ -6,7 +6,7 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EmployeesMonthBar, ScheduleGrid, dayTypeClass } from "@/components/employees/ScheduleGrid";
+import { ScheduleGrid, dayTypeClass } from "@/components/employees/ScheduleGrid";
 import { useFillSchedule, useSaveSchedule, useSchedule } from "@/hooks/useSchedule";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import type { ScheduleDayType } from "@/lib/api/types";
@@ -56,11 +56,11 @@ export function SchedulePanel() {
 
   return (
     <div className="grid gap-6">
-      <EmployeesMonthBar />
       {save.isError ? <p className="text-sm text-[var(--danger)]">{t("scheduleSaveError")}</p> : null}
       <QueryState isLoading={schedule.isLoading} isError={schedule.isError}>
         {grid ? (
           <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--ink)]">{t("schedulePlanTitle")}</h2>
             {grid.employees.length === 0 ? (
               <p className="text-sm text-[var(--muted-2)]">{t("scheduleEmpty")}</p>
             ) : (
@@ -103,11 +103,17 @@ export function SchedulePanel() {
                 renderRowExtra={(employee) => {
                   const counts = countsFor(employee.days);
                   return (
-                    <div className="flex items-center gap-3">
-                      <Button type="button" size="sm" variant="outline" onClick={() => openPattern(employee.id)}>
+                    <div className="flex flex-col items-start gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-auto w-full whitespace-normal px-1 py-1 text-center text-xs"
+                        onClick={() => openPattern(employee.id)}
+                      >
                         {t("fillPattern")}
                       </Button>
-                      <span className="text-xs tabular-nums text-[var(--ink)]/70">
+                      <span className="whitespace-normal text-xs tabular-nums text-[var(--ink)]/70">
                         {t("dayWorkShort")} {counts.work} {t("dayOffShort")} {counts.off} {t("dayVacationShort")}{" "}
                         {counts.vacation} {t("daySickShort")} {counts.sick}
                       </span>
