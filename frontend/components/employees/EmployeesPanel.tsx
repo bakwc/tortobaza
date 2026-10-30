@@ -105,7 +105,9 @@ export function EmployeesPanel() {
                   <tr
                     key={row.id}
                     onClick={() => open(row)}
-                    className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
+                    className={`cursor-pointer border-t border-[var(--line)] ${
+                      row.is_active ? "bg-green-50 hover:bg-green-100" : "bg-neutral-100 hover:bg-neutral-200"
+                    }`}
                   >
                     <td className="py-2 pr-3">{displayName(row)}</td>
                     <td className="py-2 pr-3">{row.username}</td>

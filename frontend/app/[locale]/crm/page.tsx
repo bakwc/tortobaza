@@ -268,7 +268,7 @@ function CrmBoard() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 md:gap-6">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 md:gap-6">
           {orders.map((order) => (
             <CrmOrderCard
               key={order.id}
@@ -520,7 +520,7 @@ function CrmOrderCard({
     <div
       id={`crm-order-${order.id}`}
       className={cn(
-        "relative rounded-2xl border shadow-sm transition-colors md:rounded-3xl",
+        "relative min-w-0 rounded-2xl border shadow-sm transition-colors md:rounded-3xl",
         collapsed ? "p-3" : "p-3 sm:p-4 md:p-8",
         tone.card,
         focused && "ring-2 ring-[var(--brand)] ring-offset-2",
@@ -528,7 +528,7 @@ function CrmOrderCard({
     >
       {collapseButton}
       {collapsed ? (
-        <div className="flex items-center gap-2 pr-10">
+        <div className="flex min-w-0 items-center gap-2 pr-10">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <CrmOrderTimeSlot
               timeStart={order.time_start}
@@ -566,11 +566,11 @@ function CrmOrderCard({
             >
               #{order.id}
             </Link>
-            <p className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium text-[var(--ink)]">
+            <p className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 text-sm font-medium text-[var(--ink)]">
               {order.is_gift ? <Gift className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : null}
               <span
                 className={cn(
-                  "min-w-0 truncate",
+                  "min-w-0 flex-1 truncate",
                   order.is_gift && "rounded-md bg-red-100 px-1.5",
                 )}
               >

@@ -107,15 +107,17 @@ class AuditLogTests(TestCase):
         self.assertEqual(event.changes["lines"]["old"][0]["quantity"], "1.000")
         self.assertEqual(event.changes["lines"]["new"][0]["quantity"], "2.000")
 
-    def test_password_is_not_stored(self):
+    def test_user_and_profile_are_not_tracked(self):
         self.user.set_password("another-password")
         self.user.username = "renamed"
+        profile = UserProfile.objects.create(user=self.user, hourly_rate=Decimal("10.00"))
         with actor(self.finance):
             with self.captureOnCommitCallbacks(execute=True):
                 self.user.save()
-        event = AuditEvent.objects.get(model="user")
-        self.assertNotIn("password", event.changes)
-        self.assertEqual(event.changes["username"], {"old": "worker", "new": "renamed"})
+                profile.hourly_rate = Decimal("12.00")
+                profile.save()
+        self.assertFalse(AuditEvent.objects.filter(model="user").exists())
+        self.assertFalse(AuditEvent.objects.filter(model="userprofile").exists())
 
     def test_crm_order_event_is_mirrored(self):
         order = CrmOrder.objects.create(

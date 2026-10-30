@@ -1,7 +1,5 @@
-from django.contrib.auth.models import User
 from django.db.models import Model
 
-from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
 from catalog.models import Category, CategoryLanding, Option, OptionGroup, Product, ProductImage, ProductOptionGroup
 from crm.models import CrmSettings, FinancialAccount, FinancialTransaction, FinancialTransactionRule
@@ -30,8 +28,6 @@ from orders.models import LibertyPayment, Order, PayPalPayment, PickupLocation, 
 from rsge.models import Invoice, Waybill
 
 ROOTS = {
-    User,
-    UserProfile,
     AttendanceEvent,
     Category,
     CategoryLanding,
