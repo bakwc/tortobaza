@@ -147,7 +147,7 @@ function DayLabel({ date, locale }: { date: string; locale: string }) {
 function EmployeeName({ name }: { name: string }) {
   const words = name.trim().split(/\s+/);
   return (
-    <div className="text-sm font-semibold normal-case leading-tight tracking-normal text-[var(--ink)]">
+    <div className="text-xs font-semibold normal-case leading-tight tracking-normal text-[var(--ink)]">
       {words.length === 2 ? (
         <>
           <div>{words[0]}</div>
@@ -188,7 +188,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
         <colgroup>
           <col className="w-12" />
           {employees.map((employee) => (
-            <col key={employee.id} className="w-28" />
+            <col key={employee.id} className="w-20" />
           ))}
         </colgroup>
         <thead>
@@ -200,7 +200,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
                 <th
                   key={employee.id}
                   className={cn(
-                    "w-28 min-w-28 max-w-28 px-1 py-2 text-center font-medium normal-case",
+                    "w-20 min-w-20 max-w-20 px-1 py-2 text-center font-medium normal-case",
                     highlighted ? "bg-[var(--brand)]/10" : "bg-white",
                   )}
                 >
