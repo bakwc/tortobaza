@@ -125,6 +125,20 @@ class CrmOrderItemLineInputSerializer(serializers.Serializer):
         return attrs
 
 
+_CENT = Decimal("0.01")
+
+
+def crm_item_sale_price(tech_card: TechCard, quantity: int, weight_kg: Decimal | None) -> Decimal:
+    sale_price = tech_card.sale_price
+    if sale_price is None:
+        raise serializers.ValidationError("Tech card has no sale price.")
+    if tech_card.kind == TechCard.KIND_WEIGHTED:
+        amount = sale_price * weight_kg / tech_card.basis_weight_kg * quantity
+    else:
+        amount = sale_price * quantity / tech_card.basis_quantity
+    return amount.quantize(_CENT)
+
+
 class CrmOrderItemInputSerializer(serializers.Serializer):
     tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     name = serializers.CharField(max_length=255, allow_blank=True)
@@ -146,6 +160,9 @@ class CrmOrderItemInputSerializer(serializers.Serializer):
         )
         if errors:
             raise serializers.ValidationError(errors)
+        tech_card = attrs["tech_card"]
+        if tech_card is not None:
+            attrs["price"] = crm_item_sale_price(tech_card, attrs["quantity"], attrs["weight_kg"])
         return attrs
 
 

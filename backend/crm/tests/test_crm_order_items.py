@@ -167,6 +167,8 @@ class CrmOrderItemsApiTests(TestCase):
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.finance = User.objects.create_user(username="finance", password="password", is_staff=True)
         UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        self.menu.cake.sale_price = Decimal("60.00")
+        self.menu.cake.save(update_fields=["sale_price"])
         self.order = CrmOrder.objects.create(
             date=date(2026, 10, 20),
             time_start=time(12, 0),
@@ -257,6 +259,54 @@ class CrmOrderItemsApiTests(TestCase):
         response = self._put(self._payload(CrmOrder.STATUS_NEW, [self._cake_item(None)]))
         self.assertEqual(response.status_code, 400)
         self.assertFalse(CrmOrderItem.objects.exists())
+
+    def test_item_price_scales_by_weight_and_quantity(self):
+        self.client.force_authenticate(self.admin)
+        item = self._cake_item("1.5")
+        item["quantity"] = 2
+        item["price"] = "1.00"
+        payload = self._payload(CrmOrder.STATUS_NEW, [item])
+        payload["cake_price"] = "999.00"
+        response = self._put(payload)
+        self.assertEqual(response.status_code, 200, response.content)
+        saved = CrmOrderItem.objects.get(order=self.order)
+        self.assertEqual(saved.price, Decimal("180.00"))
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.cake_price, Decimal("999.00"))
+
+    def test_piece_item_price_scales_by_quantity(self):
+        self.menu.bento.basis_quantity = 2
+        self.menu.bento.sale_price = Decimal("25.00")
+        self.menu.bento.save(update_fields=["basis_quantity", "sale_price"])
+        self.client.force_authenticate(self.admin)
+        response = self._put(
+            self._payload(
+                CrmOrder.STATUS_NEW,
+                [
+                    {
+                        "tech_card": self.menu.bento.pk,
+                        "name": "",
+                        "quantity": 4,
+                        "weight_kg": None,
+                        "price": "1.00",
+                        "comment": "",
+                        "needs_review": False,
+                        "modifiers": [],
+                        "lines": [],
+                    }
+                ],
+            )
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(CrmOrderItem.objects.get(order=self.order).price, Decimal("50.00"))
+
+    def test_item_without_sale_price_is_rejected(self):
+        self.menu.cake.sale_price = None
+        self.menu.cake.save(update_fields=["sale_price"])
+        self.client.force_authenticate(self.admin)
+        response = self._put(self._payload(CrmOrder.STATUS_NEW, [self._cake_item("2")]))
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(CrmOrderItem.objects.filter(order=self.order).exists())
 
     def test_food_cost_only_for_finance_admin(self):
         self.client.force_authenticate(self.admin)

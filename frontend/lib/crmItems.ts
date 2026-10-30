@@ -14,7 +14,6 @@ export type CrmItemDraft = {
   name: string;
   quantity: string;
   weight_kg: string;
-  price: string;
   comment: string;
   needs_review: boolean;
   modifiers: CrmItemModifierDraft[];
@@ -30,7 +29,6 @@ export function emptyCrmItem(): CrmItemDraft {
     name: "",
     quantity: "1",
     weight_kg: "",
-    price: "",
     comment: "",
     needs_review: false,
     modifiers: [],
@@ -45,7 +43,6 @@ export function crmItemDraftFromItem(item: CrmOrderItem): CrmItemDraft {
     name: item.name,
     quantity: String(item.quantity),
     weight_kg: item.weight_kg ?? "",
-    price: item.price ?? "",
     comment: item.comment,
     needs_review: item.needs_review,
     modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: String(row.quantity) })),
@@ -76,7 +73,7 @@ export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrder
     name: "",
     quantity: Number(item.quantity || "1"),
     weight_kg: card?.kind === "weighted" ? decimalOrNull(item.weight_kg) : null,
-    price: decimalOrNull(item.price),
+    price: crmItemSalePrice(item, techCards),
     comment: item.comment,
     needs_review: item.needs_review,
     modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: Number(row.quantity || "1") })),
@@ -159,10 +156,28 @@ export function crmItemsFillingText(items: CrmItemDraft[], techCards: TechCard[]
   return names.join(", ");
 }
 
-export function crmItemsPriceSum(items: CrmItemDraft[]): number | null {
-  const prices = items
-    .map((item) => decimalOrNull(item.price))
-    .filter((value): value is string => value !== null);
-  if (prices.length === 0) return null;
-  return prices.reduce((sum, value) => sum + Number(value), 0);
+function roundCents(value: number): string {
+  return (Math.round(value * 100) / 100).toFixed(2);
+}
+
+export function crmItemSalePrice(item: CrmItemDraft, techCards: TechCard[]): string | null {
+  const card = findCard(techCards, item.tech_card);
+  if (card === undefined || card.sale_price === null) return null;
+  const quantity = Number(item.quantity);
+  if (!Number.isInteger(quantity) || quantity < 1) return null;
+  const sale = Number(card.sale_price);
+  if (card.kind === "weighted") {
+    const weight = decimalOrNull(item.weight_kg);
+    if (weight === null || card.basis_weight_kg === null) return null;
+    return roundCents((sale * Number(weight) * quantity) / Number(card.basis_weight_kg));
+  }
+  if (card.basis_quantity === null) return null;
+  return roundCents((sale * quantity) / card.basis_quantity);
+}
+
+export function crmItemsPriceSum(items: CrmItemDraft[], techCards: TechCard[]): number {
+  return items.reduce((sum, item) => {
+    const price = crmItemSalePrice(item, techCards);
+    return price === null ? sum : sum + Number(price);
+  }, 0);
 }

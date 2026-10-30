@@ -33,11 +33,13 @@ import type {
 import {
   crmItemBody,
   crmItemDraftFromItem,
+  crmItemSalePrice,
   crmItemsFillingText,
   crmItemsPriceSum,
   crmItemsWeightText,
   type CrmItemDraft,
 } from "@/lib/crmItems";
+import { formatAed } from "@/lib/format";
 import {
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
@@ -167,21 +169,22 @@ export function CrmOrderForm(
   );
   const [weightTouched, setWeightTouched] = useState(props.mode === "edit" && props.order.weight !== "");
   const [fillingTouched, setFillingTouched] = useState(props.mode === "edit" && props.order.filling !== "");
+  const [cakePriceTouched, setCakePriceTouched] = useState(props.mode === "edit");
   const techCards = useTechCards();
   const cards = techCards.list.data ?? [];
-  const itemsPriceSum = crmItemsPriceSum(items);
-  const priceMismatch =
-    itemsPriceSum !== null && Math.abs(itemsPriceSum - Number(fields.cake_price.replace(",", ".") || "0")) >= 0.01;
+  const itemsPriceSum = crmItemsPriceSum(items, cards);
   const foodCost = props.mode === "edit" ? props.order.food_cost : undefined;
 
   const onItemsChange = (next: CrmItemDraft[]) => {
     setItems(next);
     const weightText = crmItemsWeightText(next, cards, { kg: t("items.kg"), pcs: t("items.pcs") });
     const fillingText = next.length === 0 ? "" : crmItemsFillingText(next, cards);
+    const priceSum = crmItemsPriceSum(next, cards);
     setFields((prev) => ({
       ...prev,
       weight: !weightTouched ? weightText : prev.weight,
       filling: !fillingTouched && fillingText !== "" ? fillingText : prev.filling,
+      cake_price: !cakePriceTouched && priceSum !== 0 ? priceSum.toFixed(2) : prev.cake_price,
     }));
   };
   const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
@@ -237,6 +240,9 @@ export function CrmOrderForm(
         setTimeRangeError("timeRangeMin20");
         return;
       }
+    }
+    if (items.some((item) => crmItemSalePrice(item, cards) === null)) {
+      return;
     }
     const body = buildCrmOrderFormData(
       fields,
@@ -501,6 +507,11 @@ export function CrmOrderForm(
         </div>
         <div className="mt-4">
           <CrmOrderItemsEditor items={items} onChange={onItemsChange} />
+          {items.length > 0 ? (
+            <p className="mt-3 text-sm font-semibold tabular-nums text-[var(--ink)]">
+              {t("items.total")}: {formatAed(itemsPriceSum)}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -569,18 +580,11 @@ export function CrmOrderForm(
               required
               inputMode="decimal"
               value={fields.cake_price}
-              onChange={(event) => setField("cake_price", event.target.value)}
+              onChange={(event) => {
+                setCakePriceTouched(true);
+                setField("cake_price", event.target.value);
+              }}
             />
-            {itemsPriceSum !== null ? (
-              <span
-                className={cn(
-                  "text-xs",
-                  priceMismatch ? "font-semibold text-amber-700" : "text-[var(--muted-2)]",
-                )}
-              >
-                {t("items.priceSum", { value: itemsPriceSum.toFixed(2) })}
-              </span>
-            ) : null}
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">

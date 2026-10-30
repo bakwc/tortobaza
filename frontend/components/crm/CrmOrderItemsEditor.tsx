@@ -11,7 +11,8 @@ import { GroupPicker } from "@/components/crm/GroupPicker";
 import { useCrmItemCost } from "@/hooks/useCrmOrders";
 import { useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import type { TechCard } from "@/lib/api/types";
-import { crmItemCostBody, emptyCrmItem, type CrmItemDraft } from "@/lib/crmItems";
+import { crmItemCostBody, crmItemSalePrice, emptyCrmItem, type CrmItemDraft } from "@/lib/crmItems";
+import { formatAed } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function ItemEditor({
@@ -35,6 +36,7 @@ function ItemEditor({
     .map((row) => ({ value: String(row.id), label: row.name }));
   const update = (patch: Partial<CrmItemDraft>) => onChange({ ...item, ...patch, needs_review: false });
   const cost = useCrmItemCost(card === undefined ? null : crmItemCostBody(item, card));
+  const price = crmItemSalePrice(item, techCards);
   const options = componentOptions(
     ingredients.list.data ?? [],
     semiProducts.list.data ?? [],
@@ -108,7 +110,12 @@ function ItemEditor({
           />
         </Field>
         <Field label={t("price")}>
-          <Input inputMode="decimal" value={item.price} onChange={(event) => update({ price: event.target.value })} />
+          <span className="flex h-12 items-center text-sm font-medium tabular-nums text-[var(--ink)]">
+            {price === null ? "—" : formatAed(price)}
+          </span>
+          {card !== undefined && card.sale_price === null ? (
+            <span className="text-sm font-medium text-amber-700">{t("noSalePrice")}</span>
+          ) : null}
           {cost.data !== undefined ? (
             <span className="text-sm font-medium text-[var(--ink)]">
               {t("foodCost", { value: Number(cost.data).toFixed(2) })}
