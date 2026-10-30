@@ -10,10 +10,12 @@ import {
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
   AnalyticsClientsSchema,
+  AnalyticsEmployeesSchema,
   AnalyticsLoadSchema,
   AnalyticsOverviewSchema,
   AnalyticsProductsSchema,
   CrmSalariesSchema,
+  EmployeeSchema,
   ExchangeRatesSchema,
   FinanceAccountSchema,
   FinanceTransactionSchema,
@@ -57,10 +59,13 @@ import {
   type CrmExpensesDay,
   type CrmExpensesMonth,
   type AnalyticsClients,
+  type AnalyticsEmployees,
   type AnalyticsLoad,
   type AnalyticsOverview,
   type AnalyticsProducts,
   type CrmSalaries,
+  type Employee,
+  type EmployeeBody,
   type ExchangeRates,
   type FinanceAccount,
   type FinanceTransaction,
@@ -578,6 +583,8 @@ export function endpoints(fetcher: Fetcher) {
       return parse(SessionUserSchema, raw);
     },
 
+    employees: resource<Employee, EmployeeBody>(fetcher, "/api/accounts/employees/", EmployeeSchema),
+
     async markAttendance(eventType: AttendanceEventType): Promise<AttendanceEvent> {
       const raw = await fetcher<unknown>("/api/attendance/mark/", {
         method: "POST",
@@ -634,6 +641,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(AnalyticsProductsSchema, raw);
+    },
+
+    async getAnalyticsEmployees(month: string): Promise<AnalyticsEmployees> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/employees/", {
+        searchParams: { month },
+      });
+      return parse(AnalyticsEmployeesSchema, raw);
     },
 
     async getFinanceTransactions(

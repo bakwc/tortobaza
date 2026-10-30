@@ -26,6 +26,7 @@ from accounts.models import UserProfile
 from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
 from crm.analytics import clients as analytics_clients
+from crm.analytics import employees as analytics_employees
 from crm.analytics import overview as analytics_overview
 from crm.analytics import production as analytics_production
 from crm.analytics import products as analytics_products
@@ -682,6 +683,20 @@ class AnalyticsProductsView(APIView):
         if month is None:
             month = f"{today.year:04d}-{today.month:02d}"
         return Response(analytics_products(month, today))
+
+
+class AnalyticsEmployeesView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+
+    def get(self, request):
+        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        today = _tbilisi_now().date()
+        month = query_serializer.validated_data.get("month")
+        if month is None:
+            month = f"{today.year:04d}-{today.month:02d}"
+        return Response(analytics_employees(month))
 
 
 class FinanceAccountsView(APIView):

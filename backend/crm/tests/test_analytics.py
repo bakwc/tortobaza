@@ -4,14 +4,17 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from crm.analytics import clients, overview, production, weight_kg, windows
+from attendance.models import AttendanceEvent
+from crm.analytics import clients, employees, overview, production, weight_kg, windows
 from crm.models import CrmOrder
 from orders.models import Order
 
 _UTC = ZoneInfo("UTC")
+_TB = ZoneInfo("Asia/Tbilisi")
 
 
 def _order(**kwargs) -> CrmOrder:
@@ -304,3 +307,53 @@ class AnalyticsApiTests(TestCase):
         self.client.force_authenticate(user=self.finance)
         response = self.client.get("/api/crm/analytics/clients/")
         self.assertEqual(response.status_code, 200)
+
+
+class AnalyticsEmployeesTests(TestCase):
+    def test_month_attributes_orders_and_attendance(self):
+        placer = User.objects.create_user(username="anna", password="password")
+        baker = User.objects.create_user(username="boris", password="password")
+        courier = User.objects.create_user(username="vera", password="password")
+        UserProfile.objects.create(user=baker, hourly_rate=Decimal("10.00"))
+        day = date(2026, 10, 10)
+        arrival = timezone.make_aware(datetime(2026, 10, 10, 9, 0), _TB)
+        departure = timezone.make_aware(datetime(2026, 10, 10, 17, 0), _TB)
+        AttendanceEvent.objects.create(user=baker, event_type=AttendanceEvent.ARRIVAL, timestamp=arrival)
+        AttendanceEvent.objects.create(user=baker, event_type=AttendanceEvent.DEPARTURE, timestamp=departure)
+        _order(
+            date=day,
+            created_by=placer,
+            taken_by=baker,
+            delivered_by=courier,
+            weight="1,5 кг",
+        )
+        _order(
+            date=date(2026, 9, 10),
+            created_by=placer,
+            taken_by=baker,
+            delivered_by=courier,
+            weight="2 кг",
+        )
+        _order(
+            date=day,
+            created_by=placer,
+            taken_by=baker,
+            delivered_by=courier,
+            weight="3 кг",
+            deleted=True,
+        )
+        report = employees("2026-10")
+        self.assertEqual(
+            [(row["name"], row["placed"], row["made"], row["made_kilograms"], row["delivered"], row["hours"], row["money"]) for row in report["employees"]],
+            [
+                ("anna", 1, 0, "0", 0, "0.00", "0.00"),
+                ("boris", 0, 1, "1.5", 0, "8.00", "80.00"),
+                ("vera", 0, 0, "0", 1, "0.00", "0.00"),
+            ],
+        )
+        self.assertEqual(report["totals"]["placed"], 1)
+        self.assertEqual(report["totals"]["made"], 1)
+        self.assertEqual(report["totals"]["made_kilograms"], "1.5")
+        self.assertEqual(report["totals"]["delivered"], 1)
+        self.assertEqual(report["totals"]["hours"], "8.00")
+        self.assertEqual(report["totals"]["money"], "80.00")

@@ -258,6 +258,25 @@ export const SessionUserSchema = z.object({
   is_finance_admin: z.boolean(),
 });
 
+export const EmployeeSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+  is_active: z.boolean(),
+  is_staff: z.boolean(),
+  hourly_rate: z.string(),
+  monthly_rate: z.string(),
+  can_login: z.boolean(),
+  telegram_username: z.string(),
+  internal_name: z.string(),
+  gender: z.enum(["male", "female"]),
+  is_finance_admin: z.boolean(),
+  is_active_courier: z.boolean(),
+  pushover_user: z.string(),
+});
+
 export const AttendanceEventSchema = z.object({
   id: z.number(),
   user: z.number(),
@@ -669,6 +688,30 @@ export const AnalyticsProductsSchema = z.object({
   weight_unknown: z.number(),
 });
 
+export const AnalyticsEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  hours: z.string(),
+  money: z.string(),
+  placed: z.number(),
+  made: z.number(),
+  made_kilograms: z.string(),
+  delivered: z.number(),
+});
+
+export const AnalyticsEmployeesSchema = z.object({
+  month: z.string(),
+  employees: z.array(AnalyticsEmployeeSchema),
+  totals: z.object({
+    hours: z.string(),
+    money: z.string(),
+    placed: z.number(),
+    made: z.number(),
+    made_kilograms: z.string(),
+    delivered: z.number(),
+  }),
+});
+
 export const AnalyticsClientsSchema = z.object({
   orders: z.number(),
   known_orders: z.number(),
@@ -870,6 +913,25 @@ export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type OrderAddress = z.infer<typeof OrderAddressSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type SessionUser = z.infer<typeof SessionUserSchema>;
+export type Employee = z.infer<typeof EmployeeSchema>;
+export type EmployeeBody = {
+  username: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  is_staff: boolean;
+  hourly_rate: string;
+  monthly_rate: string;
+  can_login: boolean;
+  telegram_username: string;
+  internal_name: string;
+  gender: "male" | "female";
+  is_finance_admin: boolean;
+  is_active_courier: boolean;
+  pushover_user: string;
+};
 export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
@@ -894,6 +956,7 @@ export type AnalyticsOverviewPayment = z.infer<typeof AnalyticsOverviewPaymentSc
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;
+export type AnalyticsEmployees = z.infer<typeof AnalyticsEmployeesSchema>;
 export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;

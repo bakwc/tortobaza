@@ -1,93 +1,46 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
-import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
-import { useRouter } from "@/i18n/navigation";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { EmployeesShell } from "@/components/employees/EmployeesShell";
+import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useCrmSalaries } from "@/hooks/useCrmOrders";
 import type { CrmSalaryPeriod } from "@/lib/api/types";
 import { formatAed, formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
-
-function shiftMonth(yyyyMm: string, delta: number): string {
-  const [yearStr, monthStr] = yyyyMm.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
-  const nextYear = date.getUTCFullYear();
-  const nextMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${nextYear}-${nextMonth}`;
-}
 
 function dayNumber(isoDate: string): number {
   return Number(isoDate.slice(8, 10));
 }
 
-function SalariesStaffOnly({ children }: { children: ReactNode }) {
-  const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
-
-  if (!currentUser.data?.is_finance_admin) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">
-        {t("staffOnly")}
-      </div>
-    );
-  }
-
-  return children;
-}
-
-export default function CrmSalariesPage() {
+export default function EmployeesSalariesPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl px-3 py-6 md:px-4 md:py-12">
-      <CrmAuthGate>
-        <SalariesStaffOnly>
-          <Suspense
-            fallback={
-              <div className="flex min-h-[40vh] items-center justify-center">
-                <Spinner className="h-6 w-6 text-[var(--brand)]" />
-              </div>
-            }
-          >
-            <CrmSalariesBoard />
-          </Suspense>
-        </SalariesStaffOnly>
-      </CrmAuthGate>
-    </div>
+    <EmployeesShell section="salaries">
+      <Suspense>
+        <SalariesBoard />
+      </Suspense>
+    </EmployeesShell>
   );
 }
 
-function CrmSalariesBoard() {
+function SalariesBoard() {
   const t = useTranslations("crm");
   const locale = useLocale();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const currentMonth = getTbilisiTodayIsoDate().slice(0, 7);
-  const selectedMonth = searchParams.get("month") ?? currentMonth;
-  const salariesQuery = useCrmSalaries(selectedMonth);
-  const isCurrentMonth = selectedMonth === currentMonth;
-
-  const setSelectedMonth = (next: string) => {
-    router.replace(`/crm/salaries?month=${next}`);
-  };
+  const period = useFinancePeriod();
+  const salariesQuery = useCrmSalaries(period.month);
+  const today = getTbilisiTodayIsoDate();
+  const isCurrentMonth = period.month === today.slice(0, 7);
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap justify-end gap-2">
-        <CrmOverflowMenu />
-      </div>
       <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedMonth(shiftMonth(selectedMonth, -1))}
+            onClick={() => period.setMonth(shiftFinanceMonth(period.month, -1))}
             className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -96,7 +49,7 @@ function CrmSalariesBoard() {
           <div className="flex min-w-0 flex-1 flex-col items-center gap-1 text-center">
             <div className="flex items-center gap-2 text-base font-semibold text-[var(--ink)] md:text-lg">
               <Calendar className="h-4 w-4 shrink-0 text-[var(--brand)] md:h-5 md:w-5" />
-              <span className="truncate">{formatCrmMonth(selectedMonth, locale)}</span>
+              <span className="truncate">{formatCrmMonth(period.month, locale)}</span>
             </div>
             <div className="flex items-center gap-2">
               {isCurrentMonth ? (
@@ -107,7 +60,7 @@ function CrmSalariesBoard() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedMonth(currentMonth)}
+                  onClick={() => period.setMonth(today.slice(0, 7))}
                   className="h-7 text-xs font-medium text-[var(--brand)] hover:text-[var(--brand)]"
                 >
                   {t("jumpToThisMonth")}
@@ -118,7 +71,7 @@ function CrmSalariesBoard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setSelectedMonth(shiftMonth(selectedMonth, 1))}
+            onClick={() => period.setMonth(shiftFinanceMonth(period.month, 1))}
             className="h-9 w-9 shrink-0 px-0 sm:w-auto sm:px-4"
           >
             <span className="hidden sm:inline">{t("nextMonth")}</span>
@@ -135,8 +88,8 @@ function CrmSalariesBoard() {
         </div>
       ) : (
         <>
-          {salariesQuery.data.periods.map((period) => (
-            <SalaryPeriodTable key={period.start} period={period} />
+          {salariesQuery.data.periods.map((periodRow) => (
+            <SalaryPeriodTable key={periodRow.start} period={periodRow} />
           ))}
           <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
             <h2 className="text-base font-semibold text-[var(--ink)]">{t("salaryMonthTotal")}</h2>
@@ -189,12 +142,8 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                 {period.employees.map((employee) => (
                   <tr key={employee.id}>
                     <td className="py-3 pr-4 text-[var(--ink)]">{employee.name}</td>
-                    <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">
-                      {employee.hours}
-                    </td>
-                    <td className="py-3 tabular-nums font-medium text-[var(--ink)]">
-                      {formatAed(employee.money)}
-                    </td>
+                    <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{employee.hours}</td>
+                    <td className="py-3 tabular-nums font-medium text-[var(--ink)]">{formatAed(employee.money)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -203,21 +152,13 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
           <tfoot>
             <tr className="border-t border-[var(--line)]">
               <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryHourlyTotal")}</td>
-              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">
-                {period.hourly_hours}
-              </td>
-              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">
-                {formatAed(period.hourly_money)}
-              </td>
+              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.hourly_hours}</td>
+              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.hourly_money)}</td>
             </tr>
             <tr>
               <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryMonthlyTotal")}</td>
-              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">
-                {period.monthly_hours}
-              </td>
-              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">
-                {formatAed(period.monthly_money)}
-              </td>
+              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.monthly_hours}</td>
+              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.monthly_money)}</td>
             </tr>
           </tfoot>
         </table>

@@ -6,6 +6,10 @@ from decimal import Decimal
 from statistics import median, quantiles
 from zoneinfo import ZoneInfo
 
+from django.contrib.auth.models import User
+
+from accounts.models import chef_identity
+from attendance.salary import compute_month_salaries, compute_salary
 from crm.models import AnalyticsOrderComposition, CrmOrder
 from crm.phone import extract_phones
 
@@ -810,6 +814,104 @@ def _metrics(bucket: _Count) -> dict:
         "quantity": bucket.quantity,
         "orders": len(bucket.order_ids),
         "kilograms": _num(bucket.kilograms),
+    }
+
+
+def _touch_employee(rows: dict[int, dict], user: User) -> dict:
+    row = rows.get(user.id)
+    if row is not None:
+        return row
+    row = {
+        "id": user.id,
+        "name": chef_identity(user)[0],
+        "user": user,
+        "placed": 0,
+        "made": 0,
+        "delivered": 0,
+        "kilograms": Decimal("0"),
+    }
+    rows[user.id] = row
+    return row
+
+
+def employees(month: str) -> dict:
+    start, end = _month_bounds(month)
+    orders = CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end).select_related(
+        "created_by",
+        "taken_by",
+        "delivered_by",
+    )
+    rows: dict[int, dict] = {}
+    for order in orders:
+        if order.created_by_id:
+            _touch_employee(rows, order.created_by)["placed"] += 1
+        if order.taken_by_id:
+            row = _touch_employee(rows, order.taken_by)
+            row["made"] += 1
+            parsed = weight_kg(order.weight)
+            if parsed is not None:
+                row["kilograms"] += parsed
+        if order.delivered_by_id:
+            _touch_employee(rows, order.delivered_by)["delivered"] += 1
+    payroll = compute_month_salaries(start.year, start.month)
+    payroll_ids = {
+        employee["id"]
+        for period in payroll["periods"]
+        for employee in period["employees"]
+    }
+    missing_ids = payroll_ids - set(rows)
+    if missing_ids:
+        for user in User.objects.filter(id__in=missing_ids):
+            _touch_employee(rows, user)
+    people = []
+    total_hours = Decimal("0")
+    total_money = Decimal("0")
+    total_placed = 0
+    total_made = 0
+    total_kilograms = Decimal("0")
+    total_delivered = 0
+    for row in rows.values():
+        salary = compute_salary(row["user"], start, end, None)
+        hours = salary["total_hours"]
+        money = salary["total_money"]
+        if (
+            hours == 0
+            and money == 0
+            and row["placed"] == 0
+            and row["made"] == 0
+            and row["delivered"] == 0
+        ):
+            continue
+        people.append(
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "hours": _money(hours),
+                "money": _money(money),
+                "placed": row["placed"],
+                "made": row["made"],
+                "made_kilograms": _num(row["kilograms"]),
+                "delivered": row["delivered"],
+            }
+        )
+        total_hours += hours
+        total_money += money
+        total_placed += row["placed"]
+        total_made += row["made"]
+        total_kilograms += row["kilograms"]
+        total_delivered += row["delivered"]
+    people.sort(key=lambda item: (item["name"].casefold(), item["id"]))
+    return {
+        "month": month,
+        "employees": people,
+        "totals": {
+            "hours": _money(total_hours),
+            "money": _money(total_money),
+            "placed": total_placed,
+            "made": total_made,
+            "made_kilograms": _num(total_kilograms),
+            "delivered": total_delivered,
+        },
     }
 
 

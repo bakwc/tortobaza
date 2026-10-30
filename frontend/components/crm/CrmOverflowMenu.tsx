@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Banknote, BookOpen, ChartColumn, ClipboardList, History, LogOut, MoreHorizontal, Receipt, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ClipboardList, History, LogOut, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -40,12 +40,10 @@ export function CrmOverflowMenu() {
   const monthParam = searchParams.get("month");
   const dateParam = searchParams.get("date");
   const month = monthParam ?? (dateParam ? dateParam.slice(0, 7) : null);
-  const salariesHref = month ? `/crm/salaries?month=${month}` : "/crm/salaries";
   const financeHref = month ? `/finance?month=${month}` : "/finance";
   const analyticsHref = month ? `/analytics?month=${month}` : "/analytics";
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
   const isStaff = Boolean(currentUser.data?.is_staff);
-  const isSalaries = isUnder(pathname, "/crm/salaries");
   const pendingQuery = useRsgePendingCount(isFinanceAdmin);
   const pendingCount = pendingQuery.data?.count ?? 0;
   const rsgeHref =
@@ -61,7 +59,7 @@ export function CrmOverflowMenu() {
       href: "/crm",
       label: t("ordersSection"),
       icon: ClipboardList,
-      active: isUnder(pathname, "/crm") && !isSalaries,
+      active: isUnder(pathname, "/crm"),
     },
     ...(isFinanceAdmin
       ? [
@@ -80,11 +78,11 @@ export function CrmOverflowMenu() {
             active: isUnder(pathname, "/finance"),
           },
           {
-            key: "salaries",
-            href: salariesHref,
-            label: t("salaries"),
-            icon: Banknote,
-            active: isSalaries,
+            key: "employees",
+            href: "/employees",
+            label: t("employeesSection"),
+            icon: Users,
+            active: isUnder(pathname, "/employees"),
           },
           {
             key: "rsge",
