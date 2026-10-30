@@ -1111,6 +1111,7 @@
     "dayEmpty": "Clear",
     "fillPattern": "From pattern",
     "pattern42": "4/2",
+    "pattern43": "4/3",
     "pattern22": "2/2",
     "pattern52": "5/2",
     "patternEvery": "Every day",
@@ -1123,6 +1124,8 @@
     "hours": "Hours",
     "schedulePlanTitle": "Schedule (plan)",
     "timesheetFactTitle": "Timesheet (actual)",
-    "date": "Date"
+    "date": "Date",
+    "selectedDays": "Selected: {count}",
+    "clearSelection": "Clear"
   }
 }

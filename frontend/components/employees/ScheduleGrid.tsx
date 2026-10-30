@@ -144,6 +144,22 @@ function DayLabel({ date, locale }: { date: string; locale: string }) {
   );
 }
 
+function EmployeeName({ name }: { name: string }) {
+  const words = name.trim().split(/\s+/);
+  return (
+    <div className="text-sm font-semibold normal-case leading-tight tracking-normal text-[var(--ink)]">
+      {words.length === 2 ? (
+        <>
+          <div>{words[0]}</div>
+          <div>{words[1]}</div>
+        </>
+      ) : (
+        name
+      )}
+    </div>
+  );
+}
+
 export function ScheduleGrid<T extends ScheduleGridEmployee>({
   start,
   end,
@@ -164,6 +180,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
   const t = useTranslations("employees");
   const locale = useLocale();
   const dates = monthDates(start, end);
+  const today = getTbilisiTodayIsoDate();
 
   return (
     <div className="overflow-x-auto">
@@ -171,7 +188,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
         <colgroup>
           <col className="w-12" />
           {employees.map((employee) => (
-            <col key={employee.id} className="w-[4.5rem]" />
+            <col key={employee.id} className="w-28" />
           ))}
         </colgroup>
         <thead>
@@ -183,44 +200,55 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
                 <th
                   key={employee.id}
                   className={cn(
-                    "w-[4.5rem] min-w-[4.5rem] max-w-[4.5rem] px-1 py-2 text-center font-medium normal-case",
+                    "w-28 min-w-28 max-w-28 px-1 py-2 text-center font-medium normal-case",
                     highlighted ? "bg-[var(--brand)]/10" : "bg-white",
                   )}
                 >
-                  <div className="truncate">{employee.name}</div>
-                  <div className="truncate font-normal text-[var(--ink)]/50">{employee.position}</div>
+                  <EmployeeName name={employee.name} />
+                  <div className="truncate text-[10px] font-normal tracking-normal text-[var(--ink)]/50">
+                    {employee.position}
+                  </div>
                 </th>
               );
             })}
           </tr>
         </thead>
         <tbody>
-          {dates.map((date) => (
-            <tr key={date}>
-              <td
-                className={cn(
-                  "sticky left-0 z-10 w-12 min-w-12 max-w-12 px-1 py-1 text-center text-[10px] font-medium",
-                  isWeekend(date) ? "bg-neutral-100 text-[var(--ink)]/70" : "bg-white text-[var(--ink)]/50",
-                )}
-              >
-                <DayLabel date={date} locale={locale} />
-              </td>
-              {employees.map((employee) => {
-                const highlighted = employee.id === highlightUserId;
-                return (
-                  <td
-                    key={employee.id}
-                    className={cn(
-                      "border border-white p-0 text-center",
-                      highlighted ? "bg-[var(--brand)]/10" : isWeekend(date) && "bg-neutral-50",
-                    )}
-                  >
-                    {renderCell(employee, date)}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+          {dates.map((date) => {
+            const isToday = date === today;
+            return (
+              <tr key={date}>
+                <td
+                  className={cn(
+                    "sticky left-0 z-10 w-12 min-w-12 max-w-12 px-1 py-1 text-center text-[10px] font-medium",
+                    isToday
+                      ? "bg-[var(--brand)] text-xs font-bold text-white"
+                      : isWeekend(date)
+                        ? "bg-neutral-100 text-[var(--ink)]/70"
+                        : "bg-white text-[var(--ink)]/50",
+                  )}
+                >
+                  <DayLabel date={date} locale={locale} />
+                </td>
+                {employees.map((employee) => {
+                  const highlighted = employee.id === highlightUserId;
+                  return (
+                    <td
+                      key={employee.id}
+                      className={cn(
+                        "border border-white p-0 text-center",
+                        highlighted ? "bg-[var(--brand)]/10" : isWeekend(date) && "bg-neutral-50",
+                        isToday &&
+                          "relative after:pointer-events-none after:absolute after:inset-0 after:z-10 after:shadow-[inset_0_0_0_2px_var(--brand)] after:content-['']",
+                      )}
+                    >
+                      {renderCell(employee, date)}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
         {renderRowExtra !== null ? (
           <tfoot>

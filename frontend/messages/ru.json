@@ -1111,6 +1111,7 @@
     "dayEmpty": "Пусто",
     "fillPattern": "По шаблону",
     "pattern42": "4/2",
+    "pattern43": "4/3",
     "pattern22": "2/2",
     "pattern52": "5/2",
     "patternEvery": "Каждый день",
@@ -1123,6 +1124,8 @@
     "hours": "Часы",
     "schedulePlanTitle": "График (план)",
     "timesheetFactTitle": "Табель (факт)",
-    "date": "Дата"
+    "date": "Дата",
+    "selectedDays": "Выбрано: {count}",
+    "clearSelection": "Сбросить"
   }
 }

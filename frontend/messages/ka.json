@@ -1111,6 +1111,7 @@
     "dayEmpty": "ცარიელი",
     "fillPattern": "შაბლონით",
     "pattern42": "4/2",
+    "pattern43": "4/3",
     "pattern22": "2/2",
     "pattern52": "5/2",
     "patternEvery": "ყოველ დღე",
@@ -1123,6 +1124,8 @@
     "hours": "საათები",
     "schedulePlanTitle": "გრაფიკი (გეგმა)",
     "timesheetFactTitle": "ტაბელი (ფაქტი)",
-    "date": "თარიღი"
+    "date": "თარიღი",
+    "selectedDays": "არჩეულია: {count}",
+    "clearSelection": "გასუფთავება"
   }
 }
