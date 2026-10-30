@@ -57,6 +57,12 @@ function displayName(row: { internal_name: string; username: string }): string {
   return internal || row.username;
 }
 
+function rowTone(row: { is_active: boolean; is_staff: boolean }): string {
+  if (!row.is_active) return "bg-neutral-100 hover:bg-neutral-200";
+  if (row.is_staff) return "bg-purple-50 hover:bg-purple-100";
+  return "bg-blue-50 hover:bg-blue-100";
+}
+
 export function EmployeesPanel() {
   const t = useTranslations("employees");
   const section = useTranslations("crm");
@@ -105,9 +111,7 @@ export function EmployeesPanel() {
                   <tr
                     key={row.id}
                     onClick={() => open(row)}
-                    className={`cursor-pointer border-t border-[var(--line)] ${
-                      row.is_active ? "bg-green-50 hover:bg-green-100" : "bg-neutral-100 hover:bg-neutral-200"
-                    }`}
+                    className={`cursor-pointer border-t border-[var(--line)] ${rowTone(row)}`}
                   >
                     <td className="py-2 pr-3">{displayName(row)}</td>
                     <td className="py-2 pr-3">{row.username}</td>
