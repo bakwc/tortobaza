@@ -691,6 +691,10 @@ class CrmSalaryEmployeeSerializer(serializers.Serializer):
     money = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
+class CrmSalaryPeriodEmployeeSerializer(CrmSalaryEmployeeSerializer):
+    position = serializers.CharField()
+
+
 class CrmExpensesBreakdownSerializer(serializers.Serializer):
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)
@@ -723,7 +727,7 @@ class AnalyticsMonthQuerySerializer(serializers.Serializer):
 class CrmSalaryPeriodSerializer(serializers.Serializer):
     start = serializers.DateField()
     end = serializers.DateField()
-    employees = CrmSalaryEmployeeSerializer(many=True)
+    employees = CrmSalaryPeriodEmployeeSerializer(many=True)
     hourly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
     hourly_money = serializers.DecimalField(max_digits=10, decimal_places=2)
     monthly_hours = serializers.DecimalField(max_digits=10, decimal_places=2)

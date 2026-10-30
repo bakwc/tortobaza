@@ -69,6 +69,7 @@ def compute_salary(
     profile = UserProfile.objects.filter(user=user).first()
     hourly_rate = profile.hourly_rate if profile else Decimal("0.00")
     monthly_rate = profile.monthly_rate if profile else Decimal("0.00")
+    position = profile.position if profile else ""
 
     start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()), _TB)
     end_dt = timezone.make_aware(
@@ -132,6 +133,7 @@ def compute_salary(
     return {
         "hourly_rate": hourly_rate,
         "monthly": monthly_rate > 0,
+        "position": position,
         "rows": rows,
         "total_hours": total_hours,
         "total_money": total_money,
@@ -249,6 +251,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                 {
                     "id": user.id,
                     "name": name,
+                    "position": result["position"],
                     "hours": first_hours,
                     "money": first_money,
                     "monthly": result["monthly"],
@@ -259,6 +262,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                 {
                     "id": user.id,
                     "name": name,
+                    "position": result["position"],
                     "hours": second_hours,
                     "money": second_money,
                     "monthly": result["monthly"],

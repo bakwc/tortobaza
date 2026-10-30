@@ -511,6 +511,10 @@ export const CrmSalaryEmployeeSchema = z.object({
   money: z.string(),
 });
 
+export const CrmSalaryPeriodEmployeeSchema = CrmSalaryEmployeeSchema.extend({
+  position: z.string(),
+});
+
 export const CrmExpensesBreakdownSchema = z.object({
   salary: z.string(),
   rent: z.string(),
@@ -535,7 +539,7 @@ export const CrmExpensesMonthSchema = z.object({
 export const CrmSalaryPeriodSchema = z.object({
   start: z.string(),
   end: z.string(),
-  employees: z.array(CrmSalaryEmployeeSchema),
+  employees: z.array(CrmSalaryPeriodEmployeeSchema),
   hourly_hours: z.string(),
   hourly_money: z.string(),
   monthly_hours: z.string(),

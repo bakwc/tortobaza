@@ -118,6 +118,7 @@ function SalariesBoard() {
 
 function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
   const t = useTranslations("crm");
+  const employeesT = useTranslations("employees");
 
   return (
     <section className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
@@ -134,6 +135,7 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
               <thead>
                 <tr className="border-b border-[var(--line)] text-left text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
                   <th className="pb-3 pr-4 font-medium">{t("salaryEmployee")}</th>
+                  <th className="pb-3 pr-4 font-medium">{employeesT("position")}</th>
                   <th className="pb-3 pr-4 font-medium">{t("salaryHours")}</th>
                   <th className="pb-3 font-medium">{t("salaryEarned")}</th>
                 </tr>
@@ -142,6 +144,7 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                 {period.employees.map((employee) => (
                   <tr key={employee.id}>
                     <td className="py-3 pr-4 text-[var(--ink)]">{employee.name}</td>
+                    <td className="py-3 pr-4 text-[var(--ink)]">{employee.position}</td>
                     <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{employee.hours}</td>
                     <td className="py-3 tabular-nums font-medium text-[var(--ink)]">{formatAed(employee.money)}</td>
                   </tr>
@@ -151,12 +154,16 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
           )}
           <tfoot>
             <tr className="border-t border-[var(--line)]">
-              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryHourlyTotal")}</td>
+              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]" colSpan={2}>
+                {t("salaryHourlyTotal")}
+              </td>
               <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.hourly_hours}</td>
               <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.hourly_money)}</td>
             </tr>
             <tr>
-              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]">{t("salaryMonthlyTotal")}</td>
+              <td className="pt-3 pr-4 font-semibold text-[var(--ink)]" colSpan={2}>
+                {t("salaryMonthlyTotal")}
+              </td>
               <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.monthly_hours}</td>
               <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.monthly_money)}</td>
             </tr>

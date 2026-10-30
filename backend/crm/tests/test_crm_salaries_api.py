@@ -37,11 +37,13 @@ class CrmSalariesApiTests(TestCase):
             user=self.worker,
             hourly_rate=Decimal("10.00"),
             internal_name="Бека",
+            position="Кондитер",
         )
         UserProfile.objects.create(
             user=self.other,
             hourly_rate=Decimal("20.00"),
             internal_name="Анна",
+            position="Курьер",
         )
         UserProfile.objects.create(
             user=self.idle,
@@ -88,6 +90,7 @@ class CrmSalariesApiTests(TestCase):
                                 "name": "Бека",
                                 "hours": "8.00",
                                 "money": "80.00",
+                                "position": "Кондитер",
                             }
                         ],
                         "hourly_hours": "8.00",
@@ -104,12 +107,14 @@ class CrmSalariesApiTests(TestCase):
                                 "name": "Анна",
                                 "hours": "4.00",
                                 "money": "80.00",
+                                "position": "Курьер",
                             },
                             {
                                 "id": self.worker.id,
                                 "name": "Бека",
                                 "hours": "4.00",
                                 "money": "40.00",
+                                "position": "Кондитер",
                             },
                         ],
                         "hourly_hours": "8.00",
