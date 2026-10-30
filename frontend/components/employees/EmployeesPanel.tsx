@@ -28,6 +28,8 @@ function emptyDraft(): EmployeeBody {
     is_finance_admin: false,
     is_active_courier: false,
     pushover_user: "",
+    position: "",
+    in_schedule: false,
   };
 }
 
@@ -49,6 +51,8 @@ function draftFrom(row: Employee): EmployeeBody {
     is_finance_admin: row.is_finance_admin,
     is_active_courier: row.is_active_courier,
     pushover_user: row.pushover_user,
+    position: row.position,
+    in_schedule: row.in_schedule,
   };
 }
 
@@ -96,6 +100,7 @@ export function EmployeesPanel() {
               <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
                 <tr>
                   <th className="py-2 pr-3">{t("name")}</th>
+                  <th className="py-2 pr-3">{t("position")}</th>
                   <th className="py-2 pr-3">{t("username")}</th>
                   <th className="py-2 pr-3">{t("hourlyRate")}</th>
                   <th className="py-2 pr-3">{t("monthlyRate")}</th>
@@ -114,6 +119,7 @@ export function EmployeesPanel() {
                     className={`cursor-pointer border-t border-[var(--line)] ${rowTone(row)}`}
                   >
                     <td className="py-2 pr-3">{displayName(row)}</td>
+                    <td className="py-2 pr-3">{row.position}</td>
                     <td className="py-2 pr-3">{row.username}</td>
                     <td className="py-2 pr-3 tabular-nums">{row.hourly_rate}</td>
                     <td className="py-2 pr-3 tabular-nums">{row.monthly_rate}</td>
@@ -159,6 +165,8 @@ export function EmployeesPanel() {
                   is_finance_admin: draft.is_finance_admin,
                   is_active_courier: draft.is_active_courier,
                   pushover_user: draft.pushover_user.trim(),
+                  position: draft.position.trim(),
+                  in_schedule: draft.in_schedule,
                 },
               },
               { onSuccess: close },
@@ -194,6 +202,9 @@ export function EmployeesPanel() {
             </Field>
             <Field label={t("internalName")}>
               <Input value={draft.internal_name} onChange={(event) => setDraft({ ...draft, internal_name: event.target.value })} />
+            </Field>
+            <Field label={t("position")}>
+              <Input value={draft.position} onChange={(event) => setDraft({ ...draft, position: event.target.value })} />
             </Field>
             <Field label={t("telegram")}>
               <Input value={draft.telegram_username} onChange={(event) => setDraft({ ...draft, telegram_username: event.target.value })} />
@@ -232,6 +243,11 @@ export function EmployeesPanel() {
               />
               <CheckboxField label={t("staff")} checked={draft.is_staff} onChange={(value) => setDraft({ ...draft, is_staff: value })} />
               <CheckboxField label={t("active")} checked={draft.is_active} onChange={(value) => setDraft({ ...draft, is_active: value })} />
+              <CheckboxField
+                label={t("inSchedule")}
+                checked={draft.in_schedule}
+                onChange={(value) => setDraft({ ...draft, in_schedule: value })}
+              />
             </div>
           </div>
         </EditorDialog>

@@ -17,6 +17,8 @@ PROFILE_FIELDS = (
     "is_finance_admin",
     "is_active_courier",
     "pushover_user",
+    "position",
+    "in_schedule",
 )
 
 
@@ -73,6 +75,8 @@ class EmployeeSerializer(serializers.Serializer):
     is_finance_admin = serializers.BooleanField()
     is_active_courier = serializers.BooleanField()
     pushover_user = serializers.CharField(max_length=30, allow_blank=True)
+    position = serializers.CharField(max_length=64, allow_blank=True)
+    in_schedule = serializers.BooleanField()
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
@@ -129,6 +133,8 @@ class EmployeeSerializer(serializers.Serializer):
             is_finance_admin = False
             is_active_courier = False
             pushover_user = ""
+            position = ""
+            in_schedule = False
         else:
             hourly_rate = profile.hourly_rate
             monthly_rate = profile.monthly_rate
@@ -139,6 +145,8 @@ class EmployeeSerializer(serializers.Serializer):
             is_finance_admin = profile.is_finance_admin
             is_active_courier = profile.is_active_courier
             pushover_user = profile.pushover_user
+            position = profile.position
+            in_schedule = profile.in_schedule
         return {
             "id": instance.id,
             "username": instance.username,
@@ -156,6 +164,8 @@ class EmployeeSerializer(serializers.Serializer):
             "is_finance_admin": is_finance_admin,
             "is_active_courier": is_active_courier,
             "pushover_user": pushover_user,
+            "position": position,
+            "in_schedule": in_schedule,
         }
 
     def _apply_profile(self, profile, validated_data):

@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext_lazy as _
 
-from attendance.models import AttendanceEvent, SalaryCalculation
+from attendance.models import AttendanceEvent, ScheduleDay, SalaryCalculation
 from attendance.salary import compute_salary
 
 
@@ -23,6 +23,14 @@ class AttendanceEventAdmin(admin.ModelAdmin):
     list_display = ["user", "event_type", "timestamp"]
     list_filter = ["event_type", "user"]
     date_hierarchy = "timestamp"
+    search_fields = ["user__username"]
+
+
+@admin.register(ScheduleDay)
+class ScheduleDayAdmin(admin.ModelAdmin):
+    list_display = ["user", "date", "day_type"]
+    list_filter = ["day_type", "user"]
+    date_hierarchy = "date"
     search_fields = ["user__username"]
 
 

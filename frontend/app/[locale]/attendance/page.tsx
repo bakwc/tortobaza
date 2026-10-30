@@ -2,14 +2,17 @@
 
 import { useState, type FormEvent } from "react";
 import { LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { isUnauthenticatedError, useCurrentUser, useLogin, useLogout } from "@/hooks/useAuth";
+import { ScheduleDayCell, ScheduleGrid } from "@/components/employees/ScheduleGrid";
 import { useAttendanceSummary, useMarkAttendance } from "@/hooks/useAttendance";
+import { useSchedule } from "@/hooks/useSchedule";
 import type { AttendanceEvent, AttendanceEventType, SessionUser } from "@/lib/api/types";
-import { formatAed, formatAttendanceDate, formatAttendanceTime } from "@/lib/format";
+import { formatAed, formatAttendanceDate, formatAttendanceTime, getTbilisiTodayIsoDate } from "@/lib/format";
 
 export default function AttendancePage() {
   const currentUser = useCurrentUser();
@@ -37,6 +40,43 @@ export default function AttendancePage() {
       ) : (
         <LoginForm />
       )}
+    </div>
+  );
+}
+
+function TeamSchedule({ userId }: { userId: number }) {
+  const t = useTranslations("employees");
+  const month = getTbilisiTodayIsoDate().slice(0, 7);
+  const schedule = useSchedule(month);
+  const grid = schedule.data;
+
+  return (
+    <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
+      <h2 className="text-lg font-semibold text-[var(--ink)]">{t("teamSchedule")}</h2>
+      {schedule.isLoading ? (
+        <div className="mt-6 flex justify-center">
+          <Spinner className="h-5 w-5 text-[var(--brand)]" />
+        </div>
+      ) : null}
+      {schedule.isError ? <p className="mt-6 text-sm text-[var(--danger)]">{t("scheduleLoadError")}</p> : null}
+      {grid && grid.employees.length === 0 ? (
+        <p className="mt-6 text-sm text-[var(--muted-2)]">{t("scheduleEmpty")}</p>
+      ) : null}
+      {grid && grid.employees.length > 0 ? (
+        <div className="mt-6">
+          <ScheduleGrid
+            start={grid.start}
+            end={grid.end}
+            employees={grid.employees}
+            highlightUserId={userId}
+            rowExtraHeader={null}
+            renderRowExtra={null}
+            renderCell={(employee, date) => (
+              <ScheduleDayCell value={date in employee.days ? employee.days[date] : null} />
+            )}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -177,6 +217,8 @@ function AttendancePanel({ user }: { user: SessionUser }) {
           </p>
         ) : null}
       </div>
+
+      <TeamSchedule userId={user.id} />
 
       <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
         <h2 className="text-lg font-semibold text-[var(--ink)]">Last 15 days</h2>

@@ -1,16 +1,18 @@
 import re
 from calendar import monthrange
 from collections import defaultdict
-from datetime import date, timedelta
-from decimal import Decimal
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from statistics import median, quantiles
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.utils import timezone
 
-from accounts.models import chef_identity
-from attendance.salary import compute_month_salaries, compute_salary
-from crm.models import AnalyticsOrderComposition, CrmOrder
+from accounts.models import UserProfile, chef_identity
+from attendance.models import AttendanceEvent
+from attendance.salary import compute_day_worked_seconds, daily_monthly_share
+from crm.models import AnalyticsOrderComposition, CrmOrder, CrmOrderEvent
 from crm.phone import extract_phones
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -817,101 +819,510 @@ def _metrics(bucket: _Count) -> dict:
     }
 
 
-def _touch_employee(rows: dict[int, dict], user: User) -> dict:
-    row = rows.get(user.id)
-    if row is not None:
-        return row
-    row = {
-        "id": user.id,
-        "name": chef_identity(user)[0],
-        "user": user,
-        "placed": 0,
-        "made": 0,
-        "delivered": 0,
-        "kilograms": Decimal("0"),
+_PRODUCTION_END = frozenset(
+    {
+        CrmOrder.STATUS_READY,
+        CrmOrder.STATUS_CLIENT_APPROVED,
+        CrmOrder.STATUS_IN_DELIVERY,
+        CrmOrder.STATUS_DELIVERED,
     }
-    rows[user.id] = row
-    return row
+)
 
 
-def employees(month: str) -> dict:
-    start, end = _month_bounds(month)
-    orders = CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end).select_related(
-        "created_by",
-        "taken_by",
-        "delivered_by",
-    )
-    rows: dict[int, dict] = {}
-    for order in orders:
-        if order.created_by_id:
-            _touch_employee(rows, order.created_by)["placed"] += 1
-        if order.taken_by_id:
-            row = _touch_employee(rows, order.taken_by)
-            row["made"] += 1
-            parsed = weight_kg(order.weight)
-            if parsed is not None:
-                row["kilograms"] += parsed
-        if order.delivered_by_id:
-            _touch_employee(rows, order.delivered_by)["delivered"] += 1
-    payroll = compute_month_salaries(start.year, start.month)
-    payroll_ids = {
-        employee["id"]
-        for period in payroll["periods"]
-        for employee in period["employees"]
-    }
-    missing_ids = payroll_ids - set(rows)
-    if missing_ids:
-        for user in User.objects.filter(id__in=missing_ids):
-            _touch_employee(rows, user)
-    people = []
-    total_hours = Decimal("0")
-    total_money = Decimal("0")
-    total_placed = 0
-    total_made = 0
-    total_kilograms = Decimal("0")
-    total_delivered = 0
-    for row in rows.values():
-        salary = compute_salary(row["user"], start, end, None)
-        hours = salary["total_hours"]
-        money = salary["total_money"]
-        if (
-            hours == 0
-            and money == 0
-            and row["placed"] == 0
-            and row["made"] == 0
-            and row["delivered"] == 0
-        ):
+def _month_key(day: date) -> str:
+    return f"{day.year:04d}-{day.month:02d}"
+
+
+def _month_keys(start: date, end: date) -> list[str]:
+    year = start.year
+    month = start.month
+    keys = []
+    while (year, month) <= (end.year, end.month):
+        keys.append(f"{year:04d}-{month:02d}")
+        if month == 12:
+            year += 1
+            month = 1
+        else:
+            month += 1
+    return keys
+
+
+def _share(part: Decimal, whole: Decimal) -> str | None:
+    if whole == 0:
+        return None
+    return _num(part / whole)
+
+
+def _per_kg(money: Decimal, kilograms: Decimal) -> str | None:
+    if kilograms == 0:
+        return None
+    return _money(money / kilograms)
+
+
+def _per_hour(kilograms: Decimal, hours: Decimal) -> str | None:
+    if hours == 0:
+        return None
+    return _num(kilograms / hours)
+
+
+def _clock(stamps: list[datetime]) -> str | None:
+    if not stamps:
+        return None
+    minutes = [stamp.astimezone(_TB).hour * 60 + stamp.astimezone(_TB).minute for stamp in stamps]
+    total = int(Decimal(str(median(minutes))).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def _shift_is_open(events: list[AttendanceEvent]) -> bool:
+    collapsed: list[AttendanceEvent] = []
+    for event in sorted(events, key=lambda item: item.timestamp):
+        if not collapsed:
+            collapsed.append(event)
             continue
+        if collapsed[-1].event_type == event.event_type:
+            if event.event_type == AttendanceEvent.DEPARTURE:
+                collapsed[-1] = event
+            continue
+        collapsed.append(event)
+    index = 0
+    open_shift = False
+    while index < len(collapsed):
+        if collapsed[index].event_type == AttendanceEvent.DEPARTURE:
+            index += 1
+            continue
+        if (
+            index + 1 < len(collapsed)
+            and collapsed[index + 1].event_type == AttendanceEvent.DEPARTURE
+        ):
+            index += 2
+            continue
+        open_shift = True
+        index += 1
+    return open_shift
+
+
+def _staff_days(
+    events: list[AttendanceEvent],
+    hourly_rate: Decimal,
+    monthly_rate: Decimal,
+    start: date,
+    end: date,
+    today: date,
+    open_now: datetime | None,
+) -> dict[date, dict]:
+    by_date: dict[date, list[AttendanceEvent]] = defaultdict(list)
+    for event in events:
+        by_date[event.timestamp.astimezone(_TB).date()].append(event)
+    rows = {}
+    current = start
+    while current <= end:
+        day_events = by_date.get(current, [])
+        seconds = compute_day_worked_seconds(day_events, open_now if current == today else None)
+        hours = (Decimal(seconds) / Decimal(3600)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if monthly_rate > 0:
+            money = daily_monthly_share(monthly_rate, current)
+        else:
+            money = (Decimal(seconds) * hourly_rate / Decimal(3600)).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            )
+        arrivals = [event for event in day_events if event.event_type == AttendanceEvent.ARRIVAL]
+        departures = [event for event in day_events if event.event_type == AttendanceEvent.DEPARTURE]
+        closed = bool(arrivals) and bool(departures) and not _shift_is_open(day_events)
+        rows[current] = {
+            "hours": hours,
+            "money": money,
+            "unclosed": current < today and _shift_is_open(day_events),
+            "arrival": min(event.timestamp for event in arrivals) if closed else None,
+            "departure": max(event.timestamp for event in departures) if closed else None,
+        }
+        current += timedelta(days=1)
+    return rows
+
+
+def _walk(start: date, end: date):
+    current = start
+    while current <= end:
+        yield current
+        current += timedelta(days=1)
+
+
+def _production_minutes(events: list[CrmOrderEvent]) -> Decimal | None:
+    started = None
+    for event in events:
+        change = event.changes.get("status")
+        if not isinstance(change, dict):
+            continue
+        new = change.get("new")
+        if started is None:
+            if new == CrmOrder.STATUS_IN_WORK:
+                started = event.created_at
+            continue
+        if new in _PRODUCTION_END and started is not None:
+            delta = event.created_at - started
+            return Decimal(delta.days * 86400 + delta.seconds) / Decimal(60)
+    return None
+
+
+def _baker_rows(buckets: dict[int, dict], names: dict[int, str]) -> list[dict]:
+    rows = []
+    for user_id, bucket in buckets.items():
+        if bucket["orders"] == 0 and bucket["kilograms"] == 0:
+            continue
+        rows.append(
+            {
+                "id": user_id,
+                "name": names[user_id],
+                "orders": bucket["orders"],
+                "kilograms": bucket["kilograms"],
+            }
+        )
+    rows.sort(key=lambda row: (-row["kilograms"], -row["orders"], row["name"].casefold(), row["id"]))
+    return rows
+
+
+def _format_bakers(rows: list[dict]) -> list[dict]:
+    return [
+        {
+            "id": row["id"],
+            "name": row["name"],
+            "kilograms": _num(row["kilograms"]),
+            "orders": row["orders"],
+        }
+        for row in rows
+    ]
+
+
+def _touch_baker(buckets: dict[int, dict], user_id: int) -> dict:
+    bucket = buckets.get(user_id)
+    if bucket is None:
+        bucket = {"orders": 0, "kilograms": Decimal("0")}
+        buckets[user_id] = bucket
+    return bucket
+
+
+class _StaffPeriod:
+    def __init__(self) -> None:
+        self.hourly_money = Decimal("0")
+        self.monthly_money = Decimal("0")
+        self.hours = Decimal("0")
+        self.shifts = 0
+        self.revenue = Decimal("0")
+        self.kilograms = Decimal("0")
+        self.bakers: dict[int, dict] = {}
+        self.unassigned_kilograms = Decimal("0")
+        self.without_baker = 0
+        self.orders = 0
+
+
+def _collect_period(
+    user_days: dict[int, dict[date, dict]],
+    monthly_ids: set[int],
+    orders_by_date: dict[date, list[CrmOrder]],
+    start: date,
+    end: date,
+) -> _StaffPeriod:
+    period = _StaffPeriod()
+    for day in _walk(start, end):
+        for user_id, days in user_days.items():
+            row = days.get(day)
+            if row is None:
+                continue
+            if user_id in monthly_ids:
+                period.monthly_money += row["money"]
+            else:
+                period.hourly_money += row["money"]
+            period.hours += row["hours"]
+            if row["hours"] > 0:
+                period.shifts += 1
+        for order in orders_by_date.get(day, []):
+            period.orders += 1
+            period.revenue += _order_revenue(order)
+            parsed = weight_kg(order.weight)
+            kilograms = Decimal("0") if parsed is None else parsed
+            period.kilograms += kilograms
+            if order.taken_by_id is None:
+                period.without_baker += 1
+                period.unassigned_kilograms += kilograms
+            else:
+                bucket = _touch_baker(period.bakers, order.taken_by_id)
+                bucket["orders"] += 1
+                bucket["kilograms"] += kilograms
+    return period
+
+
+def _format_period(period: _StaffPeriod) -> dict:
+    money = period.hourly_money + period.monthly_money
+    return {
+        "hourly_money": _money(period.hourly_money),
+        "monthly_money": _money(period.monthly_money),
+        "money": _money(money),
+        "revenue": _money(period.revenue),
+        "kilograms": _num(period.kilograms),
+        "hours": _money(period.hours),
+        "shifts": period.shifts,
+        "salary_share": _share(money, period.revenue),
+        "money_per_kg": _per_kg(money, period.kilograms),
+        "kg_per_hour": _per_hour(period.kilograms, period.hours),
+    }
+
+
+def employees(month: str, today: date) -> dict:
+    start, end, prev_start, prev_end = windows(month, today)
+    now = timezone.now()
+    open_now = now if now.astimezone(_TB).date() == today else None
+    orders = list(
+        CrmOrder.objects.filter(deleted=False).select_related("taken_by").order_by("date", "id")
+    )
+    events = list(AttendanceEvent.objects.select_related("user").order_by("timestamp", "id"))
+    users: dict[int, User] = {}
+    events_by_user: dict[int, list[AttendanceEvent]] = defaultdict(list)
+    for event in events:
+        users[event.user_id] = event.user
+        events_by_user[event.user_id].append(event)
+    for order in orders:
+        if order.taken_by_id is not None:
+            users[order.taken_by_id] = order.taken_by
+    profiles = {
+        profile.user_id: profile
+        for profile in UserProfile.objects.filter(user_id__in=users).select_related("user")
+    }
+    for profile in UserProfile.objects.filter(monthly_rate__gt=0).select_related("user"):
+        users[profile.user_id] = profile.user
+        profiles[profile.user_id] = profile
+    names = {user_id: chef_identity(user)[0] for user_id, user in users.items()}
+    monthly_ids = {user_id for user_id, profile in profiles.items() if profile.monthly_rate > 0}
+    firsts = []
+    if orders:
+        firsts.append(orders[0].date)
+    if events:
+        firsts.append(events[0].timestamp.astimezone(_TB).date())
+    span_start = None if not firsts else date(min(firsts).year, min(firsts).month, 1)
+    salary_start = prev_start if span_start is None else min(span_start, prev_start)
+    salary_end = today if end <= today else end
+    user_days = {
+        user_id: _staff_days(
+            events_by_user.get(user_id, []),
+            profiles[user_id].hourly_rate if user_id in profiles else Decimal("0.00"),
+            profiles[user_id].monthly_rate if user_id in profiles else Decimal("0.00"),
+            salary_start,
+            salary_end,
+            today,
+            open_now,
+        )
+        for user_id in users
+    }
+    orders_by_date: dict[date, list[CrmOrder]] = defaultdict(list)
+    for order in orders:
+        orders_by_date[order.date].append(order)
+    selected = _collect_period(user_days, monthly_ids, orders_by_date, start, end)
+    previous = _collect_period(user_days, monthly_ids, orders_by_date, prev_start, prev_end)
+    window_orders = [order for order in orders if start <= order.date <= end]
+    window_ids = [order.id for order in window_orders]
+    compositions = {
+        composition.order_id: composition
+        for composition in AnalyticsOrderComposition.objects.filter(order_id__in=window_ids).prefetch_related(
+            "items"
+        )
+    }
+    status_events: dict[int, list[CrmOrderEvent]] = defaultdict(list)
+    for event in CrmOrderEvent.objects.filter(order_id__in=window_ids).order_by("created_at", "id"):
+        status_events[event.order_id].append(event)
+    kinds_by_user: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    minutes_by_user: dict[int, list[Decimal]] = defaultdict(list)
+    without_composition = 0
+    without_production = 0
+    for order in window_orders:
+        composition = compositions.get(order.id)
+        if composition is None:
+            without_composition += 1
+        elif order.taken_by_id is not None:
+            for item in composition.items.all():
+                kinds_by_user[order.taken_by_id][item.kind] += item.quantity
+        if order.taken_by_id is None:
+            continue
+        minutes = _production_minutes(status_events.get(order.id, []))
+        if minutes is None:
+            without_production += 1
+        else:
+            minutes_by_user[order.taken_by_id].append(minutes)
+    made_by_user = {
+        user_id: bucket
+        for user_id, bucket in selected.bakers.items()
+    }
+    people = []
+    for user_id, days in user_days.items():
+        hours = Decimal("0")
+        money = Decimal("0")
+        shifts = 0
+        arrivals = []
+        departures = []
+        sheet = []
+        unclosed = 0
+        for day in _walk(start, end):
+            row = days[day]
+            hours += row["hours"]
+            money += row["money"]
+            if row["hours"] > 0:
+                shifts += 1
+            if row["unclosed"]:
+                unclosed += 1
+            if row["arrival"] is not None and row["departure"] is not None:
+                arrivals.append(row["arrival"])
+                departures.append(row["departure"])
+            sheet.append(
+                {
+                    "date": day.isoformat(),
+                    "hours": _money(row["hours"]),
+                    "open": row["unclosed"],
+                }
+            )
+        made = made_by_user.get(user_id, {"orders": 0, "kilograms": Decimal("0")})
+        if hours == 0 and money == 0 and made["orders"] == 0 and unclosed == 0:
+            continue
+        kind_rows = [
+            {"kind": kind, "quantity": quantity}
+            for kind, quantity in sorted(kinds_by_user.get(user_id, {}).items(), key=lambda item: (-item[1], item[0]))
+        ]
+        samples = minutes_by_user.get(user_id, [])
         people.append(
+            {
+                "id": user_id,
+                "name": names[user_id],
+                "monthly": user_id in monthly_ids,
+                "shifts": shifts,
+                "hours": hours,
+                "average_shift": None if shifts == 0 else hours / shifts,
+                "money": money,
+                "made": made["orders"],
+                "made_kilograms": made["kilograms"],
+                "arrival": _clock(arrivals),
+                "departure": _clock(departures),
+                "kinds": kind_rows,
+                "production_minutes": None if not samples else Decimal(str(median(samples))),
+                "production_orders": len(samples),
+                "sheet": sheet,
+                "unclosed": unclosed,
+            }
+        )
+    people.sort(
+        key=lambda row: (-row["money"], -row["made_kilograms"], row["name"].casefold(), row["id"])
+    )
+    fund = selected.hourly_money + selected.monthly_money
+    days = []
+    weekday_hours: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+    weekday_kg: dict[int, Decimal] = defaultdict(lambda: Decimal("0"))
+    weekday_count: dict[int, int] = defaultdict(int)
+    for day in _walk(start, end):
+        day_hours = Decimal("0")
+        for days_of_user in user_days.values():
+            day_hours += days_of_user[day]["hours"]
+        day_bakers: dict[int, dict] = {}
+        unassigned = Decimal("0")
+        day_kg = Decimal("0")
+        for order in orders_by_date.get(day, []):
+            parsed = weight_kg(order.weight)
+            kilograms = Decimal("0") if parsed is None else parsed
+            day_kg += kilograms
+            if order.taken_by_id is None:
+                unassigned += kilograms
+            else:
+                bucket = _touch_baker(day_bakers, order.taken_by_id)
+                bucket["orders"] += 1
+                bucket["kilograms"] += kilograms
+        days.append(
+            {
+                "date": day.isoformat(),
+                "hours": _money(day_hours),
+                "kilograms": _num(day_kg),
+                "kg_per_hour": _per_hour(day_kg, day_hours),
+                "bakers": [
+                    {
+                        "id": row["id"],
+                        "name": row["name"],
+                        "kilograms": _num(row["kilograms"]),
+                    }
+                    for row in _baker_rows(day_bakers, names)
+                    if row["kilograms"] > 0
+                ],
+                "unassigned_kilograms": _num(unassigned),
+            }
+        )
+        weekday = day.weekday()
+        weekday_hours[weekday] += day_hours
+        weekday_kg[weekday] += day_kg
+        weekday_count[weekday] += 1
+    months = []
+    if span_start is not None:
+        for key in _month_keys(span_start, today):
+            month_start, month_last = _month_bounds(key)
+            partial = _month_key(today) == key
+            month_end = today if partial else month_last
+            period = _collect_period(user_days, monthly_ids, orders_by_date, month_start, month_end)
+            payload = _format_period(period)
+            months.append(
+                {
+                    "month": key,
+                    "partial": partial,
+                    "hourly_money": payload["hourly_money"],
+                    "monthly_money": payload["monthly_money"],
+                    "revenue": payload["revenue"],
+                    "kilograms": payload["kilograms"],
+                    "hours": payload["hours"],
+                    "salary_share": payload["salary_share"],
+                    "money_per_kg": payload["money_per_kg"],
+                    "kg_per_hour": payload["kg_per_hour"],
+                    "bakers": _format_bakers(_baker_rows(period.bakers, names)),
+                    "unassigned_kilograms": _num(period.unassigned_kilograms),
+                }
+            )
+    return {
+        "month": month,
+        "totals": _format_period(selected),
+        "previous": _format_period(previous),
+        "gaps": {
+            "without_baker": selected.without_baker,
+            "unclosed_shifts": sum(row["unclosed"] for row in people),
+            "without_composition": without_composition,
+            "without_production": without_production,
+        },
+        "months": months,
+        "days": days,
+        "weekdays": [
+            {
+                "weekday": weekday,
+                "hours": _money(weekday_hours[weekday] / Decimal(weekday_count[weekday])),
+                "kilograms": _num(weekday_kg[weekday] / Decimal(weekday_count[weekday])),
+            }
+            for weekday in range(7)
+            if weekday_count[weekday] > 0
+        ],
+        "employees": [
             {
                 "id": row["id"],
                 "name": row["name"],
-                "hours": _money(hours),
-                "money": _money(money),
-                "placed": row["placed"],
+                "monthly": row["monthly"],
+                "shifts": row["shifts"],
+                "hours": _money(row["hours"]),
+                "average_shift": None if row["average_shift"] is None else _money(row["average_shift"]),
+                "money": _money(row["money"]),
+                "money_share": _share(row["money"], fund),
                 "made": row["made"],
-                "made_kilograms": _num(row["kilograms"]),
-                "delivered": row["delivered"],
+                "made_kilograms": _num(row["made_kilograms"]),
+                "arrival": row["arrival"],
+                "departure": row["departure"],
+                "kinds": row["kinds"],
+                "production_minutes": None
+                if row["production_minutes"] is None
+                else _num(row["production_minutes"]),
+                "production_orders": row["production_orders"],
             }
-        )
-        total_hours += hours
-        total_money += money
-        total_placed += row["placed"]
-        total_made += row["made"]
-        total_kilograms += row["kilograms"]
-        total_delivered += row["delivered"]
-    people.sort(key=lambda item: (item["name"].casefold(), item["id"]))
-    return {
-        "month": month,
-        "employees": people,
-        "totals": {
-            "hours": _money(total_hours),
-            "money": _money(total_money),
-            "placed": total_placed,
-            "made": total_made,
-            "made_kilograms": _num(total_kilograms),
-            "delivered": total_delivered,
-        },
+            for row in people
+        ],
+        "timesheet": [
+            {"id": row["id"], "name": row["name"], "days": row["sheet"]}
+            for row in people
+        ],
     }
 
 

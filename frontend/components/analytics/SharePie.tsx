@@ -9,8 +9,8 @@ const DONUT_OUTER = 118;
 const DONUT_INNER = 70;
 const DONUT_TOP = 7;
 const REST_KEY = "__rest__";
-const REST_COLOR = "#b5b5b5";
-const PIE_COLORS = [
+export const REST_COLOR = "#b5b5b5";
+export const PIE_COLORS = [
   "#cc767f",
   "#d4a017",
   "#5b8fa8",

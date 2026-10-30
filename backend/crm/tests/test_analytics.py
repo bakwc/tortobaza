@@ -9,8 +9,9 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from attendance.models import AttendanceEvent
+from attendance.salary import daily_monthly_share
 from crm.analytics import clients, employees, overview, production, weight_kg, windows
-from crm.models import CrmOrder
+from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder, CrmOrderEvent
 from orders.models import Order
 
 _UTC = ZoneInfo("UTC")
@@ -342,18 +343,121 @@ class AnalyticsEmployeesTests(TestCase):
             weight="3 кг",
             deleted=True,
         )
-        report = employees("2026-10")
+        report = employees("2026-10", date(2026, 10, 10))
         self.assertEqual(
-            [(row["name"], row["placed"], row["made"], row["made_kilograms"], row["delivered"], row["hours"], row["money"]) for row in report["employees"]],
             [
-                ("anna", 1, 0, "0", 0, "0.00", "0.00"),
-                ("boris", 0, 1, "1.5", 0, "8.00", "80.00"),
-                ("vera", 0, 0, "0", 1, "0.00", "0.00"),
+                (
+                    row["name"],
+                    row["made"],
+                    row["made_kilograms"],
+                    row["hours"],
+                    row["money"],
+                    row["shifts"],
+                    row["arrival"],
+                    row["departure"],
+                )
+                for row in report["employees"]
             ],
+            [("boris", 1, "1.5", "8.00", "80.00", 1, "09:00", "17:00")],
         )
-        self.assertEqual(report["totals"]["placed"], 1)
-        self.assertEqual(report["totals"]["made"], 1)
-        self.assertEqual(report["totals"]["made_kilograms"], "1.5")
-        self.assertEqual(report["totals"]["delivered"], 1)
         self.assertEqual(report["totals"]["hours"], "8.00")
         self.assertEqual(report["totals"]["money"], "80.00")
+        self.assertEqual(report["totals"]["hourly_money"], "80.00")
+        self.assertEqual(report["totals"]["monthly_money"], "0.00")
+        self.assertEqual(report["totals"]["kilograms"], "1.5")
+        self.assertEqual(report["totals"]["revenue"], "10.00")
+        self.assertEqual(report["totals"]["salary_share"], "8")
+        self.assertEqual(report["totals"]["money_per_kg"], "53.33")
+        self.assertEqual(report["totals"]["kg_per_hour"], "0.188")
+        self.assertEqual(report["totals"]["shifts"], 1)
+        self.assertEqual(report["previous"]["revenue"], "10.00")
+        self.assertEqual(report["previous"]["kilograms"], "2")
+        self.assertEqual(report["previous"]["money"], "0.00")
+        self.assertEqual(
+            [(row["month"], row["partial"], row["kilograms"], row["bakers"][0]["kilograms"]) for row in report["months"]],
+            [("2026-09", False, "2", "2"), ("2026-10", True, "1.5", "1.5")],
+        )
+        saturday = next(row for row in report["weekdays"] if row["weekday"] == 5)
+        self.assertEqual(saturday["hours"], "4.00")
+        self.assertEqual(saturday["kilograms"], "0.75")
+        worked = next(row for row in report["days"] if row["date"] == "2026-10-10")
+        self.assertEqual(worked["kg_per_hour"], "0.188")
+        self.assertEqual(worked["bakers"], [{"id": baker.id, "name": "boris", "kilograms": "1.5"}])
+
+    def test_monthly_rate_stops_at_today(self):
+        worker = User.objects.create_user(username="anna", password="password")
+        UserProfile.objects.create(user=worker, monthly_rate=Decimal("310.00"))
+        _order(date=date(2026, 10, 10), weight="—")
+        report = employees("2026-10", date(2026, 10, 10))
+        expected = sum(
+            (daily_monthly_share(Decimal("310.00"), date(2026, 10, day)) for day in range(1, 11)),
+            Decimal("0.00"),
+        )
+        self.assertEqual(report["totals"]["monthly_money"], format(expected, "f"))
+        self.assertEqual(report["totals"]["monthly_money"], "100.00")
+        self.assertEqual(report["employees"][0]["monthly"], True)
+        self.assertEqual(report["employees"][0]["hours"], "0.00")
+        self.assertIsNone(report["totals"]["money_per_kg"])
+
+    def test_unclosed_shift_and_missing_baker(self):
+        worker = User.objects.create_user(username="boris", password="password")
+        UserProfile.objects.create(user=worker, hourly_rate=Decimal("10.00"))
+        AttendanceEvent.objects.create(
+            user=worker,
+            event_type=AttendanceEvent.ARRIVAL,
+            timestamp=timezone.make_aware(datetime(2026, 10, 9, 9, 0), _TB),
+        )
+        _order(date=date(2026, 10, 10), weight="1 кг")
+        report = employees("2026-10", date(2026, 10, 10))
+        self.assertEqual(report["gaps"]["without_baker"], 1)
+        self.assertEqual(report["gaps"]["unclosed_shifts"], 1)
+        self.assertEqual(report["days"][-1]["unassigned_kilograms"], "1")
+        self.assertEqual(report["employees"][0]["hours"], "0.00")
+        opened = next(day for day in report["timesheet"][0]["days"] if day["date"] == "2026-10-09")
+        self.assertEqual(opened["open"], True)
+        self.assertEqual(opened["hours"], "0.00")
+
+    def test_kinds_and_production_time(self):
+        baker = User.objects.create_user(username="boris", password="password")
+        made = _order(date=date(2026, 10, 10), taken_by=baker, weight="1 кг")
+        composition = AnalyticsOrderComposition.objects.create(
+            order=made,
+            source_hash="hash",
+            parser=AnalyticsOrderComposition.PARSER_RULES,
+        )
+        AnalyticsOrderCompositionItem.objects.create(
+            composition=composition,
+            kind=AnalyticsOrderCompositionItem.KIND_CAKE,
+            name="Cake",
+            quantity=2,
+        )
+        AnalyticsOrderCompositionItem.objects.create(
+            composition=composition,
+            kind=AnalyticsOrderCompositionItem.KIND_BENTO,
+            name="Bento",
+            quantity=1,
+        )
+        CrmOrderEvent.objects.create(
+            order=made,
+            action=CrmOrderEvent.ACTION_UPDATED,
+            source=CrmOrderEvent.SOURCE_CRM,
+            created_at=timezone.make_aware(datetime(2026, 10, 10, 9, 0), _TB),
+            changes={"status": {"old": "new", "new": "in_work"}},
+        )
+        CrmOrderEvent.objects.create(
+            order=made,
+            action=CrmOrderEvent.ACTION_UPDATED,
+            source=CrmOrderEvent.SOURCE_CRM,
+            created_at=timezone.make_aware(datetime(2026, 10, 10, 11, 0), _TB),
+            changes={"status": {"old": "in_work", "new": "ready"}},
+        )
+        _order(date=date(2026, 10, 10), taken_by=baker, weight="1 кг")
+        report = employees("2026-10", date(2026, 10, 10))
+        row = report["employees"][0]
+        self.assertEqual(row["made"], 2)
+        self.assertEqual(row["made_kilograms"], "2")
+        self.assertEqual(row["kinds"], [{"kind": "cake", "quantity": 2}, {"kind": "bento", "quantity": 1}])
+        self.assertEqual(row["production_minutes"], "120")
+        self.assertEqual(row["production_orders"], 1)
+        self.assertEqual(report["gaps"]["without_composition"], 1)
+        self.assertEqual(report["gaps"]["without_production"], 1)

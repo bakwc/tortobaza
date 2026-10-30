@@ -33,6 +33,8 @@ class EmployeesApiTests(TestCase):
             "is_finance_admin": False,
             "is_active_courier": True,
             "pushover_user": "pushover1",
+            "position": "Кондитер",
+            "in_schedule": True,
         }
 
     def test_unauthenticated_access_denied(self):
@@ -76,6 +78,8 @@ class EmployeesApiTests(TestCase):
                 "is_finance_admin": False,
                 "is_active_courier": True,
                 "pushover_user": "pushover1",
+                "position": "Кондитер",
+                "in_schedule": True,
             },
         )
         user = User.objects.get(pk=user_id)
@@ -100,6 +104,8 @@ class EmployeesApiTests(TestCase):
         profile = UserProfile.objects.get(user=user)
         self.assertEqual(profile.hourly_rate, Decimal("15.00"))
         self.assertFalse(profile.can_login)
+        self.assertEqual(profile.position, "Кондитер")
+        self.assertTrue(profile.in_schedule)
 
     def test_blank_password_does_not_reset_user_without_profile(self):
         bare = User.objects.create_user(username="bare", password="password", first_name="A")
@@ -111,6 +117,8 @@ class EmployeesApiTests(TestCase):
         self.assertEqual(row["can_login"], True)
         self.assertEqual(row["is_finance_admin"], False)
         self.assertEqual(row["gender"], "female")
+        self.assertEqual(row["position"], "")
+        self.assertEqual(row["in_schedule"], False)
         self.assertNotIn("password", row)
 
         payload = self.payload("")

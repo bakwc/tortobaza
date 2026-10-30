@@ -696,7 +696,7 @@ class AnalyticsEmployeesView(APIView):
         month = query_serializer.validated_data.get("month")
         if month is None:
             month = f"{today.year:04d}-{today.month:02d}"
-        return Response(analytics_employees(month))
+        return Response(analytics_employees(month, today))
 
 
 class FinanceAccountsView(APIView):

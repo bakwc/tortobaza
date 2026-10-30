@@ -275,6 +275,8 @@ export const EmployeeSchema = z.object({
   is_finance_admin: z.boolean(),
   is_active_courier: z.boolean(),
   pushover_user: z.string(),
+  position: z.string(),
+  in_schedule: z.boolean(),
 });
 
 export const AttendanceEventSchema = z.object({
@@ -297,6 +299,41 @@ export const AttendanceSummarySchema = z.object({
   rows: z.array(AttendanceSummaryRowSchema),
   total_hours: z.string(),
   total_money: z.string(),
+});
+
+export const ScheduleDayTypeSchema = z.enum(["work", "off", "vacation", "sick"]);
+
+export const ScheduleEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.string(),
+  days: z.record(z.string(), ScheduleDayTypeSchema),
+});
+
+export const ScheduleGridSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  employees: z.array(ScheduleEmployeeSchema),
+});
+
+export const TimesheetCellSchema = z.object({
+  day_type: ScheduleDayTypeSchema.nullable(),
+  hours: z.string(),
+  mismatch: z.boolean(),
+});
+
+export const TimesheetEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.string(),
+  total_hours: z.string(),
+  days: z.record(z.string(), TimesheetCellSchema),
+});
+
+export const TimesheetGridSchema = z.object({
+  start: z.string(),
+  end: z.string(),
+  employees: z.array(TimesheetEmployeeSchema),
 });
 
 export const CrmOrderImageSchema = z.object({
@@ -688,28 +725,113 @@ export const AnalyticsProductsSchema = z.object({
   weight_unknown: z.number(),
 });
 
+export const AnalyticsStaffPeriodSchema = z.object({
+  hourly_money: z.string(),
+  monthly_money: z.string(),
+  money: z.string(),
+  revenue: z.string(),
+  kilograms: z.string(),
+  hours: z.string(),
+  shifts: z.number(),
+  salary_share: z.string().nullable(),
+  money_per_kg: z.string().nullable(),
+  kg_per_hour: z.string().nullable(),
+});
+
+export const AnalyticsStaffBakerSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  kilograms: z.string(),
+  orders: z.number(),
+});
+
 export const AnalyticsEmployeeSchema = z.object({
   id: z.number(),
   name: z.string(),
+  monthly: z.boolean(),
+  shifts: z.number(),
   hours: z.string(),
+  average_shift: z.string().nullable(),
   money: z.string(),
-  placed: z.number(),
+  money_share: z.string().nullable(),
   made: z.number(),
   made_kilograms: z.string(),
-  delivered: z.number(),
+  arrival: z.string().nullable(),
+  departure: z.string().nullable(),
+  kinds: z.array(
+    z.object({
+      kind: AnalyticsProductKindSchema,
+      quantity: z.number(),
+    }),
+  ),
+  production_minutes: z.string().nullable(),
+  production_orders: z.number(),
 });
 
 export const AnalyticsEmployeesSchema = z.object({
   month: z.string(),
-  employees: z.array(AnalyticsEmployeeSchema),
-  totals: z.object({
-    hours: z.string(),
-    money: z.string(),
-    placed: z.number(),
-    made: z.number(),
-    made_kilograms: z.string(),
-    delivered: z.number(),
+  totals: AnalyticsStaffPeriodSchema,
+  previous: AnalyticsStaffPeriodSchema,
+  gaps: z.object({
+    without_baker: z.number(),
+    unclosed_shifts: z.number(),
+    without_composition: z.number(),
+    without_production: z.number(),
   }),
+  months: z.array(
+    AnalyticsStaffPeriodSchema.pick({
+      hourly_money: true,
+      monthly_money: true,
+      revenue: true,
+      kilograms: true,
+      hours: true,
+      salary_share: true,
+      money_per_kg: true,
+      kg_per_hour: true,
+    }).extend({
+      month: z.string(),
+      partial: z.boolean(),
+      bakers: z.array(AnalyticsStaffBakerSchema),
+      unassigned_kilograms: z.string(),
+    }),
+  ),
+  days: z.array(
+    z.object({
+      date: z.string(),
+      hours: z.string(),
+      kilograms: z.string(),
+      kg_per_hour: z.string().nullable(),
+      bakers: z.array(
+        z.object({
+          id: z.number(),
+          name: z.string(),
+          kilograms: z.string(),
+        }),
+      ),
+      unassigned_kilograms: z.string(),
+    }),
+  ),
+  weekdays: z.array(
+    z.object({
+      weekday: z.number(),
+      hours: z.string(),
+      kilograms: z.string(),
+    }),
+  ),
+  employees: z.array(AnalyticsEmployeeSchema),
+  timesheet: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      days: z.array(
+        z.object({
+          date: z.string(),
+          hours: z.string(),
+          open: z.boolean(),
+        }),
+      ),
+    }),
+  ),
 });
 
 export const AnalyticsClientsSchema = z.object({
@@ -931,9 +1053,26 @@ export type EmployeeBody = {
   is_finance_admin: boolean;
   is_active_courier: boolean;
   pushover_user: string;
+  position: string;
+  in_schedule: boolean;
 };
 export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
+export type ScheduleDayType = z.infer<typeof ScheduleDayTypeSchema>;
+export type ScheduleGrid = z.infer<typeof ScheduleGridSchema>;
+export type TimesheetGrid = z.infer<typeof TimesheetGridSchema>;
+export type ScheduleCellBody = {
+  user: number;
+  date: string;
+  day_type: ScheduleDayType | null;
+};
+export type ScheduleFillBody = {
+  user: number;
+  start: string;
+  end: string;
+  cycle_start: string;
+  pattern: ScheduleDayType[];
+};
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;

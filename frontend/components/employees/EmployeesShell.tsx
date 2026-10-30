@@ -6,7 +6,7 @@ import { SectionShell, type SectionTab } from "@/components/menu/SectionShell";
 import { Spinner } from "@/components/ui/spinner";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 
-export type EmployeesSection = "employees" | "salaries";
+export type EmployeesSection = "employees" | "schedule" | "timesheet" | "salaries";
 
 export function EmployeesShell({ section, children }: { section: EmployeesSection; children: ReactNode }) {
   return (
@@ -27,6 +27,8 @@ function EmployeesShellContent({ section, children }: { section: EmployeesSectio
   const period = useFinancePeriod();
   const tabs: SectionTab[] = [
     { key: "employees", href: "/employees", label: t("employeesSection") },
+    { key: "schedule", href: `/employees/schedule?${period.query}`, label: t("schedule") },
+    { key: "timesheet", href: `/employees/timesheet?${period.query}`, label: t("timesheet") },
     { key: "salaries", href: `/employees/salaries?${period.query}`, label: t("salaries") },
   ];
   return (

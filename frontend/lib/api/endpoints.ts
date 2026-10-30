@@ -2,6 +2,8 @@ import { ApiError } from "./client";
 import {
   AttendanceEventSchema,
   AttendanceSummarySchema,
+  ScheduleGridSchema,
+  TimesheetGridSchema,
   CartSchema,
   CategoryDetailSchema,
   CategoryLandingSchema,
@@ -51,6 +53,10 @@ import {
   type AttendanceEvent,
   type AttendanceEventType,
   type AttendanceSummary,
+  type ScheduleCellBody,
+  type ScheduleFillBody,
+  type ScheduleGrid,
+  type TimesheetGrid,
   type Cart,
   type Category,
   type CategoryDetail,
@@ -596,6 +602,34 @@ export function endpoints(fetcher: Fetcher) {
     async getAttendanceSummary(): Promise<AttendanceSummary> {
       const raw = await fetcher<unknown>("/api/attendance/summary/");
       return parse(AttendanceSummarySchema, raw);
+    },
+
+    async getSchedule(month: string): Promise<ScheduleGrid> {
+      const raw = await fetcher<unknown>("/api/attendance/schedule/", {
+        searchParams: { month },
+      });
+      return parse(ScheduleGridSchema, raw);
+    },
+
+    async saveSchedule(cells: ScheduleCellBody[]): Promise<void> {
+      await fetcher<void>("/api/attendance/schedule/", {
+        method: "PUT",
+        body: JSON.stringify({ cells }),
+      });
+    },
+
+    async fillSchedule(body: ScheduleFillBody): Promise<void> {
+      await fetcher<void>("/api/attendance/schedule/fill/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
+
+    async getTimesheet(month: string): Promise<TimesheetGrid> {
+      const raw = await fetcher<unknown>("/api/attendance/timesheet/", {
+        searchParams: { month },
+      });
+      return parse(TimesheetGridSchema, raw);
     },
 
     async getCrmExpenses(date?: string): Promise<CrmExpensesDay> {
