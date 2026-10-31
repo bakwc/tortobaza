@@ -1,9 +1,15 @@
+import random
+import time
+from collections.abc import Callable
 from decimal import Decimal, ROUND_HALF_UP
 
 import requests
 from django.conf import settings
 
+from crm.exchange_rates import usd_rate
 from orders.models import Order, PayPalPayment
+
+_ATTEMPTS = 5
 
 
 def paypal_enabled() -> bool:
@@ -11,16 +17,19 @@ def paypal_enabled() -> bool:
 
 
 def nbg_usd_rate() -> Decimal:
-    response = requests.get(
-        settings.NBG_RATES_URL,
-        params={"currencies": "USD"},
-        timeout=15,
-    )
-    response.raise_for_status()
-    currency = response.json()[0]["currencies"][0]
-    rate = Decimal(str(currency["rate"]))
-    quantity = Decimal(str(currency["quantity"]))
-    return rate / quantity
+    return usd_rate()
+
+
+def _request_with_retry(send: Callable[[], requests.Response]) -> requests.Response:
+    attempt = 0
+    while True:
+        try:
+            return send()
+        except (requests.ConnectionError, requests.Timeout):
+            attempt += 1
+            if attempt == _ATTEMPTS:
+                raise
+            time.sleep(random.uniform(1, 2))
 
 
 def gel_to_usd(amount: Decimal, rate: Decimal) -> Decimal:
@@ -52,15 +61,17 @@ def access_token() -> str:
 
 
 def payment_resources_access_token() -> str:
-    response = requests.post(
-        f"{settings.PAYPAL_API_URL}/v1/oauth2/token",
-        auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
-        data={
-            "grant_type": "client_credentials",
-            "scope": _PAYMENT_RESOURCES_SCOPE,
-        },
-        headers={"Accept": "application/json"},
-        timeout=30,
+    response = _request_with_retry(
+        lambda: requests.post(
+            f"{settings.PAYPAL_API_URL}/v1/oauth2/token",
+            auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
+            data={
+                "grant_type": "client_credentials",
+                "scope": _PAYMENT_RESOURCES_SCOPE,
+            },
+            headers={"Accept": "application/json"},
+            timeout=30,
+        )
     )
     _raise_for_status(response)
     return response.json()["access_token"]
@@ -123,16 +134,18 @@ def payment_link_href(payload: dict) -> str:
 def create_payment_link(order_id: int, amount_usd: Decimal, return_url: str) -> tuple[str, str]:
     token = payment_resources_access_token()
     amount_key = format(amount_usd, "f").replace(".", "")
-    response = requests.post(
-        f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "PayPal-Request-Id": f"crm-order-{order_id}-{amount_key}",
-        },
-        json=payment_link_body(order_id, amount_usd, return_url),
-        timeout=30,
+    response = _request_with_retry(
+        lambda: requests.post(
+            f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "PayPal-Request-Id": f"crm-order-{order_id}-{amount_key}",
+            },
+            json=payment_link_body(order_id, amount_usd, return_url),
+            timeout=30,
+        )
     )
     _raise_for_status(response)
     payload = response.json()
@@ -141,15 +154,17 @@ def create_payment_link(order_id: int, amount_usd: Decimal, return_url: str) -> 
 
 def update_payment_link(link_id: str, order_id: int, amount_usd: Decimal, return_url: str) -> None:
     token = payment_resources_access_token()
-    response = requests.put(
-        f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources/{link_id}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-        json=payment_link_body(order_id, amount_usd, return_url),
-        timeout=30,
+    response = _request_with_retry(
+        lambda: requests.put(
+            f"{settings.PAYPAL_API_URL}/v1/checkout/payment-resources/{link_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            json=payment_link_body(order_id, amount_usd, return_url),
+            timeout=30,
+        )
     )
     _raise_for_status(response)
 

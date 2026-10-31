@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 from unittest.mock import Mock, patch
 
 import requests
@@ -8,7 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from crm.exchange_rates import NBG_CURRENCIES_URL, current_exchange_rates
+from crm.exchange_rates import NBG_CURRENCIES_URL, current_exchange_rates, usd_rate
 from crm.models import ExchangeRateSnapshot
 
 NBG_PAYLOAD = [
@@ -67,6 +68,54 @@ class CurrentExchangeRatesTests(TestCase):
             result = current_exchange_rates()
         self.assertEqual(result.pk, old.pk)
         self.assertEqual(ExchangeRateSnapshot.objects.count(), 1)
+
+
+class UsdRateTests(TestCase):
+    def test_connection_error_uses_snapshot_without_retry(self):
+        _snapshot(25)
+        with (
+            patch(
+                "crm.exchange_rates.requests.get",
+                side_effect=requests.ConnectionError("aborted"),
+            ) as get,
+            patch("crm.exchange_rates.time.sleep") as sleep,
+        ):
+            rate = usd_rate()
+        get.assert_called_once_with(NBG_CURRENCIES_URL, timeout=10)
+        sleep.assert_not_called()
+        self.assertEqual(rate, Decimal("2.5900"))
+
+    def test_connection_error_without_snapshot_retries(self):
+        with (
+            patch(
+                "crm.exchange_rates.requests.get",
+                side_effect=requests.ConnectionError("aborted"),
+            ) as get,
+            patch("crm.exchange_rates.time.sleep") as sleep,
+        ):
+            with self.assertRaises(requests.ConnectionError):
+                usd_rate()
+        self.assertEqual(get.call_count, 5)
+        self.assertEqual(sleep.call_count, 4)
+
+    def test_success_stores_snapshot_per_unit(self):
+        response = Mock()
+        response.json.return_value = [
+            {
+                "date": "2026-10-10T00:00:00.000Z",
+                "currencies": [
+                    {"code": "USD", "quantity": 10, "rate": 26.005},
+                    {"code": "EUR", "quantity": 1, "rate": 3.0451},
+                ],
+            }
+        ]
+        with patch("crm.exchange_rates.requests.get", return_value=response) as get:
+            rate = usd_rate()
+        get.assert_called_once_with(NBG_CURRENCIES_URL, timeout=10)
+        self.assertEqual(rate, Decimal("2.6005"))
+        snapshot = ExchangeRateSnapshot.objects.get()
+        self.assertEqual(snapshot.rates_date, date(2026, 10, 10))
+        self.assertEqual(snapshot.rates, {"USD": "2.6005", "EUR": "3.0451"})
 
 
 class ExchangeRatesApiTests(TestCase):
