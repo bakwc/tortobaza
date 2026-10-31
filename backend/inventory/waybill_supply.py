@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import date
 from decimal import Decimal
 from typing import Literal
@@ -25,17 +26,18 @@ WAYBILL_MATCH_PROMPT = """You match lines from a Georgian tax waybill to a baker
 
 The user message is JSON: {"ingredients": [{id, name, unit}], "lines": [{good_id, name, name_ru, unit_txt, quantity, price, amount, bar_code}]}.
 unit is g (grams), ml (milliliters), or pcs (pieces).
-price is the unit price, amount is the line total.
+price is the unit price, amount is the line total. The waybill price is usually for 1 kg or 1 L. An ingredient in grams needs that price per gram, so kilograms must be multiplied by 1000. Never report kilograms as grams.
 
 For each line return up to 3 suggestions, best first.
 ingredient_id is an id from ingredients, or null when nothing in the catalog fits.
 Never invent an id.
 factor is the multiplier from the waybill quantity to the ingredient quantity, as a decimal string.
 Waybill quantity times factor equals the quantity in the ingredient unit.
-A number in the name such as 10 or 25 is often only the nominal pack. The price is usually for 1 kg or 1 L, not for that pack, but not always. Check price against amount.
-When amount is about price times quantity, quantity is already in unit_txt, so ignore the pack number in the name. "კგ" or "кг" into grams is factor "1000". "ლ" or "л" into milliliters is factor "1000".
-When unit_txt is a piece, read the pack from the name. "1ლ" with quantity 10 and ingredient unit ml is factor "1000". "200გრ" with quantity 1 and ingredient unit g is factor "200". A piece that is already the ingredient unit is factor "1".
-When amount is about price times quantity times the pack size in the name, the price is per 1 kg or 1 L and quantity counts those packs, so include that pack size in the factor.
+1 kg = 1000 g. 1 L = 1000 ml.
+A kilogram number in the name is only the nominal pack. Ignore it. The waybill quantity is per 1 kg, so the factor into grams is "1000", not that number and not that number times 1000.
+quantity 2 of "Шоколад белый (NATRA испанский) 29,7% (упаковка 10 кг)" is 2 kg = 2000 g, factor "1000". It is not 20 g and not 20000 g.
+"კგ", "кг" or "kg" in unit_txt is the same rule: factor into grams is "1000".
+"1ლ" with quantity 10 and ingredient unit ml is factor "1000". "200გრ" with quantity 1 and ingredient unit g is factor "200". "ლ" or "л" into milliliters is factor "1000". A piece that is already the ingredient unit is factor "1".
 When ingredient_id is set, unit is that ingredient's unit.
 When ingredient_id is null, unit is g, ml, or pcs for a new ingredient, and factor converts the waybill quantity into that unit.
 Return every good_id from lines exactly once.
@@ -57,8 +59,32 @@ class WaybillMatchModel(BaseModel):
     lines: list[WaybillGoodMatchModel]
 
 
+_KILO_PACK = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:კგ|кг|kg)\b", re.IGNORECASE)
+_KILO_UNITS = {"კგ", "кг", "kg"}
+_GRAMS_PER_KILO = Decimal(1000)
+
+
 def decimal_text(value: Decimal) -> str:
     return format(value, "f")
+
+
+def kilo_pack(good: WaybillGood) -> Decimal | None:
+    match = _KILO_PACK.search(f"{good.name} {good.name_ru}")
+    if match is None:
+        return None
+    return Decimal(match.group(1).replace(",", "."))
+
+
+def fix_kilogram_factor(good: WaybillGood, payload: dict) -> dict:
+    if payload["unit"] != "g":
+        return payload
+    factor = Decimal(payload["factor"])
+    kilos = kilo_pack(good)
+    unit_is_kg = good.unit_txt.strip().casefold() in _KILO_UNITS
+    used_pack = kilos is not None and (factor == kilos or factor == kilos * _GRAMS_PER_KILO)
+    if (unit_is_kg and factor == 1) or used_pack:
+        payload["factor"] = decimal_text(_GRAMS_PER_KILO)
+    return payload
 
 
 def seller_display_name(waybill: Waybill) -> str:
@@ -161,11 +187,15 @@ def match_waybill_goods(goods: list[WaybillGood]) -> dict[int, list[dict]]:
     returned = [row.good_id for row in parsed.lines]
     if len(returned) != len(set(returned)) or set(returned) != expected:
         raise ValidationError("Waybill match did not return every line.")
+    by_id = {good.pk: good for good in goods}
     matches: dict[int, list[dict]] = {}
     for row in parsed.lines:
         if len(row.suggestions) > 3:
             raise ValidationError("At most 3 suggestions per line.")
-        matches[row.good_id] = [suggestion_payload(suggestion, known) for suggestion in row.suggestions]
+        good = by_id[row.good_id]
+        matches[row.good_id] = [
+            fix_kilogram_factor(good, suggestion_payload(suggestion, known)) for suggestion in row.suggestions
+        ]
     return matches
 
 

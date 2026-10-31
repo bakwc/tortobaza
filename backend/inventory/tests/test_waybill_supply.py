@@ -206,6 +206,37 @@ class WaybillSupplyApiTests(TestCase):
         )
 
     @patch("inventory.waybill_supply.OpenAI")
+    def test_ten_kg_pack_is_not_twenty_grams(self, openai_cls):
+        chocolate = make_good(
+            self.waybill,
+            12,
+            "თეთრი შოკოლადი 10კგ",
+            "Шоколад белый (NATRA испанский) 29,7% (упаковка 10 кг)",
+            "2",
+            "110",
+            "",
+            "ც",
+        )
+        openai_cls.return_value.responses.parse.return_value.output_parsed = WaybillMatchModel(
+            lines=[
+                WaybillGoodMatchModel(
+                    good_id=self.milk_good.pk,
+                    suggestions=[suggestion(self.milk.pk, "1000", "ml")],
+                ),
+                WaybillGoodMatchModel(
+                    good_id=chocolate.pk,
+                    suggestions=[suggestion(self.flour.pk, "10", "g")],
+                ),
+            ]
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.draft(self.waybill)
+        self.assertEqual(response.status_code, 200, response.content)
+        lines = response.json()["lines"]
+        self.assertEqual(lines[1]["suggestions"][0]["factor"], "1000")
+        self.assertEqual(lines[1]["suggestions"][0]["unit"], "g")
+
+    @patch("inventory.waybill_supply.OpenAI")
     def test_empty_model_output_fails(self, openai_cls):
         openai_cls.return_value.responses.parse.return_value.output_parsed = None
         self.client.force_authenticate(self.admin)
