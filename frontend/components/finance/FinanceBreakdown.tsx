@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useFinanceScope } from "@/hooks/useFinanceScope";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatAed, toGel } from "@/lib/format";
@@ -114,6 +115,7 @@ export function FinanceBreakdown({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { scope } = useFinanceScope();
   const typeParam = typeField === "income_type" ? "income_type" : "expense_type";
   const accountFilters = readAccountIds(searchParams.getAll("account"));
   const typeFilters = searchParams.getAll(typeParam);
@@ -134,6 +136,7 @@ export function FinanceBreakdown({
       hrefWithParams("/finance", searchParams.toString(), [
         { key: "kind", values: [typeField === "income_type" ? "income" : "expense"] },
         { key: "counterparty", values: [counterparty] },
+        { key: "scope", values: [scope] },
       ]),
     );
   }

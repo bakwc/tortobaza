@@ -120,7 +120,7 @@ export function FinanceAccountList({
         return (
           <Link
             key={account.id}
-            href={`/finance?${periodQuery}&account=${account.id}`}
+            href={`/finance?${periodQuery}&account=${account.id}&scope=${scope}`}
             className="flex min-w-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-2 py-2 shadow-sm transition hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-[var(--ink)] md:gap-3 md:rounded-2xl md:px-3"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--cream)] text-[var(--muted-2)] md:h-10 md:w-10 md:rounded-lg">

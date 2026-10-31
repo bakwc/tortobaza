@@ -40,7 +40,12 @@ export function CrmOverflowMenu() {
   const monthParam = searchParams.get("month");
   const dateParam = searchParams.get("date");
   const month = monthParam ?? (dateParam ? dateParam.slice(0, 7) : null);
-  const financeHref = month ? `/finance?month=${month}` : "/finance";
+  const scope = searchParams.get("scope");
+  const financeParams = new URLSearchParams();
+  if (month) financeParams.set("month", month);
+  if (scope === "personal" || scope === "business") financeParams.set("scope", scope);
+  const financeQuery = financeParams.toString();
+  const financeHref = financeQuery ? `/finance?${financeQuery}` : "/finance";
   const analyticsHref = month ? `/analytics?month=${month}` : "/analytics";
   const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
   const isStaff = Boolean(currentUser.data?.is_staff);
