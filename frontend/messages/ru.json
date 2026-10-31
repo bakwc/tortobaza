@@ -907,7 +907,11 @@
     "fromAi": "ИИ",
     "aiCreateNew": "ИИ: создать новый",
     "createNamed": "Создать «{name}»",
-    "newIngredientTitle": "Новый ингредиент"
+    "newIngredientTitle": "Новый ингредиент",
+    "priceWas": "Было",
+    "priceWillBe": "Станет",
+    "priceUnchanged": "Без изменений",
+    "priceNew": "Первая цена"
   },
   "analytics": {
     "overview": "Общее",

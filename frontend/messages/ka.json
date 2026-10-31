@@ -907,7 +907,11 @@
     "fromAi": "AI",
     "aiCreateNew": "AI: ახლის შექმნა",
     "createNamed": "შექმნა «{name}»",
-    "newIngredientTitle": "ახალი ინგრედიენტი"
+    "newIngredientTitle": "ახალი ინგრედიენტი",
+    "priceWas": "იყო",
+    "priceWillBe": "გახდება",
+    "priceUnchanged": "უცვლელია",
+    "priceNew": "პირველი ფასი"
   },
   "analytics": {
     "overview": "ზოგადი",

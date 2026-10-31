@@ -907,7 +907,11 @@
     "fromAi": "AI",
     "aiCreateNew": "AI: create new",
     "createNamed": "Create “{name}”",
-    "newIngredientTitle": "New ingredient"
+    "newIngredientTitle": "New ingredient",
+    "priceWas": "Was",
+    "priceWillBe": "Will be",
+    "priceUnchanged": "Unchanged",
+    "priceNew": "First price"
   },
   "analytics": {
     "overview": "Overview",

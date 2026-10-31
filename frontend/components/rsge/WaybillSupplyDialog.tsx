@@ -7,6 +7,7 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { QueryState, formatQuantity } from "@/components/menu/ui";
 import { WaybillIngredientDialog } from "@/components/rsge/WaybillIngredientDialog";
 import { WaybillLinePicker } from "@/components/rsge/WaybillLinePicker";
+import { WaybillPriceChange } from "@/components/rsge/WaybillPriceChange";
 import { useCreateWaybillSupply, useWaybillSupplyDraft } from "@/hooks/useWaybills";
 import { useIngredients } from "@/hooks/useStock";
 import { formatMoney } from "@/lib/format";
@@ -189,6 +190,15 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
                         </div>
                       )}
                     </div>
+                    {row.skipped || ingredient === undefined ? null : (
+                      <WaybillPriceChange
+                        avgCost={ingredient.avg_cost}
+                        costQuantity={ingredient.cost_quantity}
+                        unitLabel={units(ingredient.unit)}
+                        amount={line.amount}
+                        quantity={row.quantity}
+                      />
+                    )}
                   </div>
                 );
               })}
