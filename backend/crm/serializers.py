@@ -312,6 +312,16 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         return order_phones(instance, self.context)
 
 
+class CrmDayOrderSerializer(CrmOrderSerializer):
+    client_order_count = serializers.SerializerMethodField()
+
+    class Meta(CrmOrderSerializer.Meta):
+        fields = [*CrmOrderSerializer.Meta.fields, "client_order_count"]
+
+    def get_client_order_count(self, instance: CrmOrder) -> int | None:
+        return self.context["client_order_counts"][instance.id]
+
+
 def _chef_identity_cached(user, cache: dict) -> tuple[str, str | None, str | None, str]:
     found = cache.get(user.id)
     if found is not None:

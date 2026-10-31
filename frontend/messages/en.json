@@ -296,6 +296,7 @@
     "orderImageTitle": "Order #{id} Image",
     "delivery": "Delivery",
     "pickup": "Pickup",
+    "repeatClient": "Repeat client ({count})",
     "contact": "Recipient",
     "gift": "Gift",
     "nickname": "Sender",

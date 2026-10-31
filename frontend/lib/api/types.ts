@@ -465,9 +465,13 @@ export const AuditEventsResponseSchema = z.object({
   results: z.array(AuditEventSchema),
 });
 
+export const CrmDayOrderSchema = CrmOrderSchema.extend({
+  client_order_count: z.number().nullable(),
+});
+
 export const CrmOrdersResponseSchema = z.object({
   date: z.string(),
-  orders: z.array(CrmOrderSchema),
+  orders: z.array(CrmDayOrderSchema),
 });
 
 export const CrmMonthlyOrdersResponseSchema = z.object({
@@ -1079,6 +1083,7 @@ export type ScheduleFillBody = {
 };
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
+export type CrmDayOrder = z.infer<typeof CrmDayOrderSchema>;
 export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 export type AuditEventsResponse = z.infer<typeof AuditEventsResponseSchema>;

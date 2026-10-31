@@ -296,6 +296,7 @@
     "orderImageTitle": "Order #{id} Image",
     "delivery": "Delivery",
     "pickup": "Pickup",
+    "repeatClient": "განმეორებითი კლიენტი ({count})",
     "contact": "Recipient",
     "gift": "საჩუქარი",
     "nickname": "Sender",

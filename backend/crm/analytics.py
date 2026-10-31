@@ -570,6 +570,25 @@ def _link_customers(orders: list[CrmOrder]) -> tuple[dict[str, Customer], int]:
     return customers, unknown
 
 
+def client_order_counts(order_ids: list[int]) -> dict[int, int | None]:
+    counts: dict[int, int | None] = {order_id: None for order_id in order_ids}
+    if not order_ids:
+        return counts
+    rows = list(
+        CrmOrder.objects.filter(deleted=False)
+        .only("id", "phones", "contact", "nickname")
+        .order_by("date", "id")
+    )
+    customers, _unknown = _link_customers(rows)
+    wanted = set(order_ids)
+    for customer in customers.values():
+        total = len(customer.orders)
+        for order in customer.orders:
+            if order.id in wanted:
+                counts[order.id] = total
+    return counts
+
+
 def _label(value: str) -> str:
     text = re.sub(r"\d{7,}", " ", value)
     return re.sub(r"\s+", " ", text).strip(" ,.-")

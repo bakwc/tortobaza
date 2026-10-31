@@ -25,6 +25,7 @@ from rest_framework.views import APIView
 from accounts.models import UserProfile
 from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
+from crm.analytics import client_order_counts
 from crm.analytics import clients as analytics_clients
 from crm.analytics import employees as analytics_employees
 from crm.analytics import overview as analytics_overview
@@ -58,6 +59,7 @@ from crm.serializers import (
     CrmOrderEventSerializer,
     CrmOrderItemCostSerializer,
     CrmOrderMapQuerySerializer,
+    CrmDayOrderSerializer,
     CrmOrderQuerySerializer,
     CrmOrderSerializer,
     CrmOrderUpdateSerializer,
@@ -270,8 +272,15 @@ class CrmOrderListView(APIView):
                 }
             )
         target_date = query_serializer.validated_data.get("date") or timezone.now().astimezone(_TB).date()
-        orders = with_order_relations(live_orders().filter(date=target_date))
-        serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
+        orders = list(with_order_relations(live_orders().filter(date=target_date)))
+        serializer = CrmDayOrderSerializer(
+            orders,
+            many=True,
+            context={
+                "request": request,
+                "client_order_counts": client_order_counts([order.id for order in orders]),
+            },
+        )
         return Response(
             {
                 "date": target_date.isoformat(),

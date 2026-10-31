@@ -296,6 +296,7 @@
     "orderImageTitle": "Изображение заказа #{id}",
     "delivery": "Доставка",
     "pickup": "Самовывоз",
+    "repeatClient": "Повторный клиент ({count})",
     "contact": "Получатель",
     "gift": "Подарок",
     "nickname": "Отправитель",

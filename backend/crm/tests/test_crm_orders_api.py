@@ -208,6 +208,40 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(data["orders"][1]["time_start"], "16:30:00")
         self.assertEqual(data["orders"][1]["time_end"], "18:00:00")
 
+    def test_day_orders_include_client_order_count(self):
+        day = date(2026, 8, 25)
+        earlier = date(2026, 8, 1)
+
+        def make(when: date, contact: str, deleted: bool) -> CrmOrder:
+            return CrmOrder.objects.create(
+                date=when,
+                contact=contact,
+                fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+                weight="1kg",
+                filling="Vanilla",
+                cake_price=Decimal("80.00"),
+                prepayment=Decimal("0.00"),
+                is_paid=False,
+                payment_type=CrmOrder.PAYMENT_CASH,
+                deleted=deleted,
+            )
+
+        repeat = make(day, "+995555111222", False)
+        make(earlier, "+995555111222", False)
+        single = make(day, "+995555999888", False)
+        make(earlier, "+995555777666", True)
+        after_deleted = make(day, "+995555777666", False)
+        unknown = make(day, "Ann", False)
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/crm/orders/", {"date": "2026-08-25"})
+        self.assertEqual(response.status_code, 200)
+        counts = {row["id"]: row["client_order_count"] for row in response.json()["orders"]}
+        self.assertEqual(counts[repeat.id], 2)
+        self.assertEqual(counts[single.id], 1)
+        self.assertEqual(counts[after_deleted.id], 1)
+        self.assertIsNone(counts[unknown.id])
+
     def test_midnight_orders_sort_last(self):
         target_date = date(2026, 8, 25)
         midnight = CrmOrder.objects.create(

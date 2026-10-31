@@ -53,7 +53,7 @@ import {
   useResolveYandexAddress,
 } from "@/hooks/useCrmOrders";
 import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
-import type { CrmOrder, CrmOrderPaymentType, CrmOrderStatus } from "@/lib/api/types";
+import type { CrmDayOrder, CrmOrder, CrmOrderPaymentType, CrmOrderStatus } from "@/lib/api/types";
 import {
   CRM_ORDER_NEXT_STATUS,
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
@@ -417,7 +417,7 @@ function CrmOrderCard({
   onSetPaid,
   onTakeInWork,
 }: {
-  order: CrmOrder;
+  order: CrmDayOrder;
   focused: boolean;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
@@ -767,6 +767,12 @@ function CrmOrderCard({
                 />
               </div>
             </div>
+
+            {order.client_order_count !== null && order.client_order_count >= 2 ? (
+              <span className="w-fit rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
+                {t("repeatClient", { count: order.client_order_count })}
+              </span>
+            ) : null}
 
             <div className="flex flex-col gap-2.5 lg:gap-4">
               <div
