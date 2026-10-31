@@ -105,12 +105,13 @@ def suggestion_payload(suggestion: WaybillSuggestionModel, known: dict[int, Ingr
     factor = Decimal(suggestion.factor)
     if factor <= 0:
         raise ValidationError("Factor must be positive.")
-    if suggestion.ingredient_id is not None and suggestion.unit != known[suggestion.ingredient_id].unit:
-        raise ValidationError("Suggestion unit does not match the ingredient.")
+    unit = suggestion.unit
+    if suggestion.ingredient_id is not None:
+        unit = known[suggestion.ingredient_id].unit
     return {
         "ingredient_id": suggestion.ingredient_id,
         "factor": decimal_text(factor),
-        "unit": suggestion.unit,
+        "unit": unit,
     }
 
 

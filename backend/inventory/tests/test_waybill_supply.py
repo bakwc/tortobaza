@@ -188,6 +188,24 @@ class WaybillSupplyApiTests(TestCase):
         self.assertIn("999999", str(response.json()))
 
     @patch("inventory.waybill_supply.OpenAI")
+    def test_suggestion_unit_comes_from_the_ingredient(self, openai_cls):
+        openai_cls.return_value.responses.parse.return_value.output_parsed = WaybillMatchModel(
+            lines=[
+                WaybillGoodMatchModel(
+                    good_id=self.milk_good.pk,
+                    suggestions=[suggestion(self.flour.pk, "200", "ml")],
+                )
+            ]
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.draft(self.waybill)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(
+            response.json()["lines"][0]["suggestions"],
+            [{"ingredient_id": self.flour.pk, "factor": "200", "unit": "g"}],
+        )
+
+    @patch("inventory.waybill_supply.OpenAI")
     def test_empty_model_output_fails(self, openai_cls):
         openai_cls.return_value.responses.parse.return_value.output_parsed = None
         self.client.force_authenticate(self.admin)
