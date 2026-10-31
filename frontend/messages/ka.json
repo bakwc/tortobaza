@@ -901,7 +901,13 @@
     "supplyCreated": "მიწოდება",
     "supplyTitle": "მიწოდება ზედნადებიდან",
     "skipLine": "არ მივიღოთ",
-    "gramsPerUnit": "გრამი ერთეულში"
+    "suggestionsHeading": "მინიშნებები",
+    "allIngredients": "ყველა ინგრედიენტი",
+    "fromHistory": "ისტორიიდან",
+    "fromAi": "AI",
+    "aiCreateNew": "AI: ახლის შექმნა",
+    "createNamed": "შექმნა «{name}»",
+    "newIngredientTitle": "ახალი ინგრედიენტი"
   },
   "analytics": {
     "overview": "ზოგადი",

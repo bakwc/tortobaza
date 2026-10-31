@@ -901,7 +901,13 @@
     "supplyCreated": "Поставка",
     "supplyTitle": "Поставка из накладной",
     "skipLine": "Не принимать",
-    "gramsPerUnit": "Грамм в единице"
+    "suggestionsHeading": "Подсказки",
+    "allIngredients": "Все ингредиенты",
+    "fromHistory": "Из истории",
+    "fromAi": "ИИ",
+    "aiCreateNew": "ИИ: создать новый",
+    "createNamed": "Создать «{name}»",
+    "newIngredientTitle": "Новый ингредиент"
   },
   "analytics": {
     "overview": "Общее",

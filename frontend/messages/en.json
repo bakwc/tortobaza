@@ -901,7 +901,13 @@
     "supplyCreated": "Supply",
     "supplyTitle": "Supply from waybill",
     "skipLine": "Skip",
-    "gramsPerUnit": "Grams per unit"
+    "suggestionsHeading": "Suggestions",
+    "allIngredients": "All ingredients",
+    "fromHistory": "From history",
+    "fromAi": "AI",
+    "aiCreateNew": "AI: create new",
+    "createNamed": "Create “{name}”",
+    "newIngredientTitle": "New ingredient"
   },
   "analytics": {
     "overview": "Overview",

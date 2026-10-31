@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export type SearchSelectOption = { value: string; label: string };
 
-function listPlacement(anchor: HTMLElement): { upward: boolean; maxHeight: number } {
+export function listPlacement(anchor: HTMLElement): { upward: boolean; maxHeight: number } {
   const margin = 8;
   const preferred = 240;
   let clipTop = 0;
