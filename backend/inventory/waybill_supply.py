@@ -23,15 +23,19 @@ SUPPLIER_NAME_LIMIT = 200
 
 WAYBILL_MATCH_PROMPT = """You match lines from a Georgian tax waybill to a bakery ingredient catalog.
 
-The user message is JSON: {"ingredients": [{id, name, unit}], "lines": [{good_id, name, name_ru, unit_txt, quantity, bar_code}]}.
+The user message is JSON: {"ingredients": [{id, name, unit}], "lines": [{good_id, name, name_ru, unit_txt, quantity, price, amount, bar_code}]}.
 unit is g (grams), ml (milliliters), or pcs (pieces).
+price is the unit price, amount is the line total.
 
 For each line return up to 3 suggestions, best first.
 ingredient_id is an id from ingredients, or null when nothing in the catalog fits.
 Never invent an id.
 factor is the multiplier from the waybill quantity to the ingredient quantity, as a decimal string.
 Waybill quantity times factor equals the quantity in the ingredient unit.
-Read the package size from the name. "1ლ" with quantity 10 and ingredient unit ml is factor "1000". "200გრ" with quantity 1 and ingredient unit g is factor "200". "კგ" or "кг" into grams is factor "1000". "ლ" or "л" into milliliters is factor "1000". A piece that is already the ingredient unit is factor "1".
+A number in the name such as 10 or 25 is often only the nominal pack. The price is usually for 1 kg or 1 L, not for that pack, but not always. Check price against amount.
+When amount is about price times quantity, quantity is already in unit_txt, so ignore the pack number in the name. "კგ" or "кг" into grams is factor "1000". "ლ" or "л" into milliliters is factor "1000".
+When unit_txt is a piece, read the pack from the name. "1ლ" with quantity 10 and ingredient unit ml is factor "1000". "200გრ" with quantity 1 and ingredient unit g is factor "200". A piece that is already the ingredient unit is factor "1".
+When amount is about price times quantity times the pack size in the name, the price is per 1 kg or 1 L and quantity counts those packs, so include that pack size in the factor.
 When ingredient_id is set, unit is that ingredient's unit.
 When ingredient_id is null, unit is g, ml, or pcs for a new ingredient, and factor converts the waybill quantity into that unit.
 Return every good_id from lines exactly once.
@@ -128,6 +132,8 @@ def match_waybill_goods(goods: list[WaybillGood]) -> dict[int, list[dict]]:
                     "name_ru": good.name_ru,
                     "unit_txt": good.unit_txt,
                     "quantity": decimal_text(good.quantity),
+                    "price": decimal_text(good.price),
+                    "amount": decimal_text(good.amount),
                     "bar_code": good.bar_code,
                 }
                 for good in goods
