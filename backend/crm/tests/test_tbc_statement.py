@@ -76,6 +76,35 @@ def _statement_with_headers(headers: list[str], rows: list[dict]) -> BytesIO:
     return buffer
 
 
+NATIVE_HEADERS = [
+    "თარიღი\nDate",
+    "დანიშნულება\nDescription",
+    "დამატებითი ინფორმაცია\nAdditional Information",
+    "გასული თანხა\nPaid Out",
+    "შემოსული თანხა\nPaid In",
+    "ბალანსი\nBalance",
+]
+
+
+def _native_statement(rows: list[dict]) -> BytesIO:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Statement"
+    worksheet.cell(1, 1, "Account Statement:")
+    worksheet.cell(2, 1, "Account:")
+    worksheet.cell(2, 2, "GE07TB7154245068100036")
+    for index, header in enumerate(NATIVE_HEADERS, start=1):
+        worksheet.cell(4, index, header)
+    for offset, row in enumerate(rows):
+        excel_row = 5 + offset
+        for index, header in enumerate(NATIVE_HEADERS, start=1):
+            worksheet.cell(excel_row, index, row[header])
+    buffer = BytesIO()
+    workbook.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
 def _account(name: str, bank_name: str) -> FinancialAccount:
     return FinancialAccount.objects.create(
         name=name,
@@ -292,3 +321,82 @@ class TbcStatementImportTests(TestCase):
         self.assertEqual(expense.counterparty_name, "POS - LTD KEEPZ.ME*YANDEX GO")
         self.assertEqual(expense.counterparty_iban, "GE17BS0000097608945002")
         self.assertEqual(expense.description, f"{expense_operation} | {expense_additional}")
+
+    def test_native_statement_export(self):
+        _account("TBC card", "TBC")
+        income_additional = "ი/მ სელეჰეი მარკო, BAGAGE22, GE72BG0000000611931871"
+        expense_operation = (
+            "POS - LTD KEEPZ.ME*YANDEX GO, 5.20 GEL, Sep 30 2026\n3:52PM, ტრანსპორტი"
+        )
+        expense_additional = (
+            "TBCBank merchant, TBCBGE22,\nGE28TB0004511348888888"
+        )
+        result = import_tbc_statement(
+            _native_statement(
+                [
+                    {
+                        "თარიღი\nDate": "01/10/2026",
+                        "დანიშნულება\nDescription": "COST OF SERVICES",
+                        "დამატებითი ინფორმაცია\nAdditional Information": income_additional,
+                        "გასული თანხა\nPaid Out": None,
+                        "შემოსული თანხა\nPaid In": "75.00",
+                        "ბალანსი\nBalance": "2633.80",
+                    },
+                    {
+                        "თარიღი\nDate": "01/10/2026",
+                        "დანიშნულება\nDescription": expense_operation,
+                        "დამატებითი ინფორმაცია\nAdditional Information": expense_additional,
+                        "გასული თანხა\nPaid Out": "5.20",
+                        "შემოსული თანხა\nPaid In": None,
+                        "ბალანსი\nBalance": "2628.60",
+                    },
+                ]
+            )
+        )
+        expense_operation_line = expense_operation.replace("\n", " ")
+        expense_additional_line = "TBCBank merchant, TBCBGE22, GE28TB0004511348888888"
+        self.assertEqual(result.error, "")
+        self.assertEqual(result.created, 2)
+        income = FinancialTransaction.objects.get(kind=FinancialTransaction.KIND_INCOME)
+        self.assertEqual(income.date, datetime(2026, 10, 1).date())
+        self.assertEqual(income.amount, Decimal("75.00"))
+        self.assertEqual(income.counterparty_name, "ი/მ სელეჰეი მარკო")
+        self.assertEqual(income.counterparty_iban, "GE72BG0000000611931871")
+        self.assertEqual(income.external_id, f"2026-10-01|COST OF SERVICES|{income_additional}|75.00")
+        expense = FinancialTransaction.objects.get(kind=FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.amount, Decimal("-5.20"))
+        self.assertEqual(expense.counterparty_name, "POS - LTD KEEPZ.ME*YANDEX GO")
+        self.assertEqual(expense.counterparty_iban, "GE28TB0004511348888888")
+        self.assertEqual(
+            expense.external_id,
+            f"2026-10-01|{expense_operation_line}|{expense_additional_line}|-5.20",
+        )
+        self.assertNotIn("\n", expense.description)
+
+    def test_native_reimport_matches_old_external_id(self):
+        _account("TBC card", "TBC")
+        first = import_tbc_statement(_statement([_income()]))
+        self.assertEqual(first.error, "")
+        self.assertEqual(first.created, 1)
+        again = import_tbc_statement(
+            _native_statement(
+                [
+                    {
+                        "თარიღი\nDate": "02/09/2026",
+                        "დანიშნულება\nDescription": INCOME_OPERATION,
+                        "დამატებითი ინფორმაცია\nAdditional Information": (
+                            "ავთანდილ გორგაძე, TBCBGE22,\nGE29TB7649345064300130"
+                        ),
+                        "გასული თანხა\nPaid Out": None,
+                        "შემოსული თანხა\nPaid In": "90.00",
+                        "ბალანსი\nBalance": "368.93",
+                    }
+                ]
+            )
+        )
+        self.assertEqual(again.error, "")
+        self.assertEqual(again.created, 0)
+        self.assertEqual(again.skipped, 1)
+        self.assertEqual(FinancialTransaction.objects.count(), 1)
+        income = FinancialTransaction.objects.get()
+        self.assertEqual(income.external_id, INCOME_EXTERNAL_ID)

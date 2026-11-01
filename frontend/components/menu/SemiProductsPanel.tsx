@@ -26,8 +26,8 @@ import {
   Field,
   NativeSelect,
   QueryState,
-  formatMoney,
   formatQuantity,
+  formatUnitCost,
 } from "@/components/menu/ui";
 import { useIngredients, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import { useRouter } from "@/i18n/navigation";
@@ -35,6 +35,10 @@ import type { MenuUnit, SemiProduct } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
+
+function costPerYieldUnit(cost: string, yieldQuantity: string): string {
+  return (Number(cost) / Number(yieldQuantity)).toFixed(6);
+}
 
 type SemiDraft = {
   name: string;
@@ -56,6 +60,7 @@ function SemiProductRow({
   onOpen: () => void;
 }) {
   const t = useTranslations("stock");
+  const units = useTranslations("stock.units");
   const cover = row.images[0];
   return (
     <button
@@ -103,8 +108,11 @@ function SemiProductRow({
         {yieldLabel}
       </span>
       {row.cost !== undefined ? (
-        <span className="w-24 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatMoney(row.cost)}
+        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+          {formatUnitCost(costPerYieldUnit(row.cost, row.yield_quantity))}
+          <span className="block text-[11px] font-normal text-[var(--muted-2)]">
+            {t("costPerUnit", { unit: units(row.unit) })}
+          </span>
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -334,7 +342,12 @@ export function SemiProductsPanel() {
                 { label: t("yield"), value: `${formatQuantity(current.yield_quantity)} ${units(current.unit)}` },
                 { label: t("componentsLabel"), value: String(current.lines.length) },
                 ...(current.cost !== undefined
-                  ? [{ label: t("recipeCost"), value: formatMoney(current.cost) }]
+                  ? [
+                      {
+                        label: t("costPerUnit", { unit: units(current.unit) }),
+                        value: formatUnitCost(costPerYieldUnit(current.cost, current.yield_quantity)),
+                      },
+                    ]
                   : []),
               ]}
               images={current.images}

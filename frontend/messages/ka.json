@@ -750,6 +750,7 @@
     "removeImage": "სურათის წაშლა",
     "newTechCard": "ახალი ტექ. ბარათი",
     "recipeCost": "თვითღირებულება",
+    "costPerUnit": "თვითღირებულება 1 {unit}-ზე",
     "costPerKg": "თვითღირებულება {weight} კგ-ზე",
     "costPerPiece": "თვითღირებულება {count} ცალზე",
     "costRange": "{min}-დან {max}-მდე",

@@ -136,7 +136,7 @@ def crm_item_sale_price(tech_card: TechCard, quantity: int, weight_kg: Decimal |
     if tech_card.kind == TechCard.KIND_WEIGHTED:
         amount = sale_price * weight_kg / tech_card.basis_weight_kg * quantity
     else:
-        amount = sale_price * quantity / tech_card.basis_quantity
+        amount = sale_price * quantity
     return amount.quantize(_CENT)
 
 

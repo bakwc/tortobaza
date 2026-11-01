@@ -121,6 +121,44 @@ class IngredientCostApiTests(TestCase):
         self.assertEqual(response.status_code, 201, response.content)
         self.assertEqual(Decimal(response.json()["grams_per_unit"]), Decimal("0.920"))
 
+    def test_milliliters_reject_zero_grams_per_unit(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Oil"
+        payload["unit"] = "ml"
+        payload["grams_per_unit"] = "0"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_piece_saves_without_grams_per_unit(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Candle"
+        payload["unit"] = "pcs"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertIsNone(response.json()["grams_per_unit"])
+
+    def test_piece_saves_zero_grams_per_unit_as_null(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Candle"
+        payload["unit"] = "pcs"
+        payload["grams_per_unit"] = "0"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertIsNone(response.json()["grams_per_unit"])
+
+    def test_piece_saves_grams_per_unit(self):
+        self.client.force_authenticate(self.admin)
+        payload = self._payload(None)
+        payload["name"] = "Candle"
+        payload["unit"] = "pcs"
+        payload["grams_per_unit"] = "12"
+        response = self.client.post("/api/menu/ingredients/", payload, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Decimal(response.json()["grams_per_unit"]), Decimal("12"))
+
     def test_staff_sets_and_clears_sale_price(self):
         self.client.force_authenticate(self.staff)
         payload = self._payload(None)
