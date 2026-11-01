@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Input } from "@/components/ui/input";
+import { Input, selectZeroOnFocus } from "@/components/ui/input";
 import { Field, NativeSelect } from "@/components/menu/ui";
 import type { TechCardGroup } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
@@ -95,6 +95,7 @@ export function GroupPicker({
                   inputMode="numeric"
                   aria-label={t("modifierQuantity")}
                   value={row.quantity}
+                  onFocus={selectZeroOnFocus}
                   onChange={(event) => setQuantity(modifier.id, event.target.value)}
                   className="h-7 w-12 rounded-full border border-[var(--line)] px-2 text-center text-sm"
                 />
