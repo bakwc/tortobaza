@@ -338,6 +338,29 @@ export const TimesheetGridSchema = z.object({
   employees: z.array(TimesheetEmployeeSchema),
 });
 
+export const ScheduleTodayEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.string(),
+  scheduled: z.boolean(),
+  on_site: z.boolean(),
+  arrival: z.string().nullable(),
+  departure: z.string().nullable(),
+});
+
+export const ScheduleTomorrowEmployeeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.string(),
+});
+
+export const ScheduleTodaySchema = z.object({
+  today: z.string(),
+  tomorrow: z.string(),
+  today_employees: z.array(ScheduleTodayEmployeeSchema),
+  tomorrow_employees: z.array(ScheduleTomorrowEmployeeSchema),
+});
+
 export const CrmOrderImageSchema = z.object({
   id: z.number(),
   image: ResponsiveImageSchema,
@@ -1109,6 +1132,7 @@ export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;
 export type ScheduleDayType = z.infer<typeof ScheduleDayTypeSchema>;
 export type ScheduleGrid = z.infer<typeof ScheduleGridSchema>;
 export type TimesheetGrid = z.infer<typeof TimesheetGridSchema>;
+export type ScheduleToday = z.infer<typeof ScheduleTodaySchema>;
 export type ScheduleCellBody = {
   user: number;
   date: string;

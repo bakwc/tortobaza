@@ -1182,6 +1182,14 @@
     "timesheetFactTitle": "Timesheet (actual)",
     "date": "Date",
     "selectedDays": "Selected: {count}",
-    "clearSelection": "Clear"
+    "clearSelection": "Clear",
+    "todayTitle": "Today",
+    "tomorrowTitle": "Tomorrow",
+    "onSiteCount": "On site: {on} of {total}",
+    "onSiteSince": "on site since {time}",
+    "notArrived": "not in yet",
+    "offSchedule": "off schedule",
+    "todayEmpty": "Nobody is scheduled today",
+    "tomorrowEmpty": "Nobody is scheduled tomorrow"
   }
 }

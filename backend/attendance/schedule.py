@@ -65,6 +65,71 @@ def schedule_grid(start: date, end: date) -> dict:
     }
 
 
+def _presence_rank(row: dict) -> int:
+    if row["on_site"]:
+        return 0
+    if row["departure"] is not None:
+        return 1
+    return 2
+
+
+def today_overview(today: date, tomorrow: date) -> dict:
+    users = list(_schedule_users())
+    work_rows = ScheduleDay.objects.filter(
+        user__in=users,
+        date__in=[today, tomorrow],
+        day_type=ScheduleDay.WORK,
+    )
+    scheduled_today = {row.user_id for row in work_rows if row.date == today}
+    scheduled_tomorrow = {row.user_id for row in work_rows if row.date == tomorrow}
+    start_dt = timezone.make_aware(datetime.combine(today, datetime.min.time()), _TB)
+    end_dt = timezone.make_aware(datetime.combine(today + timedelta(days=1), datetime.min.time()), _TB)
+    events = AttendanceEvent.objects.filter(
+        user__in=users,
+        timestamp__gte=start_dt,
+        timestamp__lt=end_dt,
+    ).order_by("timestamp")
+    events_by_user: dict[int, list[AttendanceEvent]] = {}
+    for event in events:
+        events_by_user.setdefault(event.user_id, []).append(event)
+    by_id = {row["id"]: row for row in _employee_rows(users)}
+    today_employees = []
+    for user in users:
+        day_events = events_by_user.get(user.id, [])
+        scheduled = user.id in scheduled_today
+        if not scheduled and not day_events:
+            continue
+        on_site = bool(day_events) and day_events[-1].event_type == AttendanceEvent.ARRIVAL
+        today_employees.append(
+            {
+                "id": user.id,
+                "name": by_id[user.id]["name"],
+                "position": by_id[user.id]["position"],
+                "scheduled": scheduled,
+                "on_site": on_site,
+                "arrival": _clock(day_events, AttendanceEvent.ARRIVAL),
+                "departure": None if on_site else _clock(day_events, AttendanceEvent.DEPARTURE),
+            }
+        )
+    today_employees.sort(key=lambda row: (_presence_rank(row), row["name"].casefold(), row["id"]))
+    tomorrow_employees = [
+        {
+            "id": user.id,
+            "name": by_id[user.id]["name"],
+            "position": by_id[user.id]["position"],
+        }
+        for user in users
+        if user.id in scheduled_tomorrow
+    ]
+    tomorrow_employees.sort(key=lambda row: (row["name"].casefold(), row["id"]))
+    return {
+        "today": today.isoformat(),
+        "tomorrow": tomorrow.isoformat(),
+        "today_employees": today_employees,
+        "tomorrow_employees": tomorrow_employees,
+    }
+
+
 def save_cells(cells: list[dict]) -> None:
     for cell in cells:
         if cell["day_type"] is None:

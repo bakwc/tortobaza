@@ -5,6 +5,7 @@ import { EmployeesShell } from "@/components/employees/EmployeesShell";
 import { EmployeesMonthBar } from "@/components/employees/ScheduleGrid";
 import { SchedulePanel } from "@/components/employees/SchedulePanel";
 import { TimesheetPanel } from "@/components/employees/TimesheetPanel";
+import { TodayPanel } from "@/components/employees/TodayPanel";
 import { useCan } from "@/hooks/useAuth";
 
 export default function EmployeesSchedulePage() {
@@ -21,6 +22,7 @@ function EmployeesScheduleContent() {
   const canEditSchedule = useCan("edit_schedule");
   return (
     <div className="grid gap-6">
+      <TodayPanel />
       <EmployeesMonthBar />
       <SchedulePanel />
       {canEditSchedule ? <TimesheetPanel /> : null}

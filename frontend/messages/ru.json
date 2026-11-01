@@ -1182,6 +1182,14 @@
     "timesheetFactTitle": "Табель (факт)",
     "date": "Дата",
     "selectedDays": "Выбрано: {count}",
-    "clearSelection": "Сбросить"
+    "clearSelection": "Сбросить",
+    "todayTitle": "Сегодня",
+    "tomorrowTitle": "Завтра",
+    "onSiteCount": "На месте: {on} из {total}",
+    "onSiteSince": "на месте с {time}",
+    "notArrived": "ещё не пришёл(а)",
+    "offSchedule": "вне графика",
+    "todayEmpty": "Сегодня никто не запланирован",
+    "tomorrowEmpty": "Завтра никто не запланирован"
   }
 }

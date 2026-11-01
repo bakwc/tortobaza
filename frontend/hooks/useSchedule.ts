@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { ScheduleCellBody, ScheduleFillBody, ScheduleGrid, TimesheetGrid } from "@/lib/api/types";
+import type { ScheduleCellBody, ScheduleFillBody, ScheduleGrid, ScheduleToday, TimesheetGrid } from "@/lib/api/types";
 
 export function scheduleQueryKey(month: string) {
   return ["schedule", month] as const;
@@ -12,11 +12,16 @@ export function timesheetQueryKey(month: string) {
   return ["timesheet", month] as const;
 }
 
+export function scheduleTodayQueryKey() {
+  return ["schedule", "today"] as const;
+}
+
 function useInvalidateSchedule(month: string) {
   const qc = useQueryClient();
   return () => {
     qc.invalidateQueries({ queryKey: scheduleQueryKey(month) });
     qc.invalidateQueries({ queryKey: timesheetQueryKey(month) });
+    qc.invalidateQueries({ queryKey: scheduleTodayQueryKey() });
   };
 }
 
@@ -31,6 +36,14 @@ export function useTimesheet(month: string) {
   return useQuery<TimesheetGrid>({
     queryKey: timesheetQueryKey(month),
     queryFn: () => api.getTimesheet(month),
+  });
+}
+
+export function useScheduleToday() {
+  return useQuery<ScheduleToday>({
+    queryKey: scheduleTodayQueryKey(),
+    queryFn: () => api.getScheduleToday(),
+    refetchInterval: 60_000,
   });
 }
 

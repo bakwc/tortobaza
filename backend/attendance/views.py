@@ -13,7 +13,14 @@ from rest_framework.views import APIView
 
 from attendance.models import AttendanceEvent
 from attendance.salary import compute_salary
-from attendance.schedule import apply_pattern, month_bounds, save_cells, schedule_grid, timesheet_grid
+from attendance.schedule import (
+    apply_pattern,
+    month_bounds,
+    save_cells,
+    schedule_grid,
+    timesheet_grid,
+    today_overview,
+)
 from attendance.serializers import (
     AttendanceEventSerializer,
     AttendanceMarkInputSerializer,
@@ -21,7 +28,7 @@ from attendance.serializers import (
     ScheduleFillSerializer,
     ScheduleWriteSerializer,
 )
-from accounts.permissions import EditSection
+from accounts.permissions import CanView, EditSection
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -109,6 +116,15 @@ class ScheduleFillView(APIView):
         user = get_object_or_404(User, pk=data["user"])
         apply_pattern(user, data["start"], data["end"], data["cycle_start"], data["pattern"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ScheduleTodayView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, CanView("schedule")]
+
+    def get(self, request):
+        today = timezone.now().astimezone(_TB).date()
+        return Response(today_overview(today, today + timedelta(days=1)))
 
 
 class TimesheetView(APIView):

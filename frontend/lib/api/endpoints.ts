@@ -3,6 +3,7 @@ import {
   AttendanceEventSchema,
   AttendanceSummarySchema,
   ScheduleGridSchema,
+  ScheduleTodaySchema,
   TimesheetGridSchema,
   CartSchema,
   CategoryDetailSchema,
@@ -59,6 +60,7 @@ import {
   type ScheduleCellBody,
   type ScheduleFillBody,
   type ScheduleGrid,
+  type ScheduleToday,
   type TimesheetGrid,
   type Cart,
   type Category,
@@ -644,6 +646,11 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(TimesheetGridSchema, raw);
+    },
+
+    async getScheduleToday(): Promise<ScheduleToday> {
+      const raw = await fetcher<unknown>("/api/attendance/today/");
+      return parse(ScheduleTodaySchema, raw);
     },
 
     async getCrmExpenses(date?: string): Promise<CrmExpensesDay> {

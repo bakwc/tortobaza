@@ -1182,6 +1182,14 @@
     "timesheetFactTitle": "ტაბელი (ფაქტი)",
     "date": "თარიღი",
     "selectedDays": "არჩეულია: {count}",
-    "clearSelection": "გასუფთავება"
+    "clearSelection": "გასუფთავება",
+    "todayTitle": "დღეს",
+    "tomorrowTitle": "ხვალ",
+    "onSiteCount": "ადგილზე: {on} {total}-დან",
+    "onSiteSince": "ადგილზეა {time}-დან",
+    "notArrived": "ჯერ არ მოსულა",
+    "offSchedule": "გრაფიკს გარეთ",
+    "todayEmpty": "დღეს არავინაა დაგეგმილი",
+    "tomorrowEmpty": "ხვალ არავინაა დაგეგმილი"
   }
 }

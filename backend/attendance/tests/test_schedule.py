@@ -220,3 +220,85 @@ class ScheduleApiTests(TestCase):
         self.assertFalse(employee["days"]["2026-11-04"]["mismatch"])
         self.assertIsNone(employee["days"]["2026-11-04"]["day_type"])
         self.assertFalse(employee["days"]["2026-11-15"]["mismatch"])
+
+    def test_today_overview(self):
+        today = date(2026, 11, 2)
+        tomorrow = date(2026, 11, 3)
+        on_site = User.objects.create_user(username="anya", password="password")
+        UserProfile.objects.create(user=on_site, internal_name="Аня", position="Кондитер", in_schedule=True)
+        left = User.objects.create_user(username="borya", password="password")
+        UserProfile.objects.create(user=left, internal_name="Боря", position="Кассир", in_schedule=True)
+        waiting = User.objects.create_user(username="vera", password="password")
+        UserProfile.objects.create(user=waiting, internal_name="Вера", position="Бариста", in_schedule=True)
+        extra = User.objects.create_user(username="gleb", password="password")
+        UserProfile.objects.create(user=extra, internal_name="Глеб", position="Курьер", in_schedule=True)
+        ScheduleDay.objects.create(user=on_site, date=today, day_type=ScheduleDay.WORK)
+        ScheduleDay.objects.create(user=on_site, date=tomorrow, day_type=ScheduleDay.WORK)
+        ScheduleDay.objects.create(user=left, date=today, day_type=ScheduleDay.WORK)
+        ScheduleDay.objects.create(user=waiting, date=today, day_type=ScheduleDay.WORK)
+        ScheduleDay.objects.create(user=waiting, date=tomorrow, day_type=ScheduleDay.WORK)
+        ScheduleDay.objects.create(user=extra, date=today, day_type=ScheduleDay.OFF)
+        AttendanceEvent.objects.create(user=on_site, event_type=AttendanceEvent.ARRIVAL, timestamp=_dt(today, 9, 12))
+        AttendanceEvent.objects.create(user=left, event_type=AttendanceEvent.ARRIVAL, timestamp=_dt(today, 9, 5))
+        AttendanceEvent.objects.create(user=left, event_type=AttendanceEvent.DEPARTURE, timestamp=_dt(today, 17, 40))
+        AttendanceEvent.objects.create(user=extra, event_type=AttendanceEvent.ARRIVAL, timestamp=_dt(today, 10, 0))
+        self.client.force_authenticate(user=self.schedule_reader)
+        with patch("attendance.views.timezone.now", return_value=_dt(today, 18, 0)):
+            response = self.client.get("/api/attendance/today/")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body["today"], "2026-11-02")
+        self.assertEqual(body["tomorrow"], "2026-11-03")
+        self.assertEqual(
+            body["today_employees"],
+            [
+                {
+                    "id": on_site.id,
+                    "name": "Аня",
+                    "position": "Кондитер",
+                    "scheduled": True,
+                    "on_site": True,
+                    "arrival": "09:12",
+                    "departure": None,
+                },
+                {
+                    "id": extra.id,
+                    "name": "Глеб",
+                    "position": "Курьер",
+                    "scheduled": False,
+                    "on_site": True,
+                    "arrival": "10:00",
+                    "departure": None,
+                },
+                {
+                    "id": left.id,
+                    "name": "Боря",
+                    "position": "Кассир",
+                    "scheduled": True,
+                    "on_site": False,
+                    "arrival": "09:05",
+                    "departure": "17:40",
+                },
+                {
+                    "id": waiting.id,
+                    "name": "Вера",
+                    "position": "Бариста",
+                    "scheduled": True,
+                    "on_site": False,
+                    "arrival": None,
+                    "departure": None,
+                },
+            ],
+        )
+        self.assertEqual(
+            body["tomorrow_employees"],
+            [
+                {"id": on_site.id, "name": "Аня", "position": "Кондитер"},
+                {"id": waiting.id, "name": "Вера", "position": "Бариста"},
+            ],
+        )
+
+    def test_today_requires_view_schedule(self):
+        self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/attendance/today/")
+        self.assertEqual(response.status_code, 403)
