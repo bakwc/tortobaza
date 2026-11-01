@@ -3,10 +3,11 @@ from decimal import Decimal
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, Permission, User
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.db.models import Q
 from rest_framework import serializers
 
 from accounts.models import UserProfile
-from accounts.permissions import section_codenames, user_section_codes
+from accounts.permissions import admin_model_permissions, section_codenames, user_section_codes
 
 PROFILE_FIELDS = (
     "hourly_rate",
@@ -228,4 +229,15 @@ class AccessGroupSerializer(serializers.Serializer):
         )
         if len(perms) != len(codes):
             raise RuntimeError("Section permission rows are missing.")
-        group.permissions.set(perms)
+        catalog_perms = admin_model_permissions(codes)
+        managed = list(
+            group.permissions.filter(
+                Q(content_type__app_label="accounts", content_type__model="sectionaccess")
+                | Q(content_type__app_label="catalog")
+            )
+        )
+        if managed:
+            group.permissions.remove(*managed)
+        wanted = perms + catalog_perms
+        if wanted:
+            group.permissions.add(*wanted)

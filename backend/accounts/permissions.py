@@ -1,7 +1,13 @@
+from django.apps import apps
 from django.contrib.auth.models import Group, Permission
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 from accounts.models import SectionAccess
+
+CATALOG_SECTION_ACTIONS = {
+    "view_catalog": ("view",),
+    "edit_catalog": ("view", "add", "change", "delete"),
+}
 
 
 def section_codenames() -> set[str]:
@@ -23,6 +29,29 @@ def user_section_codes(user) -> list[str]:
 
 def permission_rows() -> list[dict[str, str]]:
     return [{"code": code, "label": str(name)} for code, name in SectionAccess._meta.permissions]
+
+
+def admin_model_permissions(codes: list[str]) -> list[Permission]:
+    actions: set[str] = set()
+    for code in codes:
+        for action in CATALOG_SECTION_ACTIONS.get(code, ()):
+            actions.add(action)
+    if not actions:
+        return []
+    codenames = [
+        f"{action}_{model._meta.model_name}"
+        for model in apps.get_app_config("catalog").get_models()
+        for action in actions
+    ]
+    perms = list(
+        Permission.objects.filter(
+            content_type__app_label="catalog",
+            codename__in=codenames,
+        )
+    )
+    if len(perms) != len(codenames):
+        raise RuntimeError("Catalog model permissions are missing.")
+    return perms
 
 
 def can_view(user, section: str) -> bool:

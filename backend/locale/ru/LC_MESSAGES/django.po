@@ -1491,3 +1491,9 @@ msgstr "Строка состава позиции заказа CRM"
 
 msgid "CRM order item lines"
 msgstr "Строки состава позиции заказа CRM"
+
+msgid "Catalog: view"
+msgstr "Каталог: просмотр"
+
+msgid "Catalog: edit"
+msgstr "Каталог: редактирование"

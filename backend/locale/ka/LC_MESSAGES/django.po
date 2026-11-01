@@ -158,6 +158,12 @@ msgstr "გამარჯობა, %(name)s!"
 msgid "We have received your order #%(number)s. It is not confirmed yet. It will be confirmed after card payment or by a manager."
 msgstr "თქვენი შეკვეთა #%(number)s მიღებულია. ის ჯერ არ არის დადასტურებული. დადასტურდება ბარათით გადახდის ან მენეჯერის შემდეგ."
 
+msgid "Catalog: view"
+msgstr "კატალოგი: ნახვა"
+
+msgid "Catalog: edit"
+msgstr "კატალოგი: რედაქტირება"
+
 #, python-format
 msgid "Your order #%(number)s is confirmed."
 msgstr "თქვენი შეკვეთა #%(number)s დადასტურებულია."
