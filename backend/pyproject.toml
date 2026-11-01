@@ -19,6 +19,7 @@ openpyxl = "^3.1.5"
 numbers-parser = "^4.22.0"
 pyobjc-framework-quartz = { version = "^12.2.2", markers = "sys_platform == 'darwin'" }
 pillow-heif = "^1.8.1"
+django-hijack = ">=3.7.9,<3.8"
 
 [build-system]
 requires = ["poetry-core"]

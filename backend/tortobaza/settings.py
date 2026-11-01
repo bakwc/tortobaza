@@ -30,6 +30,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "modeltranslation",
     "django.contrib.admin",
+    "hijack",
+    "hijack.contrib.admin",
     "rest_framework",
     "corsheaders",
     "accounts",
@@ -54,6 +56,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "hijack.middleware.HijackUserMiddleware",
     "tortobaza.middleware.FinanceScopeMiddleware",
     "tortobaza.middleware.CanLoginMiddleware",
     "audit.middleware.AuditMiddleware",
@@ -127,6 +130,9 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_REDIRECT_URL = "/admin/"
+LOGOUT_REDIRECT_URL = "/admin/auth/user/"
 
 
 REST_FRAMEWORK = {

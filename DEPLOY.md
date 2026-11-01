@@ -242,6 +242,7 @@ server {
     # Django: API, admin, health, static and uploaded media
     location /api/    { proxy_pass http://tortobaza_backend_dev; }
     location /admin/  { proxy_pass http://tortobaza_backend_dev; }
+    location /hijack/ { proxy_pass http://tortobaza_backend_dev; }
     location /health/ { proxy_pass http://tortobaza_backend_dev; }
     location /static/ { proxy_pass http://tortobaza_backend_dev; }
     location /media/  { proxy_pass http://tortobaza_backend_dev; }
@@ -292,6 +293,7 @@ server {
 
     location /api/    { proxy_pass http://tortobaza_backend; }
     location /admin/  { proxy_pass http://tortobaza_backend; }
+    location /hijack/ { proxy_pass http://tortobaza_backend; }
     location /health/ { proxy_pass http://tortobaza_backend; }
     location /static/ { proxy_pass http://tortobaza_backend; }
     location /media/  { proxy_pass http://tortobaza_backend; }

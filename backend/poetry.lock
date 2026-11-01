@@ -625,6 +625,26 @@ asgiref = ">=3.6"
 django = ">=4.2"
 
 [[package]]
+name = "django-hijack"
+version = "3.7.9"
+description = "Enable users to hijack (=login as) and work on behalf of another user."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "django_hijack-3.7.9-py3-none-any.whl", hash = "sha256:76e451842684ad79ea27e79a1dea60518c845d239656c90735c2c5c6eb2f78a3"},
+    {file = "django_hijack-3.7.9.tar.gz", hash = "sha256:b43fb47b2501e230a7343aaae94e1748ee628a16161916e1edc83a52b3924347"},
+]
+
+[package.dependencies]
+django = ">=4.2"
+
+[package.extras]
+docs = ["mkdocs (==1.6.1)"]
+lint = ["msgcheck (==4.2.0)", "ruff (==0.16.9)"]
+test = ["pytest", "pytest-cov", "pytest-django"]
+
+[[package]]
 name = "django-modeltranslation"
 version = "0.20.3"
 description = "Translates Django models using a registration approach."
@@ -1759,4 +1779,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "db9dda1f33d699e90379b1c588e67ccb15551683340f19fa2c50cffd26710ce0"
+content-hash = "d603e94493813d09316797359b18b026b774ae8f592328dc04d22975349ec5ae"

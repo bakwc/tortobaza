@@ -8,6 +8,7 @@ from tortobaza.views import health
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("hijack/", include("hijack.urls")),
     path("personal-admin/", personal_admin_site.urls),
     path("health/", health),
     path("api/", include("accounts.urls")),

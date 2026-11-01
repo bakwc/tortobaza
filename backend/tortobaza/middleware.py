@@ -21,7 +21,7 @@ class CanLoginMiddleware:
 
     def __call__(self, request):
         user = request.user
-        if user.is_authenticated:
+        if user.is_authenticated and not request.session.get("hijack_history"):
             profile = UserProfile.objects.filter(user=user).first()
             if profile is not None and not profile.can_login:
                 logout(request)
