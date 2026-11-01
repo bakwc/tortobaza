@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from attendance.models import AttendanceEvent
 from crm.models import CrmSettings
 
@@ -33,7 +34,7 @@ class CrmExpensesApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.admin, "view_finance")
         UserProfile.objects.create(user=self.worker, hourly_rate=Decimal("10.00"))
         self.day = date(2026, 6, 15)
 

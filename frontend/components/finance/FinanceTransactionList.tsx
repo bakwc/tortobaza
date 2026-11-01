@@ -15,6 +15,7 @@ import {
   Truck,
 } from "lucide-react";
 import { FinanceTransactionForm } from "@/components/finance/FinanceTransactionForm";
+import { useCan } from "@/hooks/useAuth";
 import { rsgeMonth } from "@/components/rsge/RsgeDocumentRow";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -280,6 +281,7 @@ export function FinanceTransactionList({
   rates: Record<string, string>;
 }) {
   const t = useTranslations("finance");
+  const canEdit = useCan("edit_finance");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -378,6 +380,7 @@ export function FinanceTransactionList({
   if (transactions.length === 0) {
     return (
       <div className="grid gap-6">
+        {canEdit ? (
         <div className="flex justify-end">
           <Button
             type="button"
@@ -389,6 +392,7 @@ export function FinanceTransactionList({
             {t("add")}
           </Button>
         </div>
+        ) : null}
         <div className="rounded-3xl border border-[var(--line)] bg-white p-8 text-center text-sm text-[var(--muted-2)] shadow-sm">
           {t("empty")}
         </div>
@@ -449,6 +453,7 @@ export function FinanceTransactionList({
 
   return (
     <div className="grid gap-6">
+      {canEdit ? (
       <div className="flex justify-end">
         <Button
           type="button"
@@ -460,6 +465,7 @@ export function FinanceTransactionList({
           {t("add")}
         </Button>
       </div>
+      ) : null}
       <div className="grid gap-2 rounded-2xl border border-[var(--line)] bg-white px-3 py-2.5 shadow-sm">
         <FilterRow label={t("filterAccount")}>
           <FilterPill
@@ -1111,6 +1117,7 @@ function TransactionDetail({
   t: ReturnType<typeof useTranslations<"finance">>;
 }) {
   const locale = useLocale();
+  const canEdit = useCan("edit_finance");
   const tone = kindTone(tx.kind);
   const kindLabel =
     tx.kind === "transfer"
@@ -1139,11 +1146,13 @@ function TransactionDetail({
         <span className={cn("text-2xl font-bold", tone.amount)}>
           {formatMoneyWithGel(tx.amount, tx.account.currency, rates)}
         </span>
+        {canEdit ? (
         <div className="flex justify-end">
           <Button type="button" variant="outline" size="sm" onClick={onEdit}>
             {t("edit")}
           </Button>
         </div>
+        ) : null}
       </div>
 
       <DetailSection title={t("detail.sectionMain")}>

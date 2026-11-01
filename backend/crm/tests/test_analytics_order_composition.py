@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from catalog.models import Option, OptionGroup
 from crm.analytics import products
 from crm.analytics_composition import sync_analytics_composition
@@ -285,7 +285,7 @@ class AnalyticsProductsApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
         self.finance = User.objects.create_user(username="finance", password="password")
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "view_analytics")
 
     def test_unauthenticated_access_denied(self):
         response = self.client.get("/api/crm/analytics/products/")

@@ -1,10 +1,11 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 
 
 class EmployeesApiTests(TestCase):
@@ -13,7 +14,9 @@ class EmployeesApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
         self.finance = User.objects.create_user(username="finance", password="password")
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True, internal_name="Босс")
+        UserProfile.objects.create(user=self.finance, internal_name="Босс")
+        grant(self.finance, "edit_employees")
+        self.chefs = Group.objects.create(name="Смена")
 
     def payload(self, password: str) -> dict:
         return {
@@ -30,18 +33,18 @@ class EmployeesApiTests(TestCase):
             "telegram_username": "nino",
             "internal_name": "Нино",
             "gender": "female",
-            "is_finance_admin": False,
             "is_active_courier": True,
             "pushover_user": "pushover1",
             "position": "Кондитер",
             "in_schedule": True,
+            "groups": [],
         }
 
     def test_unauthenticated_access_denied(self):
         response = self.client.get("/api/accounts/employees/")
         self.assertEqual(response.status_code, 403)
 
-    def test_staff_without_finance_admin_denied(self):
+    def test_staff_without_employees_permission_denied(self):
         self.client.force_authenticate(user=self.staff)
         response = self.client.get("/api/accounts/employees/")
         self.assertEqual(response.status_code, 403)
@@ -53,7 +56,7 @@ class EmployeesApiTests(TestCase):
         response = self.client.post("/api/accounts/employees/", self.payload(""), format="json")
         self.assertEqual(response.status_code, 400)
 
-    def test_finance_admin_creates_and_updates_employee(self):
+    def test_editor_creates_and_updates_employee(self):
         self.client.force_authenticate(user=self.finance)
         created = self.client.post("/api/accounts/employees/", self.payload("secret-pass"), format="json")
         self.assertEqual(created.status_code, 201)
@@ -75,11 +78,11 @@ class EmployeesApiTests(TestCase):
                 "telegram_username": "nino",
                 "internal_name": "Нино",
                 "gender": "female",
-                "is_finance_admin": False,
                 "is_active_courier": True,
                 "pushover_user": "pushover1",
                 "position": "Кондитер",
                 "in_schedule": True,
+                "groups": [],
             },
         )
         user = User.objects.get(pk=user_id)
@@ -88,7 +91,7 @@ class EmployeesApiTests(TestCase):
         updated_payload = self.payload("")
         updated_payload["hourly_rate"] = "15.00"
         updated_payload["monthly_rate"] = "800.00"
-        updated_payload["is_finance_admin"] = True
+        updated_payload["groups"] = [self.chefs.id]
         updated_payload["can_login"] = False
         updated_payload["is_active"] = False
         updated = self.client.put(f"/api/accounts/employees/{user_id}/", updated_payload, format="json")
@@ -96,11 +99,12 @@ class EmployeesApiTests(TestCase):
         self.assertNotIn("password", updated.json())
         self.assertEqual(updated.json()["hourly_rate"], "15.00")
         self.assertEqual(updated.json()["monthly_rate"], "800.00")
-        self.assertEqual(updated.json()["is_finance_admin"], True)
+        self.assertEqual(updated.json()["groups"], [self.chefs.id])
         self.assertEqual(updated.json()["can_login"], False)
         self.assertEqual(updated.json()["is_active"], False)
         user.refresh_from_db()
         self.assertTrue(user.check_password("secret-pass"))
+        self.assertEqual(list(user.groups.values_list("id", flat=True)), [self.chefs.id])
         profile = UserProfile.objects.get(user=user)
         self.assertEqual(profile.hourly_rate, Decimal("15.00"))
         self.assertFalse(profile.can_login)
@@ -115,7 +119,7 @@ class EmployeesApiTests(TestCase):
         row = next(item for item in listed.json() if item["username"] == "bare")
         self.assertEqual(row["hourly_rate"], "0.00")
         self.assertEqual(row["can_login"], True)
-        self.assertEqual(row["is_finance_admin"], False)
+        self.assertEqual(row["groups"], [])
         self.assertEqual(row["gender"], "female")
         self.assertEqual(row["position"], "")
         self.assertEqual(row["in_schedule"], False)

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { formatAedWhole, sumCrmCakePrices } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +16,8 @@ export function CrmIncomeStats({
   compact: boolean;
   detailed: boolean;
 }) {
-  const currentUser = useCurrentUser();
-  if (!currentUser.data?.is_finance_admin) {
+  const allowed = useCan("view_finance");
+  if (!allowed) {
     return null;
   }
 

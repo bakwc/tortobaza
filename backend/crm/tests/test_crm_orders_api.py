@@ -12,6 +12,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress, ResolvedTelegramPhone
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -22,6 +23,8 @@ class CrmOrdersApiTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        grant(self.user, "view_orders")
+        grant(self.admin, "edit_orders")
 
     def test_unauthenticated_access_denied(self):
         response = self.client.get("/api/crm/orders/")
@@ -526,6 +529,7 @@ class CrmOrdersApiTests(TestCase):
     def test_take_in_work_reassigns_to_other_user(self):
         UserProfile.objects.create(user=self.user, telegram_username="chef_one")
         other = User.objects.create_user(username="other", password="password")
+        grant(other, "view_orders")
         UserProfile.objects.create(user=other, telegram_username="chef_two")
         order = CrmOrder.objects.create(
             date=date(2026, 8, 25),
@@ -595,6 +599,7 @@ class CrmOrdersApiTests(TestCase):
             taken_by=self.user,
         )
         other = User.objects.create_user(username="other", password="password")
+        grant(other, "view_orders")
         self.client.force_authenticate(user=other)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
@@ -719,6 +724,7 @@ class CrmOrdersApiTests(TestCase):
     def test_patch_status_delivered_replaces_existing_delivered_by(self):
         UserProfile.objects.create(user=self.user, telegram_username="courier_one")
         other = User.objects.create_user(username="other", password="password")
+        grant(other, "view_orders")
         UserProfile.objects.create(
             user=other,
             telegram_username="courier_two",
@@ -1610,7 +1616,7 @@ class CrmOrdersApiTests(TestCase):
         denied = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(denied.status_code, 403)
 
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
@@ -1667,7 +1673,7 @@ class CrmOrdersApiTests(TestCase):
             prepayment=Decimal("0.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
         )
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 400)
 
@@ -1685,7 +1691,7 @@ class CrmOrdersApiTests(TestCase):
             prepayment=Decimal("100.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
         )
-        self.client.force_authenticate(user=self.user)
+        self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 400)
         rate.assert_not_called()
@@ -1730,6 +1736,7 @@ class CrmOrderMapApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
+        grant(self.user, "view_orders")
         self.now = datetime(2026, 9, 17, 14, 0, tzinfo=_TB)
         self.address = "Rustaveli 12, Batumi"
         self.google_url = "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import { useFinishedProductions, useTechCards } from "@/hooks/useStock";
 import type { FinishedProduction, FinishedProductionBody, TechCard } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
@@ -64,6 +65,7 @@ function lineBody(line: LineDraft, card: TechCard | undefined): FinishedProducti
 
 export function FinishedProductionsPanel() {
   const t = useTranslations("stock");
+  const canEdit = useCan("edit_inventory");
   const units = useTranslations("stock.units");
   const productions = useFinishedProductions();
   const techCards = useTechCards();
@@ -92,10 +94,12 @@ export function FinishedProductionsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.finishedGoods")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("finishedProductionHint")}</p>
         <QueryState isLoading={productions.list.isLoading} isError={productions.list.isError}>
@@ -136,7 +140,7 @@ export function FinishedProductionsPanel() {
           title={editing === null ? t("newFinishedProduction") : `${t("inventory.finishedGoods")} · ${editing.date}`}
           pending={productions.save.isPending}
           error={productions.save.error ?? productions.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() => {
             const body: FinishedProductionBody = {
               date: draft.date,
@@ -150,7 +154,7 @@ export function FinishedProductionsPanel() {
             };
             productions.save.mutate({ id: editing ? editing.id : null, body }, { onSuccess: close });
           }}
-          onDelete={editing === null ? null : () => productions.remove.mutate(editing.id, { onSuccess: close })}
+          onDelete={canEdit && editing !== null ? () => productions.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={productions.remove.isPending}
           headerAction={null}
           below={null}

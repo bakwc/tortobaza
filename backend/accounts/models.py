@@ -40,7 +40,6 @@ class UserProfile(models.Model):
         default=GENDER_FEMALE,
         verbose_name=_("Gender"),
     )
-    is_finance_admin = models.BooleanField(default=False, verbose_name=_("Finance admin"))
     is_active_courier = models.BooleanField(default=False, verbose_name=_("Active courier"))
     pushover_user = models.CharField(max_length=30, blank=True, verbose_name=_("Pushover user"))
     position = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Position"))
@@ -52,6 +51,32 @@ class UserProfile(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user} profile"
+
+
+class SectionAccess(models.Model):
+    class Meta:
+        managed = False
+        default_permissions = ()
+        permissions = [
+            ("view_orders", _("Orders: view and change status")),
+            ("edit_orders", _("Orders: create, edit, delete")),
+            ("view_menu", _("Menu: view")),
+            ("edit_menu", _("Menu: edit")),
+            ("view_inventory", _("Inventory: view")),
+            ("edit_inventory", _("Inventory: edit")),
+            ("view_finance", _("Finance: view")),
+            ("edit_finance", _("Finance: edit")),
+            ("view_employees", _("Employees: view")),
+            ("edit_employees", _("Employees: edit")),
+            ("view_rsge", _("RSGE: view")),
+            ("edit_rsge", _("RSGE: edit")),
+            ("view_analytics", _("Analytics: view")),
+            ("view_history", _("History: view")),
+            ("view_costs", _("See costs, suppliers and supplies")),
+        ]
+
+    def __str__(self) -> str:
+        return "section access"
 
 
 def chef_identity(user) -> tuple[str, str | None, str | None, str]:

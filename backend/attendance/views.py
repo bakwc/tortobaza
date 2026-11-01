@@ -21,7 +21,7 @@ from attendance.serializers import (
     ScheduleFillSerializer,
     ScheduleWriteSerializer,
 )
-from crm.views import IsFinanceAdmin
+from accounts.permissions import EditSection, SectionPermission
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -82,7 +82,7 @@ class ScheduleView(APIView):
 
     def get_permissions(self):
         if self.request.method == "PUT":
-            return [IsFinanceAdmin()]
+            return [EditSection("employees")()]
         return [IsAuthenticated()]
 
     def get(self, request):
@@ -99,7 +99,7 @@ class ScheduleView(APIView):
 
 class ScheduleFillView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("employees")]
 
     @transaction.atomic
     def post(self, request):
@@ -113,7 +113,7 @@ class ScheduleFillView(APIView):
 
 class TimesheetView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("employees")]
 
     def get(self, request):
         start, end = _month_bounds_from_request(request)

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BookOpen, ChartColumn, ClipboardList, History, LogOut, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCurrentUser, useLogout } from "@/hooks/useAuth";
+import { useCan, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
 import { Link, usePathname } from "@/i18n/navigation";
 
@@ -33,7 +33,14 @@ function PendingBadge({ count }: { count: number }) {
 export function CrmOverflowMenu() {
   const t = useTranslations("crm");
   const logout = useLogout();
-  const currentUser = useCurrentUser();
+  const canViewOrders = useCan("view_orders");
+  const canViewAnalytics = useCan("view_analytics");
+  const canViewFinance = useCan("view_finance");
+  const canViewEmployees = useCan("view_employees");
+  const canViewRsge = useCan("view_rsge");
+  const canViewMenu = useCan("view_menu");
+  const canViewInventory = useCan("view_inventory");
+  const canViewHistory = useCan("view_history");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -47,9 +54,7 @@ export function CrmOverflowMenu() {
   const financeQuery = financeParams.toString();
   const financeHref = financeQuery ? `/finance?${financeQuery}` : "/finance";
   const analyticsHref = month ? `/analytics?month=${month}` : "/analytics";
-  const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
-  const isStaff = Boolean(currentUser.data?.is_staff);
-  const pendingQuery = useRsgePendingCount(isFinanceAdmin);
+  const pendingQuery = useRsgePendingCount(canViewRsge);
   const pendingCount = pendingQuery.data?.count ?? 0;
   const rsgeHref =
     pendingQuery.data !== undefined && pendingQuery.data.count > 0
@@ -59,14 +64,18 @@ export function CrmOverflowMenu() {
       : "/rsge";
 
   const items: MenuItem[] = [
-    {
-      key: "orders",
-      href: "/crm",
-      label: t("ordersSection"),
-      icon: ClipboardList,
-      active: isUnder(pathname, "/crm"),
-    },
-    ...(isFinanceAdmin
+    ...(canViewOrders
+      ? [
+          {
+            key: "orders",
+            href: "/crm",
+            label: t("ordersSection"),
+            icon: ClipboardList,
+            active: isUnder(pathname, "/crm"),
+          },
+        ]
+      : []),
+    ...(canViewAnalytics
       ? [
           {
             key: "analytics",
@@ -75,6 +84,10 @@ export function CrmOverflowMenu() {
             icon: ChartColumn,
             active: isUnder(pathname, "/analytics"),
           },
+        ]
+      : []),
+    ...(canViewFinance
+      ? [
           {
             key: "finance",
             href: financeHref,
@@ -82,6 +95,10 @@ export function CrmOverflowMenu() {
             icon: Wallet,
             active: isUnder(pathname, "/finance"),
           },
+        ]
+      : []),
+    ...(canViewEmployees
+      ? [
           {
             key: "employees",
             href: "/employees",
@@ -89,6 +106,10 @@ export function CrmOverflowMenu() {
             icon: Users,
             active: isUnder(pathname, "/employees"),
           },
+        ]
+      : []),
+    ...(canViewRsge
+      ? [
           {
             key: "rsge",
             href: rsgeHref,
@@ -98,7 +119,7 @@ export function CrmOverflowMenu() {
           },
         ]
       : []),
-    ...(isStaff
+    ...(canViewMenu
       ? [
           {
             key: "menu",
@@ -107,6 +128,10 @@ export function CrmOverflowMenu() {
             icon: BookOpen,
             active: isUnder(pathname, "/menu"),
           },
+        ]
+      : []),
+    ...(canViewInventory
+      ? [
           {
             key: "inventory",
             href: "/inventory",
@@ -116,7 +141,7 @@ export function CrmOverflowMenu() {
           },
         ]
       : []),
-    ...(isFinanceAdmin
+    ...(canViewHistory
       ? [
           {
             key: "history",

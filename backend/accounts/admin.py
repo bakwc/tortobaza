@@ -18,7 +18,6 @@ class UserAdmin(BaseUserAdmin):
         "get_hourly_rate",
         "get_monthly_rate",
         "get_can_login",
-        "get_is_finance_admin",
         "get_is_active_courier",
     )
 
@@ -42,13 +41,6 @@ class UserAdmin(BaseUserAdmin):
         if profile is None:
             return True
         return profile.can_login
-
-    @admin.display(description=_("Finance admin"), boolean=True)
-    def get_is_finance_admin(self, obj):
-        profile = UserProfile.objects.filter(user=obj).first()
-        if profile is None:
-            return False
-        return profile.is_finance_admin
 
     @admin.display(description=_("Active courier"), boolean=True)
     def get_is_active_courier(self, obj):

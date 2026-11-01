@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { House, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import type { CrmSalaryEmployee } from "@/lib/api/types";
 import { formatAed, formatAedWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,8 @@ export function CrmExpenseStats({
   compact: boolean;
   detailed: boolean;
 }) {
-  const currentUser = useCurrentUser();
-  if (!currentUser.data?.is_finance_admin) {
+  const allowed = useCan("view_finance");
+  if (!allowed) {
     return null;
   }
   if (salary === undefined || rent === undefined || employees === undefined) {

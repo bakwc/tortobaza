@@ -5,7 +5,7 @@ import { EmployeesShell } from "@/components/employees/EmployeesShell";
 import { EmployeesMonthBar } from "@/components/employees/ScheduleGrid";
 import { SchedulePanel } from "@/components/employees/SchedulePanel";
 import { TimesheetPanel } from "@/components/employees/TimesheetPanel";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 
 export default function EmployeesSchedulePage() {
   return (
@@ -18,12 +18,12 @@ export default function EmployeesSchedulePage() {
 }
 
 function EmployeesScheduleContent() {
-  const currentUser = useCurrentUser();
+  const canViewEmployees = useCan("view_employees");
   return (
     <div className="grid gap-6">
       <EmployeesMonthBar />
       <SchedulePanel />
-      {currentUser.data?.is_staff ? <TimesheetPanel /> : null}
+      {canViewEmployees ? <TimesheetPanel /> : null}
     </div>
   );
 }

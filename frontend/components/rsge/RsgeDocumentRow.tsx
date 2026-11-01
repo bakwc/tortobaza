@@ -3,6 +3,7 @@
 import { type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { useCan } from "@/hooks/useAuth";
 import { Link } from "@/i18n/navigation";
 import { formatCrmCompactDate, formatCrmDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -206,7 +207,8 @@ export function RsgeDocumentRow({
   rows: string[][];
 }) {
   const t = useTranslations("rsge");
-  const pending = onConfirm !== null && onReject !== null;
+  const canEdit = useCan("edit_rsge");
+  const pending = canEdit && onConfirm !== null && onReject !== null;
 
   return (
     <div

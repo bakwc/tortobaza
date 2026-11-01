@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from attendance.models import AttendanceEvent, ScheduleDay
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -28,7 +29,8 @@ class ScheduleApiTests(TestCase):
             in_schedule=True,
         )
         self.finance = User.objects.create_user(username="finance", password="password")
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True, internal_name="Босс")
+        UserProfile.objects.create(user=self.finance, internal_name="Босс")
+        grant(self.finance, "edit_employees")
 
     def test_worker_reads_schedule_and_cannot_change_it(self):
         self.client.force_authenticate(user=self.worker)

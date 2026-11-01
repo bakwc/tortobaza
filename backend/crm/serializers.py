@@ -3,6 +3,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from accounts.models import chef_identity
+from accounts.permissions import can_edit
 from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.flowwow_statement import ACCOUNT_NAME as FLOWWOW_ACCOUNT_NAME
@@ -365,7 +366,7 @@ class CrmOrderEventSerializer(serializers.ModelSerializer):
         users_by_id = self.context["users_by_id"]
         cache = self.context["identities"]
         changes = {key: value for key, value in instance.changes.items()}
-        if not request.user.is_staff:
+        if not can_edit(request.user, "orders"):
             changes.pop("internal_description", None)
         for field in USER_ID_FIELDS:
             change = changes.get(field)

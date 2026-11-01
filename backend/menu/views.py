@@ -7,8 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import HasPerm, SectionPermission, can_see_costs
 from catalog.models import Option
-from crm.views import IsFinanceAdmin, is_finance_admin
 from menu.models import (
     Ingredient,
     IngredientCategory,
@@ -39,7 +39,7 @@ from menu.serializers import (
 
 
 def serializer_context(request) -> dict:
-    return {"request": request, "show_costs": is_finance_admin(request.user)}
+    return {"request": request, "show_costs": can_see_costs(request.user)}
 
 
 def protected_objects(instance) -> list[str]:
@@ -61,7 +61,7 @@ def delete_unless_protected(instance) -> Response:
 
 class MenuListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
     serializer_class = None
 
     def get_queryset(self):
@@ -89,7 +89,7 @@ class MenuListView(APIView):
 
 class MenuDetailView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
     serializer_class = None
 
     def get_queryset(self):
@@ -128,6 +128,7 @@ class IngredientCategoryDetailView(MenuDetailView):
 
 
 class IngredientListView(MenuListView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = IngredientSerializer
 
     def get_queryset(self):
@@ -135,6 +136,7 @@ class IngredientListView(MenuListView):
 
 
 class IngredientDetailView(MenuDetailView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = IngredientSerializer
 
     def get_queryset(self):
@@ -143,7 +145,7 @@ class IngredientDetailView(MenuDetailView):
 
 class AssignIngredientCategoryView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
 
     @transaction.atomic
     def post(self, request):
@@ -160,6 +162,7 @@ class AssignIngredientCategoryView(APIView):
 
 
 class SemiProductListView(MenuListView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
@@ -167,6 +170,7 @@ class SemiProductListView(MenuListView):
 
 
 class SemiProductDetailView(MenuDetailView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
@@ -174,6 +178,7 @@ class SemiProductDetailView(MenuDetailView):
 
 
 class ModifierGroupListView(MenuListView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = ModifierGroupSerializer
 
     def get_queryset(self):
@@ -181,6 +186,7 @@ class ModifierGroupListView(MenuListView):
 
 
 class ModifierGroupDetailView(MenuDetailView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = ModifierGroupSerializer
 
     def get_queryset(self):
@@ -202,6 +208,7 @@ class TechCardCategoryDetailView(MenuDetailView):
 
 
 class TechCardListView(MenuListView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
@@ -209,6 +216,7 @@ class TechCardListView(MenuListView):
 
 
 class TechCardDetailView(MenuDetailView):
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = TechCardSerializer
 
     def get_queryset(self):
@@ -217,7 +225,7 @@ class TechCardDetailView(MenuDetailView):
 
 class AssignTechCardCategoryView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
 
     @transaction.atomic
     def post(self, request):
@@ -235,7 +243,7 @@ class AssignTechCardCategoryView(APIView):
 
 class TechCardCostView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
 
     def get(self, request, pk: int):
         tech_card = get_object_or_404(TechCard, pk=pk)
@@ -253,7 +261,7 @@ class TechCardCostView(APIView):
 
 class MissingModifierLinesView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
 
     def get(self, request):
         rows = []
@@ -273,7 +281,7 @@ class MissingModifierLinesView(APIView):
 
 class MenuImageCreateView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
     parent_model = None
     image_model = None
     parent_attr = ""
@@ -291,7 +299,7 @@ class MenuImageCreateView(APIView):
 
 class MenuImageDeleteView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
     image_model = None
     parent_attr = ""
 
@@ -326,7 +334,7 @@ class TechCardImageDeleteView(MenuImageDeleteView):
 
 class CatalogOptionListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
 
     def get(self, request):
         options = Option.objects.select_related("group").order_by("group__name", "position", "id")

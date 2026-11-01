@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from crm.views import IsFinanceAdmin
+from accounts.permissions import SectionPermission
 from inventory.models import Supply
 from inventory.serializers import SupplySerializer
 from inventory.views import supplies_queryset
@@ -64,7 +64,7 @@ def waybill_queryset():
 
 class WaybillListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def get(self, request):
         query = MonthQuerySerializer(data=request.query_params)
@@ -88,7 +88,7 @@ def waybill_for_decision(pk: int) -> Waybill:
 
 class WaybillConfirmView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def post(self, request, pk: int):
         waybill = waybill_for_decision(pk)
@@ -101,7 +101,7 @@ class WaybillConfirmView(APIView):
 
 class WaybillRejectView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def post(self, request, pk: int):
         waybill = waybill_for_decision(pk)
@@ -114,7 +114,7 @@ class WaybillRejectView(APIView):
 
 class WaybillSupplyDraftView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def post(self, request, pk: int):
         waybill = waybill_for_decision(pk)
@@ -123,7 +123,7 @@ class WaybillSupplyDraftView(APIView):
 
 class WaybillSupplyCreateView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     @transaction.atomic
     def post(self, request, pk: int):
@@ -138,7 +138,7 @@ class WaybillSupplyCreateView(APIView):
 
 class InvoiceListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def get(self, request):
         query = MonthQuerySerializer(data=request.query_params)
@@ -169,7 +169,7 @@ def invoice_for_decision(pk: int) -> Invoice:
 
 class InvoiceConfirmView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def post(self, request, pk: int):
         invoice = invoice_for_decision(pk)
@@ -185,7 +185,7 @@ class InvoiceConfirmView(APIView):
 
 class PendingCountView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def get(self, request):
         cutoff = timezone.now() - PENDING_WINDOW
@@ -212,7 +212,7 @@ class PendingCountView(APIView):
 
 class InvoiceRejectView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("rsge")]
 
     def post(self, request, pk: int):
         body = InvoiceRejectSerializer(data=request.data)

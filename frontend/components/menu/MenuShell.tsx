@@ -11,7 +11,7 @@ export function MenuShell({ section, children }: { section: MenuSection; childre
   return (
     <SectionShell
       active={section}
-      financeOnly={false}
+      permission="view_menu"
       tabs={[
         { key: "tech-cards", href: "/menu", label: t("techCards") },
         { key: "ingredients", href: "/menu/ingredients", label: t("ingredients") },

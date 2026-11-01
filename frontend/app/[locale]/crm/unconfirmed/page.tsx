@@ -11,7 +11,7 @@ import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link } from "@/i18n/navigation";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { useCrmUnconfirmedOrders, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
@@ -58,7 +58,7 @@ export default function CrmUnconfirmedPage() {
 
 function CrmUnconfirmedBoard() {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
   const locale = useLocale();
   const ordersQuery = useCrmUnconfirmedOrders();
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
@@ -75,7 +75,7 @@ function CrmUnconfirmedBoard() {
         <Button asChild variant="outline">
           <Link href="/crm/month">{t("monthlyOrders")}</Link>
         </Button>
-        {currentUser.data?.is_staff ? (
+        {canEditOrders ? (
           <Button asChild>
             <Link href={`/crm/new?date=${getTbilisiTodayIsoDate()}`}>
               <Plus className="mr-1.5 h-4 w-4" />
@@ -131,7 +131,7 @@ function CrmUnconfirmedBoard() {
 
 function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -245,7 +245,7 @@ function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
         </div>
       </Link>
 
-      {currentUser.data?.is_staff ? (
+      {canEditOrders ? (
         <Button
           asChild
           variant="outline"
@@ -258,7 +258,7 @@ function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
           </Link>
         </Button>
       ) : null}
-      {currentUser.data?.is_staff ? (
+      {canEditOrders ? (
         <CrmDeleteOrderDialog
           open={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
@@ -275,7 +275,7 @@ function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
         orderId={order.id}
         clientToken={order.client_token}
         onDelete={
-          currentUser.data?.is_staff
+          canEditOrders
             ? () => {
                 deleteMutation.reset();
                 setIsDeleteOpen(true);

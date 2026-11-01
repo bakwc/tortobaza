@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product
 from crm.models import CrmOrder, CrmOrderItem
@@ -166,7 +166,8 @@ class CrmOrderItemsApiTests(TestCase):
         self.client = APIClient()
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.finance = User.objects.create_user(username="finance", password="password", is_staff=True)
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.admin, "edit_orders")
+        grant(self.finance, "view_orders", "view_costs")
         self.menu.cake.sale_price = Decimal("60.00")
         self.menu.cake.save(update_fields=["sale_price"])
         self.order = CrmOrder.objects.create(

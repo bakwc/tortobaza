@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from inventory.models import StockMovement, Supplier, Supply, WaybillIngredientAlias
 from inventory.waybill_supply import (
     WAYBILL_MATCH_MODEL,
@@ -99,7 +99,7 @@ class WaybillSupplyApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("chef", password="x")
         self.admin = User.objects.create_user("boss", password="x")
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.admin, "edit_rsge")
         self.flour = Ingredient.objects.create(name="Мука", unit=UNIT_GRAM)
         Ingredient.objects.create(name="Скрытая мука", unit=UNIT_GRAM, is_active=False)
         self.milk = Ingredient.objects.create(name="Молоко", unit=UNIT_MILLILITER)

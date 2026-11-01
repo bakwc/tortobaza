@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { SectionShell, type SectionTab } from "@/components/menu/SectionShell";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 
 export type InventorySection =
   | "stock"
@@ -18,7 +18,7 @@ const FINANCE_ADMIN_SECTIONS: string[] = ["supplies", "suppliers"];
 
 export function InventoryShell({ section, children }: { section: InventorySection; children: ReactNode }) {
   const t = useTranslations("stock.inventory");
-  const currentUser = useCurrentUser();
+  const canSeeCosts = useCan("view_costs");
   const tabs: SectionTab[] = [
     { key: "stock", href: "/inventory", label: t("stock") },
     { key: "supplies", href: "/inventory/supplies", label: t("supplies") },
@@ -28,9 +28,9 @@ export function InventoryShell({ section, children }: { section: InventorySectio
     { key: "write-offs", href: "/inventory/write-offs", label: t("writeOffs") },
     { key: "inventory-counts", href: "/inventory/inventory-counts", label: t("inventoryCounts") },
   ];
-  const visibleTabs = currentUser.data?.is_finance_admin ? tabs : tabs.filter((tab) => !FINANCE_ADMIN_SECTIONS.includes(tab.key));
+  const visibleTabs = canSeeCosts ? tabs : tabs.filter((tab) => !FINANCE_ADMIN_SECTIONS.includes(tab.key));
   return (
-    <SectionShell active={section} financeOnly={false} tabs={visibleTabs}>
+    <SectionShell active={section} permission="view_inventory" tabs={visibleTabs}>
       {children}
     </SectionShell>
   );

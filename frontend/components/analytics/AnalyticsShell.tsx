@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { Link } from "@/i18n/navigation";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
@@ -45,13 +45,12 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
   const t = useTranslations("analytics");
   const crm = useTranslations("crm");
   const locale = useLocale();
-  const currentUser = useCurrentUser();
+  const allowed = useCan("view_analytics");
   const searchParams = useSearchParams();
   const period = useFinancePeriod();
   const currentQuery = searchParams.toString();
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
-  const allowed = Boolean(currentUser.data?.is_finance_admin);
   const showPeriod = section === "load" || section === "products" || section === "employees";
 
   if (!allowed) {

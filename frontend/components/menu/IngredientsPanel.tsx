@@ -20,7 +20,7 @@ import {
   formatMoney,
   formatUnitCost,
 } from "@/components/menu/ui";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Ingredient, IngredientBody, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
@@ -277,7 +277,8 @@ function IngredientRow({
 export function IngredientsPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
-  const currentUser = useCurrentUser();
+  const canSeeCosts = useCan("view_costs");
+  const canEdit = useCan("edit_menu");
   const router = useRouter();
   const searchParams = useSearchParams();
   const ingredients = useIngredients();
@@ -329,7 +330,7 @@ export function IngredientsPanel() {
     ingredients.remove.reset();
     setIgnoreIngredientParam(true);
     setViewing(null);
-    setDraft(emptyIngredient(Boolean(currentUser.data?.is_finance_admin)));
+    setDraft(emptyIngredient(canSeeCosts));
     router.replace("/menu/ingredients", { scroll: false });
   };
   const close = () => {
@@ -383,13 +384,17 @@ export function IngredientsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.ingredients")}</h2>
           <div className="flex flex-wrap items-center gap-2">
+            {canEdit ? (
             <Button type="button" variant={selecting ? "primary" : "outline"} onClick={toggleSelecting}>
               {t("selectIngredients")}
             </Button>
+            ) : null}
+            {canEdit ? (
             <Button type="button" onClick={openNew}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("add")}
             </Button>
+            ) : null}
           </div>
         </div>
         <div className="relative mt-5">
@@ -574,17 +579,17 @@ export function IngredientsPanel() {
           title={viewing === null ? t("newIngredient") : draft.name}
           pending={ingredients.save.isPending}
           error={ingredients.save.error ?? ingredients.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             ingredients.save.mutate(
               { id: viewing === null ? null : viewing.id, body: ingredientRequest(draft) },
               { onSuccess: close },
             )
           }
-          onDelete={viewing === null ? null : () => ingredients.remove.mutate(viewing.id, { onSuccess: close })}
+          onDelete={canEdit && viewing !== null ? () => ingredients.remove.mutate(viewing.id, { onSuccess: close }) : null}
           deletePending={ingredients.remove.isPending}
           headerAction={
-            viewing !== null && currentUser.data?.is_finance_admin ? (
+            viewing !== null && canSeeCosts ? (
               <IngredientHistoryMenu ingredientId={viewing.id} categories={categories.list.data ?? []} />
             ) : null
           }

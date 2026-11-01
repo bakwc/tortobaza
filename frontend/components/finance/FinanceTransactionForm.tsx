@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import { useCan } from "@/hooks/useAuth";
 import { useFinanceScope } from "@/hooks/useFinanceScope";
 import {
   useCreateFinanceTransaction,
@@ -155,6 +156,7 @@ export function FinanceTransactionForm({
   onClose: () => void;
 }) {
   const t = useTranslations("finance");
+  const canEdit = useCan("edit_finance");
   const locale = useLocale();
   const { scope } = useFinanceScope();
   const accountsQuery = useFinanceAccounts(open, scope);
@@ -560,6 +562,7 @@ export function FinanceTransactionForm({
 
           {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
 
+          {canEdit ? (
           <div className="flex flex-wrap justify-between gap-3">
             {transaction !== null ? (
               <Button type="button" variant="outline" onClick={onDelete} disabled={pending}>
@@ -576,6 +579,7 @@ export function FinanceTransactionForm({
               )}
             </Button>
           </div>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

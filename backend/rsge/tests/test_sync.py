@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from rsge.models import Invoice, InvoiceLine, InvoiceSync, Waybill, WaybillGood, WaybillSync
 from rsge.sync import sync_invoices, sync_waybills, window_start
 
@@ -298,7 +298,7 @@ class WaybillApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("boss", password="x", is_staff=True)
         self.finance = User.objects.create_user("finance", password="x", is_staff=True)
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "edit_rsge")
         older = datetime(2026, 10, 1, 12, 0, tzinfo=TB)
         newer = datetime(2026, 10, 14, 21, 17, 49, tzinfo=TB)
         first = Waybill.objects.create(
@@ -663,7 +663,7 @@ class InvoiceApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("boss", password="x", is_staff=True)
         self.finance = User.objects.create_user("finance", password="x", is_staff=True)
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "edit_rsge")
         older = datetime(2026, 10, 2, 18, 29, 21, tzinfo=TB)
         newer = datetime(2026, 10, 11, 21, 51, 47, tzinfo=TB)
         first = Invoice.objects.create(
@@ -804,7 +804,7 @@ class PendingCountApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("boss", password="x", is_staff=True)
         self.finance = User.objects.create_user("finance", password="x", is_staff=True)
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "edit_rsge")
         self.now = timezone.now()
 
     def test_finance_admin_counts_pending_in_window(self):

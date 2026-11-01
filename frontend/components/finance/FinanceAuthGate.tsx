@@ -3,13 +3,13 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 
 function FinanceStaffOnly({ children }: { children: ReactNode }) {
   const t = useTranslations("finance");
-  const currentUser = useCurrentUser();
+  const allowed = useCan("view_finance");
 
-  if (!currentUser.data?.is_finance_admin) {
+  if (!allowed) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">
         {t("staffOnly")}

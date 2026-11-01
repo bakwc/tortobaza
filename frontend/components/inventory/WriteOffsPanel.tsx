@@ -15,6 +15,7 @@ import {
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
+import { useCan } from "@/hooks/useAuth";
 import {
   Card,
   CardTitle,
@@ -45,6 +46,7 @@ function draftFrom(row: WriteOff | null): WriteOffDraft {
 
 export function WriteOffsPanel() {
   const t = useTranslations("stock");
+  const canEdit = useCan("edit_inventory");
   const units = useTranslations("stock.units");
   const writeOffs = useWriteOffs();
   const reasons = useWriteOffReasons();
@@ -79,10 +81,12 @@ export function WriteOffsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.writeOffs")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <QueryState isLoading={writeOffs.list.isLoading} isError={writeOffs.list.isError}>
           <div className="mt-4 grid gap-2">
@@ -160,7 +164,7 @@ export function WriteOffsPanel() {
           title={editing === null ? t("newWriteOff") : `${editing.reason_name} · ${editing.date}`}
           pending={writeOffs.save.isPending}
           error={writeOffs.save.error ?? writeOffs.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             writeOffs.save.mutate(
               {
@@ -175,7 +179,7 @@ export function WriteOffsPanel() {
               { onSuccess: close },
             )
           }
-          onDelete={editing === null ? null : () => writeOffs.remove.mutate(editing.id, { onSuccess: close })}
+          onDelete={canEdit && editing !== null ? () => writeOffs.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={writeOffs.remove.isPending}
           headerAction={null}
           below={null}

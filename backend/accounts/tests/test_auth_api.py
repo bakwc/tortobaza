@@ -3,6 +3,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 
 
 class AuthApiTests(TestCase):
@@ -16,21 +17,21 @@ class AuthApiTests(TestCase):
         response = self.client.get("/api/auth/me/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["is_staff"], False)
-        self.assertEqual(response.json()["is_finance_admin"], False)
+        self.assertEqual(response.json()["permissions"], [])
 
     def test_me_returns_is_staff_true_for_staff(self):
         self.client.force_authenticate(user=self.admin)
         response = self.client.get("/api/auth/me/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["is_staff"], True)
-        self.assertEqual(response.json()["is_finance_admin"], False)
+        self.assertEqual(response.json()["permissions"], [])
 
-    def test_me_returns_is_finance_admin_from_profile(self):
-        UserProfile.objects.create(user=self.worker, is_finance_admin=True)
+    def test_me_returns_group_permissions(self):
+        grant(self.worker, "view_orders", "edit_menu")
         self.client.force_authenticate(user=self.worker)
         response = self.client.get("/api/auth/me/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["is_finance_admin"], True)
+        self.assertEqual(response.json()["permissions"], ["edit_menu", "view_orders"])
 
     def test_login_denied_when_can_login_false(self):
         UserProfile.objects.create(user=self.worker, can_login=False)

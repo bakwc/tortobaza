@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from attendance.models import AttendanceEvent
 from attendance.salary import daily_monthly_share
 from crm.analytics import clients, employees, overview, production, weight_kg, windows
@@ -288,7 +289,7 @@ class AnalyticsApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
         self.finance = User.objects.create_user(username="finance", password="password")
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "view_analytics")
 
     def test_unauthenticated_access_denied(self):
         response = self.client.get("/api/crm/analytics/overview/")

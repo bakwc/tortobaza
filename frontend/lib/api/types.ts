@@ -255,7 +255,7 @@ export const SessionUserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   is_staff: z.boolean(),
-  is_finance_admin: z.boolean(),
+  permissions: z.array(z.string()),
 });
 
 export const EmployeeSchema = z.object({
@@ -272,8 +272,8 @@ export const EmployeeSchema = z.object({
   telegram_username: z.string(),
   internal_name: z.string(),
   gender: z.enum(["male", "female"]),
-  is_finance_admin: z.boolean(),
   is_active_courier: z.boolean(),
+  groups: z.array(z.number()),
   pushover_user: z.string(),
   position: z.string(),
   in_schedule: z.boolean(),
@@ -1043,7 +1043,24 @@ export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type OrderAddress = z.infer<typeof OrderAddressSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type SessionUser = z.infer<typeof SessionUserSchema>;
+export const SectionPermissionSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+});
+
+export const AccessGroupSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  permissions: z.array(z.string()),
+});
+
 export type Employee = z.infer<typeof EmployeeSchema>;
+export type SectionPermissionOption = z.infer<typeof SectionPermissionSchema>;
+export type AccessGroup = z.infer<typeof AccessGroupSchema>;
+export type AccessGroupBody = {
+  name: string;
+  permissions: string[];
+};
 export type EmployeeBody = {
   username: string;
   password: string;
@@ -1058,8 +1075,8 @@ export type EmployeeBody = {
   telegram_username: string;
   internal_name: string;
   gender: "male" | "female";
-  is_finance_admin: boolean;
   is_active_courier: boolean;
+  groups: number[];
   pushover_user: string;
   position: string;
   in_schedule: boolean;

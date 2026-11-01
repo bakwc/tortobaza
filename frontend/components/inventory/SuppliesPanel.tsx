@@ -32,6 +32,7 @@ import {
   type RsgeColumn,
 } from "@/components/rsge/RsgeDocumentRow";
 import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
+import { useCan } from "@/hooks/useAuth";
 import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
 import type { MenuUnit, Supply, SupplyReceipt } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -137,6 +138,7 @@ function decimal(value: string): string {
 
 function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () => void }) {
   const t = useTranslations("stock");
+  const canEdit = useCan("view_costs");
   const units = useTranslations("stock.units");
   const supplies = useSupplies();
   const suppliers = useSuppliers();
@@ -176,7 +178,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
       title={supply === null ? t("newSupply") : `${t("inventory.supplies")} · ${supply.date}`}
       pending={supplies.save.isPending}
       error={supplies.save.error ?? supplies.remove.error}
-      submitLabel={t("save")}
+      submitLabel={canEdit ? t("save") : null}
       onSubmit={() =>
         supplies.save.mutate(
           {
@@ -197,7 +199,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
           { onSuccess: onClose },
         )
       }
-      onDelete={supply === null ? null : () => supplies.remove.mutate(supply.id, { onSuccess: onClose })}
+      onDelete={canEdit && supply !== null ? () => supplies.remove.mutate(supply.id, { onSuccess: onClose }) : null}
       deletePending={supplies.remove.isPending}
       headerAction={null}
       below={null}
@@ -445,6 +447,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
 
 function SuppliesList() {
   const t = useTranslations("stock");
+  const canEdit = useCan("view_costs");
   const rsge = useTranslations("rsge");
   const units = useTranslations("stock.units");
   const locale = useLocale();
@@ -473,6 +476,7 @@ function SuppliesList() {
     <div className="grid gap-6">
       <div className="flex items-center justify-between gap-3">
         <CardTitle>{t("inventory.supplies")}</CardTitle>
+        {canEdit ? (
         <Button
           type="button"
           size="sm"
@@ -484,6 +488,7 @@ function SuppliesList() {
           <Plus className="mr-1 h-4 w-4" />
           {t("add")}
         </Button>
+        ) : null}
       </div>
       <QueryState isLoading={supplies.list.isLoading} isError={supplies.list.isError}>
         <div className="grid gap-6">

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { Link } from "@/i18n/navigation";
 
 export type SectionTab = { key: string; href: string; label: string };
@@ -13,19 +13,16 @@ export type SectionTab = { key: string; href: string; label: string };
 export function SectionShell({
   tabs,
   active,
-  financeOnly,
+  permission,
   children,
 }: {
   tabs: SectionTab[];
   active: string;
-  financeOnly: boolean;
+  permission: string;
   children: ReactNode;
 }) {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
-  const allowed = financeOnly
-    ? Boolean(currentUser.data?.is_finance_admin)
-    : Boolean(currentUser.data?.is_staff);
+  const allowed = useCan(permission);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
@@ -56,7 +53,7 @@ export function SectionShell({
               </Suspense>
             </div>
             <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-[var(--ink)]">
-              {financeOnly ? t("staffOnly") : t("adminOnly")}
+              {t("adminOnly")}
             </div>
           </div>
         )}

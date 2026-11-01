@@ -17,7 +17,9 @@ import {
   AnalyticsOverviewSchema,
   AnalyticsProductsSchema,
   CrmSalariesSchema,
+  AccessGroupSchema,
   EmployeeSchema,
+  SectionPermissionSchema,
   ExchangeRatesSchema,
   FinanceAccountSchema,
   FinanceTransactionSchema,
@@ -70,8 +72,11 @@ import {
   type AnalyticsOverview,
   type AnalyticsProducts,
   type CrmSalaries,
+  type AccessGroup,
+  type AccessGroupBody,
   type Employee,
   type EmployeeBody,
+  type SectionPermissionOption,
   type ExchangeRates,
   type FinanceAccount,
   type FinanceTransaction,
@@ -590,6 +595,13 @@ export function endpoints(fetcher: Fetcher) {
     },
 
     employees: resource<Employee, EmployeeBody>(fetcher, "/api/accounts/employees/", EmployeeSchema),
+
+    groups: resource<AccessGroup, AccessGroupBody>(fetcher, "/api/accounts/groups/", AccessGroupSchema),
+
+    async permissions(): Promise<SectionPermissionOption[]> {
+      const raw = await fetcher<unknown>("/api/accounts/permissions/");
+      return parse(z.array(SectionPermissionSchema), raw);
+    },
 
     async markAttendance(eventType: AttendanceEventType): Promise<AttendanceEvent> {
       const raw = await fetcher<unknown>("/api/attendance/mark/", {

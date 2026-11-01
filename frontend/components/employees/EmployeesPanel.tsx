@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import { useEmployees } from "@/hooks/useEmployees";
+import { useGroups } from "@/hooks/useGroups";
 import type { Employee, EmployeeBody } from "@/lib/api/types";
 
 function emptyDraft(): EmployeeBody {
@@ -25,7 +27,7 @@ function emptyDraft(): EmployeeBody {
     telegram_username: "",
     internal_name: "",
     gender: "female",
-    is_finance_admin: false,
+    groups: [],
     is_active_courier: false,
     pushover_user: "",
     position: "",
@@ -48,7 +50,7 @@ function draftFrom(row: Employee): EmployeeBody {
     telegram_username: row.telegram_username,
     internal_name: row.internal_name,
     gender: row.gender,
-    is_finance_admin: row.is_finance_admin,
+    groups: row.groups,
     is_active_courier: row.is_active_courier,
     pushover_user: row.pushover_user,
     position: row.position,
@@ -70,7 +72,9 @@ function rowTone(row: { is_active: boolean; is_staff: boolean }): string {
 export function EmployeesPanel() {
   const t = useTranslations("employees");
   const section = useTranslations("crm");
+  const canEdit = useCan("edit_employees");
   const employees = useEmployees();
+  const groups = useGroups();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<EmployeeBody | null>(null);
 
@@ -89,10 +93,12 @@ export function EmployeesPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{section("employeesSection")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <QueryState isLoading={employees.list.isLoading} isError={employees.list.isError}>
           <div className="mt-4 overflow-x-auto">
@@ -105,7 +111,7 @@ export function EmployeesPanel() {
                   <th className="py-2 pr-3">{t("hourlyRate")}</th>
                   <th className="py-2 pr-3">{t("monthlyRate")}</th>
                   <th className="py-2 pr-3">{t("canLogin")}</th>
-                  <th className="py-2 pr-3">{t("financeAdmin")}</th>
+                  <th className="py-2 pr-3">{t("groups")}</th>
                   <th className="py-2 pr-3">{t("courier")}</th>
                   <th className="py-2 pr-3">{t("staff")}</th>
                   <th className="py-2">{t("active")}</th>
@@ -124,7 +130,12 @@ export function EmployeesPanel() {
                     <td className="py-2 pr-3 tabular-nums">{row.hourly_rate}</td>
                     <td className="py-2 pr-3 tabular-nums">{row.monthly_rate}</td>
                     <td className="py-2 pr-3">{flag(row.can_login)}</td>
-                    <td className="py-2 pr-3">{flag(row.is_finance_admin)}</td>
+                    <td className="py-2 pr-3">
+                      {(groups.list.data ?? [])
+                        .filter((group) => row.groups.includes(group.id))
+                        .map((group) => group.name)
+                        .join(", ")}
+                    </td>
                     <td className="py-2 pr-3">{flag(row.is_active_courier)}</td>
                     <td className="py-2 pr-3">{flag(row.is_staff)}</td>
                     <td className="py-2">{flag(row.is_active)}</td>
@@ -143,7 +154,7 @@ export function EmployeesPanel() {
           title={editingId === null ? t("newEmployee") : displayName(draft)}
           pending={employees.save.isPending}
           error={employees.save.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             employees.save.mutate(
               {
@@ -162,7 +173,7 @@ export function EmployeesPanel() {
                   telegram_username: draft.telegram_username.trim(),
                   internal_name: draft.internal_name.trim(),
                   gender: draft.gender,
-                  is_finance_admin: draft.is_finance_admin,
+                  groups: draft.groups,
                   is_active_courier: draft.is_active_courier,
                   pushover_user: draft.pushover_user.trim(),
                   position: draft.position.trim(),
@@ -231,11 +242,24 @@ export function EmployeesPanel() {
             </Field>
             <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
               <CheckboxField label={t("canLogin")} checked={draft.can_login} onChange={(value) => setDraft({ ...draft, can_login: value })} />
-              <CheckboxField
-                label={t("financeAdmin")}
-                checked={draft.is_finance_admin}
-                onChange={(value) => setDraft({ ...draft, is_finance_admin: value })}
-              />
+              <div className="grid gap-2 sm:col-span-2">
+                <p className="text-sm font-semibold text-[var(--ink)]">{t("groups")}</p>
+                {(groups.list.data ?? []).map((group) => (
+                  <CheckboxField
+                    key={group.id}
+                    label={group.name}
+                    checked={draft.groups.includes(group.id)}
+                    onChange={(value) =>
+                      setDraft({
+                        ...draft,
+                        groups: value
+                          ? [...draft.groups, group.id]
+                          : draft.groups.filter((id) => id !== group.id),
+                      })
+                    }
+                  />
+                ))}
+              </div>
               <CheckboxField
                 label={t("courier")}
                 checked={draft.is_active_courier}

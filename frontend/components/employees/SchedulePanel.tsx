@@ -7,6 +7,7 @@ import { Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScheduleGrid, dayTypeClass, shortDayType } from "@/components/employees/ScheduleGrid";
+import { useCan } from "@/hooks/useAuth";
 import { useFillSchedule, useSaveSchedule, useSchedule } from "@/hooks/useSchedule";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import type { ScheduleDayType } from "@/lib/api/types";
@@ -39,6 +40,7 @@ function scheduledType(days: Record<string, ScheduleDayType>, date: string): Sch
 
 export function SchedulePanel() {
   const t = useTranslations("employees");
+  const canEdit = useCan("edit_employees");
   const period = useFinancePeriod();
   const schedule = useSchedule(period.month);
   const save = useSaveSchedule(period.month);
@@ -89,7 +91,7 @@ export function SchedulePanel() {
         {grid ? (
           <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm md:rounded-3xl md:p-6">
             <h2 className="mb-4 text-lg font-semibold text-[var(--ink)]">{t("schedulePlanTitle")}</h2>
-            {selected.length > 0 ? (
+            {canEdit && selected.length > 0 ? (
               <div className="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-2 bg-white py-2">
                 <span className="text-sm font-medium text-[var(--ink)]">{t("selectedDays", { count: selected.length })}</span>
                 {APPLY_TYPES.map((dayType) => (
@@ -134,8 +136,10 @@ export function SchedulePanel() {
                       type="button"
                       aria-label={t("dayType")}
                       aria-pressed={isSelected}
-                      disabled={save.isPending}
-                      onClick={() => toggleCell(employee.id, date)}
+                      disabled={!canEdit || save.isPending}
+                      onClick={() => {
+                        if (canEdit) toggleCell(employee.id, date);
+                      }}
                       className={cn(
                         "flex h-8 w-full items-center justify-center text-[10px] font-semibold",
                         dayTypeClass(value),
@@ -150,6 +154,7 @@ export function SchedulePanel() {
                   const counts = countsFor(employee.days);
                   return (
                     <div className="flex flex-col items-start gap-1">
+                      {canEdit ? (
                       <Button
                         type="button"
                         size="sm"
@@ -159,6 +164,7 @@ export function SchedulePanel() {
                       >
                         {t("fillPattern")}
                       </Button>
+                      ) : null}
                       <span className="whitespace-normal text-xs tabular-nums text-[var(--ink)]/70">
                         {t("dayWorkShort")} {counts.work} {t("dayOffShort")} {counts.off} {t("dayVacationShort")}{" "}
                         {counts.vacation} {t("daySickShort")} {counts.sick}

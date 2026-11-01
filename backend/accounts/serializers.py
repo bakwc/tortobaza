@@ -1,11 +1,12 @@
 from decimal import Decimal
 
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, Permission, User
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from rest_framework import serializers
 
 from accounts.models import UserProfile
+from accounts.permissions import section_codenames, user_section_codes
 
 PROFILE_FIELDS = (
     "hourly_rate",
@@ -14,7 +15,6 @@ PROFILE_FIELDS = (
     "telegram_username",
     "internal_name",
     "gender",
-    "is_finance_admin",
     "is_active_courier",
     "pushover_user",
     "position",
@@ -23,17 +23,14 @@ PROFILE_FIELDS = (
 
 
 class UserSerializer(serializers.ModelSerializer):
-    is_finance_admin = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "is_staff", "is_finance_admin"]
+        fields = ["id", "username", "first_name", "last_name", "is_staff", "permissions"]
 
-    def get_is_finance_admin(self, user: User) -> bool:
-        profile = UserProfile.objects.filter(user=user).first()
-        if profile is None:
-            return False
-        return profile.is_finance_admin
+    def get_permissions(self, user: User) -> list[str]:
+        return user_section_codes(user)
 
 
 class LoginSerializer(serializers.Serializer):
@@ -72,8 +69,8 @@ class EmployeeSerializer(serializers.Serializer):
     telegram_username = serializers.CharField(max_length=32, allow_blank=True)
     internal_name = serializers.CharField(max_length=64, allow_blank=True)
     gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES)
-    is_finance_admin = serializers.BooleanField()
     is_active_courier = serializers.BooleanField()
+    groups = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
     pushover_user = serializers.CharField(max_length=30, allow_blank=True)
     position = serializers.CharField(max_length=64, allow_blank=True)
     in_schedule = serializers.BooleanField()
@@ -88,6 +85,13 @@ class EmployeeSerializer(serializers.Serializer):
             raise serializers.ValidationError({"username": ["A user with that username already exists."]})
         return attrs
 
+    def validate_groups(self, value: list[int]) -> list[int]:
+        ids = list(dict.fromkeys(value))
+        found = set(Group.objects.filter(pk__in=ids).values_list("pk", flat=True))
+        if len(found) != len(ids):
+            raise serializers.ValidationError("Unknown group.")
+        return ids
+
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data["username"],
@@ -101,6 +105,7 @@ class EmployeeSerializer(serializers.Serializer):
         profile = UserProfile(user=user)
         self._apply_profile(profile, validated_data)
         profile.save()
+        user.groups.set(validated_data["groups"])
         return user
 
     def update(self, instance, validated_data):
@@ -119,6 +124,7 @@ class EmployeeSerializer(serializers.Serializer):
             profile = UserProfile(user=instance)
         self._apply_profile(profile, validated_data)
         profile.save()
+        instance.groups.set(validated_data["groups"])
         return instance
 
     def to_representation(self, instance):
@@ -130,7 +136,6 @@ class EmployeeSerializer(serializers.Serializer):
             telegram_username = ""
             internal_name = ""
             gender = UserProfile.GENDER_FEMALE
-            is_finance_admin = False
             is_active_courier = False
             pushover_user = ""
             position = ""
@@ -142,7 +147,6 @@ class EmployeeSerializer(serializers.Serializer):
             telegram_username = profile.telegram_username
             internal_name = profile.internal_name
             gender = profile.gender
-            is_finance_admin = profile.is_finance_admin
             is_active_courier = profile.is_active_courier
             pushover_user = profile.pushover_user
             position = profile.position
@@ -161,8 +165,8 @@ class EmployeeSerializer(serializers.Serializer):
             "telegram_username": telegram_username,
             "internal_name": internal_name,
             "gender": gender,
-            "is_finance_admin": is_finance_admin,
             "is_active_courier": is_active_courier,
+            "groups": list(instance.groups.values_list("id", flat=True)),
             "pushover_user": pushover_user,
             "position": position,
             "in_schedule": in_schedule,
@@ -171,3 +175,57 @@ class EmployeeSerializer(serializers.Serializer):
     def _apply_profile(self, profile, validated_data):
         for field in PROFILE_FIELDS:
             setattr(profile, field, validated_data[field])
+
+
+class AccessGroupSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(max_length=150)
+    permissions = serializers.ListField(child=serializers.CharField(), allow_empty=True)
+
+    def validate_name(self, value: str) -> str:
+        taken = Group.objects.filter(name=value)
+        if self.instance is not None:
+            taken = taken.exclude(pk=self.instance.pk)
+        if taken.exists():
+            raise serializers.ValidationError("A group with that name already exists.")
+        return value
+
+    def validate_permissions(self, value: list[str]) -> list[str]:
+        codes = list(dict.fromkeys(value))
+        known = section_codenames()
+        unknown = [code for code in codes if code not in known]
+        if unknown:
+            raise serializers.ValidationError("Unknown permission.")
+        return codes
+
+    def create(self, validated_data):
+        group = Group.objects.create(name=validated_data["name"])
+        self._apply_permissions(group, validated_data["permissions"])
+        return group
+
+    def update(self, instance, validated_data):
+        instance.name = validated_data["name"]
+        instance.save(update_fields=["name"])
+        self._apply_permissions(instance, validated_data["permissions"])
+        return instance
+
+    def to_representation(self, instance):
+        known = section_codenames()
+        codes = [
+            perm.codename
+            for perm in instance.permissions.all()
+            if perm.content_type.app_label == "accounts" and perm.codename in known
+        ]
+        return {"id": instance.id, "name": instance.name, "permissions": sorted(codes)}
+
+    def _apply_permissions(self, group, codes: list[str]) -> None:
+        perms = list(
+            Permission.objects.filter(
+                content_type__app_label="accounts",
+                content_type__model="sectionaccess",
+                codename__in=codes,
+            )
+        )
+        if len(perms) != len(codes):
+            raise RuntimeError("Section permission rows are missing.")
+        group.permissions.set(perms)

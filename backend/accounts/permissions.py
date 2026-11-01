@@ -1,0 +1,94 @@
+from django.contrib.auth.models import Group, Permission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
+
+from accounts.models import SectionAccess
+
+
+def section_codenames() -> set[str]:
+    return {code for code, _name in SectionAccess._meta.permissions}
+
+
+def user_section_codes(user) -> list[str]:
+    prefix = "accounts."
+    known = section_codenames()
+    codes = []
+    for perm in user.get_all_permissions():
+        if not perm.startswith(prefix):
+            continue
+        code = perm[len(prefix):]
+        if code in known:
+            codes.append(code)
+    return sorted(codes)
+
+
+def permission_rows() -> list[dict[str, str]]:
+    return [{"code": code, "label": str(name)} for code, name in SectionAccess._meta.permissions]
+
+
+def can_view(user, section: str) -> bool:
+    return user.has_perm(f"accounts.view_{section}") or user.has_perm(f"accounts.edit_{section}")
+
+
+def can_edit(user, section: str) -> bool:
+    return user.has_perm(f"accounts.edit_{section}")
+
+
+def can_see_costs(user) -> bool:
+    return bool(user.is_authenticated and user.has_perm("accounts.view_costs"))
+
+
+def grant(user, *codenames: str) -> None:
+    group, _created = Group.objects.get_or_create(name=f"test-{user.pk}")
+    perms = list(
+        Permission.objects.filter(
+            content_type__app_label="accounts",
+            content_type__model="sectionaccess",
+            codename__in=codenames,
+        )
+    )
+    found = {perm.codename for perm in perms}
+    missing = [code for code in codenames if code not in found]
+    if missing:
+        raise RuntimeError(f"Unknown section permissions: {missing}")
+    group.permissions.add(*perms)
+    user.groups.add(group)
+
+
+def SectionPermission(section: str, also_view: tuple[str, ...] = ()):
+    class _SectionPermission(BasePermission):
+        def has_permission(self, request, view):
+            if request.method in SAFE_METHODS:
+                if can_view(request.user, section):
+                    return True
+                return any(can_view(request.user, extra) for extra in also_view)
+            return can_edit(request.user, section)
+
+    _SectionPermission.__name__ = f"SectionPermission_{section}"
+    return _SectionPermission
+
+
+def HasPerm(codename: str):
+    class _HasPerm(BasePermission):
+        def has_permission(self, request, view):
+            return bool(request.user.is_authenticated and request.user.has_perm(f"accounts.{codename}"))
+
+    _HasPerm.__name__ = f"HasPerm_{codename}"
+    return _HasPerm
+
+
+def CanView(*sections: str):
+    class _CanView(BasePermission):
+        def has_permission(self, request, view):
+            return any(can_view(request.user, section) for section in sections)
+
+    _CanView.__name__ = "CanView_" + "_".join(sections)
+    return _CanView
+
+
+def EditSection(section: str):
+    class _EditSection(BasePermission):
+        def has_permission(self, request, view):
+            return can_edit(request.user, section)
+
+    _EditSection.__name__ = f"EditSection_{section}"
+    return _EditSection

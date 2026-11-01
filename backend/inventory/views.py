@@ -14,8 +14,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.permissions import HasPerm, SectionPermission
 from crm.models import FinancialTransaction
-from crm.views import IsFinanceAdmin
 from inventory.models import (
     FinishedGood,
     FinishedProduction,
@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 
 class InventoryListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
     serializer_class = None
 
     def get_queryset(self):
@@ -97,7 +97,7 @@ class InventoryListView(APIView):
 
 class InventoryDetailView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
     serializer_class = None
 
     def get_queryset(self):
@@ -130,7 +130,7 @@ class InventoryDetailView(APIView):
 
 
 class SupplierListView(InventoryListView):
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
     serializer_class = SupplierSerializer
 
     def get_queryset(self):
@@ -138,7 +138,7 @@ class SupplierListView(InventoryListView):
 
 
 class SupplierDetailView(InventoryDetailView):
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
     serializer_class = SupplierSerializer
 
     def get_queryset(self):
@@ -176,7 +176,7 @@ RECEIPT_EXTENSIONS = {"jpg", "jpeg", "png", "heic"}
 
 class SupplyReceiptUploadView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
     parser_classes = [MultiPartParser]
 
     @transaction.atomic
@@ -217,7 +217,7 @@ class SupplyReceiptUploadView(APIView):
 
 
 class SupplyListView(InventoryListView):
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
     serializer_class = SupplySerializer
 
     def get_queryset(self):
@@ -228,7 +228,7 @@ class SupplyListView(InventoryListView):
 
 
 class SupplyDetailView(InventoryDetailView):
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
     serializer_class = SupplySerializer
 
     def get_queryset(self):
@@ -270,7 +270,7 @@ class FinishedProductionDetailView(InventoryDetailView):
 
 class FinishedGoodListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory", also_view=("orders",))]
 
     def get(self, request):
         goods = FinishedGood.objects.select_related("tech_card").prefetch_related("modifiers__modifier")
@@ -329,7 +329,7 @@ class InventoryCountDetailView(InventoryDetailView):
 
 class InventoryCountCloseView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
 
     def post(self, request, pk: int):
         count = get_object_or_404(InventoryCount, pk=pk)
@@ -345,7 +345,7 @@ class InventoryCountCloseView(APIView):
 
 class StockView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
 
     def get(self, request):
         query = StockQuerySerializer(data=request.query_params)
@@ -398,7 +398,7 @@ class StockView(APIView):
 
 class MovementListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
 
     def get(self, request):
         query = MovementQuerySerializer(data=request.query_params)
@@ -409,7 +409,7 @@ class MovementListView(APIView):
 
 class SupplyTransactionListView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, HasPerm("view_costs")]
 
     def get(self, request):
         query = FinancialTransactionQuerySerializer(data=request.query_params)

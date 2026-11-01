@@ -18,6 +18,7 @@ import {
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
+import { useCan } from "@/hooks/useAuth";
 import {
   Card,
   CardTitle,
@@ -128,6 +129,7 @@ function draftFrom(row: SemiProduct | null): SemiDraft {
 
 export function SemiProductsPanel() {
   const t = useTranslations("stock");
+  const canEdit = useCan("edit_menu");
   const units = useTranslations("stock.units");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -221,10 +223,12 @@ export function SemiProductsPanel() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.semiProducts")}</h2>
+          {canEdit ? (
           <Button type="button" onClick={openNew}>
             <Plus className="mr-1.5 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
@@ -355,7 +359,7 @@ export function SemiProductsPanel() {
           title={current === null ? t("newSemiProduct") : draft.name}
           pending={semiProducts.save.isPending}
           error={semiProducts.save.error ?? semiProducts.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             semiProducts.save.mutate(
               {
@@ -382,7 +386,7 @@ export function SemiProductsPanel() {
             )
           }
           onCancel={cancelEdit}
-          onDelete={current === null ? null : () => semiProducts.remove.mutate(current.id, { onSuccess: close })}
+          onDelete={canEdit && current !== null ? () => semiProducts.remove.mutate(current.id, { onSuccess: close }) : null}
           deletePending={semiProducts.remove.isPending}
           headerAction={null}
           below={null}

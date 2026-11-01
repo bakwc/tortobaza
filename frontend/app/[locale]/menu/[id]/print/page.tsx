@@ -5,17 +5,17 @@ import { useTranslations } from "next-intl";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { TechCardPrint } from "@/components/menu/TechCardPrint";
 import { QueryState } from "@/components/menu/ui";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { useTechCards } from "@/hooks/useStock";
 
 function TechCardPrintBody({ id }: { id: number }) {
   const t = useTranslations("stock");
   const crm = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canViewMenu = useCan("view_menu");
   const techCards = useTechCards();
   const card = (techCards.list.data ?? []).find((row) => row.id === id) ?? null;
 
-  if (!currentUser.data?.is_staff) {
+  if (!canViewMenu) {
     return <p className="py-16 text-center text-sm text-[var(--ink)]">{crm("adminOnly")}</p>;
   }
 

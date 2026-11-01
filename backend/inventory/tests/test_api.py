@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from crm.models import FinancialAccount, FinancialTransaction
 from inventory.models import StockMovement, Supply
 from menu.tests.fixtures import MenuFixture
@@ -16,7 +16,8 @@ class InventoryApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("chef", password="x")
         self.admin = User.objects.create_user("boss", password="x")
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.staff, "edit_inventory", "edit_menu")
+        grant(self.admin, "edit_inventory", "view_costs")
         self.account = FinancialAccount.objects.create(name="BOG", kind=FinancialAccount.KIND_BANK)
 
     def _supply_payload(self, transaction_id: int | None) -> dict:

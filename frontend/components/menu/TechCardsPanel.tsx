@@ -55,7 +55,7 @@ import {
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { useRouter } from "@/i18n/navigation";
 import {
   useIngredients,
@@ -191,7 +191,7 @@ function TechCardRow({
   row,
   basis,
   missing,
-  isFinanceAdmin,
+  canSeeCosts,
   selecting,
   selected,
   onOpen,
@@ -199,7 +199,7 @@ function TechCardRow({
   row: TechCard;
   basis: string;
   missing: number;
-  isFinanceAdmin: boolean;
+  canSeeCosts: boolean;
   selecting: boolean;
   selected: boolean;
   onOpen: () => void;
@@ -292,7 +292,7 @@ function TechCardRow({
           {formatMoney(row.sale_price)}
         </span>
       ) : null}
-      {isFinanceAdmin && row.cost_min !== undefined && row.cost_max !== undefined ? (
+      {canSeeCosts && row.cost_min !== undefined && row.cost_max !== undefined ? (
         <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
           {formatCostRange(row.cost_min, row.cost_max, (values) => t("costRange", values))}
         </span>
@@ -314,8 +314,8 @@ export function TechCardsPanel() {
   const semiProducts = useSemiProducts();
   const missing = useMissingModifierLines();
   const images = useTechCardImages();
-  const currentUser = useCurrentUser();
-  const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
+  const canSeeCosts = useCan("view_costs");
+  const canEdit = useCan("edit_menu");
   const cardParam = searchParams.get("card");
   const paramId = cardParam === null ? null : Number(cardParam);
   const [mode, setMode] = useState<"view" | "edit" | null>(null);
@@ -505,13 +505,17 @@ export function TechCardsPanel() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.techCards")}</h2>
           <div className="flex flex-wrap items-center gap-2">
+            {canEdit ? (
             <Button type="button" variant={selecting ? "primary" : "outline"} onClick={toggleSelecting}>
               {t("selectIngredients")}
             </Button>
+            ) : null}
+            {canEdit ? (
             <Button type="button" onClick={openNew}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("add")}
             </Button>
+            ) : null}
           </div>
         </div>
         <div className="relative mt-5">
@@ -610,7 +614,7 @@ export function TechCardsPanel() {
                       row={row}
                       basis={basisLabel(row)}
                       missing={missingByCard.get(row.id) ?? 0}
-                      isFinanceAdmin={isFinanceAdmin}
+                      canSeeCosts={canSeeCosts}
                       selecting={selecting}
                       selected={selected.includes(row.id)}
                       onOpen={() => (selecting ? toggleSelected(row.id) : openView(row))}
@@ -724,7 +728,7 @@ export function TechCardsPanel() {
                       },
                     ]
                   : []),
-                ...(isFinanceAdmin && current.cost_min !== undefined && current.cost_max !== undefined
+                ...(canSeeCosts && current.cost_min !== undefined && current.cost_max !== undefined
                   ? [
                       {
                         label:
@@ -823,10 +827,10 @@ export function TechCardsPanel() {
           title={current === null ? t("newTechCard") : draft.name}
           pending={techCards.save.isPending}
           error={techCards.save.error ?? techCards.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={submit}
           onCancel={cancelEdit}
-          onDelete={current === null ? null : () => techCards.remove.mutate(current.id, { onSuccess: close })}
+          onDelete={canEdit && current !== null ? () => techCards.remove.mutate(current.id, { onSuccess: close }) : null}
           deletePending={techCards.remove.isPending}
           headerAction={null}
           below={null}
@@ -914,7 +918,7 @@ export function TechCardsPanel() {
               {t("linkedProducts")}: {current.products.map((product) => product.name).join(", ")}
             </p>
           ) : null}
-          {current && isFinanceAdmin && current.cost_min !== undefined && current.cost_max !== undefined ? (
+          {current && canSeeCosts && current.cost_min !== undefined && current.cost_max !== undefined ? (
             <p className="text-sm text-[var(--ink)]">
               {draft.kind === "weighted"
                 ? t("costPerKg", { weight: draft.basis_weight_kg })

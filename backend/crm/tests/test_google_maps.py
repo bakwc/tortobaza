@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from accounts.permissions import grant
 from crm.google_maps import coords_from_google_url, extract_address_url, yandex_url_to_google_url
 from crm.models import ResolvedGoogleAddress, ResolvedYandexAddress
 from crm.yandex_maps import YANDEX_MAPS_PROMPT_ID, YANDEX_MAPS_PROMPT_VERSION
@@ -180,6 +181,7 @@ class ResolveGoogleAddressApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
+        grant(self.user, "view_orders")
 
     def test_unauthenticated_access_denied(self):
         response = self.client.post(

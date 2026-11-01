@@ -18,7 +18,7 @@ import {
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components/menu/ui";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import {
   useCloseInventoryCount,
   useFinishedGoods,
@@ -102,8 +102,8 @@ export function InventoryCountsPanel() {
   const [editing, setEditing] = useState<InventoryCount | null>(null);
   const [draft, setDraft] = useState<CountDraft | null>(null);
   const stock = useStockLevels(draft?.date ?? null);
-  const currentUser = useCurrentUser();
-  const isFinanceAdmin = Boolean(currentUser.data?.is_finance_admin);
+  const canSeeCosts = useCan("view_costs");
+  const canEdit = useCan("edit_inventory");
 
   const options = [
     ...componentOptions(
@@ -162,10 +162,12 @@ export function InventoryCountsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.inventoryCounts")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("inventoryCountHint")}</p>
         <QueryState isLoading={counts.list.isLoading} isError={counts.list.isError}>
@@ -202,14 +204,14 @@ export function InventoryCountsPanel() {
           title={editing === null ? t("newInventoryCount") : `${t("inventory.inventoryCounts")} · ${editing.date}`}
           pending={counts.save.isPending}
           error={counts.save.error ?? counts.remove.error ?? closeCount.error}
-          submitLabel={isClosed ? null : t("saveDraft")}
+          submitLabel={canEdit && !isClosed ? t("saveDraft") : null}
           onSubmit={() =>
             counts.save.mutate(
               { id: editing ? editing.id : null, body: body(draft) },
               { onSuccess: (saved) => setEditing(saved) },
             )
           }
-          onDelete={editing === null ? null : () => counts.remove.mutate(editing.id, { onSuccess: close })}
+          onDelete={canEdit && editing !== null ? () => counts.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={counts.remove.isPending}
           headerAction={null}
           below={null}
@@ -244,11 +246,11 @@ export function InventoryCountsPanel() {
                 lines={draft.lines}
                 onChange={(lines) => setDraft({ ...draft, lines })}
                 options={options}
-                extraColumn={isFinanceAdmin ? "unitCost" : null}
+                extraColumn={canSeeCosts ? "unitCost" : null}
                 quantityLabel={t("actual")}
                 chooseQuantityUnit={false}
               />
-              {editing ? (
+              {canEdit && editing ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">
                   <p className="flex-1 text-sm text-[var(--ink)]">{t("closeCountHint")}</p>
                   <Button

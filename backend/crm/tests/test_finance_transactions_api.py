@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
 from tortobaza.finance_db import use_finance_db
 
@@ -69,7 +69,7 @@ class FinanceTransactionsApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.admin, "edit_finance")
         self.account = FinancialAccount.objects.create(name="Liberty", kind=FinancialAccount.KIND_BANK)
         self.day = date(2026, 6, 15)
 
@@ -620,7 +620,7 @@ class FinanceScopeIsolationTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.admin, "edit_finance")
         self.client.force_authenticate(user=self.admin)
         self.business_account = FinancialAccount.objects.create(
             name="Business",

@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from audit.context import bind, release
 from audit.models import AuditEvent
 from crm.history import record_crm_order_event
@@ -31,7 +32,7 @@ class AuditLogTests(TestCase):
         self.user = User.objects.create_user(username="worker", password="password")
         self.staff = User.objects.create_user(username="staff", password="password")
         self.finance = User.objects.create_user(username="finance", password="password")
-        UserProfile.objects.create(user=self.finance, is_finance_admin=True)
+        grant(self.finance, "view_history")
 
     def test_update_records_raw_field_diff_and_skips_anonymous(self):
         ingredient = Ingredient.objects.create(name="Flour", unit=UNIT_GRAM)

@@ -43,7 +43,7 @@ import { CrmPaymentLinkField } from "@/components/crm/CrmPaymentLinkField";
 import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import {
   useCrmExpenses,
   useCrmOrders,
@@ -121,7 +121,8 @@ export default function CrmPage() {
 
 function CrmBoard() {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
+  const canViewFinance = useCan("view_finance");
   const router = useRouter();
   const searchParams = useSearchParams();
   const todayStr = getTbilisiTodayIsoDate();
@@ -133,7 +134,7 @@ function CrmBoard() {
   };
 
   const ordersQuery = useCrmOrders(selectedDate);
-  const expensesQuery = useCrmExpenses(selectedDate, Boolean(currentUser.data?.is_finance_admin));
+  const expensesQuery = useCrmExpenses(selectedDate, canViewFinance);
   const patchMutation = usePatchCrmOrder();
 
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
@@ -163,7 +164,7 @@ function CrmBoard() {
         <Button asChild variant="outline">
           <Link href="/crm/month">{t("monthlyOrders")}</Link>
         </Button>
-        {currentUser.data?.is_staff ? (
+        {canEditOrders ? (
           <Button asChild>
             <Link href={`/crm/new?date=${selectedDate}`}>
               <Plus className="mr-1.5 h-4 w-4" />
@@ -336,6 +337,7 @@ function CrmOrderStatusMenu({
   onTogglePaid: () => void;
 }) {
   const t = useTranslations("crm");
+  const canEditOrders = useCan("edit_orders");
   const [open, setOpen] = useState(false);
 
   return (
@@ -384,7 +386,10 @@ function CrmOrderStatusMenu({
               ) : null}
             </button>
           ))}
+          {canEditOrders ? (
           <div className="my-1 border-t border-[var(--line)]" />
+          ) : null}
+          {canEditOrders ? (
           <button
             type="button"
             onClick={() => {
@@ -403,6 +408,7 @@ function CrmOrderStatusMenu({
             )}
             {t("markPaid")}
           </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -425,7 +431,7 @@ function CrmOrderCard({
   onTakeInWork: () => void;
 }) {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
   const tone = crmOrderStatusTone(order.status);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -485,6 +491,7 @@ function CrmOrderCard({
   const NextStepIcon = nextStatus ? NEXT_STEP_ICONS[nextStatus] : null;
 
   const handlePaidClick = () => {
+    if (!canEditOrders) return;
     if (order.is_paid) {
       onSetPaid(false, order.payment_type);
       return;
@@ -745,7 +752,7 @@ function CrmOrderCard({
                 >
                   #{order.id}
                 </Link>
-                {currentUser.data?.is_staff ? (
+                {canEditOrders ? (
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/crm/${order.id}/edit`}>
                       <Pencil className="mr-1.5 h-3.5 w-3.5" />
@@ -757,7 +764,7 @@ function CrmOrderCard({
                   orderId={order.id}
                   clientToken={order.client_token}
                   onDelete={
-                    currentUser.data?.is_staff
+                    canEditOrders
                       ? () => {
                           deleteMutation.reset();
                           setIsDeleteOpen(true);
@@ -1154,7 +1161,7 @@ function CrmOrderCard({
               <button
                 type="button"
                 onClick={handlePaidClick}
-                disabled={isPatching}
+                disabled={isPatching || !canEditOrders}
                 className={cn(
                   "flex cursor-pointer items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:pointer-events-none disabled:opacity-60",
                   order.is_paid
@@ -1219,7 +1226,7 @@ function CrmOrderCard({
           }}
         />
       ) : null}
-      {currentUser.data?.is_staff ? (
+      {canEditOrders ? (
         <CrmDeleteOrderDialog
           open={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}

@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { FinanceAuthGate } from "@/components/finance/FinanceAuthGate";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, Field, QueryState } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import { useSuppliers } from "@/hooks/useStock";
 import type { Supplier, SupplierBody } from "@/lib/api/types";
 
 function SuppliersList() {
   const t = useTranslations("stock");
+  const canEdit = useCan("view_costs");
   const suppliers = useSuppliers();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<SupplierBody | null>(null);
@@ -32,10 +34,12 @@ function SuppliersList() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.suppliers")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <QueryState isLoading={suppliers.list.isLoading} isError={suppliers.list.isError}>
           <table className="mt-4 w-full text-sm">
@@ -70,14 +74,14 @@ function SuppliersList() {
           title={editingId === null ? t("newSupplier") : draft.name}
           pending={suppliers.save.isPending}
           error={suppliers.save.error ?? suppliers.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             suppliers.save.mutate(
               { id: editingId, body: { name: draft.name.trim(), phone: draft.phone.trim(), comment: draft.comment } },
               { onSuccess: close },
             )
           }
-          onDelete={editingId === null ? null : () => suppliers.remove.mutate(editingId, { onSuccess: close })}
+          onDelete={canEdit && editingId !== null ? () => suppliers.remove.mutate(editingId, { onSuccess: close }) : null}
           deletePending={suppliers.remove.isPending}
           headerAction={null}
           below={null}

@@ -10,6 +10,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.permissions import grant
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product, ProductImage
 from crm.models import CrmOrder, CrmOrderImage
@@ -344,6 +345,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         crm.status = CrmOrder.STATUS_NEW
         crm.save(update_fields=["status"])
         user = User.objects.create_user(username="worker", password="password")
+        grant(user, "view_orders")
         self.client.force_authenticate(user=user)
         response = self.client.patch(
             f"/api/crm/orders/{crm.id}/",
@@ -362,6 +364,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
         user = User.objects.create_user(username="worker", password="password")
+        grant(user, "view_orders")
         self.client.force_authenticate(user=user)
         response = self.client.patch(
             f"/api/crm/orders/{crm.id}/",
@@ -382,6 +385,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
         crm.status = CrmOrder.STATUS_NEW
         crm.save(update_fields=["status"])
         user = User.objects.create_user(username="worker", password="password")
+        grant(user, "view_orders")
         self.client.force_authenticate(user=user)
         take = self.client.patch(
             f"/api/crm/orders/{crm.id}/",
@@ -414,6 +418,7 @@ class WebsiteOrderCrmSyncTests(TestCase):
             payment_type=CrmOrder.PAYMENT_CASH,
         )
         user = User.objects.create_user(username="worker", password="password")
+        grant(user, "view_orders")
         self.client.force_authenticate(user=user)
         response = self.client.patch(
             f"/api/crm/orders/{crm.id}/",

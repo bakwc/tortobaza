@@ -12,7 +12,7 @@ from openai.lib._pydantic import to_strict_json_schema
 from PIL import Image
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from inventory.models import Supplier, Supply, SupplyReceipt
 from inventory.receipts import RECEIPT_MODEL, RecognizedLine, RecognizedReceipt, recognize_receipt, to_jpeg
 from menu.models import UNIT_GRAM, Ingredient
@@ -120,7 +120,7 @@ class SupplyReceiptApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("chef", password="x")
         self.admin = User.objects.create_user("boss", password="x")
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.admin, "view_costs")
 
     def _recognized(self) -> dict:
         return {

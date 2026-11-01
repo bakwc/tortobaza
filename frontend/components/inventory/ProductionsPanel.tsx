@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import { useProductions, useSemiProducts } from "@/hooks/useStock";
 import type { Production, ProductionBody } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -24,6 +25,7 @@ function draftFrom(row: Production | null): ProductionDraft {
 
 export function ProductionsPanel() {
   const t = useTranslations("stock");
+  const canEdit = useCan("edit_inventory");
   const units = useTranslations("stock.units");
   const productions = useProductions();
   const semiProducts = useSemiProducts();
@@ -46,10 +48,12 @@ export function ProductionsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.productions")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <QueryState isLoading={productions.list.isLoading} isError={productions.list.isError}>
           <table className="mt-4 w-full text-sm">
@@ -89,7 +93,7 @@ export function ProductionsPanel() {
           title={editing === null ? t("newProduction") : `${editing.semi_product_name} · ${editing.date}`}
           pending={productions.save.isPending}
           error={productions.save.error ?? productions.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() => {
             const body: ProductionBody = {
               date: draft.date,
@@ -99,7 +103,7 @@ export function ProductionsPanel() {
             };
             productions.save.mutate({ id: editing ? editing.id : null, body }, { onSuccess: close });
           }}
-          onDelete={editing === null ? null : () => productions.remove.mutate(editing.id, { onSuccess: close })}
+          onDelete={canEdit && editing !== null ? () => productions.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={productions.remove.isPending}
           headerAction={null}
           below={null}

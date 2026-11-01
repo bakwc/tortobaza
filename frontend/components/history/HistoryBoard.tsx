@@ -142,7 +142,7 @@ function HistoryBoardContent() {
   };
 
   return (
-    <SectionShell active="history" financeOnly tabs={tabs}>
+    <SectionShell active="history" permission="view_history" tabs={tabs}>
       <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="grid gap-1 text-sm text-[var(--ink)]">
           {t("start")}

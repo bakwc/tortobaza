@@ -27,7 +27,7 @@ import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCurrentUser } from "@/hooks/useAuth";
+import { useCan } from "@/hooks/useAuth";
 import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
@@ -94,7 +94,8 @@ export default function CrmMonthPage() {
 
 function CrmMonthBoard() {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
+  const canViewFinance = useCan("view_finance");
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -108,7 +109,7 @@ function CrmMonthBoard() {
   const ordersQuery = useCrmOrdersByMonth(selectedMonth);
   const expensesQuery = useCrmExpensesByMonth(
     selectedMonth,
-    Boolean(currentUser.data?.is_finance_admin),
+    canViewFinance,
   );
   const orders = sortCrmBoardOrders(ordersQuery.data?.orders ?? []);
   const isCurrentMonth = selectedMonth === currentMonth;
@@ -126,7 +127,7 @@ function CrmMonthBoard() {
         <Button asChild variant="outline">
           <Link href="/crm">{t("dailyBoard")}</Link>
         </Button>
-        {currentUser.data?.is_staff ? (
+        {canEditOrders ? (
           <Button asChild>
             <Link
               href={`/crm/new?date=${isCurrentMonth ? getTbilisiTodayIsoDate() : `${selectedMonth}-01`}`}
@@ -285,7 +286,7 @@ function CrmMonthBoard() {
 
 function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
-  const currentUser = useCurrentUser();
+  const canEditOrders = useCan("edit_orders");
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -399,7 +400,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         </div>
       </Link>
 
-      {currentUser.data?.is_staff ? (
+      {canEditOrders ? (
         <Button
           asChild
           variant="outline"
@@ -412,7 +413,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
           </Link>
         </Button>
       ) : null}
-      {currentUser.data?.is_staff ? (
+      {canEditOrders ? (
         <CrmDeleteOrderDialog
           open={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
@@ -429,7 +430,7 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
         orderId={order.id}
         clientToken={order.client_token}
         onDelete={
-          currentUser.data?.is_staff
+          canEditOrders
             ? () => {
                 deleteMutation.reset();
                 setIsDeleteOpen(true);

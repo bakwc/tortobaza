@@ -33,7 +33,7 @@ function RsgeShellContent({ section, children }: { section: RsgeSection; childre
     { key: "invoices", href: `/rsge/invoices?${period.query}`, label: t("invoices") },
   ];
   return (
-    <SectionShell active={section} financeOnly tabs={tabs}>
+    <SectionShell active={section} permission="view_rsge" tabs={tabs}>
       <RsgeMonthBar period={period} />
       {children}
     </SectionShell>

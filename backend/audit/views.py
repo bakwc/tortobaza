@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from accounts.models import UserProfile
 from audit.models import AuditEvent
-from crm.views import IsFinanceAdmin
+from accounts.permissions import SectionPermission
 
 PAGE_SIZE = 50
 
@@ -39,7 +39,7 @@ def _actor_names(actor_ids: list[int]) -> dict[int, str]:
 
 class AuditEventsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("history")]
 
     def get(self, request):
         queryset = AuditEvent.objects.select_related("actor").all()

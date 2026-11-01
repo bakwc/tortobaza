@@ -22,7 +22,7 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.models import UserProfile
+from accounts.permissions import CanView, SectionPermission, can_edit, can_see_costs, can_view
 from attendance.salary import compute_all_salaries, compute_month_salaries
 from catalog.responsive_urls import detail_image
 from crm.analytics import client_order_counts
@@ -88,34 +88,16 @@ from tortobaza.finance_db import current_finance_db
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
-def is_finance_admin(user) -> bool:
-    if not user.is_authenticated:
-        return False
-    profile = UserProfile.objects.filter(user=user).first()
-    if profile is None:
-        return False
-    return profile.is_finance_admin
-
-
-class IsFinanceAdmin(BasePermission):
-    def has_permission(self, request, view):
-        return is_finance_admin(request.user)
-
-
-class IsStaff(BasePermission):
-    def has_permission(self, request, view):
-        return request.user.is_staff
+_ORDER_STATUS_FIELDS = {"status", "take_in_work"}
 
 
 class CrmOrderWritePermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
-            return True
-        if request.user.is_staff:
-            return True
-        if request.method == "PATCH":
-            return set(request.data.keys()) <= {"status", "take_in_work"}
-        return False
+            return can_view(request.user, "orders")
+        if request.method == "PATCH" and set(request.data.keys()) <= _ORDER_STATUS_FIELDS:
+            return can_view(request.user, "orders")
+        return can_edit(request.user, "orders")
 
 
 def live_orders():
@@ -135,7 +117,7 @@ def with_order_relations(orders):
 
 
 def order_detail_context(request) -> dict:
-    return {"request": request, "show_food_cost": is_finance_admin(request.user)}
+    return {"request": request, "show_food_cost": can_see_costs(request.user)}
 
 
 def _tbilisi_now() -> datetime:
@@ -225,7 +207,7 @@ def crm_order_write_payload(request):
 
 class CrmOrderItemCostView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsStaff]
+    permission_classes = [IsAuthenticated, CanView("orders")]
 
     def post(self, request):
         serializer = CrmOrderItemCostSerializer(data=request.data)
@@ -306,7 +288,7 @@ class CrmOrderListView(APIView):
 
 class CrmOrderMapView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("orders")]
 
     def get(self, request):
         query_serializer = CrmOrderMapQuerySerializer(data=request.query_params)
@@ -380,7 +362,7 @@ class CrmOrderDetailView(APIView):
 
 class CrmOrderPaymentLinkView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, SectionPermission("orders")]
 
     def post(self, request, pk: int):
         order = get_object_or_404(live_orders(), pk=pk)
@@ -473,7 +455,7 @@ class CrmOrderClientMapView(APIView):
 
 class ResolveYandexAddressView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanView("orders")]
 
     def post(self, request):
         serializer = ResolveYandexAddressSerializer(data=request.data)
@@ -484,7 +466,7 @@ class ResolveYandexAddressView(APIView):
 
 class ResolveGoogleAddressView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanView("orders")]
 
     def post(self, request):
         serializer = ResolveGoogleAddressSerializer(data=request.data)
@@ -497,7 +479,7 @@ class ResolveGoogleAddressView(APIView):
 
 class CrmExpensesView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def get(self, request):
         query_serializer = CrmOrderQuerySerializer(data=request.query_params)
@@ -545,7 +527,7 @@ class CrmExpensesView(APIView):
 
 class CrmSalariesView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("employees")]
 
     def get(self, request):
         query_serializer = CrmSalariesQuerySerializer(data=request.query_params)
@@ -565,7 +547,7 @@ class CrmSalariesView(APIView):
 
 class FinanceTransactionsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def get(self, request):
         query_serializer = FinanceTransactionsQuerySerializer(data=request.query_params)
@@ -607,7 +589,7 @@ class FinanceTransactionsView(APIView):
 
 class FinanceTransactionDetailView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def put(self, request, pk: int):
         tx = get_object_or_404(FinancialTransaction, pk=pk)
@@ -629,7 +611,7 @@ class FinanceTransactionDetailView(APIView):
 
 class FinanceTransactionSearchView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def get(self, request):
         query_serializer = FinanceTransactionSearchQuerySerializer(data=request.query_params)
@@ -652,7 +634,7 @@ class FinanceTransactionSearchView(APIView):
 
 class AnalyticsOverviewView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
         return Response(analytics_overview(_tbilisi_now().date()))
@@ -660,7 +642,7 @@ class AnalyticsOverviewView(APIView):
 
 class AnalyticsLoadView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
         query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
@@ -674,7 +656,7 @@ class AnalyticsLoadView(APIView):
 
 class AnalyticsClientsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
         return Response(analytics_clients())
@@ -682,7 +664,7 @@ class AnalyticsClientsView(APIView):
 
 class AnalyticsProductsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
         query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
@@ -696,7 +678,7 @@ class AnalyticsProductsView(APIView):
 
 class AnalyticsEmployeesView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
         query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
@@ -710,7 +692,7 @@ class AnalyticsEmployeesView(APIView):
 
 class FinanceAccountsView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def get(self, request):
         accounts = FinancialAccount.objects.order_by("name", "id")
@@ -729,7 +711,7 @@ def _finance_transaction_for_response(pk: int) -> FinancialTransaction:
 
 class ExchangeRatesView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, IsFinanceAdmin]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
 
     def get(self, request):
         snapshot = current_exchange_rates()

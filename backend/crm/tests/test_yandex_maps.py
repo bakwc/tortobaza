@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from accounts.permissions import grant
 from crm.models import ResolvedYandexAddress
 from crm.yandex_maps import YANDEX_MAPS_PROMPT_ID, YANDEX_MAPS_PROMPT_VERSION
 
@@ -27,6 +28,7 @@ class ResolveYandexAddressApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
+        grant(self.user, "view_orders")
 
     def test_unauthenticated_access_denied(self):
         response = self.client.post(

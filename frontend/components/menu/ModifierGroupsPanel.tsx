@@ -14,6 +14,7 @@ import {
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts } from "@/hooks/useStock";
 import type { Modifier, ModifierGroup } from "@/lib/api/types";
 
@@ -73,6 +74,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
 
 export function ModifierGroupsPanel() {
   const t = useTranslations("stock");
+  const canEdit = useCan("edit_menu");
   const groups = useModifierGroups();
   const catalogOptions = useCatalogOptions();
   const ingredients = useIngredients();
@@ -113,10 +115,12 @@ export function ModifierGroupsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("menu.modifierGroups")}</CardTitle>
+          {canEdit ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
           </Button>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("modifierGroupsHint")}</p>
         <QueryState isLoading={groups.list.isLoading} isError={groups.list.isError}>
@@ -152,7 +156,7 @@ export function ModifierGroupsPanel() {
           title={editingId === null ? t("newModifierGroup") : draft.name}
           pending={groups.save.isPending}
           error={groups.save.error ?? groups.remove.error}
-          submitLabel={t("save")}
+          submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             groups.save.mutate(
               {
@@ -178,7 +182,7 @@ export function ModifierGroupsPanel() {
               { onSuccess: close },
             )
           }
-          onDelete={editingId === null ? null : () => groups.remove.mutate(editingId, { onSuccess: close })}
+          onDelete={canEdit && editingId !== null ? () => groups.remove.mutate(editingId, { onSuccess: close }) : null}
           deletePending={groups.remove.isPending}
           headerAction={null}
           below={null}

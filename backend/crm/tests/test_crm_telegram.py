@@ -18,6 +18,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
+from accounts.permissions import grant
 from crm.google_maps import SWEET_CHILL_COORDS
 from crm.models import (
     CrmOrder,
@@ -826,6 +827,7 @@ class CrmTelegramTests(TestCase):
 
     def test_create_api_schedules_sync(self):
         user = User.objects.create_user(username="admin", password="password", is_staff=True)
+        grant(user, "edit_orders")
         client = APIClient()
         client.force_authenticate(user=user)
         d, t = self._slot(timedelta(hours=2))
@@ -993,6 +995,7 @@ class CrmTelegramTests(TestCase):
             call_command("sync_crm_orders_to_telegram")
             openai_cls.assert_not_called()
         user = User.objects.create_user(username="worker", password="password")
+        grant(user, "view_orders")
         client = APIClient()
         client.force_authenticate(user=user)
         fake_response = MagicMock()

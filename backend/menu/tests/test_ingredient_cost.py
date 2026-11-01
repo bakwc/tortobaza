@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.models import UserProfile
+from accounts.permissions import grant
 from menu.models import IngredientCategory, TechCardCategory
 from menu.tests.fixtures import MenuFixture
 
@@ -15,7 +15,8 @@ class IngredientCostApiTests(TestCase):
         self.client = APIClient()
         self.staff = User.objects.create_user("chef", password="x")
         self.admin = User.objects.create_user("boss", password="x")
-        UserProfile.objects.create(user=self.admin, is_finance_admin=True)
+        grant(self.staff, "edit_menu")
+        grant(self.admin, "edit_menu", "view_costs")
         self.flour = self.menu.flour
 
     def _payload(self, avg_cost: str | None) -> dict:

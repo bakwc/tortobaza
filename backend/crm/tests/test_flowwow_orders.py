@@ -12,6 +12,7 @@ from django.test import TestCase, override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
+from accounts.permissions import grant
 from crm.flowwow import _filling, _weight
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
 
@@ -625,6 +626,8 @@ class FlowwowCourierLeftSyncTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
+        grant(self.user, "view_orders")
+        grant(self.admin, "edit_orders")
 
     def _assert_post(self, mock_post, url: str, order_id: int):
         mock_post.assert_called_once()

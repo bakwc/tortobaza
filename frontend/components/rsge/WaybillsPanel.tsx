@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Truck } from "lucide-react";
 import { QueryState, formatQuantity } from "@/components/menu/ui";
+import { useCan } from "@/hooks/useAuth";
 import {
   RsgeChip,
   RsgeDayHeader,
@@ -128,6 +129,7 @@ function WaybillMeta({ waybill, locale }: { waybill: RsWaybill; locale: string }
 
 export function WaybillsPanel() {
   const t = useTranslations("rsge");
+  const canEdit = useCan("edit_rsge");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const period = useFinancePeriod();
@@ -240,7 +242,7 @@ export function WaybillsPanel() {
                   onClick={null}
                   details={<WaybillMeta waybill={waybill} locale={locale} />}
                   extra={
-                    waybill.supply === null ? (
+                    canEdit && waybill.supply === null ? (
                       <div className="flex justify-end border-t border-black/5 pt-3">
                         <Button type="button" size="sm" variant="outline" onClick={() => setSupplyWaybill(waybill)}>
                           {t("createSupply")}
