@@ -55,11 +55,25 @@ def admin_model_permissions(codes: list[str]) -> list[Permission]:
 
 
 def can_view(user, section: str) -> bool:
-    return user.has_perm(f"accounts.view_{section}") or user.has_perm(f"accounts.edit_{section}")
+    return (
+        user.has_perm(f"accounts.view_{section}")
+        or user.has_perm(f"accounts.edit_{section}")
+        or user.has_perm(f"accounts.edit_own_{section}")
+    )
 
 
 def can_edit(user, section: str) -> bool:
     return user.has_perm(f"accounts.edit_{section}")
+
+
+def can_change_finished(user, document) -> bool:
+    if user.has_perm("accounts.edit_finished"):
+        return True
+    if not user.has_perm("accounts.edit_own_finished"):
+        return False
+    if document is None:
+        return True
+    return document.created_by_id == user.id
 
 
 def can_see_costs(user) -> bool:
@@ -112,6 +126,13 @@ def CanView(*sections: str):
 
     _CanView.__name__ = "CanView_" + "_".join(sections)
     return _CanView
+
+
+class FinishedProductionAccess(BasePermission):
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return can_view(request.user, "finished")
+        return can_change_finished(request.user, None)
 
 
 def EditSection(section: str):

@@ -9,13 +9,13 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts.permissions import HasPerm, SectionPermission
+from accounts.permissions import FinishedProductionAccess, HasPerm, SectionPermission, can_change_finished
 from crm.models import FinancialTransaction
 from inventory.models import (
     FinishedGood,
@@ -251,6 +251,7 @@ class ProductionListView(InventoryListView):
 
 
 class FinishedProductionListView(InventoryListView):
+    permission_classes = [IsAuthenticated, FinishedProductionAccess]
     serializer_class = FinishedProductionSerializer
 
     def get_queryset(self):
@@ -261,6 +262,7 @@ class FinishedProductionListView(InventoryListView):
 
 
 class FinishedProductionDetailView(InventoryDetailView):
+    permission_classes = [IsAuthenticated, FinishedProductionAccess]
     serializer_class = FinishedProductionSerializer
 
     def get_queryset(self):
@@ -268,6 +270,18 @@ class FinishedProductionDetailView(InventoryDetailView):
 
     def apply(self, instance) -> None:
         apply_finished_production(instance)
+
+    def put(self, request, pk: int):
+        instance = get_object_or_404(self.get_queryset(), pk=pk)
+        if not can_change_finished(request.user, instance):
+            raise PermissionDenied
+        return super().put(request, pk)
+
+    def delete(self, request, pk: int):
+        instance = get_object_or_404(self.get_queryset(), pk=pk)
+        if not can_change_finished(request.user, instance):
+            raise PermissionDenied
+        return super().delete(request, pk)
 
 
 class ProducerListView(APIView):

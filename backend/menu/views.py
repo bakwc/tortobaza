@@ -208,7 +208,7 @@ class TechCardCategoryDetailView(MenuDetailView):
 
 
 class TechCardListView(MenuListView):
-    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
+    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders", "finished"))]
     serializer_class = TechCardSerializer
 
     def get_queryset(self):

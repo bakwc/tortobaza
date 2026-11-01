@@ -66,7 +66,9 @@ function lineBody(line: LineDraft, card: TechCard | undefined): FinishedProducti
 
 export function FinishedProductionsPanel() {
   const t = useTranslations("stock");
-  const canEdit = useCan("edit_inventory");
+  const canEditAll = useCan("edit_finished");
+  const canEditOwn = useCan("edit_own_finished");
+  const canCreate = canEditAll || canEditOwn;
   const units = useTranslations("stock.units");
   const currentUser = useCurrentUser();
   const isStaff = currentUser.data?.is_staff === true;
@@ -76,6 +78,13 @@ export function FinishedProductionsPanel() {
   const [editing, setEditing] = useState<FinishedProduction | null>(null);
   const [draft, setDraft] = useState<FinishedDraft | null>(null);
   const cards = techCards.list.data ?? [];
+  const userId = currentUser.data?.id;
+  const canChange = (row: FinishedProduction | null) => {
+    if (canEditAll) return true;
+    if (!canEditOwn) return false;
+    if (row === null) return true;
+    return row.created_by_id === userId;
+  };
 
   const open = (row: FinishedProduction | null) => {
     const user = currentUser.data;
@@ -102,7 +111,7 @@ export function FinishedProductionsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.finishedGoods")}</CardTitle>
-          {canEdit ? (
+          {canCreate ? (
           <Button type="button" size="sm" onClick={() => open(null)}>
             <Plus className="mr-1 h-4 w-4" />
             {t("add")}
@@ -154,7 +163,7 @@ export function FinishedProductionsPanel() {
           title={editing === null ? t("newFinishedProduction") : `${t("inventory.finishedGoods")} · ${editing.date}`}
           pending={productions.save.isPending}
           error={productions.save.error ?? productions.remove.error}
-          submitLabel={canEdit ? t("save") : null}
+          submitLabel={canChange(editing) ? t("save") : null}
           onSubmit={() => {
             const user = currentUser.data;
             if (user === undefined) {
@@ -174,7 +183,7 @@ export function FinishedProductionsPanel() {
             };
             productions.save.mutate({ id: editing ? editing.id : null, body }, { onSuccess: close });
           }}
-          onDelete={canEdit && editing !== null ? () => productions.remove.mutate(editing.id, { onSuccess: close }) : null}
+          onDelete={canChange(editing) && editing !== null ? () => productions.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={productions.remove.isPending}
           headerAction={null}
           below={null}

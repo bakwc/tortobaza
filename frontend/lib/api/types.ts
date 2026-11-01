@@ -1759,6 +1759,7 @@ export const FinishedProductionSchema = z.object({
   comment: z.string(),
   created_at: z.string(),
   created_by: z.number().nullable(),
+  created_by_id: z.number().nullable(),
   created_by_name: z.string().nullable(),
   lines: z.array(FinishedProductionLineSchema),
   consumed: z.array(StockMovementSchema),

@@ -42,7 +42,8 @@ export function useCan(code: string): boolean {
   const permissions = currentUser.data?.permissions ?? [];
   if (permissions.includes(code)) return true;
   if (code.startsWith("view_")) {
-    return permissions.includes(`edit_${code.slice("view_".length)}`);
+    const section = code.slice("view_".length);
+    return permissions.includes(`edit_${section}`) || permissions.includes(`edit_own_${section}`);
   }
   return false;
 }

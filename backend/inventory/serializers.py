@@ -278,6 +278,7 @@ class FinishedProductionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        data["created_by_id"] = instance.created_by_id
         data["created_by_name"] = person_name(instance.created_by)
         rows = instance.lines.select_related("finished_good__tech_card").prefetch_related(
             "finished_good__modifiers__modifier",

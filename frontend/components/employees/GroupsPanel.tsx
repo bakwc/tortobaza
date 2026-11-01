@@ -20,7 +20,7 @@ function draftFrom(row: AccessGroup): AccessGroupBody {
 }
 
 function sectionKey(code: string): string {
-  return code.replace(/^(view|edit)_/, "");
+  return code.replace(/^(view|edit_own|edit)_/, "");
 }
 
 function grouped(options: SectionPermissionOption[]): { key: string; codes: SectionPermissionOption[] }[] {

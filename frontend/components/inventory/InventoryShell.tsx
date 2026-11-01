@@ -19,6 +19,8 @@ const FINANCE_ADMIN_SECTIONS: string[] = ["supplies", "suppliers"];
 export function InventoryShell({ section, children }: { section: InventorySection; children: ReactNode }) {
   const t = useTranslations("stock.inventory");
   const canSeeCosts = useCan("view_costs");
+  const canViewInventory = useCan("view_inventory");
+  const canViewFinished = useCan("view_finished");
   const tabs: SectionTab[] = [
     { key: "stock", href: "/inventory", label: t("stock") },
     { key: "supplies", href: "/inventory/supplies", label: t("supplies") },
@@ -28,9 +30,15 @@ export function InventoryShell({ section, children }: { section: InventorySectio
     { key: "write-offs", href: "/inventory/write-offs", label: t("writeOffs") },
     { key: "inventory-counts", href: "/inventory/inventory-counts", label: t("inventoryCounts") },
   ];
-  const visibleTabs = canSeeCosts ? tabs : tabs.filter((tab) => !FINANCE_ADMIN_SECTIONS.includes(tab.key));
+  const visibleTabs = tabs.filter((tab) => {
+    if (tab.key === "finished") return canViewFinished;
+    if (!canViewInventory) return false;
+    if (FINANCE_ADMIN_SECTIONS.includes(tab.key)) return canSeeCosts;
+    return true;
+  });
+  const permission = section === "finished" ? "view_finished" : "view_inventory";
   return (
-    <SectionShell active={section} permission="view_inventory" tabs={visibleTabs}>
+    <SectionShell active={section} permission={permission} tabs={visibleTabs}>
       {children}
     </SectionShell>
   );

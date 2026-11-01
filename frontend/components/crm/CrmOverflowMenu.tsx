@@ -41,6 +41,7 @@ export function CrmOverflowMenu() {
   const canViewRsge = useCan("view_rsge");
   const canViewMenu = useCan("view_menu");
   const canViewInventory = useCan("view_inventory");
+  const canViewFinished = useCan("view_finished");
   const canViewHistory = useCan("view_history");
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -131,11 +132,11 @@ export function CrmOverflowMenu() {
           },
         ]
       : []),
-    ...(canViewInventory
+    ...(canViewInventory || canViewFinished
       ? [
           {
             key: "inventory",
-            href: "/inventory",
+            href: canViewInventory ? "/inventory" : "/inventory/finished",
             label: t("inventorySection"),
             icon: Warehouse,
             active: isUnder(pathname, "/inventory"),
