@@ -298,7 +298,7 @@ class CrmOrderItemsApiTests(TestCase):
             )
         )
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(CrmOrderItem.objects.get(order=self.order).price, Decimal("50.00"))
+        self.assertEqual(CrmOrderItem.objects.get(order=self.order).price, Decimal("100.00"))
 
     def test_item_without_sale_price_is_rejected(self):
         self.menu.cake.sale_price = None

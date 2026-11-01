@@ -290,6 +290,9 @@ function TechCardRow({
       {row.sale_price !== null ? (
         <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
           {formatMoney(row.sale_price)}
+          <span className="block text-[11px] font-normal text-[var(--muted-2)]">
+            {t("salePricePerPiece", { count: 1 })}
+          </span>
         </span>
       ) : null}
       {isFinanceAdmin && row.cost_min !== undefined && row.cost_max !== undefined ? (
@@ -716,10 +719,7 @@ export function TechCardsPanel() {
                 ...(current.sale_price !== null
                   ? [
                       {
-                        label:
-                          current.kind === "weighted"
-                            ? t("salePricePerKg", { weight: current.basis_weight_kg ?? "" })
-                            : t("salePricePerPiece", { count: current.basis_quantity ?? 0 }),
+                        label: t("salePricePerPiece", { count: 1 }),
                         value: formatMoney(current.sale_price),
                       },
                     ]
@@ -886,14 +886,7 @@ export function TechCardsPanel() {
                 />
               </Field>
             )}
-            <Field
-              label={
-                draft.kind === "weighted"
-                  ? t("salePricePerKg", { weight: draft.basis_weight_kg })
-                  : t("salePricePerPiece", { count: draft.basis_quantity })
-              }
-              className="sm:col-span-3"
-            >
+            <Field label={t("salePricePerPiece", { count: 1 })} className="sm:col-span-3">
               <Input
                 inputMode="decimal"
                 value={draft.sale_price}

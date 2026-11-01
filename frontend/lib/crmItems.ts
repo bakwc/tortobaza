@@ -171,8 +171,7 @@ export function crmItemSalePrice(item: CrmItemDraft, techCards: TechCard[]): str
     if (weight === null || card.basis_weight_kg === null) return null;
     return roundCents((sale * Number(weight) * quantity) / Number(card.basis_weight_kg));
   }
-  if (card.basis_quantity === null) return null;
-  return roundCents((sale * quantity) / card.basis_quantity);
+  return roundCents(sale * quantity);
 }
 
 export function crmItemsPriceSum(items: CrmItemDraft[], techCards: TechCard[]): number {
