@@ -822,6 +822,7 @@
     "actualQuantities": "Actual quantities",
     "closeCountHint": "Closing adjusts only the filled rows. Empty rows stay as they are. A closed count cannot be edited.",
     "notCounted": "not counted",
+    "clearCount": "Not counted",
     "countLegend": "An empty field leaves the stock unchanged. 0 means it ran out.",
     "closeCount": "Close count",
     "units": {

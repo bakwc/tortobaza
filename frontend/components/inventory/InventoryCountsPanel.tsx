@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -272,9 +272,6 @@ function CountLines({
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" size="sm" onClick={() => setQuantity(row.key, "0")}>
-                          0
-                        </Button>
                         <Input
                           inputMode="decimal"
                           placeholder={t("notCounted")}
@@ -282,6 +279,17 @@ function CountLines({
                           onChange={(event) => setQuantity(row.key, event.target.value)}
                           className="w-32"
                         />
+                        {value.trim() === "" ? null : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("clearCount")}
+                            onClick={() => setQuantity(row.key, "")}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                         {difference === null ? null : (
                           <span className={cn("w-24 text-right text-sm", differenceClass(difference))}>
                             {formatQuantity(String(difference))}
