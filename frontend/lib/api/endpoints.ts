@@ -130,6 +130,7 @@ import {
   MissingModifierLineSchema,
   FinishedGoodSchema,
   FinishedProductionSchema,
+  ProducerSchema,
   ModifierGroupSchema,
   ProductionSchema,
   SemiProductSchema,
@@ -159,6 +160,7 @@ import {
   type FinishedGood,
   type FinishedProduction,
   type FinishedProductionBody,
+  type Producer,
   type Production,
   type ProductionBody,
   type SemiProduct,
@@ -277,6 +279,10 @@ export function endpoints(fetcher: Fetcher) {
       "/api/inventory/finished-productions/",
       FinishedProductionSchema,
     ),
+    async inventoryProducers(): Promise<Producer[]> {
+      const raw = await fetcher<unknown>("/api/inventory/producers/");
+      return parse(z.array(ProducerSchema), raw);
+    },
     inventoryFinishedGoods: resource<FinishedGood, never>(
       fetcher,
       "/api/inventory/finished-goods/",

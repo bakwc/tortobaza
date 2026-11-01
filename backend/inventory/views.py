@@ -3,6 +3,7 @@ import time
 from decimal import Decimal
 from pathlib import Path
 
+from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -10,7 +11,7 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.parsers import MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -43,6 +44,7 @@ from inventory.serializers import (
     WriteOffReasonSerializer,
     WriteOffSerializer,
     movement_payloads,
+    person_name,
     show_costs,
     transaction_payload,
 )
@@ -252,7 +254,7 @@ class FinishedProductionListView(InventoryListView):
     serializer_class = FinishedProductionSerializer
 
     def get_queryset(self):
-        return FinishedProduction.objects.select_related("created_by")
+        return FinishedProduction.objects.select_related("created_by", "created_by__profile")
 
     def apply(self, instance) -> None:
         apply_finished_production(instance)
@@ -262,10 +264,21 @@ class FinishedProductionDetailView(InventoryDetailView):
     serializer_class = FinishedProductionSerializer
 
     def get_queryset(self):
-        return FinishedProduction.objects.select_related("created_by")
+        return FinishedProduction.objects.select_related("created_by", "created_by__profile")
 
     def apply(self, instance) -> None:
         apply_finished_production(instance)
+
+
+class ProducerListView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, IsAdminUser, SectionPermission("inventory")]
+
+    def get(self, request):
+        users = User.objects.filter(is_active=True)
+        rows = [{"id": user.pk, "name": person_name(user)} for user in users]
+        rows.sort(key=lambda row: row["name"].casefold())
+        return Response(rows)
 
 
 class FinishedGoodListView(APIView):

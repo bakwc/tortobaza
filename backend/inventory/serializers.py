@@ -1,7 +1,9 @@
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
+from accounts.models import UserProfile
 from crm.models import FinancialTransaction
 from inventory.finished import finished_signature, stored_weight
 from inventory.models import (
@@ -227,12 +229,31 @@ class FinishedProductionLineInputSerializer(serializers.Serializer):
 
 class FinishedProductionSerializer(serializers.ModelSerializer):
     lines = FinishedProductionLineInputSerializer(many=True, write_only=True)
+    created_by = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(is_active=True),
+        allow_null=True,
+    )
 
     class Meta:
         model = FinishedProduction
-        fields = ["id", "date", "comment", "lines", "created_at"]
+        fields = ["id", "date", "comment", "lines", "created_by", "created_at"]
         read_only_fields = ["created_at"]
         extra_kwargs = {"comment": {"required": True}}
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        chosen = attrs["created_by"]
+        if user.is_staff:
+            if chosen is None:
+                raise serializers.ValidationError({"created_by": "This field is required."})
+            return attrs
+        if self.instance is None:
+            if chosen != user:
+                raise serializers.ValidationError({"created_by": "You can only record yourself."})
+            return attrs
+        if chosen != self.instance.created_by:
+            raise serializers.ValidationError({"created_by": "You cannot change who made this."})
+        return attrs
 
     def validate_lines(self, value: list[dict]) -> list[dict]:
         if not value:
@@ -257,7 +278,7 @@ class FinishedProductionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data["created_by_name"] = user_name(instance.created_by)
+        data["created_by_name"] = person_name(instance.created_by)
         rows = instance.lines.select_related("finished_good__tech_card").prefetch_related(
             "finished_good__modifiers__modifier",
             "movements",
@@ -294,7 +315,6 @@ class FinishedProductionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         lines = validated_data.pop("lines")
-        validated_data["created_by"] = self.context["request"].user
         instance = FinishedProduction.objects.create(**validated_data)
         self._save_lines(instance, lines)
         return instance
@@ -330,6 +350,15 @@ class FinishedGoodSerializer(serializers.Serializer):
 def user_name(user) -> str | None:
     if user is None:
         return None
+    return user.get_full_name() or user.username
+
+
+def person_name(user) -> str | None:
+    if user is None:
+        return None
+    internal = UserProfile.objects.filter(user_id=user.pk).values_list("internal_name", flat=True).first()
+    if internal is not None and internal.strip():
+        return internal.strip()
     return user.get_full_name() or user.username
 
 

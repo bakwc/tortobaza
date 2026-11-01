@@ -117,6 +117,14 @@ export function useFinishedProductions() {
   return useResource(["inventory", "finished-productions"], api.inventoryFinishedProductions);
 }
 
+export function useProducers(enabled: boolean) {
+  return useQuery({
+    queryKey: ["inventory", "producers"],
+    queryFn: () => api.inventoryProducers(),
+    enabled,
+  });
+}
+
 export function useFinishedGoods() {
   return useQuery({
     queryKey: ["inventory", "finished-goods"],

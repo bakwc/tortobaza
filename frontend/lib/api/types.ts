@@ -1758,9 +1758,15 @@ export const FinishedProductionSchema = z.object({
   date: z.string(),
   comment: z.string(),
   created_at: z.string(),
+  created_by: z.number().nullable(),
   created_by_name: z.string().nullable(),
   lines: z.array(FinishedProductionLineSchema),
   consumed: z.array(StockMovementSchema),
+});
+
+export const ProducerSchema = z.object({
+  id: z.number(),
+  name: z.string(),
 });
 
 export const StockRowSchema = z.object({
@@ -1982,6 +1988,7 @@ export type StockMovement = z.infer<typeof StockMovementSchema>;
 export type Production = z.infer<typeof ProductionSchema>;
 export type FinishedGood = z.infer<typeof FinishedGoodSchema>;
 export type FinishedProduction = z.infer<typeof FinishedProductionSchema>;
+export type Producer = z.infer<typeof ProducerSchema>;
 export type WriteOff = z.infer<typeof WriteOffSchema>;
 export type InventoryCount = z.infer<typeof InventoryCountSchema>;
 export type StockRow = z.infer<typeof StockRowSchema>;
@@ -2010,6 +2017,7 @@ export type StockComponentBody = ComponentRefBody & { finished_good: number | nu
 export type FinishedProductionBody = {
   date: string;
   comment: string;
+  created_by: number | null;
   lines: {
     tech_card: number;
     weight_kg: string | null;

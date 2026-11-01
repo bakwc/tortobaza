@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -373,13 +375,16 @@ class FinishedGoodTests(TestCase):
 
     def test_duplicate_assembly_in_one_document_is_rejected(self):
         menu = MenuFixture()
+        user = User.objects.create_user(username="baker", password="password")
         payload = {
             "date": "2026-10-02",
             "comment": "",
+            "created_by": user.pk,
             "lines": [
                 {"tech_card": menu.bento.pk, "weight_kg": None, "modifiers": [], "quantity": 1},
                 {"tech_card": menu.bento.pk, "weight_kg": None, "modifiers": [], "quantity": 2},
             ],
         }
-        serializer = FinishedProductionSerializer(data=payload)
+        serializer = FinishedProductionSerializer(data=payload, context={"request": SimpleNamespace(user=user)})
         self.assertFalse(serializer.is_valid())
+        self.assertIn("lines", serializer.errors)

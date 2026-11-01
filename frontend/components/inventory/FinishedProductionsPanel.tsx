@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components/menu/ui";
-import { useCan } from "@/hooks/useAuth";
-import { useFinishedProductions, useTechCards } from "@/hooks/useStock";
+import { useCan, useCurrentUser } from "@/hooks/useAuth";
+import { useFinishedProductions, useProducers, useTechCards } from "@/hooks/useStock";
 import type { FinishedProduction, FinishedProductionBody, TechCard } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -25,19 +25,20 @@ type LineDraft = {
   quantity: string;
 };
 
-type FinishedDraft = { date: string; comment: string; lines: LineDraft[] };
+type FinishedDraft = { date: string; comment: string; created_by: string; lines: LineDraft[] };
 
 function emptyLine(): LineDraft {
   return { key: newDraftKey(), tech_card: "", weight_kg: "", modifiers: [], quantity: "1" };
 }
 
-function draftFrom(row: FinishedProduction | null): FinishedDraft {
+function draftFrom(row: FinishedProduction | null, selfId: number): FinishedDraft {
   if (row === null) {
-    return { date: getTbilisiTodayIsoDate(), comment: "", lines: [emptyLine()] };
+    return { date: getTbilisiTodayIsoDate(), comment: "", created_by: String(selfId), lines: [emptyLine()] };
   }
   return {
     date: row.date,
     comment: row.comment,
+    created_by: row.created_by === null ? "" : String(row.created_by),
     lines: row.lines.map((line) => ({
       key: newDraftKey(),
       tech_card: String(line.tech_card),
@@ -67,17 +68,24 @@ export function FinishedProductionsPanel() {
   const t = useTranslations("stock");
   const canEdit = useCan("edit_inventory");
   const units = useTranslations("stock.units");
+  const currentUser = useCurrentUser();
+  const isStaff = currentUser.data?.is_staff === true;
   const productions = useFinishedProductions();
+  const producers = useProducers(isStaff);
   const techCards = useTechCards();
   const [editing, setEditing] = useState<FinishedProduction | null>(null);
   const [draft, setDraft] = useState<FinishedDraft | null>(null);
   const cards = techCards.list.data ?? [];
 
   const open = (row: FinishedProduction | null) => {
+    const user = currentUser.data;
+    if (user === undefined) {
+      throw new Error("Current user is not loaded.");
+    }
     productions.save.reset();
     productions.remove.reset();
     setEditing(row);
-    setDraft(draftFrom(row));
+    setDraft(draftFrom(row, user.id));
   };
   const close = () => setDraft(null);
 
@@ -108,6 +116,7 @@ export function FinishedProductionsPanel() {
               <tr>
                 <th className="py-2">{t("date")}</th>
                 <th className="py-2">{t("name")}</th>
+                <th className="py-2">{t("pieces")}</th>
                 <th className="py-2">{t("createdBy")}</th>
               </tr>
             </thead>
@@ -120,9 +129,14 @@ export function FinishedProductionsPanel() {
                 >
                   <td className="py-2">{row.date}</td>
                   <td className="py-2">
-                    {row.lines
-                      .map((line) => `${line.name} ×${line.quantity}`)
-                      .join(", ")}
+                    {row.lines.map((line) => (
+                      <div key={line.id}>{line.name}</div>
+                    ))}
+                  </td>
+                  <td className="py-2">
+                    {row.lines.map((line) => (
+                      <div key={line.id}>{line.quantity}</div>
+                    ))}
                   </td>
                   <td className="py-2">{row.created_by_name ?? "—"}</td>
                 </tr>
@@ -142,9 +156,15 @@ export function FinishedProductionsPanel() {
           error={productions.save.error ?? productions.remove.error}
           submitLabel={canEdit ? t("save") : null}
           onSubmit={() => {
+            const user = currentUser.data;
+            if (user === undefined) {
+              throw new Error("Current user is not loaded.");
+            }
+            const created_by = isStaff ? Number(draft.created_by) : editing === null ? user.id : editing.created_by;
             const body: FinishedProductionBody = {
               date: draft.date,
               comment: draft.comment,
+              created_by,
               lines: draft.lines.map((line) =>
                 lineBody(
                   line,
@@ -169,6 +189,21 @@ export function FinishedProductionsPanel() {
                   onChange={(event) => setDraft({ ...draft, date: event.target.value })}
                 />
               </Field>
+              {isStaff ? (
+                <Field label={t("createdBy")}>
+                  <SearchSelect
+                    options={(producers.data ?? []).map((person) => ({
+                      value: String(person.id),
+                      label: person.name,
+                    }))}
+                    value={draft.created_by}
+                    onChange={(created_by) => setDraft({ ...draft, created_by })}
+                    placeholder={t("createdBy")}
+                    required={true}
+                    className=""
+                  />
+                </Field>
+              ) : null}
               <Field label={t("comment")}>
                 <Textarea
                   value={draft.comment}
