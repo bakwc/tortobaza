@@ -749,6 +749,7 @@
     "removeImage": "Remove image",
     "newTechCard": "New tech card",
     "recipeCost": "Cost",
+    "costPerUnit": "Cost for 1 {unit}",
     "costPerKg": "Cost for {weight} kg",
     "costPerPiece": "Cost for {count} pcs",
     "costRange": "{min} – {max}",

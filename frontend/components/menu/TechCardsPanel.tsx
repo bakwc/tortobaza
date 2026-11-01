@@ -104,6 +104,15 @@ function formatCostRange(
   return range({ min: formatMoney(min), max: formatMoney(max) });
 }
 
+function perPieceCost(value: string, count: number): string {
+  return String(Number(value) / count);
+}
+
+function displayedCost(value: string, kind: TechCard["kind"], basisQuantity: number | null): string {
+  if (kind === "weighted") return value;
+  return perPieceCost(value, basisQuantity as number);
+}
+
 function emptySection(): SectionDraft {
   return { key: newDraftKey(), name: "", method: "", lines: [] };
 }
@@ -297,7 +306,16 @@ function TechCardRow({
       ) : null}
       {isFinanceAdmin && row.cost_min !== undefined && row.cost_max !== undefined ? (
         <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatCostRange(row.cost_min, row.cost_max, (values) => t("costRange", values))}
+          {formatCostRange(
+            displayedCost(row.cost_min, row.kind, row.basis_quantity),
+            displayedCost(row.cost_max, row.kind, row.basis_quantity),
+            (values) => t("costRange", values),
+          )}
+          {row.kind === "piece" ? (
+            <span className="block text-[11px] font-normal text-[var(--muted-2)]">
+              {t("costPerPiece", { count: 1 })}
+            </span>
+          ) : null}
         </span>
       ) : null}
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
@@ -730,9 +748,11 @@ export function TechCardsPanel() {
                         label:
                           current.kind === "weighted"
                             ? t("costPerKg", { weight: current.basis_weight_kg ?? "" })
-                            : t("costPerPiece", { count: current.basis_quantity ?? 0 }),
-                        value: formatCostRange(current.cost_min, current.cost_max, (values) =>
-                          t("costRange", values),
+                            : t("costPerPiece", { count: 1 }),
+                        value: formatCostRange(
+                          displayedCost(current.cost_min, current.kind, current.basis_quantity),
+                          displayedCost(current.cost_max, current.kind, current.basis_quantity),
+                          (values) => t("costRange", values),
                         ),
                       },
                     ]
@@ -911,8 +931,13 @@ export function TechCardsPanel() {
             <p className="text-sm text-[var(--ink)]">
               {draft.kind === "weighted"
                 ? t("costPerKg", { weight: draft.basis_weight_kg })
-                : t("costPerPiece", { count: draft.basis_quantity })}
-              : {formatCostRange(current.cost_min, current.cost_max, (values) => t("costRange", values))}
+                : t("costPerPiece", { count: 1 })}
+              :{" "}
+              {formatCostRange(
+                displayedCost(current.cost_min, current.kind, current.basis_quantity),
+                displayedCost(current.cost_max, current.kind, current.basis_quantity),
+                (values) => t("costRange", values),
+              )}
             </p>
           ) : null}
 

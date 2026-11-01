@@ -749,6 +749,7 @@
     "removeImage": "Удалить картинку",
     "newTechCard": "Новая тех. карта",
     "recipeCost": "Себестоимость",
+    "costPerUnit": "Себестоимость на 1 {unit}",
     "costPerKg": "Себестоимость на {weight} кг",
     "costPerPiece": "Себестоимость на {count} шт",
     "costRange": "от {min} до {max}",

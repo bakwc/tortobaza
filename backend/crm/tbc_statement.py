@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from django.db import transaction
@@ -14,15 +14,15 @@ from crm.sms_statement_merge import STATEMENT_UPDATE_FIELDS, absorb_open_sms
 from crm.transaction_rules import assign_expense_types
 from tortobaza.finance_db import current_finance_db
 
-SHEET_NAME = "Операции"
+SHEET_NAMES = ("Операции", "Statement")
 BANK_NAME = "TBC"
 COLUMN_GROUPS = (
-    ("Дата",),
-    ("Описание операции", "Назначение"),
-    ("Дополнительная информация",),
-    ("Списание, GEL", "Расход, GEL"),
-    ("Поступление, GEL", "Приход, GEL"),
-    ("Остаток, GEL",),
+    ("Дата", "Date"),
+    ("Описание операции", "Назначение", "Description"),
+    ("Дополнительная информация", "Additional Information"),
+    ("Списание, GEL", "Расход, GEL", "Paid Out"),
+    ("Поступление, GEL", "Приход, GEL", "Paid In"),
+    ("Остаток, GEL", "Balance"),
 )
 DATE_COLUMN = COLUMN_GROUPS[0][0]
 OPERATION_COLUMN = COLUMN_GROUPS[1][0]
@@ -129,19 +129,15 @@ def import_tbc_statement(file) -> TbcStatementImportResult:
 
 def parse_tbc_statement(file) -> tuple[list[ParsedTbcRow], str]:
     workbook = load_workbook(file, data_only=False)
-    if SHEET_NAME not in workbook.sheetnames:
+    worksheet = next((workbook[name] for name in SHEET_NAMES if name in workbook.sheetnames), None)
+    if worksheet is None:
         return [], _("Sheet 'Операции' not found")
-    worksheet = workbook[SHEET_NAME]
     header_map: dict[str, int] | None = None
     rows: list[ParsedTbcRow] = []
     for excel_row in worksheet.iter_rows():
         values = [cell.value for cell in excel_row]
         if header_map is None:
-            names: dict[str, int] = {}
-            for index, value in enumerate(values):
-                if isinstance(value, str) and value.strip():
-                    names[value.strip()] = index
-            resolved = resolve_header(names)
+            resolved = resolve_header(header_names(values))
             if resolved is not None:
                 header_map, missing_columns = resolved
                 if missing_columns:
@@ -159,8 +155,20 @@ def parse_tbc_statement(file) -> tuple[list[ParsedTbcRow], str]:
     return rows, ""
 
 
+def header_names(values: list) -> dict[str, int]:
+    names: dict[str, int] = {}
+    for index, value in enumerate(values):
+        if isinstance(value, str) and value.strip():
+            names[value.strip()] = index
+            for line in value.splitlines():
+                line = line.strip()
+                if line:
+                    names[line] = index
+    return names
+
+
 def resolve_header(names: dict[str, int]) -> tuple[dict[str, int], list[str]] | None:
-    if DATE_COLUMN not in names:
+    if not any(name in names for name in COLUMN_GROUPS[0]):
         return None
     credit_names = COLUMN_GROUPS[4]
     if not any(name in names for name in credit_names):
@@ -181,10 +189,10 @@ def parse_tbc_row(
     header_map: dict[str, int],
     row_number: int,
 ) -> tuple[ParsedTbcRow | None, str]:
-    operation = text_value(column_value(values, header_map, OPERATION_COLUMN))
+    operation = single_line(text_value(column_value(values, header_map, OPERATION_COLUMN)))
     if operation == "":
         return None, _("Row %(row_number)s: missing operation description") % {"row_number": row_number}
-    additional = text_value(column_value(values, header_map, ADDITIONAL_COLUMN))
+    additional = single_line(text_value(column_value(values, header_map, ADDITIONAL_COLUMN)))
     if additional == "":
         return None, _("Row %(row_number)s: missing additional information") % {"row_number": row_number}
     parts = [part.strip() for part in additional.split(",")]
@@ -213,7 +221,7 @@ def parse_tbc_row(
             return None, _("Row %(row_number)s: amount sign does not match debit") % {"row_number": row_number}
         kind = FinancialTransaction.KIND_EXPENSE
         income_type = ""
-    parsed_date = parse_date(column_value(values, header_map, DATE_COLUMN))
+    parsed_date = parse_tbc_date(column_value(values, header_map, DATE_COLUMN))
     if parsed_date is None:
         return None, _("Row %(row_number)s: invalid date") % {"row_number": row_number}
     description = f"{operation} | {additional}"
@@ -239,3 +247,19 @@ def parse_tbc_row(
         ),
         "",
     )
+
+
+def single_line(value: str) -> str:
+    return value.replace("\r\n", " ").replace("\n", " ").replace("\r", " ").strip()
+
+
+def parse_tbc_date(value) -> date | None:
+    parsed = parse_date(value)
+    if parsed is not None:
+        return parsed
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if len(text) != 10 or text[2] != "/" or text[5] != "/":
+        return None
+    return datetime.strptime(text, "%d/%m/%Y").date()
