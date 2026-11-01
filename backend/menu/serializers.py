@@ -8,6 +8,7 @@ from catalog.responsive_urls import detail_image
 from menu.models import (
     UNIT_CHOICES,
     UNIT_GRAM,
+    UNIT_PIECE,
     Ingredient,
     IngredientCategory,
     Modifier,
@@ -65,7 +66,7 @@ class IngredientSerializer(serializers.ModelSerializer):
     grams_per_unit = serializers.DecimalField(
         max_digits=12,
         decimal_places=3,
-        min_value=Decimal("0.001"),
+        min_value=Decimal("0"),
         required=False,
         allow_null=True,
     )
@@ -96,9 +97,10 @@ class IngredientSerializer(serializers.ModelSerializer):
         if "avg_cost" in self.initial_data and not show_costs(self.context):
             raise serializers.ValidationError("Only finance admins can set unit costs.")
         unit = attrs["unit"] if "unit" in attrs else self.instance.unit
-        if unit == UNIT_GRAM:
+        grams = attrs.get("grams_per_unit")
+        if unit == UNIT_GRAM or (unit == UNIT_PIECE and (grams is None or grams == 0)):
             attrs["grams_per_unit"] = None
-        elif attrs.get("grams_per_unit") is None:
+        elif grams is None or grams == 0:
             raise serializers.ValidationError({"grams_per_unit": "Required."})
         return attrs
 

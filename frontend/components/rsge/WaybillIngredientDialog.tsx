@@ -10,6 +10,13 @@ import type { IngredientBody, MenuUnit } from "@/lib/api/types";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 
+function gramsPerUnitRequest(unit: MenuUnit, value: string): string | null {
+  if (unit === "g") return null;
+  const normalized = value.replace(",", ".").trim();
+  if (unit === "pcs" && (normalized === "" || Number(normalized) === 0)) return null;
+  return normalized;
+}
+
 export function WaybillIngredientDialog({
   name,
   unit,
@@ -39,7 +46,7 @@ export function WaybillIngredientDialog({
       is_active: true,
       avg_cost: null,
       cost_quantity: null,
-      grams_per_unit: draftUnit === "g" ? null : gramsPerUnit,
+      grams_per_unit: gramsPerUnitRequest(draftUnit, gramsPerUnit),
       sale_price: null,
     };
     Reflect.deleteProperty(body, "avg_cost");
@@ -102,7 +109,7 @@ export function WaybillIngredientDialog({
         {draftUnit === "g" ? null : (
           <Field label={stock(draftUnit === "ml" ? "density" : "pieceWeight")} className="sm:col-span-2">
             <Input
-              required
+              required={draftUnit === "ml"}
               inputMode="decimal"
               value={gramsPerUnit}
               onChange={(event) => setGramsPerUnit(event.target.value)}

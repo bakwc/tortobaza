@@ -80,6 +80,13 @@ function salePriceForQuantity(salePrice: string, costQuantity: string, unitLabel
   return `${formatMoney(salePrice)} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
 
+function gramsPerUnitRequest(unit: MenuUnit, value: string | null): string | null {
+  if (unit === "g" || value === null) return null;
+  const normalized = value.replace(",", ".").trim();
+  if (unit === "pcs" && (normalized === "" || Number(normalized) === 0)) return null;
+  return normalized;
+}
+
 function ingredientRequest(draft: IngredientBody): IngredientBody {
   const body: IngredientBody = {
     name: draft.name,
@@ -88,7 +95,7 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     is_active: draft.is_active,
     avg_cost: null,
     cost_quantity: null,
-    grams_per_unit: draft.unit === "g" || draft.grams_per_unit === null ? null : draft.grams_per_unit.replace(",", "."),
+    grams_per_unit: gramsPerUnitRequest(draft.unit, draft.grams_per_unit),
     sale_price: draft.sale_price === null ? null : draft.sale_price.replace(",", "."),
   };
   if (draft.avg_cost !== null && draft.cost_quantity !== null) {
@@ -627,7 +634,7 @@ export function IngredientsPanel() {
             {draft.unit === "g" ? null : (
               <Field label={t(draft.unit === "ml" ? "density" : "pieceWeight")}>
                 <Input
-                  required
+                  required={draft.unit === "ml"}
                   inputMode="decimal"
                   value={draft.grams_per_unit ?? ""}
                   onChange={(event) => setDraft({ ...draft, grams_per_unit: event.target.value })}
