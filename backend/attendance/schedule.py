@@ -92,6 +92,17 @@ def _hours(seconds: int) -> Decimal:
     return (Decimal(seconds) / Decimal(3600)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+def _clock(events: list[AttendanceEvent], event_type: str) -> str | None:
+    stamps = [event.timestamp for event in events if event.event_type == event_type]
+    if event_type == AttendanceEvent.ARRIVAL:
+        moment = min(stamps, default=None)
+    else:
+        moment = max(stamps, default=None)
+    if moment is None:
+        return None
+    return moment.astimezone(_TB).strftime("%H:%M")
+
+
 def _mismatch(day_type: str | None, hours: Decimal, day: date, today: date) -> bool:
     if hours > 0 and day_type != ScheduleDay.WORK:
         return True
@@ -121,13 +132,16 @@ def timesheet_grid(start: date, end: date, today: date) -> dict:
     totals: dict[int, Decimal] = {user.id: Decimal("0.00") for user in users}
     for user in users:
         for day in _daterange(start, end):
-            seconds = compute_day_worked_seconds(events_by_key.get((user.id, day), []), None)
+            day_events = events_by_key.get((user.id, day), [])
+            seconds = compute_day_worked_seconds(day_events, None)
             hours = _hours(seconds)
             day_type = types_by_key.get((user.id, day))
             days_by_user[user.id][day.isoformat()] = {
                 "day_type": day_type,
                 "hours": str(hours),
                 "mismatch": _mismatch(day_type, hours, day, today),
+                "arrival": _clock(day_events, AttendanceEvent.ARRIVAL),
+                "departure": _clock(day_events, AttendanceEvent.DEPARTURE),
             }
             totals[user.id] += hours
     employees = _employee_rows(users)

@@ -40,7 +40,7 @@ function scheduledType(days: Record<string, ScheduleDayType>, date: string): Sch
 
 export function SchedulePanel() {
   const t = useTranslations("employees");
-  const canEdit = useCan("edit_employees");
+  const canEdit = useCan("edit_schedule");
   const period = useFinancePeriod();
   const schedule = useSchedule(period.month);
   const save = useSaveSchedule(period.month);
@@ -126,6 +126,7 @@ export function SchedulePanel() {
                 end={grid.end}
                 employees={grid.employees}
                 highlightUserId={null}
+                columnClassName="w-20 min-w-20 max-w-20"
                 rowExtraHeader={t("pattern")}
                 renderCell={(employee, date) => {
                   const value = scheduledType(employee.days, date);

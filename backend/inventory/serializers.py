@@ -423,12 +423,6 @@ class InventoryCountLineInputSerializer(serializers.Serializer):
     )
     finished_good = serializers.PrimaryKeyRelatedField(queryset=FinishedGood.objects.all(), allow_null=True)
     actual_quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0"))
-    unit_cost = serializers.DecimalField(
-        max_digits=14,
-        decimal_places=6,
-        min_value=Decimal("0"),
-        allow_null=True,
-    )
 
     def validate(self, attrs):
         chosen = [attrs["ingredient"], attrs["semi_product"], attrs["finished_good"]]
@@ -461,8 +455,6 @@ class InventoryCountSerializer(serializers.ModelSerializer):
                 keys.append(("finished", line["finished_good"].pk))
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("Each item can be counted only once.")
-        if not show_costs(self.context) and any(line["unit_cost"] is not None for line in attrs["lines"]):
-            raise serializers.ValidationError("Only finance admins can set unit costs.")
         return attrs
 
     def to_representation(self, instance):
@@ -480,8 +472,6 @@ class InventoryCountSerializer(serializers.ModelSerializer):
             payload["expected_quantity"] = (
                 str(line.expected_quantity) if line.expected_quantity is not None else None
             )
-            if show_costs(self.context):
-                payload["unit_cost"] = str(line.unit_cost) if line.unit_cost is not None else None
             lines.append(payload)
         data["lines"] = lines
         return data

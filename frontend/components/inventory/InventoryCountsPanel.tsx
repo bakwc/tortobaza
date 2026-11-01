@@ -2,93 +2,300 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ComponentLinesEditor,
-  componentOptions,
-  componentRef,
-  componentValue,
-  finishedGoodOptions,
-  newDraftKey,
-  type ComponentLineDraft,
-} from "@/components/menu/ComponentLinesEditor";
+import { componentRef, componentValue } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
 import {
   useCloseInventoryCount,
-  useFinishedGoods,
+  useIngredientCategories,
   useIngredients,
   useInventoryCounts,
-  useSemiProducts,
   useStockLevels,
 } from "@/hooks/useStock";
-import type { InventoryCount } from "@/lib/api/types";
+import type { InventoryCount, MenuUnit, StockRow } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-type CountDraft = { date: string; comment: string; lines: ComponentLineDraft[] };
+type CountDraft = { date: string; comment: string; quantities: Record<string, string> };
+
+type CountItem = {
+  key: string;
+  name: string;
+  unit: MenuUnit;
+  group: string;
+  expected: string;
+};
+
+type CountGroup = { key: string; label: string; rows: CountItem[] };
 
 function draftFrom(row: InventoryCount | null): CountDraft {
   if (row === null) {
-    return { date: getTbilisiTodayIsoDate(), comment: "", lines: [] };
+    return { date: getTbilisiTodayIsoDate(), comment: "", quantities: {} };
   }
-  return {
-    date: row.date,
-    comment: row.comment,
-    lines: row.lines.map((line) => ({
-      key: newDraftKey(),
-      component: componentValue(line),
-      quantity: line.actual_quantity,
-      loss_percent: "0",
-      unit_cost: line.unit_cost ?? "",
-      quantity_unit: line.unit,
-    })),
-  };
+  const quantities: Record<string, string> = {};
+  for (const line of row.lines) {
+    quantities[componentValue(line)] = line.actual_quantity;
+  }
+  return { date: row.date, comment: row.comment, quantities };
 }
 
-function ClosedCountView({ count }: { count: InventoryCount }) {
+function filled(quantities: Record<string, string>, key: string): boolean {
+  return (quantities[key] ?? "").trim() !== "";
+}
+
+function parsedQuantity(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const number = Number(trimmed.replace(",", "."));
+  return Number.isFinite(number) ? number : null;
+}
+
+function differenceClass(difference: number): string {
+  if (difference < 0) return "text-[var(--danger)]";
+  if (difference > 0) return "text-emerald-700";
+  return "";
+}
+
+function itemGroup(
+  row: { ingredient: number | null; semi_product: number | null; finished_good: number | null },
+  categoryByIngredient: Map<number, number | null>,
+): string {
+  if (row.finished_good !== null) return "finished";
+  if (row.semi_product !== null) return "semi";
+  if (row.ingredient === null) return "none";
+  const category = categoryByIngredient.get(row.ingredient);
+  if (category === undefined || category === null) return "none";
+  return String(category);
+}
+
+function countGroups(
+  items: CountItem[],
+  categories: { id: number; name: string }[],
+  labels: { none: string; semi: string; finished: string },
+): CountGroup[] {
+  const byGroup = new Map<string, CountItem[]>();
+  for (const item of items) {
+    const rows = byGroup.get(item.group) ?? [];
+    rows.push(item);
+    byGroup.set(item.group, rows);
+  }
+  for (const rows of byGroup.values()) {
+    rows.sort((left, right) => left.name.localeCompare(right.name));
+  }
+  return [
+    ...categories.map((category) => ({ key: String(category.id), label: category.name })),
+    { key: "none", label: labels.none },
+    { key: "semi", label: labels.semi },
+    { key: "finished", label: labels.finished },
+  ]
+    .map((group) => ({ ...group, rows: byGroup.get(group.key) ?? [] }))
+    .filter((group) => group.rows.length > 0);
+}
+
+function listedRow(row: StockRow, quantities: Record<string, string>): boolean {
+  return row.is_active || Number(row.quantity) !== 0 || filled(quantities, componentValue(row));
+}
+
+function ClosedCountView({
+  count,
+  categories,
+  categoryByIngredient,
+}: {
+  count: InventoryCount;
+  categories: { id: number; name: string }[];
+  categoryByIngredient: Map<number, number | null>;
+}) {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const items: CountItem[] = count.lines.map((line) => ({
+    key: String(line.id),
+    name: line.name,
+    unit: line.unit,
+    group: itemGroup(line, categoryByIngredient),
+    expected: line.expected_quantity ?? "0",
+  }));
+  const actualByKey = new Map(count.lines.map((line) => [String(line.id), line.actual_quantity]));
+  const groups = countGroups(items, categories, {
+    none: t("noCategory"),
+    semi: t("semiProduct"),
+    finished: t("finishedGood"),
+  });
   return (
-    <table className="w-full text-sm">
-      <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-        <tr>
-          <th className="py-2">{t("name")}</th>
-          <th className="py-2 text-right">{t("expected")}</th>
-          <th className="py-2 text-right">{t("actual")}</th>
-          <th className="py-2 text-right">{t("difference")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {count.lines.map((line) => {
-          const difference = Number(line.actual_quantity) - Number(line.expected_quantity ?? "0");
-          return (
-            <tr key={line.id} className="border-t border-[var(--line)]">
-              <td className="py-2">{line.name}</td>
-              <td className="py-2 text-right">
-                {formatQuantity(line.expected_quantity ?? "0")} {units(line.unit)}
-              </td>
-              <td className="py-2 text-right">
-                {formatQuantity(line.actual_quantity)} {units(line.unit)}
-              </td>
-              <td
-                className={cn(
-                  "py-2 text-right",
-                  difference < 0 ? "text-[var(--danger)]" : difference > 0 ? "text-emerald-700" : "",
-                )}
-              >
-                {formatQuantity(String(difference))} {units(line.unit)}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    <div className="grid gap-4">
+      {groups.map((group) => (
+        <section key={group.key} className="overflow-hidden rounded-3xl border border-[var(--line)]">
+          <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+            <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">{group.label}</h3>
+            <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+              {group.rows.length}
+            </span>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
+              <tr>
+                <th className="px-4 py-2">{t("name")}</th>
+                <th className="px-4 py-2 text-right">{t("expected")}</th>
+                <th className="px-4 py-2 text-right">{t("actual")}</th>
+                <th className="px-4 py-2 text-right">{t("difference")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.rows.map((row) => {
+                const actual = actualByKey.get(row.key) ?? "0";
+                const difference = Number(actual) - Number(row.expected);
+                return (
+                  <tr key={row.key} className="border-t border-[var(--line)]">
+                    <td className="px-4 py-2">{row.name}</td>
+                    <td className="px-4 py-2 text-right">
+                      {formatQuantity(row.expected)} {units(row.unit)}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {formatQuantity(actual)} {units(row.unit)}
+                    </td>
+                    <td className={cn("px-4 py-2 text-right", differenceClass(difference))}>
+                      {formatQuantity(String(difference))} {units(row.unit)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function CountLines({
+  items,
+  categories,
+  quantities,
+  onQuantities,
+}: {
+  items: CountItem[];
+  categories: { id: number; name: string }[];
+  quantities: Record<string, string>;
+  onQuantities: (quantities: Record<string, string>) => void;
+}) {
+  const t = useTranslations("stock");
+  const units = useTranslations("stock.units");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const allGroups = countGroups(items, categories, {
+    none: t("noCategory"),
+    semi: t("semiProduct"),
+    finished: t("finishedGood"),
+  });
+  const query = search.trim().toLowerCase();
+  const groups = allGroups
+    .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
+    .map((group) => ({
+      key: group.key,
+      label: group.label,
+      total: group.rows.length,
+      counted: group.rows.filter((row) => filled(quantities, row.key)).length,
+      rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)),
+    }))
+    .filter((group) => group.rows.length > 0);
+  const setQuantity = (key: string, quantity: string) => onQuantities({ ...quantities, [key]: quantity });
+
+  return (
+    <div className="grid gap-4">
+      <p className="text-xs text-[var(--muted-2)]">{t("countLegend")}</p>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
+        <Input
+          value={search}
+          placeholder={t("searchTechCards")}
+          onChange={(event) => setSearch(event.target.value)}
+          className="pl-11"
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: "all", label: t("allCategories"), count: items.length },
+          ...allGroups.map((group) => ({ key: group.key, label: group.label, count: group.rows.length })),
+        ].map((chip) => (
+          <button
+            key={chip.key}
+            type="button"
+            onClick={() => setCategoryFilter(chip.key)}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+              categoryFilter === chip.key
+                ? "bg-[var(--brand)] text-white"
+                : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+            )}
+          >
+            {chip.label}
+            <span
+              className={cn(
+                "rounded-full px-1.5 text-[11px]",
+                categoryFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
+              )}
+            >
+              {chip.count}
+            </span>
+          </button>
+        ))}
+      </div>
+      {groups.length === 0 ? (
+        <p className="py-6 text-center text-sm text-[var(--muted-2)]">{t("nothingFound")}</p>
+      ) : (
+        groups.map((group) => (
+          <section key={group.key} className="overflow-hidden rounded-3xl border border-[var(--line)]">
+            <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+              <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
+                {group.label}
+              </h3>
+              <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+                {group.counted}/{group.total}
+              </span>
+            </div>
+            <div className="divide-y divide-[var(--line)]">
+                {group.rows.map((row) => {
+                  const value = quantities[row.key] ?? "";
+                  const actual = parsedQuantity(value);
+                  const difference = actual === null ? null : actual - Number(row.expected);
+                  return (
+                    <div key={row.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-[var(--ink)]">{row.name}</p>
+                        <p className="text-xs text-[var(--muted-2)]">
+                          {t("expected")}: {formatQuantity(row.expected)} {units(row.unit)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setQuantity(row.key, "0")}>
+                          0
+                        </Button>
+                        <Input
+                          inputMode="decimal"
+                          placeholder={t("notCounted")}
+                          value={value}
+                          onChange={(event) => setQuantity(row.key, event.target.value)}
+                          className="w-32"
+                        />
+                        {difference === null ? null : (
+                          <span className={cn("w-24 text-right text-sm", differenceClass(difference))}>
+                            {formatQuantity(String(difference))}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </section>
+        ))
+      )}
+    </div>
   );
 }
 
@@ -97,24 +304,22 @@ export function InventoryCountsPanel() {
   const counts = useInventoryCounts();
   const closeCount = useCloseInventoryCount();
   const ingredients = useIngredients();
-  const semiProducts = useSemiProducts();
-  const finishedGoods = useFinishedGoods();
+  const categoryQuery = useIngredientCategories();
   const [editing, setEditing] = useState<InventoryCount | null>(null);
   const [draft, setDraft] = useState<CountDraft | null>(null);
   const stock = useStockLevels(draft?.date ?? null);
-  const canSeeCosts = useCan("view_costs");
   const canEdit = useCan("edit_inventory");
-
-  const options = [
-    ...componentOptions(
-      ingredients.list.data ?? [],
-      semiProducts.list.data ?? [],
-      "produced",
-      t("ingredient"),
-      t("semiProduct"),
-    ),
-    ...finishedGoodOptions(finishedGoods.data ?? [], t("finishedGood")),
-  ];
+  const categoryRows = categoryQuery.list.data ?? [];
+  const categoryByIngredient = new Map((ingredients.list.data ?? []).map((row) => [row.id, row.category]));
+  const items: CountItem[] = (stock.data ?? [])
+    .filter((row) => draft !== null && listedRow(row, draft.quantities))
+    .map((row) => ({
+      key: componentValue(row),
+      name: row.name,
+      unit: row.unit,
+      group: itemGroup(row, categoryByIngredient),
+      expected: row.quantity,
+    }));
 
   const open = (row: InventoryCount | null) => {
     counts.save.reset();
@@ -125,34 +330,15 @@ export function InventoryCountsPanel() {
   };
   const close = () => setDraft(null);
 
-  const fillFromStock = () => {
-    if (!draft) return;
-    const present = new Set(draft.lines.map((line) => line.component));
-    const extra: ComponentLineDraft[] = [];
-    for (const row of stock.data ?? []) {
-      if (!row.is_active) continue;
-      const value = componentValue(row);
-      if (present.has(value)) continue;
-      extra.push({
-        key: newDraftKey(),
-        component: value,
-        quantity: "",
-        loss_percent: "0",
-        unit_cost: "",
-        quantity_unit: row.unit,
-      });
-    }
-    setDraft({ ...draft, lines: [...draft.lines, ...extra] });
-  };
-
   const body = (value: CountDraft) => ({
     date: value.date,
     comment: value.comment,
-    lines: value.lines.map((line) => ({
-      ...componentRef(line.component),
-      actual_quantity: line.quantity.replace(",", "."),
-      unit_cost: line.unit_cost.trim() === "" ? null : line.unit_cost.replace(",", "."),
-    })),
+    lines: Object.entries(value.quantities)
+      .filter(([, quantity]) => quantity.trim() !== "")
+      .map(([component, quantity]) => ({
+        ...componentRef(component),
+        actual_quantity: quantity.replace(",", ".").trim(),
+      })),
   });
 
   const isClosed = editing?.status === "closed";
@@ -163,10 +349,10 @@ export function InventoryCountsPanel() {
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.inventoryCounts")}</CardTitle>
           {canEdit ? (
-          <Button type="button" size="sm" onClick={() => open(null)}>
-            <Plus className="mr-1 h-4 w-4" />
-            {t("add")}
-          </Button>
+            <Button type="button" size="sm" onClick={() => open(null)}>
+              <Plus className="mr-1 h-4 w-4" />
+              {t("add")}
+            </Button>
           ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("inventoryCountHint")}</p>
@@ -217,7 +403,7 @@ export function InventoryCountsPanel() {
           below={null}
         >
           {isClosed && editing ? (
-            <ClosedCountView count={editing} />
+            <ClosedCountView count={editing} categories={categoryRows} categoryByIngredient={categoryByIngredient} />
           ) : (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -229,11 +415,6 @@ export function InventoryCountsPanel() {
                     onChange={(event) => setDraft({ ...draft, date: event.target.value })}
                   />
                 </Field>
-                <div className="flex items-end">
-                  <Button type="button" variant="outline" onClick={fillFromStock} disabled={!stock.data}>
-                    {t("fillFromStock")}
-                  </Button>
-                </div>
                 <Field label={t("comment")} className="sm:col-span-2">
                   <Textarea
                     value={draft.comment}
@@ -241,15 +422,17 @@ export function InventoryCountsPanel() {
                   />
                 </Field>
               </div>
-              <CardTitle>{t("actualQuantities")}</CardTitle>
-              <ComponentLinesEditor
-                lines={draft.lines}
-                onChange={(lines) => setDraft({ ...draft, lines })}
-                options={options}
-                extraColumn={canSeeCosts ? "unitCost" : null}
-                quantityLabel={t("actual")}
-                chooseQuantityUnit={false}
-              />
+              <QueryState
+                isLoading={stock.isLoading || ingredients.list.isLoading || categoryQuery.list.isLoading}
+                isError={stock.isError || ingredients.list.isError || categoryQuery.list.isError}
+              >
+                <CountLines
+                  items={items}
+                  categories={categoryRows}
+                  quantities={draft.quantities}
+                  onQuantities={(quantities) => setDraft({ ...draft, quantities })}
+                />
+              </QueryState>
               {canEdit && editing ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">
                   <p className="flex-1 text-sm text-[var(--ink)]">{t("closeCountHint")}</p>

@@ -30,7 +30,11 @@ class ScheduleApiTests(TestCase):
         )
         self.finance = User.objects.create_user(username="finance", password="password")
         UserProfile.objects.create(user=self.finance, internal_name="Босс")
-        grant(self.finance, "edit_employees")
+        grant(self.finance, "edit_schedule")
+        self.employees_editor = User.objects.create_user(username="employees", password="password")
+        grant(self.employees_editor, "edit_employees")
+        self.schedule_reader = User.objects.create_user(username="reader", password="password")
+        grant(self.schedule_reader, "view_schedule")
 
     def test_worker_reads_schedule_and_cannot_change_it(self):
         self.client.force_authenticate(user=self.worker)
@@ -38,6 +42,54 @@ class ScheduleApiTests(TestCase):
         self.assertEqual(read.status_code, 200)
         self.assertEqual(read.json()["employees"][0]["name"], "Настя")
 
+        denied = self.client.put(
+            "/api/attendance/schedule/",
+            {"cells": [{"user": self.worker.id, "date": "2026-11-01", "day_type": "work"}]},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, 403)
+        fill = self.client.post(
+            "/api/attendance/schedule/fill/",
+            {
+                "user": self.worker.id,
+                "start": "2026-11-01",
+                "end": "2026-11-02",
+                "cycle_start": "2026-11-01",
+                "pattern": ["work", "off"],
+            },
+            format="json",
+        )
+        self.assertEqual(fill.status_code, 403)
+        timesheet = self.client.get("/api/attendance/timesheet/?month=2026-11")
+        self.assertEqual(timesheet.status_code, 403)
+
+    def test_employees_edit_does_not_open_schedule(self):
+        self.client.force_authenticate(user=self.employees_editor)
+        denied = self.client.put(
+            "/api/attendance/schedule/",
+            {"cells": [{"user": self.worker.id, "date": "2026-11-01", "day_type": "work"}]},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, 403)
+        fill = self.client.post(
+            "/api/attendance/schedule/fill/",
+            {
+                "user": self.worker.id,
+                "start": "2026-11-01",
+                "end": "2026-11-02",
+                "cycle_start": "2026-11-01",
+                "pattern": ["work", "off"],
+            },
+            format="json",
+        )
+        self.assertEqual(fill.status_code, 403)
+        timesheet = self.client.get("/api/attendance/timesheet/?month=2026-11")
+        self.assertEqual(timesheet.status_code, 403)
+
+    def test_view_schedule_cannot_write_or_read_timesheet(self):
+        self.client.force_authenticate(user=self.schedule_reader)
+        read = self.client.get("/api/attendance/schedule/?month=2026-11")
+        self.assertEqual(read.status_code, 200)
         denied = self.client.put(
             "/api/attendance/schedule/",
             {"cells": [{"user": self.worker.id, "date": "2026-11-01", "day_type": "work"}]},
@@ -153,11 +205,17 @@ class ScheduleApiTests(TestCase):
         employee = response.json()["employees"][0]
         self.assertEqual(employee["total_hours"], "16.00")
         self.assertEqual(employee["days"]["2026-11-01"]["hours"], "0.00")
+        self.assertIsNone(employee["days"]["2026-11-01"]["arrival"])
+        self.assertIsNone(employee["days"]["2026-11-01"]["departure"])
         self.assertTrue(employee["days"]["2026-11-01"]["mismatch"])
         self.assertEqual(employee["days"]["2026-11-02"]["hours"], "8.00")
+        self.assertEqual(employee["days"]["2026-11-02"]["arrival"], "09:00")
+        self.assertEqual(employee["days"]["2026-11-02"]["departure"], "17:00")
         self.assertEqual(employee["days"]["2026-11-02"]["day_type"], "off")
         self.assertTrue(employee["days"]["2026-11-02"]["mismatch"])
         self.assertEqual(employee["days"]["2026-11-03"]["hours"], "8.00")
+        self.assertEqual(employee["days"]["2026-11-03"]["arrival"], "09:00")
+        self.assertEqual(employee["days"]["2026-11-03"]["departure"], "17:00")
         self.assertFalse(employee["days"]["2026-11-03"]["mismatch"])
         self.assertFalse(employee["days"]["2026-11-04"]["mismatch"])
         self.assertIsNone(employee["days"]["2026-11-04"]["day_type"])

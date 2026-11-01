@@ -69,6 +69,7 @@ function TeamSchedule({ userId }: { userId: number }) {
             end={grid.end}
             employees={grid.employees}
             highlightUserId={userId}
+            columnClassName="w-20 min-w-20 max-w-20"
             rowExtraHeader={null}
             renderRowExtra={null}
             renderCell={(employee, date) => (

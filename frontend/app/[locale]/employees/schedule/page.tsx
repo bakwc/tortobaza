@@ -18,12 +18,12 @@ export default function EmployeesSchedulePage() {
 }
 
 function EmployeesScheduleContent() {
-  const canViewEmployees = useCan("view_employees");
+  const canEditSchedule = useCan("edit_schedule");
   return (
     <div className="grid gap-6">
       <EmployeesMonthBar />
       <SchedulePanel />
-      {canViewEmployees ? <TimesheetPanel /> : null}
+      {canEditSchedule ? <TimesheetPanel /> : null}
     </div>
   );
 }

@@ -7,6 +7,15 @@ import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useTimesheet } from "@/hooks/useSchedule";
 import { cn } from "@/lib/utils";
 
+const TIMESHEET_COLUMN = "w-28 min-w-28 max-w-28";
+
+function clockSpan(arrival: string | null, departure: string | null): string | null {
+  if (arrival !== null && departure !== null) return `${arrival} - ${departure}`;
+  if (arrival !== null) return `${arrival} -`;
+  if (departure !== null) return `- ${departure}`;
+  return null;
+}
+
 export function TimesheetPanel() {
   const t = useTranslations("employees");
   const period = useFinancePeriod();
@@ -27,21 +36,24 @@ export function TimesheetPanel() {
                 end={grid.end}
                 employees={grid.employees}
                 highlightUserId={null}
+                columnClassName={TIMESHEET_COLUMN}
                 rowExtraHeader={t("hours")}
                 renderCell={(employee, date) => {
                   const cell = employee.days[date];
                   const hours = cell?.hours ?? "0.00";
                   const value = cell?.day_type ?? null;
                   const label = hours === "0.00" ? shortDayType(value, t) : String(Number(hours));
+                  const span = clockSpan(cell?.arrival ?? null, cell?.departure ?? null);
                   return (
                     <div
                       className={cn(
-                        "flex h-8 min-w-8 items-center justify-center text-[10px] font-semibold tabular-nums leading-none",
+                        "flex min-h-8 w-full flex-col items-center justify-center gap-0.5 px-0.5 py-1 text-[10px] font-semibold tabular-nums leading-none",
                         dayTypeClass(value),
                         cell?.mismatch && "text-rose-700 ring-1 ring-inset ring-rose-600",
                       )}
                     >
-                      {label}
+                      <span>{label}</span>
+                      {span !== null ? <span className="font-medium">{span}</span> : null}
                     </div>
                   );
                 }}

@@ -320,6 +320,8 @@ export const TimesheetCellSchema = z.object({
   day_type: ScheduleDayTypeSchema.nullable(),
   hours: z.string(),
   mismatch: z.boolean(),
+  arrival: z.string().nullable(),
+  departure: z.string().nullable(),
 });
 
 export const TimesheetEmployeeSchema = z.object({
@@ -1700,7 +1702,6 @@ export const InventoryCountSchema = z.object({
       unit: MenuUnitSchema,
       actual_quantity: z.string(),
       expected_quantity: z.string().nullable(),
-      unit_cost: z.string().nullable().optional(),
     }),
   ),
 });
@@ -2003,5 +2004,5 @@ export type WriteOffBody = {
 export type InventoryCountBody = {
   date: string;
   comment: string;
-  lines: (StockComponentBody & { actual_quantity: string; unit_cost: string | null })[];
+  lines: (StockComponentBody & { actual_quantity: string })[];
 };

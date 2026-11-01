@@ -68,6 +68,8 @@ class SectionAccess(models.Model):
             ("edit_finance", _("Finance: edit")),
             ("view_employees", _("Employees: view")),
             ("edit_employees", _("Employees: edit")),
+            ("view_schedule", _("Schedule: view")),
+            ("edit_schedule", _("Schedule: edit timesheet and schedule")),
             ("view_rsge", _("RSGE: view")),
             ("edit_rsge", _("RSGE: edit")),
             ("view_analytics", _("Analytics: view")),

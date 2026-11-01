@@ -165,6 +165,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
   end,
   employees,
   highlightUserId,
+  columnClassName,
   renderCell,
   renderRowExtra,
   rowExtraHeader,
@@ -173,6 +174,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
   end: string;
   employees: T[];
   highlightUserId: number | null;
+  columnClassName: string;
   renderCell: (employee: T, date: string) => ReactNode;
   renderRowExtra: ((employee: T) => ReactNode) | null;
   rowExtraHeader: string | null;
@@ -188,7 +190,7 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
         <colgroup>
           <col className="w-12" />
           {employees.map((employee) => (
-            <col key={employee.id} className="w-20" />
+            <col key={employee.id} className={columnClassName} />
           ))}
         </colgroup>
         <thead>
@@ -200,7 +202,8 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
                 <th
                   key={employee.id}
                   className={cn(
-                    "w-20 min-w-20 max-w-20 px-1 py-2 text-center font-medium normal-case",
+                    "px-1 py-2 text-center font-medium normal-case",
+                    columnClassName,
                     highlighted ? "bg-[var(--brand)]/10" : "bg-white",
                   )}
                 >

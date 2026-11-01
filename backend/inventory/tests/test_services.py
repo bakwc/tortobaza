@@ -184,7 +184,6 @@ class InventoryCountTests(TestCase):
             count=count,
             ingredient=menu.cream,
             actual_quantity=Decimal("500"),
-            unit_cost=Decimal("0.04"),
         )
         close_inventory_count(count)
         count.refresh_from_db()
@@ -197,7 +196,7 @@ class InventoryCountTests(TestCase):
         menu.flour.refresh_from_db()
         menu.cream.refresh_from_db()
         self.assertEqual(menu.flour.avg_cost, Decimal("0.01"))
-        self.assertEqual(menu.cream.avg_cost, Decimal("0.04"))
+        self.assertEqual(menu.cream.avg_cost, Decimal("0.02"))
 
     def test_count_uses_stock_on_its_date(self):
         menu = MenuFixture()

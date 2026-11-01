@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { SectionShell, type SectionTab } from "@/components/menu/SectionShell";
 import { Spinner } from "@/components/ui/spinner";
+import { useCan } from "@/hooks/useAuth";
 import { useFinancePeriod } from "@/hooks/useFinancePeriod";
 
 export type EmployeesSection = "employees" | "groups" | "schedule" | "salaries";
@@ -25,14 +26,25 @@ export function EmployeesShell({ section, children }: { section: EmployeesSectio
 function EmployeesShellContent({ section, children }: { section: EmployeesSection; children: ReactNode }) {
   const t = useTranslations("crm");
   const period = useFinancePeriod();
+  const canViewEmployees = useCan("view_employees");
+  const canViewSchedule = useCan("view_schedule");
   const tabs: SectionTab[] = [
-    { key: "employees", href: "/employees", label: t("employeesSection") },
-    { key: "groups", href: "/employees/groups", label: t("groupsSection") },
-    { key: "schedule", href: `/employees/schedule?${period.query}`, label: t("scheduleAndTimesheet") },
-    { key: "salaries", href: `/employees/salaries?${period.query}`, label: t("salaries") },
+    ...(canViewEmployees
+      ? [
+          { key: "employees", href: "/employees", label: t("employeesSection") },
+          { key: "groups", href: "/employees/groups", label: t("groupsSection") },
+        ]
+      : []),
+    ...(canViewSchedule
+      ? [{ key: "schedule", href: `/employees/schedule?${period.query}`, label: t("scheduleAndTimesheet") }]
+      : []),
+    ...(canViewEmployees
+      ? [{ key: "salaries", href: `/employees/salaries?${period.query}`, label: t("salaries") }]
+      : []),
   ];
+  const permission = section === "schedule" ? "view_schedule" : "view_employees";
   return (
-    <SectionShell active={section} permission="view_employees" tabs={tabs}>
+    <SectionShell active={section} permission={permission} tabs={tabs}>
       {children}
     </SectionShell>
   );

@@ -115,7 +115,7 @@ class WriteOffAdmin(admin.ModelAdmin):
 class InventoryCountLineInline(admin.TabularInline):
     model = InventoryCountLine
     extra = 0
-    fields = ["ingredient", "semi_product", "finished_good", "expected_quantity", "actual_quantity", "unit_cost"]
+    fields = ["ingredient", "semi_product", "finished_good", "expected_quantity", "actual_quantity"]
     readonly_fields = fields
 
     def has_add_permission(self, request, obj=None):

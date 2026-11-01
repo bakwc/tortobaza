@@ -37,6 +37,7 @@ export function CrmOverflowMenu() {
   const canViewAnalytics = useCan("view_analytics");
   const canViewFinance = useCan("view_finance");
   const canViewEmployees = useCan("view_employees");
+  const canViewSchedule = useCan("view_schedule");
   const canViewRsge = useCan("view_rsge");
   const canViewMenu = useCan("view_menu");
   const canViewInventory = useCan("view_inventory");
@@ -97,11 +98,11 @@ export function CrmOverflowMenu() {
           },
         ]
       : []),
-    ...(canViewEmployees
+    ...(canViewEmployees || canViewSchedule
       ? [
           {
             key: "employees",
-            href: "/employees",
+            href: canViewEmployees ? "/employees" : "/employees/schedule",
             label: t("employeesSection"),
             icon: Users,
             active: isUnder(pathname, "/employees"),

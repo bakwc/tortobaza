@@ -432,13 +432,6 @@ class InventoryCountLine(StockComponent):
         decimal_places=3,
         verbose_name=_("Actual quantity"),
     )
-    unit_cost = models.DecimalField(
-        max_digits=14,
-        decimal_places=6,
-        null=True,
-        blank=True,
-        verbose_name=_("Unit cost"),
-    )
     expected_quantity = models.DecimalField(
         max_digits=12,
         decimal_places=3,

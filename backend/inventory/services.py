@@ -109,7 +109,7 @@ def recompute_costs() -> None:
     averages: dict[tuple[str, int], Decimal] = {}
     production_costs: dict[tuple[str, int], Decimal] = {}
     changed: list[StockMovement] = []
-    for movement in StockMovement.objects.select_related("inventory_count_line").order_by("date", "id"):
+    for movement in StockMovement.objects.order_by("date", "id"):
         key = _key(movement.ingredient_id, movement.semi_product_id, movement.finished_good_id)
         quantity = quantities.get(key, _ZERO)
         average = averages[key] if key in averages else stored_costs[key]
@@ -118,12 +118,10 @@ def recompute_costs() -> None:
             incoming_cost = movement.unit_cost
         elif movement.kind == StockMovement.KIND_PRODUCTION_IN:
             incoming_cost = _quantize_cost(production_costs.get(cost_key, _ZERO) / movement.quantity)
-        elif movement.kind == StockMovement.KIND_INVENTORY and movement.quantity > 0:
-            incoming_cost = movement.inventory_count_line.unit_cost
         else:
             incoming_cost = None
-        if incoming_cost is not None or (movement.kind == StockMovement.KIND_INVENTORY and movement.quantity > 0):
-            unit_cost = average if incoming_cost is None else incoming_cost
+        if incoming_cost is not None:
+            unit_cost = incoming_cost
             if quantity <= 0:
                 average = unit_cost
             else:
