@@ -162,3 +162,37 @@ class CrmSalariesApiTests(TestCase):
         self.assertEqual(data["hourly_money"], "80.00")
         self.assertEqual(data["monthly_hours"], "0.00")
         self.assertEqual(data["monthly_money"], "0.00")
+
+    def test_detail_requires_employees_permission(self):
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            f"/api/crm/salaries/{self.worker.id}/",
+            {"start": "2026-06-01", "end": "2026-06-14"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_detail_half_month_days(self):
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 6, 10), 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, date(2026, 6, 10), 17, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(
+            f"/api/crm/salaries/{self.worker.id}/",
+            {"start": "2026-06-01", "end": "2026-06-14"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["name"], "Бека")
+        self.assertEqual(data["position"], "Кондитер")
+        self.assertEqual(data["hourly_rate"], "10.00")
+        self.assertEqual(data["monthly"], False)
+        self.assertEqual(len(data["rows"]), 14)
+        day = next(row for row in data["rows"] if row["date"] == "2026-06-10")
+        self.assertEqual(day["hours"], "8.00")
+        self.assertEqual(day["money"], "80.00")
+        self.assertIsNotNone(day["arrival"])
+        self.assertIsNotNone(day["departure"])
+        idle = next(row for row in data["rows"] if row["date"] == "2026-06-01")
+        self.assertIsNone(idle["arrival"])
+        self.assertIsNone(idle["departure"])
+        self.assertEqual(data["total_hours"], "8.00")
+        self.assertEqual(data["total_money"], "80.00")

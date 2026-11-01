@@ -559,6 +559,26 @@ export const CrmSalariesSchema = z.object({
   monthly_money: z.string(),
 });
 
+export const CrmSalaryDetailRowSchema = z.object({
+  date: z.string(),
+  arrival: z.string().nullable(),
+  departure: z.string().nullable(),
+  hours: z.string(),
+  money: z.string(),
+});
+
+export const CrmSalaryDetailSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.string(),
+  hourly_rate: z.string(),
+  monthly_rate: z.string(),
+  monthly: z.boolean(),
+  rows: z.array(CrmSalaryDetailRowSchema),
+  total_hours: z.string(),
+  total_money: z.string(),
+});
+
 export const AnalyticsTotalsSchema = z.object({
   orders: z.number(),
   revenue: z.string(),
@@ -1116,6 +1136,7 @@ export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type CrmSalaryEmployee = z.infer<typeof CrmSalaryEmployeeSchema>;
 export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
 export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
+export type CrmSalaryDetail = z.infer<typeof CrmSalaryDetailSchema>;
 export type AnalyticsOverview = z.infer<typeof AnalyticsOverviewSchema>;
 export type AnalyticsOverviewPayment = z.infer<typeof AnalyticsOverviewPaymentSchema>;
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;

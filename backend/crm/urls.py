@@ -8,6 +8,7 @@ from crm.views import (
     AnalyticsProductsView,
     CrmExpensesView,
     CrmSalariesView,
+    CrmSalaryDetailView,
     CrmOrderClientMapView,
     CrmOrderClientView,
     CrmOrderDetailView,
@@ -35,6 +36,7 @@ urlpatterns = [
     path("crm/analytics/employees/", AnalyticsEmployeesView.as_view(), name="crm-analytics-employees"),
     path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
     path("crm/salaries/", CrmSalariesView.as_view(), name="crm-salaries"),
+    path("crm/salaries/<int:user_id>/", CrmSalaryDetailView.as_view(), name="crm-salary-detail"),
     path(
         "crm/finance/accounts/",
         FinanceAccountsView.as_view(),

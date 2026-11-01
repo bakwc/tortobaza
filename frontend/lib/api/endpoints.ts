@@ -17,6 +17,7 @@ import {
   AnalyticsOverviewSchema,
   AnalyticsProductsSchema,
   CrmSalariesSchema,
+  CrmSalaryDetailSchema,
   AccessGroupSchema,
   EmployeeSchema,
   SectionPermissionSchema,
@@ -72,6 +73,7 @@ import {
   type AnalyticsOverview,
   type AnalyticsProducts,
   type CrmSalaries,
+  type CrmSalaryDetail,
   type AccessGroup,
   type AccessGroupBody,
   type Employee,
@@ -663,6 +665,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(CrmSalariesSchema, raw);
+    },
+
+    async getCrmSalaryDetail(userId: number, start: string, end: string): Promise<CrmSalaryDetail> {
+      const raw = await fetcher<unknown>(`/api/crm/salaries/${userId}/`, {
+        searchParams: { start, end },
+      });
+      return parse(CrmSalaryDetailSchema, raw);
     },
 
     async getAnalyticsOverview(): Promise<AnalyticsOverview> {

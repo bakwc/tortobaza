@@ -132,6 +132,7 @@ def compute_salary(
 
     return {
         "hourly_rate": hourly_rate,
+        "monthly_rate": monthly_rate,
         "monthly": monthly_rate > 0,
         "position": position,
         "rows": rows,

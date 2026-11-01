@@ -6,6 +6,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { EmployeesShell } from "@/components/employees/EmployeesShell";
+import { SalaryEmployeeMenu } from "@/components/employees/SalaryEmployeeMenu";
 import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useCrmSalaries } from "@/hooks/useCrmOrders";
 import type { CrmSalaryPeriod } from "@/lib/api/types";
@@ -137,7 +138,8 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                   <th className="pb-3 pr-4 font-medium">{t("salaryEmployee")}</th>
                   <th className="pb-3 pr-4 font-medium">{employeesT("position")}</th>
                   <th className="pb-3 pr-4 font-medium">{t("salaryHours")}</th>
-                  <th className="pb-3 font-medium">{t("salaryEarned")}</th>
+                  <th className="pb-3 pr-4 font-medium">{t("salaryEarned")}</th>
+                  <th className="pb-3 font-medium" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
@@ -146,7 +148,15 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                     <td className="py-3 pr-4 text-[var(--ink)]">{employee.name}</td>
                     <td className="py-3 pr-4 text-[var(--ink)]">{employee.position}</td>
                     <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{employee.hours}</td>
-                    <td className="py-3 tabular-nums font-medium text-[var(--ink)]">{formatAed(employee.money)}</td>
+                    <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{formatAed(employee.money)}</td>
+                    <td className="py-3 text-right">
+                      <SalaryEmployeeMenu
+                        userId={employee.id}
+                        name={employee.name}
+                        start={period.start}
+                        end={period.end}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -158,14 +168,16 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                 {t("salaryHourlyTotal")}
               </td>
               <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.hourly_hours}</td>
-              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.hourly_money)}</td>
+              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.hourly_money)}</td>
+              <td className="pt-3" />
             </tr>
             <tr>
               <td className="pt-3 pr-4 font-semibold text-[var(--ink)]" colSpan={2}>
                 {t("salaryMonthlyTotal")}
               </td>
               <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{period.monthly_hours}</td>
-              <td className="pt-3 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.monthly_money)}</td>
+              <td className="pt-3 pr-4 tabular-nums font-semibold text-[var(--ink)]">{formatAed(period.monthly_money)}</td>
+              <td className="pt-3" />
             </tr>
           </tfoot>
         </table>

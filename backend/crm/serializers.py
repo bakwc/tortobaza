@@ -731,6 +731,36 @@ class CrmSalariesQuerySerializer(serializers.Serializer):
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
 
 
+class CrmSalaryDetailQuerySerializer(serializers.Serializer):
+    start = serializers.DateField()
+    end = serializers.DateField()
+
+    def validate(self, attrs):
+        if attrs["start"] > attrs["end"]:
+            raise serializers.ValidationError("start must be on or before end.")
+        return attrs
+
+
+class CrmSalaryDetailRowSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    arrival = serializers.DateTimeField(allow_null=True)
+    departure = serializers.DateTimeField(allow_null=True)
+    hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    money = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class CrmSalaryDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    position = serializers.CharField()
+    hourly_rate = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly_rate = serializers.DecimalField(max_digits=10, decimal_places=2)
+    monthly = serializers.BooleanField()
+    rows = CrmSalaryDetailRowSerializer(many=True)
+    total_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    total_money = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
 class AnalyticsMonthQuerySerializer(serializers.Serializer):
     month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$", required=False)
 

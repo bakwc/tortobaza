@@ -11,6 +11,7 @@ import type {
   CrmExpensesDay,
   CrmExpensesMonth,
   CrmSalaries,
+  CrmSalaryDetail,
   CrmMapOrderRange,
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
@@ -115,9 +116,18 @@ export function useCrmSalaries(month: string) {
   return useQuery<CrmSalaries>({
     queryKey: crmSalariesQueryKey(month),
     queryFn: () => api.getCrmSalaries(month),
+    enabled: /^\d{4}-(0[1-9]|1[0-2])$/.test(month),
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useCrmSalaryDetail(userId: number, start: string, end: string, enabled: boolean) {
+  return useQuery<CrmSalaryDetail>({
+    queryKey: ["crm-salary-detail", userId, start, end] as const,
+    queryFn: () => api.getCrmSalaryDetail(userId, start, end),
+    enabled,
   });
 }
 

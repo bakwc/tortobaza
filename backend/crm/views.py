@@ -22,8 +22,9 @@ from rest_framework.permissions import (
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import chef_identity
 from accounts.permissions import CanView, SectionPermission, can_edit, can_see_costs, can_view
-from attendance.salary import compute_all_salaries, compute_month_salaries
+from attendance.salary import compute_all_salaries, compute_month_salaries, compute_salary
 from catalog.responsive_urls import detail_image
 from crm.analytics import client_order_counts
 from crm.analytics import clients as analytics_clients
@@ -66,6 +67,8 @@ from crm.serializers import (
     CrmOrderWriteSerializer,
     CrmSalariesQuerySerializer,
     CrmSalariesSerializer,
+    CrmSalaryDetailQuerySerializer,
+    CrmSalaryDetailSerializer,
     ExchangeRatesSerializer,
     FinanceTransactionAccountDetailSerializer,
     FinanceTransactionSearchQuerySerializer,
@@ -543,6 +546,34 @@ class CrmSalariesView(APIView):
             month_num = today.month
         result = compute_month_salaries(year, month_num)
         return Response(CrmSalariesSerializer(result).data)
+
+
+class CrmSalaryDetailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("employees")]
+
+    def get(self, request, user_id: int):
+        query_serializer = CrmSalaryDetailQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        start = query_serializer.validated_data["start"]
+        end = query_serializer.validated_data["end"]
+        user = get_object_or_404(User, pk=user_id)
+        result = compute_salary(user, start, end, None)
+        return Response(
+            CrmSalaryDetailSerializer(
+                {
+                    "id": user.id,
+                    "name": chef_identity(user)[0],
+                    "position": result["position"],
+                    "hourly_rate": result["hourly_rate"],
+                    "monthly_rate": result["monthly_rate"],
+                    "monthly": result["monthly"],
+                    "rows": result["rows"],
+                    "total_hours": result["total_hours"],
+                    "total_money": result["total_money"],
+                }
+            ).data
+        )
 
 
 class FinanceTransactionsView(APIView):
