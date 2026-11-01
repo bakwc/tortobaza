@@ -89,6 +89,7 @@ class CrmSalariesApiTests(TestCase):
                             {
                                 "id": self.worker.id,
                                 "name": "Бека",
+                                "full_name": "Бека",
                                 "hours": "8.00",
                                 "money": "80.00",
                                 "position": "Кондитер",
@@ -106,6 +107,7 @@ class CrmSalariesApiTests(TestCase):
                             {
                                 "id": self.other.id,
                                 "name": "Анна",
+                                "full_name": "Анна",
                                 "hours": "4.00",
                                 "money": "80.00",
                                 "position": "Курьер",
@@ -113,6 +115,7 @@ class CrmSalariesApiTests(TestCase):
                             {
                                 "id": self.worker.id,
                                 "name": "Бека",
+                                "full_name": "Бека",
                                 "hours": "4.00",
                                 "money": "40.00",
                                 "position": "Кондитер",
@@ -143,8 +146,33 @@ class CrmSalariesApiTests(TestCase):
         self.assertEqual(data["periods"][0]["monthly_money"], "0.00")
         self.assertEqual(data["periods"][1]["end"], "2026-02-28")
         self.assertEqual(data["periods"][1]["employees"][0]["name"], "Бека")
+        self.assertEqual(data["periods"][1]["employees"][0]["full_name"], "Бека")
         self.assertEqual(data["hourly_money"], "80.00")
         self.assertEqual(data["monthly_money"], "0.00")
+
+    def test_payslip_name_uses_first_and_last_name(self):
+        self.worker.first_name = "Бека"
+        self.worker.last_name = "Беридзе"
+        self.worker.save(update_fields=["first_name", "last_name"])
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 6, 10), 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, date(2026, 6, 10), 17, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/salaries/", {"month": "2026-06"})
+        self.assertEqual(response.status_code, 200)
+        employee = response.json()["periods"][0]["employees"][0]
+        self.assertEqual(employee["name"], "Бека")
+        self.assertEqual(employee["full_name"], "Бека Беридзе")
+
+    def test_payslip_name_uses_only_filled_part(self):
+        self.worker.last_name = "Беридзе"
+        self.worker.save(update_fields=["last_name"])
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 6, 10), 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, date(2026, 6, 10), 17, 0)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get("/api/crm/salaries/", {"month": "2026-06"})
+        self.assertEqual(response.status_code, 200)
+        employee = response.json()["periods"][0]["employees"][0]
+        self.assertEqual(employee["full_name"], "Беридзе")
 
     def test_default_current_tbilisi_month(self):
         today = timezone.now().astimezone(_TB).date()

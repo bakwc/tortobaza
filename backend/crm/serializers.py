@@ -704,6 +704,7 @@ class CrmSalaryEmployeeSerializer(serializers.Serializer):
 
 class CrmSalaryPeriodEmployeeSerializer(CrmSalaryEmployeeSerializer):
     position = serializers.CharField()
+    full_name = serializers.CharField()
 
 
 class CrmExpensesBreakdownSerializer(serializers.Serializer):

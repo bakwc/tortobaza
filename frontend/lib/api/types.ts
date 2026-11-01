@@ -517,6 +517,7 @@ export const CrmSalaryEmployeeSchema = z.object({
 
 export const CrmSalaryPeriodEmployeeSchema = CrmSalaryEmployeeSchema.extend({
   position: z.string(),
+  full_name: z.string(),
 });
 
 export const CrmExpensesBreakdownSchema = z.object({

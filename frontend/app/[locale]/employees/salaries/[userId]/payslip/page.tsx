@@ -43,7 +43,7 @@ function PayslipBody({ userId }: { userId: number }) {
 
   return (
     <PayslipDocument
-      name={employee.name}
+      name={employee.full_name}
       position={employee.position}
       start={period.start}
       end={period.end}

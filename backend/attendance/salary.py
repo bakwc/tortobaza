@@ -224,6 +224,14 @@ def _period_totals(employees: list[dict]) -> tuple[Decimal, Decimal, Decimal, De
     return hourly_hours, hourly_money, monthly_hours, monthly_money
 
 
+def _payslip_name(user, nickname: str) -> str:
+    parts = [user.first_name.strip(), user.last_name.strip()]
+    legal = " ".join(part for part in parts if part)
+    if legal:
+        return legal
+    return nickname
+
+
 def compute_month_salaries(year: int, month: int) -> dict:
     last_day = monthrange(year, month)[1]
     start_date = date(year, month, 1)
@@ -236,6 +244,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
     for user in users:
         result = compute_salary(user, start_date, end_date, None)
         name = chef_identity(user)[0]
+        full_name = _payslip_name(user, name)
         first_hours = Decimal("0.00")
         first_money = Decimal("0.00")
         second_hours = Decimal("0.00")
@@ -252,6 +261,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                 {
                     "id": user.id,
                     "name": name,
+                    "full_name": full_name,
                     "position": result["position"],
                     "hours": first_hours,
                     "money": first_money,
@@ -263,6 +273,7 @@ def compute_month_salaries(year: int, month: int) -> dict:
                 {
                     "id": user.id,
                     "name": name,
+                    "full_name": full_name,
                     "position": result["position"],
                     "hours": second_hours,
                     "money": second_money,
