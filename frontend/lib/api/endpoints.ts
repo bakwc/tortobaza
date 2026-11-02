@@ -442,6 +442,11 @@ export function endpoints(fetcher: Fetcher) {
       return parse(InventoryCountSchema, raw);
     },
 
+    async recountInventoryCount(id: number): Promise<InventoryCount> {
+      const raw = await fetcher<unknown>(`/api/inventory/inventory-counts/${id}/recount/`, { method: "POST" });
+      return parse(InventoryCountSchema, raw);
+    },
+
     async getCategories(): Promise<Category[]> {
       const raw = await fetcher<unknown>("/api/categories/");
       return parse(z.array(CategorySchema), raw);

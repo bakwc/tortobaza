@@ -825,6 +825,8 @@
     "clearCount": "Not counted",
     "countLegend": "An empty field leaves the stock unchanged. 0 means it ran out.",
     "closeCount": "Close count",
+    "recountCount": "Recalculate",
+    "recountCountHint": "Expected quantities are recalculated from the current movements on the inventory date.",
     "units": {
       "g": "g",
       "ml": "ml",

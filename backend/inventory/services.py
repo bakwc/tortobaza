@@ -335,10 +335,8 @@ def apply_write_off(write_off: WriteOff) -> None:
     drop_orphan_finished_goods()
 
 
-@transaction.atomic
-def close_inventory_count(count: InventoryCount) -> None:
-    if count.status == InventoryCount.STATUS_CLOSED:
-        raise ValidationError(_("Inventory count is already closed."))
+def _write_count_adjustments(count: InventoryCount) -> None:
+    StockMovement.objects.filter(inventory_count_line__count=count).delete()
     levels = stock_levels(count.date, count)
     for line in count.lines.select_related("ingredient", "semi_product", "finished_good"):
         component = line.component
@@ -361,9 +359,25 @@ def close_inventory_count(count: InventoryCount) -> None:
                 inventory_count_line=line,
                 **_component_fields(component),
             )
+
+
+@transaction.atomic
+def close_inventory_count(count: InventoryCount) -> None:
+    if count.status == InventoryCount.STATUS_CLOSED:
+        raise ValidationError(_("Inventory count is already closed."))
+    _write_count_adjustments(count)
     count.status = InventoryCount.STATUS_CLOSED
     count.closed_at = timezone.now()
     count.save(update_fields=["status", "closed_at"])
+    recompute_costs()
+    drop_orphan_finished_goods()
+
+
+@transaction.atomic
+def recount_inventory_count(count: InventoryCount) -> None:
+    if count.status != InventoryCount.STATUS_CLOSED:
+        raise ValidationError(_("Inventory count is not closed."))
+    _write_count_adjustments(count)
     recompute_costs()
     drop_orphan_finished_goods()
 

@@ -5,6 +5,7 @@ from inventory.views import (
     FinishedProductionDetailView,
     FinishedProductionListView,
     InventoryCountCloseView,
+    InventoryCountRecountView,
     InventoryCountDetailView,
     InventoryCountListView,
     MovementListView,
@@ -46,4 +47,5 @@ urlpatterns = [
     path("inventory/inventory-counts/", InventoryCountListView.as_view()),
     path("inventory/inventory-counts/<int:pk>/", InventoryCountDetailView.as_view()),
     path("inventory/inventory-counts/<int:pk>/close/", InventoryCountCloseView.as_view()),
+    path("inventory/inventory-counts/<int:pk>/recount/", InventoryCountRecountView.as_view()),
 ]

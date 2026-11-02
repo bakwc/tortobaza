@@ -28,6 +28,7 @@ from inventory.services import (
     apply_supply,
     apply_write_off,
     close_inventory_count,
+    recount_inventory_count,
     delete_document,
     ensure_finished_good,
     stock_levels,
@@ -210,6 +211,31 @@ class InventoryCountTests(TestCase):
         line.refresh_from_db()
         self.assertEqual(line.expected_quantity, Decimal("1000"))
         self.assertEqual(stock(menu.flour), Decimal("1500"))
+
+    def test_recount_rebuilds_adjustment_after_an_earlier_movement(self):
+        menu = MenuFixture()
+        supply(menu.flour, "1000", "10.00", date(2026, 10, 1))
+        count = InventoryCount.objects.create(date=date(2026, 10, 5))
+        line = InventoryCountLine.objects.create(count=count, ingredient=menu.flour, actual_quantity=Decimal("900"))
+        close_inventory_count(count)
+        StockMovement.objects.create(
+            date=date(2026, 10, 4),
+            kind=StockMovement.KIND_WRITE_OFF,
+            quantity=Decimal("-200"),
+            unit_cost=Decimal("0"),
+            ingredient=menu.flour,
+        )
+        recount_inventory_count(count)
+        line.refresh_from_db()
+        self.assertEqual(line.expected_quantity, Decimal("800"))
+        self.assertEqual(stock(menu.flour), Decimal("900"))
+
+    def test_recount_rejects_a_draft(self):
+        menu = MenuFixture()
+        count = InventoryCount.objects.create(date=date(2026, 10, 5))
+        InventoryCountLine.objects.create(count=count, ingredient=menu.flour, actual_quantity=Decimal("900"))
+        with self.assertRaises(ValidationError):
+            recount_inventory_count(count)
 
 
 def produce_finished(tech_card, weight, modifiers, quantity: int, on: date):

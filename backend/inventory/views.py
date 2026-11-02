@@ -54,6 +54,7 @@ from inventory.services import (
     apply_supply,
     apply_write_off,
     close_inventory_count,
+    recount_inventory_count,
     delete_document,
     drop_orphan_finished_goods,
     stock_levels,
@@ -366,6 +367,22 @@ class InventoryCountCloseView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         close_inventory_count(count)
+        context = serializer_context(request)
+        return Response(InventoryCountSerializer(count, context=context).data)
+
+
+class InventoryCountRecountView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("inventory")]
+
+    def post(self, request, pk: int):
+        count = get_object_or_404(InventoryCount, pk=pk)
+        if count.status != InventoryCount.STATUS_CLOSED:
+            return Response(
+                {"detail": "Inventory count is not closed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        recount_inventory_count(count)
         context = serializer_context(request)
         return Response(InventoryCountSerializer(count, context=context).data)
 

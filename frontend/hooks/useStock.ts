@@ -152,6 +152,14 @@ export function useCloseInventoryCount() {
   });
 }
 
+export function useRecountInventoryCount() {
+  const invalidate = useInvalidateStock();
+  return useMutation({
+    mutationFn: (id: number) => api.recountInventoryCount(id),
+    onSuccess: invalidate,
+  });
+}
+
 export function useStockLevels(date: string | null) {
   return useQuery({
     queryKey: ["inventory", "stock", date],

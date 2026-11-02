@@ -16,6 +16,7 @@ import {
   useIngredientCategories,
   useIngredients,
   useInventoryCounts,
+  useRecountInventoryCount,
   useStockLevels,
 } from "@/hooks/useStock";
 import type { InventoryCount, MenuUnit, StockRow } from "@/lib/api/types";
@@ -304,6 +305,7 @@ export function InventoryCountsPanel() {
   const t = useTranslations("stock");
   const counts = useInventoryCounts();
   const closeCount = useCloseInventoryCount();
+  const recountCount = useRecountInventoryCount();
   const ingredients = useIngredients();
   const categoryQuery = useIngredientCategories();
   const [editing, setEditing] = useState<InventoryCount | null>(null);
@@ -326,6 +328,7 @@ export function InventoryCountsPanel() {
     counts.save.reset();
     counts.remove.reset();
     closeCount.reset();
+    recountCount.reset();
     setEditing(row);
     setDraft(draftFrom(row));
   };
@@ -343,6 +346,16 @@ export function InventoryCountsPanel() {
   });
 
   const isClosed = editing?.status === "closed";
+
+  const submitClose = () => {
+    if (editing === null || draft === null) return;
+    counts.save.mutate(
+      { id: editing.id, body: body(draft) },
+      {
+        onSuccess: (saved) => closeCount.mutate(saved.id, { onSuccess: (closed) => setEditing(closed) }),
+      },
+    );
+  };
 
   return (
     <div className="grid gap-6">
@@ -390,7 +403,7 @@ export function InventoryCountsPanel() {
           onCancel={null}
           title={editing === null ? t("newInventoryCount") : `${t("inventory.inventoryCounts")} · ${editing.date}`}
           pending={counts.save.isPending}
-          error={counts.save.error ?? counts.remove.error ?? closeCount.error}
+          error={counts.save.error ?? counts.remove.error ?? closeCount.error ?? recountCount.error}
           submitLabel={canEdit && !isClosed ? t("saveDraft") : null}
           onSubmit={() =>
             counts.save.mutate(
@@ -404,14 +417,43 @@ export function InventoryCountsPanel() {
           below={null}
         >
           {isClosed && editing ? (
-            <ClosedCountView count={editing} categories={categoryRows} categoryByIngredient={categoryByIngredient} />
+            <>
+              {canEdit ? (
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">
+                  <p className="flex-1 text-sm text-[var(--ink)]">{t("recountCountHint")}</p>
+                  <Button
+                    type="button"
+                    disabled={recountCount.isPending}
+                    onClick={() => recountCount.mutate(editing.id, { onSuccess: (saved) => setEditing(saved) })}
+                  >
+                    {recountCount.isPending ? <Spinner className="h-4 w-4" /> : t("recountCount")}
+                  </Button>
+                </div>
+              ) : null}
+              <ClosedCountView count={editing} categories={categoryRows} categoryByIngredient={categoryByIngredient} />
+            </>
           ) : (
             <>
               {canEdit ? (
-                <div className="flex justify-end">
+                <div className="flex flex-wrap justify-end gap-2">
+                  {editing !== null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={counts.remove.isPending}
+                      onClick={() => counts.remove.mutate(editing.id, { onSuccess: close })}
+                    >
+                      {counts.remove.isPending ? <Spinner className="h-4 w-4" /> : t("delete")}
+                    </Button>
+                  ) : null}
                   <Button type="submit" disabled={counts.save.isPending}>
                     {counts.save.isPending ? <Spinner className="h-4 w-4" /> : t("saveDraft")}
                   </Button>
+                  {editing !== null ? (
+                    <Button type="button" disabled={closeCount.isPending || counts.save.isPending} onClick={submitClose}>
+                      {closeCount.isPending ? <Spinner className="h-4 w-4" /> : t("closeCount")}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
@@ -444,19 +486,7 @@ export function InventoryCountsPanel() {
               {canEdit && editing ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">
                   <p className="flex-1 text-sm text-[var(--ink)]">{t("closeCountHint")}</p>
-                  <Button
-                    type="button"
-                    disabled={closeCount.isPending || counts.save.isPending}
-                    onClick={() =>
-                      counts.save.mutate(
-                        { id: editing.id, body: body(draft) },
-                        {
-                          onSuccess: (saved) =>
-                            closeCount.mutate(saved.id, { onSuccess: (closed) => setEditing(closed) }),
-                        },
-                      )
-                    }
-                  >
+                  <Button type="button" disabled={closeCount.isPending || counts.save.isPending} onClick={submitClose}>
                     {closeCount.isPending ? <Spinner className="h-4 w-4" /> : t("closeCount")}
                   </Button>
                 </div>
