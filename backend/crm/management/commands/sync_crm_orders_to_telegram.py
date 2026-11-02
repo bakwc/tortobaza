@@ -212,7 +212,7 @@ class Command(BaseCommand):
         translate_waybills()
         sync_invoices()
         translate_invoices()
+        import_card_sms()
         sync_rsge_document_links()
         notify_courier_departures(timezone.now())
         backup_database(now)
-        import_card_sms()

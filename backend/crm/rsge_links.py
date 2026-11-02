@@ -1,6 +1,6 @@
 import re
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.utils import timezone
@@ -10,6 +10,7 @@ from crm.models import FinancialTransaction
 from rsge.models import Invoice, InvoiceLine, Waybill
 
 WINDOW_DAYS = 4
+REBIND_DAYS = 2
 AMOUNT_TOLERANCE = Decimal("0.01")
 _CENT = Decimal("0.01")
 _IBAN = re.compile(r"GE\d{2}[A-Z0-9]{18}")
@@ -56,6 +57,7 @@ def sync_rsge_document_links() -> None:
     _link_waybills_to_invoices()
     _link_expenses_to_waybills()
     _link_expenses_to_invoices()
+    _rebind_recent_waybills()
     _propagate_invoices()
 
 
@@ -184,6 +186,93 @@ def _link_expenses_to_waybills() -> None:
         for transaction in group:
             pairs.append((transaction, waybill))
     _save_transaction_waybills(pairs)
+
+
+def _rebind_recent_waybills() -> None:
+    start = timezone.localdate() - timedelta(days=REBIND_DAYS)
+    waybills = [
+        waybill
+        for waybill in Waybill.objects.filter(financial_transactions__isnull=False)
+        .distinct()
+        .prefetch_related("financial_transactions", "invoices")
+        if _local_day(waybill.create_date) >= start
+    ]
+    free = _unlinked_expenses("waybills")
+    proposals: list[tuple[Waybill, FinancialTransaction, FinancialTransaction]] = []
+    for waybill in waybills:
+        linked = list(waybill.financial_transactions.all())
+        if len(linked) != 1:
+            continue
+        current = linked[0]
+        current_key = _waybill_link_key(waybill, current)
+        if current_key is None:
+            continue
+        scored: list[tuple[tuple[int, int, int], FinancialTransaction]] = []
+        for transaction in free:
+            key = _waybill_link_key(waybill, transaction)
+            if key is None or key <= current_key:
+                continue
+            scored.append((key, transaction))
+        if not scored:
+            continue
+        best = max(key for key, _transaction in scored)
+        winners = [transaction for key, transaction in scored if key == best]
+        if len(winners) != 1:
+            continue
+        proposals.append((waybill, current, winners[0]))
+    by_winner: dict[int, list[tuple[Waybill, FinancialTransaction, FinancialTransaction]]] = {}
+    for waybill, current, winner in proposals:
+        by_winner.setdefault(winner.pk, []).append((waybill, current, winner))
+    for group in by_winner.values():
+        if len(group) != 1:
+            continue
+        waybill, current, winner = group[0]
+        _move_waybill_link(waybill, current, winner)
+
+
+def _waybill_link_key(
+    waybill: Waybill,
+    transaction: FinancialTransaction,
+) -> tuple[int, int, int] | None:
+    distance = _waybill_distance(waybill, transaction)
+    if distance > WINDOW_DAYS:
+        return None
+    if _waybill_iban_match(waybill, transaction):
+        rank = 3
+    elif _waybill_name_match(waybill, transaction):
+        rank = 2
+    elif _waybill_amount_match(waybill, transaction):
+        rank = 1
+    else:
+        return None
+    exact = 1 if _same_tx_amount(waybill.full_amount, transaction.amount) else 0
+    return (rank, exact, -distance)
+
+
+def _move_waybill_link(
+    waybill: Waybill,
+    current: FinancialTransaction,
+    winner: FinancialTransaction,
+) -> None:
+    through = FinancialTransaction.waybills.through
+    through.objects.filter(financialtransaction_id=current.pk, waybill_id=waybill.pk).delete()
+    through.objects.create(financialtransaction_id=winner.pk, waybill_id=waybill.pk)
+    invoice_ids = [invoice.pk for invoice in waybill.invoices.all()]
+    if not invoice_ids:
+        return
+    held = set(
+        Invoice.objects.filter(
+            pk__in=invoice_ids,
+            waybills__financial_transactions=current,
+        ).values_list("pk", flat=True)
+    )
+    drop = [pk for pk in invoice_ids if pk not in held]
+    if not drop:
+        return
+    FinancialTransaction.invoices.through.objects.filter(
+        financialtransaction_id=current.pk,
+        invoice_id__in=drop,
+    ).delete()
 
 
 def _link_expenses_to_invoices() -> None:

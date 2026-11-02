@@ -1,10 +1,11 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.core.management import call_command
 from django.test import TestCase
+from django.utils import timezone
 
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.rsge_links import sync_rsge_document_links
@@ -493,6 +494,79 @@ class SyncRsgeDocumentLinksTests(TestCase):
 
         self.assertEqual(transaction.waybills.count(), 0)
         self.assertEqual(waybill.financial_transactions.count(), 0)
+
+    def test_rebinds_recent_waybill_to_exact_payment(self):
+        account = _account()
+        today = timezone.localdate()
+        waybill = _waybill(1, "1054", today, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        salary = _expense(account, today - timedelta(days=1), Decimal("99.50"), "Котик Настя", "")
+
+        sync_rsge_document_links()
+
+        self.assertEqual(salary.waybills.get().pk, waybill.pk)
+
+        payment = _expense(account, today, Decimal("100.00"), "SWEET CHILL", "")
+        sync_rsge_document_links()
+
+        self.assertEqual(payment.waybills.get().pk, waybill.pk)
+        self.assertEqual(salary.waybills.count(), 0)
+
+    def test_recent_link_stays_when_challenger_is_not_better(self):
+        account = _account()
+        today = timezone.localdate()
+        waybill = _waybill(1, "100", today, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        payment = _expense(account, today, Decimal("100.00"), "SWEET CHILL", "")
+
+        sync_rsge_document_links()
+
+        _expense(account, today - timedelta(days=1), Decimal("99.50"), "Котик Настя", "")
+        _expense(account, today, Decimal("100.00"), "OTHER SHOP", "")
+        sync_rsge_document_links()
+
+        self.assertEqual(waybill.financial_transactions.get().pk, payment.pk)
+
+    def test_manual_recent_link_stays(self):
+        account = _account()
+        today = timezone.localdate()
+        waybill = _waybill(1, "100", today, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        manual = _expense(account, today, Decimal("10.00"), "someone else", "")
+        exact = _expense(account, today, Decimal("100.00"), "SWEET CHILL", "")
+        manual.waybills.add(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(manual.waybills.get().pk, waybill.pk)
+        self.assertEqual(exact.waybills.count(), 0)
+
+    def test_two_equal_challengers_do_not_rebind(self):
+        account = _account()
+        today = timezone.localdate()
+        waybill = _waybill(1, "100", today, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        salary = _expense(account, today - timedelta(days=1), Decimal("99.50"), "Котик Настя", "")
+
+        sync_rsge_document_links()
+
+        first = _expense(account, today, Decimal("100.00"), "SWEET CHILL", "")
+        second = _expense(account, today, Decimal("100.00"), "OTHER SHOP", "")
+        sync_rsge_document_links()
+
+        self.assertEqual(salary.waybills.get().pk, waybill.pk)
+        self.assertEqual(first.waybills.count(), 0)
+        self.assertEqual(second.waybills.count(), 0)
+
+    def test_waybill_older_than_two_days_stays_linked(self):
+        account = _account()
+        day = timezone.localdate() - timedelta(days=3)
+        waybill = _waybill(1, "100", day, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        salary = _expense(account, day - timedelta(days=1), Decimal("99.50"), "Котик Настя", "")
+
+        sync_rsge_document_links()
+
+        exact = _expense(account, day, Decimal("100.00"), "SWEET CHILL", "")
+        sync_rsge_document_links()
+
+        self.assertEqual(salary.waybills.get().pk, waybill.pk)
+        self.assertEqual(exact.waybills.count(), 0)
 
     def test_second_run_keeps_existing_link(self):
         account = _account()
