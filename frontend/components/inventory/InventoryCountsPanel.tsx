@@ -56,6 +56,12 @@ function parsedQuantity(value: string): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
+function differenceClass(difference: number): string {
+  if (difference < 0) return "text-[var(--danger)]";
+  if (difference > 0) return "text-emerald-700";
+  return "";
+}
+
 function itemGroup(
   row: { ingredient: number | null; semi_product: number | null; finished_good: number | null },
   categoryByIngredient: Map<number, number | null>,
@@ -401,6 +407,13 @@ export function InventoryCountsPanel() {
             <ClosedCountView count={editing} categories={categoryRows} categoryByIngredient={categoryByIngredient} />
           ) : (
             <>
+              {canEdit ? (
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={counts.save.isPending}>
+                    {counts.save.isPending ? <Spinner className="h-4 w-4" /> : t("saveDraft")}
+                  </Button>
+                </div>
+              ) : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label={t("date")}>
                   <Input
