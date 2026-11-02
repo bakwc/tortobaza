@@ -1037,11 +1037,14 @@ function CrmOrderCard({
                               aria-label={t("items.needsReview")}
                             />
                           ) : null}
-                          <span>
+                          <span className="min-w-0 flex-1">
                             {prefix}
                             {title}
                             {weight}
                           </span>
+                          {item.price !== null ? (
+                            <span className="shrink-0 tabular-nums">{formatAed(item.price)}</span>
+                          ) : null}
                         </p>
                         {modifiers !== "" ? (
                           <p className="text-xs text-[var(--muted-2)]">{modifiers}</p>
