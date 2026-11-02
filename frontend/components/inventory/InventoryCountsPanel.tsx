@@ -56,12 +56,6 @@ function parsedQuantity(value: string): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
-function differenceClass(difference: number): string {
-  if (difference < 0) return "text-[var(--danger)]";
-  if (difference > 0) return "text-emerald-700";
-  return "";
-}
-
 function itemGroup(
   row: { ingredient: number | null; semi_product: number | null; finished_good: number | null },
   categoryByIngredient: Map<number, number | null>,
@@ -261,8 +255,6 @@ function CountLines({
             <div className="divide-y divide-[var(--line)]">
                 {group.rows.map((row) => {
                   const value = quantities[row.key] ?? "";
-                  const actual = parsedQuantity(value);
-                  const difference = actual === null ? null : actual - Number(row.expected);
                   return (
                     <div key={row.key} className="flex flex-wrap items-center gap-3 px-4 py-3">
                       <div className="min-w-0 flex-1">
@@ -289,11 +281,6 @@ function CountLines({
                           >
                             <X className="h-4 w-4" />
                           </Button>
-                        )}
-                        {difference === null ? null : (
-                          <span className={cn("w-24 text-right text-sm", differenceClass(difference))}>
-                            {formatQuantity(String(difference))}
-                          </span>
                         )}
                       </div>
                     </div>

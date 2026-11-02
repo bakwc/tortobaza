@@ -387,7 +387,6 @@ def stock_component_payload(line) -> dict:
         "finished_good": line.finished_good_id,
         "name": component.name,
         "unit": component.unit,
-        "quantity": str(line.quantity),
     }
 
 
@@ -410,7 +409,7 @@ class WriteOffSerializer(serializers.ModelSerializer):
         data["reason_name"] = instance.reason.name
         data["created_by_name"] = user_name(instance.created_by)
         data["lines"] = [
-            stock_component_payload(line)
+            {**stock_component_payload(line), "quantity": str(line.quantity)}
             for line in instance.lines.select_related(
                 "ingredient",
                 "semi_product",
@@ -497,7 +496,6 @@ class InventoryCountSerializer(serializers.ModelSerializer):
             "finished_good__tech_card",
         ).prefetch_related("finished_good__modifiers__modifier"):
             payload = stock_component_payload(line)
-            payload.pop("quantity")
             payload["actual_quantity"] = str(line.actual_quantity)
             payload["expected_quantity"] = (
                 str(line.expected_quantity) if line.expected_quantity is not None else None
