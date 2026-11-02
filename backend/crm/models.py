@@ -162,7 +162,7 @@ class CrmOrder(models.Model):
         verbose_name=_("Delivered by"),
     )
     weight = models.CharField(max_length=50, verbose_name=_("Weight"))
-    filling = models.CharField(max_length=255, verbose_name=_("Filling"))
+    filling = models.CharField(max_length=255, blank=True, verbose_name=_("Filling"))
     description = models.TextField(blank=True, verbose_name=_("Description"))
     internal_description = models.TextField(blank=True, verbose_name=_("Internal description"))
     cake_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name=_("Cake price"))

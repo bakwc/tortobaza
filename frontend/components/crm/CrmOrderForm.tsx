@@ -538,7 +538,6 @@ export function CrmOrderForm(
               {t("filling")}
             </span>
             <Input
-              required
               value={fields.filling}
               onChange={(event) => {
                 setFillingTouched(true);
