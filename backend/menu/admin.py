@@ -6,6 +6,7 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductCategory,
     SemiProductImage,
     SemiProductLine,
     TechCard,
@@ -32,6 +33,13 @@ class IngredientAdmin(admin.ModelAdmin):
     search_fields = ["name"]
 
 
+@admin.register(SemiProductCategory)
+class SemiProductCategoryAdmin(admin.ModelAdmin):
+    list_display = ["name", "position"]
+    list_editable = ["position"]
+    search_fields = ["name"]
+
+
 class SemiProductImageInline(admin.TabularInline):
     model = SemiProductImage
     extra = 0
@@ -48,8 +56,8 @@ class SemiProductLineInline(admin.TabularInline):
 
 @admin.register(SemiProduct)
 class SemiProductAdmin(admin.ModelAdmin):
-    list_display = ["name", "unit", "yield_quantity", "is_produced", "avg_cost", "is_active"]
-    list_filter = ["is_produced", "is_active"]
+    list_display = ["name", "category", "unit", "yield_quantity", "is_produced", "avg_cost", "is_active"]
+    list_filter = ["category", "is_produced", "is_active"]
     search_fields = ["name"]
     readonly_fields = ["avg_cost"]
     inlines = [SemiProductImageInline, SemiProductLineInline]

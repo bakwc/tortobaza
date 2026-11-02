@@ -675,6 +675,7 @@
     "categories": "Категории ингредиентов",
     "newCategory": "Новая категория",
     "techCardCategories": "Категории тех. карт",
+    "semiProductCategories": "Категории полуфабрикатов",
     "noCategory": "Без категории",
     "selectIngredients": "Выбрать",
     "selectedCount": "Выбрано {count}",

@@ -675,6 +675,7 @@
     "categories": "Ingredient categories",
     "newCategory": "New category",
     "techCardCategories": "Tech card categories",
+    "semiProductCategories": "Semi-product categories",
     "noCategory": "No category",
     "selectIngredients": "Select",
     "selectedCount": "Selected {count}",

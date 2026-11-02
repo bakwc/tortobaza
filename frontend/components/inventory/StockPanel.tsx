@@ -5,9 +5,50 @@ import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity, formatUnitCost } from "@/components/menu/ui";
-import { useStockLevels, useStockMovements } from "@/hooks/useStock";
+import { useIngredientCategories, useIngredients, useStockLevels, useStockMovements } from "@/hooks/useStock";
 import type { StockRow } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+
+type StockGroup = { key: string; label: string; rows: StockRow[] };
+
+function stockKey(row: StockRow): string {
+  return `${row.ingredient ?? "i"}-${row.semi_product ?? "s"}-${row.finished_good ?? "f"}`;
+}
+
+function stockGroup(row: StockRow, categoryByIngredient: Map<number, number | null>): string {
+  if (row.finished_good !== null) return "finished";
+  if (row.semi_product !== null) return "semi";
+  if (row.ingredient === null) return "none";
+  const category = categoryByIngredient.get(row.ingredient);
+  if (category === undefined || category === null) return "none";
+  return String(category);
+}
+
+function stockGroups(
+  rows: StockRow[],
+  categoryByIngredient: Map<number, number | null>,
+  categories: { id: number; name: string }[],
+  labels: { none: string; semi: string; finished: string },
+): StockGroup[] {
+  const byGroup = new Map<string, StockRow[]>();
+  for (const row of rows) {
+    const key = stockGroup(row, categoryByIngredient);
+    const groupRows = byGroup.get(key) ?? [];
+    groupRows.push(row);
+    byGroup.set(key, groupRows);
+  }
+  for (const groupRows of byGroup.values()) {
+    groupRows.sort((left, right) => left.name.localeCompare(right.name));
+  }
+  return [
+    ...categories.map((category) => ({ key: String(category.id), label: category.name })),
+    { key: "none", label: labels.none },
+    { key: "semi", label: labels.semi },
+    { key: "finished", label: labels.finished },
+  ]
+    .map((group) => ({ ...group, rows: byGroup.get(group.key) ?? [] }))
+    .filter((group) => group.rows.length > 0);
+}
 
 function MovementsDialog({ row, onClose }: { row: StockRow; onClose: () => void }) {
   const t = useTranslations("stock");
@@ -68,7 +109,15 @@ export function StockPanel() {
   const [date, setDate] = useState("");
   const [selected, setSelected] = useState<StockRow | null>(null);
   const stock = useStockLevels(date === "" ? null : date);
+  const ingredients = useIngredients();
+  const categories = useIngredientCategories();
   const rows = (stock.data ?? []).filter((row) => row.is_active || Number(row.quantity) !== 0);
+  const categoryByIngredient = new Map((ingredients.list.data ?? []).map((row) => [row.id, row.category]));
+  const groups = stockGroups(rows, categoryByIngredient, categories.list.data ?? [], {
+    none: t("noCategory"),
+    semi: t("semiProduct"),
+    finished: t("finishedGood"),
+  });
   const hasCosts = rows.some((row) => row.value !== undefined);
   const totalValue = rows.reduce((sum, row) => sum + Number(row.value ?? "0"), 0);
 
@@ -81,51 +130,58 @@ export function StockPanel() {
             <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </Field>
         </div>
-        <QueryState isLoading={stock.isLoading} isError={stock.isError}>
-          <table className="mt-4 w-full text-sm">
-            <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-              <tr>
-                <th className="py-2">{t("name")}</th>
-                <th className="py-2">{t("category")}</th>
-                <th className="py-2 text-right">{t("remaining")}</th>
-                {hasCosts ? <th className="py-2 text-right">{t("avgCost")}</th> : null}
-                {hasCosts ? <th className="py-2 text-right">{t("value")}</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={`${row.ingredient ?? "i"}-${row.semi_product ?? "s"}-${row.finished_good ?? "f"}`}
-                  onClick={() => setSelected(row)}
-                  className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
-                >
-                  <td className="py-2">{row.name}</td>
-                  <td className="py-2">
-                    {row.finished_good !== null
-                      ? t("finishedGood")
-                      : row.semi_product !== null
-                        ? t("semiProduct")
-                        : (row.category_name ?? "—")}
-                  </td>
-                  <td className={cn("py-2 text-right", Number(row.quantity) < 0 ? "text-[var(--danger)]" : "")}>
-                    {formatQuantity(row.quantity)} {units(row.unit)}
-                  </td>
-                  {hasCosts ? <td className="py-2 text-right">{formatUnitCost(row.avg_cost ?? "0")}</td> : null}
-                  {hasCosts ? <td className="py-2 text-right">{formatMoney(row.value ?? "0")}</td> : null}
-                </tr>
-              ))}
-            </tbody>
+        <QueryState
+          isLoading={stock.isLoading || ingredients.list.isLoading || categories.list.isLoading}
+          isError={stock.isError || ingredients.list.isError || categories.list.isError}
+        >
+          <div className="mt-4 grid gap-4">
+            {groups.map((group) => (
+              <section key={group.key} className="overflow-hidden rounded-3xl border border-[var(--line)]">
+                <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
+                    {group.label}
+                  </h3>
+                  <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+                    {group.rows.length}
+                  </span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
+                    <tr>
+                      <th className="px-4 py-2">{t("name")}</th>
+                      <th className="px-4 py-2 text-right">{t("remaining")}</th>
+                      {hasCosts ? <th className="px-4 py-2 text-right">{t("avgCost")}</th> : null}
+                      {hasCosts ? <th className="px-4 py-2 text-right">{t("value")}</th> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.rows.map((row) => (
+                      <tr
+                        key={stockKey(row)}
+                        onClick={() => setSelected(row)}
+                        className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
+                      >
+                        <td className="px-4 py-2">{row.name}</td>
+                        <td className={cn("px-4 py-2 text-right", Number(row.quantity) < 0 ? "text-[var(--danger)]" : "")}>
+                          {formatQuantity(row.quantity)} {units(row.unit)}
+                        </td>
+                        {hasCosts ? (
+                          <td className="px-4 py-2 text-right">{formatUnitCost(row.avg_cost ?? "0")}</td>
+                        ) : null}
+                        {hasCosts ? <td className="px-4 py-2 text-right">{formatMoney(row.value ?? "0")}</td> : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
+            ))}
             {hasCosts ? (
-              <tfoot>
-                <tr className="border-t border-[var(--line)] font-semibold">
-                  <td className="py-2" colSpan={4}>
-                    {t("total")}
-                  </td>
-                  <td className="py-2 text-right">{formatMoney(String(totalValue))}</td>
-                </tr>
-              </tfoot>
+              <div className="flex items-center justify-between px-4 text-sm font-semibold">
+                <span>{t("total")}</span>
+                <span>{formatMoney(String(totalValue))}</span>
+              </div>
             ) : null}
-          </table>
+          </div>
         </QueryState>
       </Card>
       {selected ? <MovementsDialog row={selected} onClose={() => setSelected(null)} /> : null}

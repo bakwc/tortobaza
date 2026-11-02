@@ -5,7 +5,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
-from menu.models import IngredientCategory, TechCardCategory
+from menu.models import IngredientCategory, SemiProductCategory, TechCardCategory
 from menu.tests.fixtures import MenuFixture
 
 
@@ -308,6 +308,43 @@ class IngredientCostApiTests(TestCase):
 
         response = self.client.post(
             "/api/menu/tech-cards/assign-category/",
+            {"ids": [999999], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+
+    def test_assign_semi_product_category(self):
+        category = SemiProductCategory.objects.create(name="Sponges")
+        sponge = self.menu.sponge
+        frozen = self.menu.frozen_sponge
+        sponge_lines = sponge.lines.count()
+        frozen_lines = frozen.lines.count()
+        self.client.force_authenticate(self.staff)
+        response = self.client.post(
+            "/api/menu/semi-products/assign-category/",
+            {"ids": [sponge.pk, frozen.pk], "category": category.pk},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        sponge.refresh_from_db()
+        frozen.refresh_from_db()
+        self.assertEqual(sponge.category_id, category.pk)
+        self.assertEqual(frozen.category_id, category.pk)
+        self.assertEqual(sponge.lines.count(), sponge_lines)
+        self.assertEqual(frozen.lines.count(), frozen_lines)
+
+        response = self.client.post(
+            "/api/menu/semi-products/assign-category/",
+            {"ids": [sponge.pk], "category": None},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 204, response.content)
+        sponge.refresh_from_db()
+        self.assertIsNone(sponge.category_id)
+        self.assertEqual(sponge.lines.count(), sponge_lines)
+
+        response = self.client.post(
+            "/api/menu/semi-products/assign-category/",
             {"ids": [999999], "category": category.pk},
             format="json",
         )

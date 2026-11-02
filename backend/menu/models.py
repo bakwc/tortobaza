@@ -77,8 +77,29 @@ class Ingredient(models.Model):
         return self.name
 
 
+class SemiProductCategory(models.Model):
+    name = models.CharField(max_length=120, unique=True, verbose_name=_("Name"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "name"]
+        verbose_name = _("Semi-product category")
+        verbose_name_plural = _("Semi-product categories")
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class SemiProduct(models.Model):
     name = models.CharField(max_length=200, unique=True, verbose_name=_("Name"))
+    category = models.ForeignKey(
+        SemiProductCategory,
+        related_name="semi_products",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Category"),
+    )
     unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Unit"))
     yield_quantity = models.DecimalField(
         max_digits=12,

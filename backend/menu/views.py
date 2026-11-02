@@ -15,6 +15,7 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductCategory,
     SemiProductImage,
     TechCard,
     TechCardCategory,
@@ -24,12 +25,14 @@ from menu.recipes import missing_modifier_compositions, tech_card_cost
 from menu.serializers import (
     CatalogOptionSerializer,
     AssignIngredientCategorySerializer,
+    AssignSemiProductCategorySerializer,
     AssignTechCardCategorySerializer,
     IngredientCategorySerializer,
     IngredientSerializer,
     MissingModifierLineSerializer,
     MenuImageUploadSerializer,
     ModifierGroupSerializer,
+    SemiProductCategorySerializer,
     SemiProductSerializer,
     menu_image_rows,
     TechCardCategorySerializer,
@@ -161,12 +164,26 @@ class AssignIngredientCategoryView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class SemiProductCategoryListView(MenuListView):
+    serializer_class = SemiProductCategorySerializer
+
+    def get_queryset(self):
+        return SemiProductCategory.objects.all()
+
+
+class SemiProductCategoryDetailView(MenuDetailView):
+    serializer_class = SemiProductCategorySerializer
+
+    def get_queryset(self):
+        return SemiProductCategory.objects.all()
+
+
 class SemiProductListView(MenuListView):
     permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
-        return SemiProduct.objects.prefetch_related("images")
+        return SemiProduct.objects.select_related("category").prefetch_related("images")
 
 
 class SemiProductDetailView(MenuDetailView):
@@ -174,7 +191,25 @@ class SemiProductDetailView(MenuDetailView):
     serializer_class = SemiProductSerializer
 
     def get_queryset(self):
-        return SemiProduct.objects.prefetch_related("images")
+        return SemiProduct.objects.select_related("category").prefetch_related("images")
+
+
+class AssignSemiProductCategoryView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = AssignSemiProductCategorySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category = serializer.validated_data["category"]
+        category_id = None if category is None else category.pk
+        for semi_product in SemiProduct.objects.filter(pk__in=serializer.validated_data["ids"]):
+            if semi_product.category_id == category_id:
+                continue
+            semi_product.category = category
+            semi_product.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ModifierGroupListView(MenuListView):

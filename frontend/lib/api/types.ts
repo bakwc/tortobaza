@@ -1362,9 +1362,17 @@ export const MenuImageSchema = z.object({
   position: z.number(),
 });
 
+export const SemiProductCategorySchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  position: z.number(),
+});
+
 export const SemiProductSchema = z.object({
   id: z.number(),
   name: z.string(),
+  category: z.number().nullable(),
+  category_name: z.string().nullable(),
   unit: MenuUnitSchema,
   yield_quantity: z.string(),
   is_produced: z.boolean(),
@@ -1472,6 +1480,7 @@ export type IngredientCategory = z.infer<typeof IngredientCategorySchema>;
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeLine = z.infer<typeof RecipeLineSchema>;
 export type MenuImage = z.infer<typeof MenuImageSchema>;
+export type SemiProductCategory = z.infer<typeof SemiProductCategorySchema>;
 export type SemiProduct = z.infer<typeof SemiProductSchema>;
 export type Modifier = z.infer<typeof ModifierSchema>;
 export type ModifierGroup = z.infer<typeof ModifierGroupSchema>;
@@ -1507,8 +1516,11 @@ export type IngredientBody = {
   sale_price: string | null;
 };
 
+export type SemiProductCategoryBody = { name: string; position: number };
+
 export type SemiProductBody = {
   name: string;
+  category: number | null;
   unit: MenuUnit;
   yield_quantity: string;
   is_produced: boolean;

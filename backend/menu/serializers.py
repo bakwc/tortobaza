@@ -14,6 +14,7 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductCategory,
     SemiProductLine,
     TechCard,
     TechCardCategory,
@@ -120,6 +121,18 @@ class AssignIngredientCategorySerializer(serializers.Serializer):
         return attrs
 
 
+class AssignSemiProductCategorySerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+    category = serializers.PrimaryKeyRelatedField(queryset=SemiProductCategory.objects.all(), allow_null=True)
+
+    def validate(self, attrs):
+        ids = attrs["ids"]
+        found = SemiProduct.objects.filter(pk__in=ids).count()
+        if found != len(set(ids)):
+            raise serializers.ValidationError({"ids": "Unknown semi-product."})
+        return attrs
+
+
 class AssignTechCardCategorySerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
     category = serializers.PrimaryKeyRelatedField(queryset=TechCardCategory.objects.all(), allow_null=True)
@@ -199,7 +212,14 @@ class MenuImageUploadSerializer(serializers.Serializer):
     image = serializers.ImageField()
 
 
+class SemiProductCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SemiProductCategory
+        fields = ["id", "name", "position"]
+
+
 class SemiProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
     lines = RecipeLineSerializer(many=True, write_only=True)
 
     class Meta:
@@ -207,6 +227,8 @@ class SemiProductSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "category",
+            "category_name",
             "unit",
             "yield_quantity",
             "is_produced",

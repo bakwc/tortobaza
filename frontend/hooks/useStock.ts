@@ -46,8 +46,19 @@ export function useIngredients() {
   return { ...ingredients, assignCategory };
 }
 
+export function useSemiProductCategories() {
+  return useResource(["menu", "semi-product-categories"], api.menuSemiProductCategories);
+}
+
 export function useSemiProducts() {
-  return useResource(["menu", "semi-products"], api.menuSemiProducts);
+  const invalidate = useInvalidateStock();
+  const semiProducts = useResource(["menu", "semi-products"], api.menuSemiProducts);
+  const assignCategory = useMutation({
+    mutationFn: ({ ids, category }: { ids: number[]; category: number | null }) =>
+      api.assignSemiProductCategory(ids, category),
+    onSuccess: invalidate,
+  });
+  return { ...semiProducts, assignCategory };
 }
 
 export function useModifierGroups() {

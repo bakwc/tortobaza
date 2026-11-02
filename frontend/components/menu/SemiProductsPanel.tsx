@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Check, ChefHat, ChevronRight, Layers, Package, Plus, Search } from "lucide-react";
+import { Check, ChefHat, ChevronRight, Layers, Package, Plus, Search, Trash2 } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
 import { RecipeView } from "@/components/menu/RecipeView";
@@ -23,13 +23,15 @@ import {
   Card,
   CardTitle,
   CheckboxField,
+  ErrorText,
   Field,
+  GroupSelect,
   NativeSelect,
   QueryState,
   formatQuantity,
   formatUnitCost,
 } from "@/components/menu/ui";
-import { useIngredients, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
+import { useIngredients, useSemiProductCategories, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import { useRouter } from "@/i18n/navigation";
 import type { MenuUnit, SemiProduct } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,7 @@ function costPerYieldUnit(cost: string, yieldQuantity: string): string {
 
 type SemiDraft = {
   name: string;
+  category: number | null;
   unit: MenuUnit;
   yield_quantity: string;
   is_produced: boolean;
@@ -53,10 +56,14 @@ type SemiDraft = {
 function SemiProductRow({
   row,
   yieldLabel,
+  selecting,
+  selected,
   onOpen,
 }: {
   row: SemiProduct;
   yieldLabel: string;
+  selecting: boolean;
+  selected: boolean;
   onOpen: () => void;
 }) {
   const t = useTranslations("stock");
@@ -65,12 +72,25 @@ function SemiProductRow({
   return (
     <button
       type="button"
+      aria-pressed={selecting ? selected : undefined}
       onClick={onOpen}
       className={cn(
         "group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--cream-soft)] focus-visible:bg-[var(--cream-soft)] focus-visible:outline-none",
         !row.is_active && "opacity-60",
+        selecting && selected && "bg-[var(--cream-soft)]",
       )}
     >
+      {selecting ? (
+        <span
+          aria-hidden
+          className={cn(
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+            selected ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-white",
+          )}
+        >
+          {selected ? <Check className="h-3.5 w-3.5" /> : null}
+        </span>
+      ) : null}
       {cover ? (
         <img
           src={cover.image.src}
@@ -91,6 +111,11 @@ function SemiProductRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className={cn("font-semibold text-[var(--ink)]", !row.is_active && "line-through")}>{row.name}</p>
+          {row.is_produced ? (
+            <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
+              {t("producedInAdvance")}
+            </span>
+          ) : null}
           {row.is_active ? null : (
             <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-[11px] font-semibold text-[var(--muted-2)]">
               {t("inactive")}
@@ -122,10 +147,20 @@ function SemiProductRow({
 
 function draftFrom(row: SemiProduct | null): SemiDraft {
   if (row === null) {
-    return { name: "", unit: "g", yield_quantity: "", is_produced: false, is_active: true, method: "", lines: [] };
+    return {
+      name: "",
+      category: null,
+      unit: "g",
+      yield_quantity: "",
+      is_produced: false,
+      is_active: true,
+      method: "",
+      lines: [],
+    };
   }
   return {
     name: row.name,
+    category: row.category,
     unit: row.unit,
     yield_quantity: row.yield_quantity,
     is_produced: row.is_produced,
@@ -142,6 +177,7 @@ export function SemiProductsPanel() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const semiProducts = useSemiProducts();
+  const categories = useSemiProductCategories();
   const images = useSemiProductImages();
   const ingredients = useIngredients();
   const semiParam = searchParams.get("semi");
@@ -150,8 +186,12 @@ export function SemiProductsPanel() {
   const [viewing, setViewing] = useState<SemiProduct | null>(null);
   const [ignoreSemiParam, setIgnoreSemiParam] = useState(false);
   const [draft, setDraft] = useState<SemiDraft | null>(null);
+  const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
-  const [groupFilter, setGroupFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [assignCategory, setAssignCategory] = useState("");
   const requestedId = ignoreSemiParam
     ? viewing === null
       ? null
@@ -206,6 +246,30 @@ export function SemiProductsPanel() {
     if (current === null) close();
     else setMode("view");
   };
+  const toggleSelecting = () => {
+    setSelecting((value) => !value);
+    setSelected([]);
+    setAssignCategory("");
+    semiProducts.assignCategory.reset();
+  };
+  const toggleSelected = (id: number) => {
+    setSelected((currentIds) =>
+      currentIds.includes(id) ? currentIds.filter((item) => item !== id) : [...currentIds, id],
+    );
+  };
+  const setGroupSelected = (ids: number[], checked: boolean) => {
+    setSelected((currentIds) => {
+      if (checked) return [...new Set([...currentIds, ...ids])];
+      const drop = new Set(ids);
+      return currentIds.filter((id) => !drop.has(id));
+    });
+  };
+  const assignSelected = () => {
+    semiProducts.assignCategory.mutate(
+      { ids: selected, category: assignCategory === "none" ? null : Number(assignCategory) },
+      { onSuccess: () => setSelected([]) },
+    );
+  };
 
   const options = componentOptions(
     ingredients.list.data ?? [],
@@ -217,26 +281,37 @@ export function SemiProductsPanel() {
   const rows = semiProducts.list.data ?? [];
   const query = search.trim().toLowerCase();
   const allGroups = [
-    { key: "produced", label: t("producedInAdvance"), rows: rows.filter((row) => row.is_produced) },
-    { key: "order", label: t("madeToOrder"), rows: rows.filter((row) => !row.is_produced) },
+    ...(categories.list.data ?? []).map((category) => ({
+      key: String(category.id),
+      label: category.name,
+      rows: rows.filter((row) => row.category === category.id),
+    })),
+    { key: "none", label: t("noCategory"), rows: rows.filter((row) => row.category === null) },
   ].filter((group) => group.rows.length > 0);
   const groups = allGroups
-    .filter((group) => groupFilter === "all" || group.key === groupFilter)
+    .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
     .map((group) => ({ ...group, rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)) }))
     .filter((group) => group.rows.length > 0);
   const activeCount = rows.filter((row) => row.is_active).length;
 
   return (
-    <div className="grid gap-6">
+    <div className={cn("grid gap-6", selected.length > 0 && "pb-28")}>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-semibold text-[var(--ink)]">{t("menu.semiProducts")}</h2>
-          {canEdit ? (
-          <Button type="button" onClick={openNew}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            {t("add")}
-          </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {canEdit ? (
+            <Button type="button" variant={selecting ? "primary" : "outline"} onClick={toggleSelecting}>
+              {t("selectIngredients")}
+            </Button>
+            ) : null}
+            {canEdit ? (
+            <Button type="button" onClick={openNew}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("add")}
+            </Button>
+            ) : null}
+          </div>
         </div>
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
@@ -255,10 +330,10 @@ export function SemiProductsPanel() {
             <button
               key={chip.key}
               type="button"
-              onClick={() => setGroupFilter(chip.key)}
+              onClick={() => setCategoryFilter(chip.key)}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                groupFilter === chip.key
+                categoryFilter === chip.key
                   ? "bg-[var(--brand)] text-white"
                   : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
               )}
@@ -267,7 +342,7 @@ export function SemiProductsPanel() {
               <span
                 className={cn(
                   "rounded-full px-1.5 text-[11px]",
-                  groupFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
+                  categoryFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
                 )}
               >
                 {chip.count}
@@ -305,6 +380,13 @@ export function SemiProductsPanel() {
                 className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-sm"
               >
                 <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+                  {selecting ? (
+                    <GroupSelect
+                      ids={group.rows.map((row) => row.id)}
+                      selected={selected}
+                      onChange={setGroupSelected}
+                    />
+                  ) : null}
                   <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">
                     {group.label}
                   </h3>
@@ -318,7 +400,9 @@ export function SemiProductsPanel() {
                       key={row.id}
                       row={row}
                       yieldLabel={`${formatQuantity(row.yield_quantity)} ${units(row.unit)}`}
-                      onOpen={() => openView(row)}
+                      selecting={selecting}
+                      selected={selected.includes(row.id)}
+                      onOpen={() => (selecting ? toggleSelected(row.id) : openView(row))}
                     />
                   ))}
                 </div>
@@ -328,6 +412,81 @@ export function SemiProductsPanel() {
         )}
       </QueryState>
 
+      <Card>
+        <CardTitle>{t("semiProductCategories")}</CardTitle>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(categories.list.data ?? []).map((row) => (
+            <span
+              key={row.id}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-3 py-1 text-sm"
+            >
+              {row.name}
+              <button
+                type="button"
+                aria-label={t("delete")}
+                onClick={() => categories.remove.mutate(row.id)}
+                className="text-[var(--muted-2)] hover:text-[var(--danger)]"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <form
+          className="mt-4 flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            categories.save.mutate(
+              {
+                id: null,
+                body: { name: newCategory, position: (categories.list.data ?? []).length },
+              },
+              { onSuccess: () => setNewCategory("") },
+            );
+          }}
+        >
+          <Input
+            required
+            value={newCategory}
+            placeholder={t("newCategory")}
+            onChange={(event) => setNewCategory(event.target.value)}
+          />
+          <Button type="submit" disabled={categories.save.isPending}>
+            {t("add")}
+          </Button>
+        </form>
+        <div className="mt-2">
+          <ErrorText error={categories.save.error ?? categories.remove.error} />
+        </div>
+      </Card>
+
+      {selected.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-white shadow-lg">
+          <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
+            <p className="text-sm font-semibold text-[var(--ink)]">{t("selectedCount", { count: selected.length })}</p>
+            <div className="min-w-[12rem] flex-1">
+              <NativeSelect value={assignCategory} onChange={(event) => setAssignCategory(event.target.value)}>
+                <option value="">{t("chooseCategory")}</option>
+                <option value="none">{t("noCategory")}</option>
+                {(categories.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <Button
+              type="button"
+              disabled={assignCategory === "" || semiProducts.assignCategory.isPending}
+              onClick={assignSelected}
+            >
+              {t("assignCategory")}
+            </Button>
+            <ErrorText error={semiProducts.assignCategory.error} />
+          </div>
+        </div>
+      ) : null}
+
       {mode !== "edit" && current ? (
         <Dialog open onOpenChange={(value) => (value ? null : close())}>
           <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
@@ -335,6 +494,7 @@ export function SemiProductsPanel() {
             <RecipeView
               title={current.name}
               badges={[
+                current.category_name ?? "",
                 current.is_produced ? t("producedInAdvance") : "",
                 current.is_active ? "" : t("inactive"),
               ].filter((badge) => badge !== "")}
@@ -379,6 +539,7 @@ export function SemiProductsPanel() {
                 id: current === null ? null : current.id,
                 body: {
                   name: draft.name,
+                  category: draft.category,
                   unit: draft.unit,
                   yield_quantity: draft.yield_quantity.replace(",", "."),
                   is_produced: draft.is_produced,
@@ -407,6 +568,21 @@ export function SemiProductsPanel() {
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">
               <Input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+            </Field>
+            <Field label={t("category")}>
+              <NativeSelect
+                value={draft.category ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...draft, category: event.target.value === "" ? null : Number(event.target.value) })
+                }
+              >
+                <option value="">—</option>
+                {(categories.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </Field>
             <Field label={t("yield")}>
               <Input

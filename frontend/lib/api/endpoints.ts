@@ -133,6 +133,7 @@ import {
   ProducerSchema,
   ModifierGroupSchema,
   ProductionSchema,
+  SemiProductCategorySchema,
   SemiProductSchema,
   StockMovementSchema,
   StockRowSchema,
@@ -165,6 +166,8 @@ import {
   type ProductionBody,
   type SemiProduct,
   type SemiProductBody,
+  type SemiProductCategory,
+  type SemiProductCategoryBody,
   type StockMovement,
   type StockRow,
   type Supplier,
@@ -245,11 +248,22 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ ids, category }),
       });
     },
+    menuSemiProductCategories: resource<SemiProductCategory, SemiProductCategoryBody>(
+      fetcher,
+      "/api/menu/semi-product-categories/",
+      SemiProductCategorySchema,
+    ),
     menuSemiProducts: resource<SemiProduct, SemiProductBody>(
       fetcher,
       "/api/menu/semi-products/",
       SemiProductSchema,
     ),
+    assignSemiProductCategory(ids: number[], category: number | null): Promise<void> {
+      return fetcher<void>("/api/menu/semi-products/assign-category/", {
+        method: "POST",
+        body: JSON.stringify({ ids, category }),
+      });
+    },
     menuModifierGroups: resource<ModifierGroup, ModifierGroupBody>(
       fetcher,
       "/api/menu/modifier-groups/",
