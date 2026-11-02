@@ -23,6 +23,7 @@ import {
   Store,
   ThumbsUp,
   Truck,
+  TriangleAlert,
   User,
   Utensils,
   ZoomIn,
@@ -53,7 +54,7 @@ import {
   useResolveYandexAddress,
 } from "@/hooks/useCrmOrders";
 import { GoogleMapsIcon, YandexMapsIcon } from "@/content/contacts/icons";
-import type { CrmDayOrder, CrmOrder, CrmOrderPaymentType, CrmOrderStatus } from "@/lib/api/types";
+import type { CrmDayOrder, CrmOrder, CrmOrderItem, CrmOrderPaymentType, CrmOrderStatus } from "@/lib/api/types";
 import {
   CRM_ORDER_NEXT_STATUS,
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
@@ -65,6 +66,14 @@ import {
 } from "@/lib/crmStatus";
 import { formatAed, formatAmount, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+function formatItemWeight(value: string): string {
+  return String(Number(value.replace(",", "."))).replace(".", ",");
+}
+
+function crmCardItems(items: CrmOrderItem[]): CrmOrderItem[] {
+  return [...items].sort((left, right) => left.position - right.position);
+}
 
 function formatRouteMinutes(seconds: number): number {
   if (seconds < 30) {
@@ -996,6 +1005,56 @@ function CrmOrderCard({
                 <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.filling}</p>
               </div>
             </div>
+
+            {order.items.length > 0 ? (
+              <div
+                className={cn(
+                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
+                  tone.panel,
+                )}
+              >
+                <div className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
+                  <Cake className="h-3.5 w-3.5" />
+                  <span>{t("items.section")}</span>
+                </div>
+                <ul className="mt-0.5 grid gap-1.5 lg:mt-1">
+                  {crmCardItems(order.items).map((item) => {
+                    const title = item.name.trim() !== "" ? item.name.trim() : (item.tech_card_name ?? "");
+                    const prefix = item.quantity > 1 ? `${item.quantity} × ` : "";
+                    const weight =
+                      item.weight_kg === null ? "" : ` · ${formatItemWeight(item.weight_kg)} ${t("items.kg")}`;
+                    const modifiers = item.modifiers
+                      .map((row) =>
+                        row.quantity > 1 ? `${row.modifier_name} × ${row.quantity}` : row.modifier_name,
+                      )
+                      .join(", ");
+                    return (
+                      <li key={item.id} className="text-sm text-[var(--ink)]">
+                        <p className="flex items-start gap-1.5 font-medium">
+                          {item.needs_review ? (
+                            <TriangleAlert
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
+                              aria-label={t("items.needsReview")}
+                            />
+                          ) : null}
+                          <span>
+                            {prefix}
+                            {title}
+                            {weight}
+                          </span>
+                        </p>
+                        {modifiers !== "" ? (
+                          <p className="text-xs text-[var(--muted-2)]">{modifiers}</p>
+                        ) : null}
+                        {item.comment !== "" ? (
+                          <p className="whitespace-pre-wrap text-xs text-[var(--muted-2)]">{item.comment}</p>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
 
             {order.description ? (
               <div
