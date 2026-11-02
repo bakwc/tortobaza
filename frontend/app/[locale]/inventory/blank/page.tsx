@@ -5,7 +5,7 @@ import { InventoryShell } from "@/components/inventory/InventoryShell";
 
 export default function InventoryBlankPage() {
   return (
-    <InventoryShell section="blank">
+    <InventoryShell section="inventory-counts">
       <InventoryBlank />
     </InventoryShell>
   );

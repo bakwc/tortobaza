@@ -132,7 +132,19 @@ class WebsiteOrderItemsTests(TestCase):
         self.assertEqual(crm.cake_price, crm.website_order.total - crm.website_order.delivery_fee)
         self.assertEqual(crm.delivery_price, crm.website_order.delivery_fee)
         self.assertEqual(crm.status, CrmOrder.STATUS_UNCONFIRMED)
-        self.assertFalse(StockMovement.objects.exists())
+        movements = {
+            movement.ingredient_id: movement.quantity
+            for movement in StockMovement.objects.filter(crm_order=crm)
+        }
+        self.assertEqual(
+            movements,
+            {
+                self.menu.flour.pk: Decimal("-600"),
+                self.menu.sugar.pk: Decimal("-400"),
+                self.menu.cream.pk: Decimal("-600"),
+                self.menu.raspberry.pk: Decimal("-200"),
+            },
+        )
 
     def test_unmatched_option_needs_review(self, mock_now, mock_sync):
         mock_now.return_value = _frozen_now()

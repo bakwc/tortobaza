@@ -24,7 +24,13 @@ from rest_framework.views import APIView
 
 from accounts.models import chef_identity
 from accounts.permissions import CanView, SectionPermission, can_edit, can_see_costs, can_view
-from attendance.salary import compute_all_salaries, compute_month_salaries, compute_salary
+from attendance.models import SalaryPayout
+from attendance.salary import (
+    _payslip_name,
+    compute_all_salaries,
+    compute_month_salaries,
+    compute_salary,
+)
 from catalog.responsive_urls import detail_image
 from crm.analytics import client_order_counts
 from crm.analytics import clients as analytics_clients
@@ -37,6 +43,7 @@ from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_sig
 from crm.google_maps import coords_for_map_order, resolve_google_maps_url
 from crm.history import USER_ID_FIELDS, record_crm_order_event, snapshot_crm_order
 from crm.manual_transactions import (
+    PAIR_NONE,
     create_manual_transaction,
     delete_manual_transaction,
     update_manual_transaction,
@@ -69,6 +76,8 @@ from crm.serializers import (
     CrmSalariesSerializer,
     CrmSalaryDetailQuerySerializer,
     CrmSalaryDetailSerializer,
+    CrmSalaryPayoutSerializer,
+    CrmSalaryPayoutWriteSerializer,
     ExchangeRatesSerializer,
     FinanceTransactionAccountDetailSerializer,
     FinanceTransactionSearchQuerySerializer,
@@ -528,6 +537,37 @@ class CrmExpensesView(APIView):
         return Response(serializer.data)
 
 
+def _attach_salary_payouts(result: dict) -> None:
+    periods = result["periods"]
+    start = periods[0]["start"]
+    end = periods[-1]["end"]
+    rows = SalaryPayout.objects.filter(
+        period_start__gte=start,
+        period_end__lte=end,
+    ).select_related("financial_transaction")
+    by_key = {
+        (row.user_id, row.period_start, row.period_end): row.financial_transaction
+        for row in rows
+    }
+    for period in periods:
+        for employee in period["employees"]:
+            tx = by_key.get((employee["id"], period["start"], period["end"]))
+            if tx is None:
+                employee["payout"] = None
+                continue
+            employee["payout"] = {
+                "id": tx.id,
+                "date": tx.date,
+                "amount": tx.amount,
+                "counterparty_name": tx.counterparty_name,
+            }
+
+
+class SalaryPayoutPermission(BasePermission):
+    def has_permission(self, request, view):
+        return can_view(request.user, "employees") and can_edit(request.user, "finance")
+
+
 class CrmSalariesView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, SectionPermission("employees")]
@@ -545,7 +585,60 @@ class CrmSalariesView(APIView):
             year = today.year
             month_num = today.month
         result = compute_month_salaries(year, month_num)
+        _attach_salary_payouts(result)
         return Response(CrmSalariesSerializer(result).data)
+
+
+class CrmSalaryPayoutView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SalaryPayoutPermission]
+
+    def post(self, request, user_id: int):
+        serializer = CrmSalaryPayoutWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        start = serializer.validated_data["start"]
+        end = serializer.validated_data["end"]
+        user = get_object_or_404(User, pk=user_id)
+        if SalaryPayout.objects.filter(user=user, period_start=start, period_end=end).exists():
+            return Response({"detail": "Already paid."}, status=status.HTTP_409_CONFLICT)
+        result = compute_salary(user, start, end, None)
+        if result["total_money"] == 0:
+            return Response({"detail": "Nothing to pay."}, status=status.HTTP_400_BAD_REQUEST)
+        full_name = _payslip_name(user, chef_identity(user)[0])
+        with transaction.atomic(using=current_finance_db()):
+            tx = create_manual_transaction(
+                {
+                    "account_id": serializer.validated_data["account_id"],
+                    "date": serializer.validated_data["date"],
+                    "amount": -result["total_money"],
+                    "kind": FinancialTransaction.KIND_EXPENSE,
+                    "income_type": "",
+                    "expense_type": FinancialTransaction.EXPENSE_SALARY,
+                    "counterparty_name": full_name,
+                    "counterparty_iban": "",
+                    "description": f"{start.isoformat()}–{end.isoformat()}",
+                    "transfer_pair": PAIR_NONE,
+                    "matched_transaction_id": None,
+                    "counterpart": None,
+                }
+            )
+            SalaryPayout.objects.create(
+                user=user,
+                period_start=start,
+                period_end=end,
+                financial_transaction=tx,
+            )
+        return Response(
+            CrmSalaryPayoutSerializer(
+                {
+                    "id": tx.id,
+                    "date": tx.date,
+                    "amount": tx.amount,
+                    "counterparty_name": tx.counterparty_name,
+                }
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CrmSalaryDetailView(APIView):

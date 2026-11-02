@@ -27,15 +27,6 @@ from menu.recipes import Component, Needs, expand_component, expand_order_item, 
 
 StockItem = Ingredient | SemiProduct | FinishedGood
 
-WRITE_OFF_STATUSES = frozenset(
-    {
-        CrmOrder.STATUS_READY,
-        CrmOrder.STATUS_CLIENT_APPROVED,
-        CrmOrder.STATUS_IN_DELIVERY,
-        CrmOrder.STATUS_DELIVERED,
-    }
-)
-
 _ZERO = Decimal("0")
 _COST_PLACES = Decimal("0.000001")
 _QUANTITY_PLACES = Decimal("0.0001")
@@ -390,7 +381,7 @@ def delete_document(document: Supply | Production | FinishedProduction | WriteOf
 
 
 def order_needs_write_off(crm_order: CrmOrder) -> bool:
-    return not crm_order.deleted and crm_order.status in WRITE_OFF_STATUSES
+    return not crm_order.deleted
 
 
 def order_stock_needs(crm_order: CrmOrder) -> tuple[Needs, dict[FinishedGood, Decimal]]:

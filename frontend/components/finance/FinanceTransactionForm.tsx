@@ -81,13 +81,22 @@ function negatedAmount(amount: string): string {
   return (-value).toFixed(2);
 }
 
+function expenseSignedAmount(amount: string): string {
+  const trimmed = amount.trim();
+  if (trimmed === "" || trimmed === "-" || trimmed === "." || trimmed === "-.") {
+    return trimmed === "" ? "-" : amount;
+  }
+  if (trimmed.startsWith("-")) return amount;
+  return `-${trimmed}`;
+}
+
 function initialFields(transaction: FinanceTransaction | null): Fields {
   const today = getTbilisiTodayIsoDate();
   if (transaction === null) {
     return {
       date: today,
       accountId: "",
-      amount: "",
+      amount: "-",
       kind: "expense",
       incomeType: "",
       expenseType: "",
@@ -178,6 +187,14 @@ export function FinanceTransactionForm({
     setFields((current) => ({
       ...current,
       kind,
+      amount:
+        transaction !== null
+          ? current.amount
+          : kind === "expense"
+            ? expenseSignedAmount(current.amount)
+            : current.kind === "expense" && current.amount === "-"
+              ? ""
+              : current.amount,
       incomeType: kind === "income" ? current.incomeType : "",
       expenseType: kind === "expense" ? current.expenseType : "",
       transferPair: kind === "transfer" ? current.transferPair : "none",
@@ -207,14 +224,18 @@ export function FinanceTransactionForm({
   }
 
   function setAmount(amount: string) {
-    setFields((current) => ({
-      ...current,
-      amount,
-      counterpartAmount:
-        current.transferPair === "create" && !counterpartTouched
-          ? negatedAmount(amount)
-          : current.counterpartAmount,
-    }));
+    setFields((current) => {
+      const nextAmount =
+        transaction === null && current.kind === "expense" ? expenseSignedAmount(amount) : amount;
+      return {
+        ...current,
+        amount: nextAmount,
+        counterpartAmount:
+          current.transferPair === "create" && !counterpartTouched
+            ? negatedAmount(nextAmount)
+            : current.counterpartAmount,
+      };
+    });
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {

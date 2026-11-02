@@ -76,3 +76,33 @@ class SalaryCalculation(AttendanceEvent):
         proxy = True
         verbose_name = _("Salary calculation")
         verbose_name_plural = _("Salary calculation")
+
+
+class SalaryPayout(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="salary_payouts",
+        on_delete=models.PROTECT,
+        verbose_name=_("User"),
+    )
+    period_start = models.DateField(verbose_name=_("Start"))
+    period_end = models.DateField(verbose_name=_("End"))
+    financial_transaction = models.OneToOneField(
+        "crm.FinancialTransaction",
+        related_name="salary_payout",
+        on_delete=models.CASCADE,
+        verbose_name=_("Financial transaction"),
+    )
+
+    class Meta:
+        verbose_name = _("Salary payout")
+        verbose_name_plural = _("Salary payouts")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "period_start", "period_end"],
+                name="unique_salary_payout_period",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user_id} {self.period_start} {self.period_end}"

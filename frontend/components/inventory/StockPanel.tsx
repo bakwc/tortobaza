@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity, formatUnitCost } from "@/components/menu/ui";
@@ -107,19 +108,27 @@ export function StockPanel() {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
   const [date, setDate] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [selected, setSelected] = useState<StockRow | null>(null);
   const stock = useStockLevels(date === "" ? null : date);
   const ingredients = useIngredients();
   const categories = useIngredientCategories();
   const rows = (stock.data ?? []).filter((row) => row.is_active || Number(row.quantity) !== 0);
   const categoryByIngredient = new Map((ingredients.list.data ?? []).map((row) => [row.id, row.category]));
-  const groups = stockGroups(rows, categoryByIngredient, categories.list.data ?? [], {
+  const allGroups = stockGroups(rows, categoryByIngredient, categories.list.data ?? [], {
     none: t("noCategory"),
     semi: t("semiProduct"),
     finished: t("finishedGood"),
   });
-  const hasCosts = rows.some((row) => row.value !== undefined);
-  const totalValue = rows.reduce((sum, row) => sum + Number(row.value ?? "0"), 0);
+  const query = search.trim().toLowerCase();
+  const groups = allGroups
+    .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
+    .map((group) => ({ ...group, rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)) }))
+    .filter((group) => group.rows.length > 0);
+  const visibleRows = groups.flatMap((group) => group.rows);
+  const hasCosts = visibleRows.some((row) => row.value !== undefined);
+  const totalValue = visibleRows.reduce((sum, row) => sum + Number(row.value ?? "0"), 0);
 
   return (
     <div className="grid gap-6">
@@ -130,10 +139,52 @@ export function StockPanel() {
             <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </Field>
         </div>
+        <div className="relative mt-5">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
+          <Input
+            value={search}
+            placeholder={t("searchTechCards")}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-11"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            { key: "all", label: t("allCategories"), count: rows.length },
+            ...allGroups.map((group) => ({ key: group.key, label: group.label, count: group.rows.length })),
+          ].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setCategoryFilter(chip.key)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                categoryFilter === chip.key
+                  ? "bg-[var(--brand)] text-white"
+                  : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {chip.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px]",
+                  categoryFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
+                )}
+              >
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
         <QueryState
           isLoading={stock.isLoading || ingredients.list.isLoading || categories.list.isLoading}
           isError={stock.isError || ingredients.list.isError || categories.list.isError}
         >
+          {groups.length === 0 ? (
+            <div className="mt-4 flex flex-col items-center justify-center rounded-3xl border border-[var(--line)] bg-white p-12 text-center">
+              <p className="text-base font-semibold text-[var(--ink)]">{t("nothingFound")}</p>
+            </div>
+          ) : (
           <div className="mt-4 grid gap-4">
             {groups.map((group) => (
               <section key={group.key} className="overflow-hidden rounded-3xl border border-[var(--line)]">
@@ -182,6 +233,7 @@ export function StockPanel() {
               </div>
             ) : null}
           </div>
+          )}
         </QueryState>
       </Card>
       {selected ? <MovementsDialog row={selected} onClose={() => setSelected(null)} /> : null}

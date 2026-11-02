@@ -12,8 +12,7 @@ export type InventorySection =
   | "productions"
   | "finished"
   | "write-offs"
-  | "inventory-counts"
-  | "blank";
+  | "inventory-counts";
 
 const FINANCE_ADMIN_SECTIONS: string[] = ["supplies", "suppliers"];
 
@@ -30,7 +29,6 @@ export function InventoryShell({ section, children }: { section: InventorySectio
     { key: "finished", href: "/inventory/finished", label: t("finishedGoods") },
     { key: "write-offs", href: "/inventory/write-offs", label: t("writeOffs") },
     { key: "inventory-counts", href: "/inventory/inventory-counts", label: t("inventoryCounts") },
-    { key: "blank", href: "/inventory/blank", label: t("printBlank") },
   ];
   const visibleTabs = tabs.filter((tab) => {
     if (tab.key === "finished") return canViewFinished;

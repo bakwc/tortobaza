@@ -9,7 +9,8 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from accounts.permissions import grant
-from attendance.models import AttendanceEvent
+from attendance.models import AttendanceEvent, SalaryPayout
+from crm.models import FinancialAccount, FinancialTransaction
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -93,6 +94,7 @@ class CrmSalariesApiTests(TestCase):
                                 "hours": "8.00",
                                 "money": "80.00",
                                 "position": "Кондитер",
+                                "payout": None,
                             }
                         ],
                         "hourly_hours": "8.00",
@@ -111,6 +113,7 @@ class CrmSalariesApiTests(TestCase):
                                 "hours": "4.00",
                                 "money": "80.00",
                                 "position": "Курьер",
+                                "payout": None,
                             },
                             {
                                 "id": self.worker.id,
@@ -119,6 +122,7 @@ class CrmSalariesApiTests(TestCase):
                                 "hours": "4.00",
                                 "money": "40.00",
                                 "position": "Кондитер",
+                                "payout": None,
                             },
                         ],
                         "hourly_hours": "8.00",
@@ -224,3 +228,123 @@ class CrmSalariesApiTests(TestCase):
         self.assertIsNone(idle["departure"])
         self.assertEqual(data["total_hours"], "8.00")
         self.assertEqual(data["total_money"], "80.00")
+
+    def test_payout_creates_salary_expense(self):
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 6, 10), 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, date(2026, 6, 10), 17, 0)
+        self.worker.first_name = "Бека"
+        self.worker.last_name = "Беридзе"
+        self.worker.save(update_fields=["first_name", "last_name"])
+        account = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        grant(self.admin, "edit_finance")
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            {
+                "start": "2026-06-01",
+                "end": "2026-06-14",
+                "account_id": account.pk,
+                "date": "2026-06-16",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        tx = FinancialTransaction.objects.get()
+        self.assertEqual(response.json()["id"], tx.pk)
+        self.assertEqual(tx.amount, Decimal("-80.00"))
+        self.assertEqual(tx.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(tx.expense_type, FinancialTransaction.EXPENSE_SALARY)
+        self.assertEqual(tx.income_type, "")
+        self.assertEqual(tx.account_id, account.pk)
+        self.assertEqual(tx.date, date(2026, 6, 16))
+        self.assertEqual(tx.counterparty_name, "Бека Беридзе")
+        self.assertEqual(tx.description, "2026-06-01–2026-06-14")
+        payout = SalaryPayout.objects.get()
+        self.assertEqual(payout.user_id, self.worker.id)
+        self.assertEqual(payout.period_start, date(2026, 6, 1))
+        self.assertEqual(payout.period_end, date(2026, 6, 14))
+        self.assertEqual(payout.financial_transaction_id, tx.pk)
+        listed = self.client.get("/api/crm/salaries/", {"month": "2026-06"})
+        self.assertEqual(listed.status_code, 200)
+        employee = listed.json()["periods"][0]["employees"][0]
+        self.assertEqual(
+            employee["payout"],
+            {
+                "id": tx.pk,
+                "date": "2026-06-16",
+                "amount": "-80.00",
+                "counterparty_name": "Бека Беридзе",
+            },
+        )
+        self.assertEqual(listed.json()["periods"][1]["employees"], [])
+
+    def test_payout_duplicate_conflict(self):
+        _event(self.worker, AttendanceEvent.ARRIVAL, date(2026, 6, 10), 9, 0)
+        _event(self.worker, AttendanceEvent.DEPARTURE, date(2026, 6, 10), 17, 0)
+        account = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        grant(self.admin, "edit_finance")
+        self.client.force_authenticate(user=self.admin)
+        body = {
+            "start": "2026-06-01",
+            "end": "2026-06-14",
+            "account_id": account.pk,
+            "date": "2026-06-16",
+        }
+        first = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            body,
+            format="json",
+        )
+        self.assertEqual(first.status_code, 201)
+        second = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            body,
+            format="json",
+        )
+        self.assertEqual(second.status_code, 409)
+        self.assertEqual(FinancialTransaction.objects.count(), 1)
+        self.assertEqual(SalaryPayout.objects.count(), 1)
+
+    def test_payout_requires_edit_finance(self):
+        account = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            {
+                "start": "2026-06-01",
+                "end": "2026-06-14",
+                "account_id": account.pk,
+                "date": "2026-06-16",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(FinancialTransaction.objects.count(), 0)
+
+    def test_payout_rejects_empty_salary_and_bad_period(self):
+        account = FinancialAccount.objects.create(name="Cash", kind=FinancialAccount.KIND_CASH)
+        grant(self.admin, "edit_finance")
+        self.client.force_authenticate(user=self.admin)
+        empty = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            {
+                "start": "2026-06-01",
+                "end": "2026-06-14",
+                "account_id": account.pk,
+                "date": "2026-06-16",
+            },
+            format="json",
+        )
+        self.assertEqual(empty.status_code, 400)
+        bad_period = self.client.post(
+            f"/api/crm/salaries/{self.worker.id}/payout/",
+            {
+                "start": "2026-06-02",
+                "end": "2026-06-14",
+                "account_id": account.pk,
+                "date": "2026-06-16",
+            },
+            format="json",
+        )
+        self.assertEqual(bad_period.status_code, 400)
+        self.assertEqual(FinancialTransaction.objects.count(), 0)

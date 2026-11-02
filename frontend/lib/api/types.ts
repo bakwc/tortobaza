@@ -540,9 +540,17 @@ export const CrmSalaryEmployeeSchema = z.object({
   money: z.string(),
 });
 
+export const CrmSalaryPayoutSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  counterparty_name: z.string(),
+});
+
 export const CrmSalaryPeriodEmployeeSchema = CrmSalaryEmployeeSchema.extend({
   position: z.string(),
   full_name: z.string(),
+  payout: CrmSalaryPayoutSchema.nullable(),
 });
 
 export const CrmExpensesBreakdownSchema = z.object({
@@ -1162,6 +1170,13 @@ export type CrmExpensesDay = z.infer<typeof CrmExpensesDaySchema>;
 export type CrmExpensesMonth = z.infer<typeof CrmExpensesMonthSchema>;
 export type CrmSalaryEmployee = z.infer<typeof CrmSalaryEmployeeSchema>;
 export type CrmSalaryPeriod = z.infer<typeof CrmSalaryPeriodSchema>;
+export type CrmSalaryPayout = z.infer<typeof CrmSalaryPayoutSchema>;
+export type SalaryPayoutWriteBody = {
+  start: string;
+  end: string;
+  account_id: number;
+  date: string;
+};
 export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
 export type CrmSalaryDetail = z.infer<typeof CrmSalaryDetailSchema>;
 export type AnalyticsOverview = z.infer<typeof AnalyticsOverviewSchema>;

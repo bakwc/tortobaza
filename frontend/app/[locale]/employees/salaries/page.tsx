@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { EmployeesShell } from "@/components/employees/EmployeesShell";
 import { SalaryEmployeeMenu } from "@/components/employees/SalaryEmployeeMenu";
+import { SalaryPayoutControl } from "@/components/employees/SalaryPayoutControl";
 import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { useCrmSalaries } from "@/hooks/useCrmOrders";
 import type { CrmSalaryPeriod } from "@/lib/api/types";
@@ -150,12 +151,15 @@ function SalaryPeriodTable({ period }: { period: CrmSalaryPeriod }) {
                     <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{employee.hours}</td>
                     <td className="py-3 pr-4 tabular-nums font-medium text-[var(--ink)]">{formatAed(employee.money)}</td>
                     <td className="py-3 text-right">
-                      <SalaryEmployeeMenu
-                        userId={employee.id}
-                        name={employee.name}
-                        start={period.start}
-                        end={period.end}
-                      />
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <SalaryPayoutControl employee={employee} start={period.start} end={period.end} />
+                        <SalaryEmployeeMenu
+                          userId={employee.id}
+                          name={employee.name}
+                          start={period.start}
+                          end={period.end}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}

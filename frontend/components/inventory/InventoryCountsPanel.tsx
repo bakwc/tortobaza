@@ -19,6 +19,7 @@ import {
   useRecountInventoryCount,
   useStockLevels,
 } from "@/hooks/useStock";
+import { Link } from "@/i18n/navigation";
 import type { InventoryCount, MenuUnit, StockRow } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -362,12 +363,17 @@ export function InventoryCountsPanel() {
       <Card>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>{t("inventory.inventoryCounts")}</CardTitle>
-          {canEdit ? (
-            <Button type="button" size="sm" onClick={() => open(null)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("add")}
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/inventory/blank">{t("inventory.printBlank")}</Link>
             </Button>
-          ) : null}
+            {canEdit ? (
+              <Button type="button" size="sm" onClick={() => open(null)}>
+                <Plus className="mr-1 h-4 w-4" />
+                {t("add")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("inventoryCountHint")}</p>
         <QueryState isLoading={counts.list.isLoading} isError={counts.list.isError}>

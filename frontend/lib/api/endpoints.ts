@@ -19,6 +19,7 @@ import {
   AnalyticsProductsSchema,
   CrmSalariesSchema,
   CrmSalaryDetailSchema,
+  CrmSalaryPayoutSchema,
   AccessGroupSchema,
   EmployeeSchema,
   SectionPermissionSchema,
@@ -76,6 +77,8 @@ import {
   type AnalyticsProducts,
   type CrmSalaries,
   type CrmSalaryDetail,
+  type CrmSalaryPayout,
+  type SalaryPayoutWriteBody,
   type AccessGroup,
   type AccessGroupBody,
   type Employee,
@@ -704,6 +707,14 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { start, end },
       });
       return parse(CrmSalaryDetailSchema, raw);
+    },
+
+    async createSalaryPayout(userId: number, body: SalaryPayoutWriteBody): Promise<CrmSalaryPayout> {
+      const raw = await fetcher<unknown>(`/api/crm/salaries/${userId}/payout/`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(CrmSalaryPayoutSchema, raw);
     },
 
     async getAnalyticsOverview(): Promise<AnalyticsOverview> {

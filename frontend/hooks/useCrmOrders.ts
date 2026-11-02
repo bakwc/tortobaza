@@ -12,6 +12,7 @@ import type {
   CrmExpensesMonth,
   CrmSalaries,
   CrmSalaryDetail,
+  SalaryPayoutWriteBody,
   CrmMapOrderRange,
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
@@ -120,6 +121,17 @@ export function useCrmSalaries(month: string) {
     staleTime: 0,
     refetchInterval: CRM_BOARD_REFETCH_INTERVAL_MS,
     refetchOnWindowFocus: true,
+  });
+}
+
+export function useCreateSalaryPayout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, body }: { userId: number; body: SalaryPayoutWriteBody }) =>
+      api.createSalaryPayout(userId, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-salaries"] });
+    },
   });
 }
 

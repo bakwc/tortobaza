@@ -8,6 +8,7 @@ from django.utils import timezone
 from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, CrmOrderItem, CrmOrderItemModifier
 from crm.telegram import schedule_crm_order_telegram_sync
+from inventory.services import sync_order_write_off
 from menu.models import Modifier, TechCard
 from menu.recipes import order_item_errors
 from orders.models import Order, OrderItem
@@ -66,6 +67,7 @@ def create_crm_order_from_website_order(order: Order) -> CrmOrder | None:
     )
     _copy_product_images(order, crm_order)
     _create_crm_items(order, crm_order)
+    sync_order_write_off(crm_order)
     record_crm_order_event(
         crm_order,
         CrmOrderEvent.ACTION_CREATED,

@@ -109,20 +109,23 @@ class OrderWriteOffTests(TestCase):
         self.order.save()
         sync_order_write_off(self.order)
 
-    def test_new_order_does_not_write_off(self):
+    def test_new_order_writes_off(self):
         sync_order_write_off(self.order)
-        self.assertFalse(StockMovement.objects.filter(crm_order=self.order).exists())
-
-    def test_ready_writes_off_and_rollback_restores(self):
-        self._set_status(CrmOrder.STATUS_READY)
         self.assertEqual(stock(self.menu.flour), Decimal("900"))
         movement = StockMovement.objects.get(crm_order=self.order)
         self.assertEqual(movement.unit_cost, Decimal("0.01"))
-        self._set_status(CrmOrder.STATUS_IN_WORK)
-        self.assertEqual(stock(self.menu.flour), Decimal("1000"))
 
-    def test_later_statuses_keep_write_off(self):
+    def test_rollback_to_in_work_keeps_write_off(self):
+        self._set_status(CrmOrder.STATUS_READY)
+        self.assertEqual(stock(self.menu.flour), Decimal("900"))
+        self._set_status(CrmOrder.STATUS_IN_WORK)
+        self.assertEqual(stock(self.menu.flour), Decimal("900"))
+
+    def test_statuses_keep_write_off(self):
         for status in [
+            CrmOrder.STATUS_UNCONFIRMED,
+            CrmOrder.STATUS_NEW,
+            CrmOrder.STATUS_IN_WORK,
             CrmOrder.STATUS_READY,
             CrmOrder.STATUS_CLIENT_APPROVED,
             CrmOrder.STATUS_IN_DELIVERY,

@@ -1,3 +1,5 @@
+from calendar import monthrange
+from datetime import date
 from decimal import Decimal
 
 from rest_framework import serializers
@@ -702,9 +704,17 @@ class CrmSalaryEmployeeSerializer(serializers.Serializer):
     money = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
+class CrmSalaryPayoutSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    counterparty_name = serializers.CharField()
+
+
 class CrmSalaryPeriodEmployeeSerializer(CrmSalaryEmployeeSerializer):
     position = serializers.CharField()
     full_name = serializers.CharField()
+    payout = CrmSalaryPayoutSerializer(allow_null=True)
 
 
 class CrmExpensesBreakdownSerializer(serializers.Serializer):
@@ -739,6 +749,34 @@ class CrmSalaryDetailQuerySerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs["start"] > attrs["end"]:
             raise serializers.ValidationError("start must be on or before end.")
+        return attrs
+
+
+class CrmSalaryPayoutWriteSerializer(serializers.Serializer):
+    start = serializers.DateField()
+    end = serializers.DateField()
+    account_id = serializers.IntegerField()
+    date = serializers.DateField()
+
+    def validate_account_id(self, value: int) -> int:
+        if not FinancialAccount.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Unknown account.")
+        return value
+
+    def validate(self, attrs):
+        start = attrs["start"]
+        end = attrs["end"]
+        if start.year != end.year or start.month != end.month:
+            raise serializers.ValidationError("Period must be one salary half.")
+        last = monthrange(start.year, start.month)[1]
+        first_half = start == date(start.year, start.month, 1) and end == date(
+            start.year, start.month, 14
+        )
+        second_half = start == date(start.year, start.month, 15) and end == date(
+            start.year, start.month, last
+        )
+        if not first_half and not second_half:
+            raise serializers.ValidationError("Period must be one salary half.")
         return attrs
 
 
