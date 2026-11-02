@@ -1,0 +1,151 @@
+from datetime import datetime, timedelta, timezone as dt_timezone
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from django.test import TestCase, override_settings
+
+from crm.models import TelegramChannel, TelegramChannelMessage
+from crm.telegram_channels import sync_telegram_channels
+
+
+@override_settings(
+    TELEGRAM_API_ID="12345",
+    TELEGRAM_API_HASH="hash",
+    TELEGRAM_USER_SESSION="session",
+)
+class SyncTelegramChannelsTests(TestCase):
+    def _client(self, entities, messages):
+        clients = []
+
+        class FakeTelegramClient:
+            def __init__(self, session, api_id, api_hash):
+                self.session = session
+                self.api_id = api_id
+                self.api_hash = api_hash
+                self.calls = []
+                self.entities = []
+                clients.append(self)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def get_entity(self, username):
+                self.entities.append(username)
+                return entities[username]
+
+            def iter_messages(self, entity, **kwargs):
+                self.calls.append({"entity": entity, "kwargs": kwargs})
+                return iter(messages[entity.id])
+
+        return FakeTelegramClient, clients
+
+    def test_no_channels_does_not_open_client(self):
+        with patch("crm.telegram_channels.TelegramClient") as client:
+            sync_telegram_channels()
+        client.assert_not_called()
+
+    def test_first_sync_reads_last_month(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        message = SimpleNamespace(
+            id=7,
+            action=None,
+            message="hi",
+            date=now - timedelta(days=1),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        TelegramChannel.objects.create(username="https://t.me/cakes")
+        fake_client, clients = self._client({"cakes": entity}, {100: [message]})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+        kwargs = clients[0].calls[0]["kwargs"]
+        self.assertEqual(kwargs["offset_date"], now - timedelta(days=30))
+        self.assertIs(kwargs["reverse"], True)
+        self.assertNotIn("min_id", kwargs)
+        self.assertEqual(clients[0].session, "session")
+        self.assertEqual(clients[0].api_id, 12345)
+        self.assertEqual(clients[0].api_hash, "hash")
+        self.assertEqual(clients[0].entities, ["cakes"])
+        row = TelegramChannelMessage.objects.get()
+        self.assertEqual(row.text, "hi")
+        self.assertEqual(row.message_id, 7)
+        self.assertEqual(row.sender_id, 3)
+        self.assertEqual(row.sender_username, "ann")
+        self.assertEqual(row.sent_at, now - timedelta(days=1))
+        channel = TelegramChannel.objects.get()
+        self.assertEqual(channel.username, "cakes")
+        self.assertEqual(channel.title, "Cakes")
+        self.assertEqual(channel.telegram_id, 100)
+        self.assertEqual(channel.last_message_id, 7)
+
+    def test_next_sync_uses_cursor_without_duplicates(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        channel = TelegramChannel.objects.create(
+            username="cakes",
+            title="Cakes",
+            telegram_id=100,
+            last_message_id=7,
+        )
+        TelegramChannelMessage.objects.create(
+            channel=channel,
+            message_id=7,
+            sent_at=now - timedelta(days=2),
+            text="hi",
+            sender_id=3,
+            sender_username="ann",
+        )
+        older = SimpleNamespace(
+            id=7,
+            action=None,
+            message="hi",
+            date=now - timedelta(days=2),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        newer = SimpleNamespace(
+            id=8,
+            action=None,
+            message="again",
+            date=now - timedelta(hours=1),
+            sender_id=3,
+            sender=SimpleNamespace(username=None),
+        )
+        fake_client, clients = self._client({"cakes": entity}, {100: [older, newer]})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+        kwargs = clients[0].calls[0]["kwargs"]
+        self.assertEqual(kwargs["min_id"], 7)
+        self.assertIs(kwargs["reverse"], True)
+        self.assertNotIn("offset_date", kwargs)
+        self.assertEqual(TelegramChannelMessage.objects.count(), 2)
+        self.assertEqual(TelegramChannelMessage.objects.get(message_id=8).text, "again")
+        self.assertEqual(TelegramChannelMessage.objects.get(message_id=8).sender_username, "")
+        channel.refresh_from_db()
+        self.assertEqual(channel.last_message_id, 8)
+
+    def test_disabled_channel_is_not_read(self):
+        entity = SimpleNamespace(id=100, title="Cakes")
+        TelegramChannel.objects.create(username="off", enabled=False)
+        TelegramChannel.objects.create(username="cakes", enabled=True)
+        fake_client, clients = self._client({"cakes": entity}, {100: []})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+        ):
+            sync_telegram_channels()
+        self.assertEqual(clients[0].entities, ["cakes"])
+        self.assertEqual(len(clients[0].calls), 1)
+        self.assertEqual(TelegramChannelMessage.objects.count(), 0)

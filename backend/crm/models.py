@@ -879,6 +879,86 @@ class AnalyticsOrderCompositionItem(models.Model):
         return self.name
 
 
+def normalize_telegram_username(value: str) -> str:
+    username = value.strip()
+    lowered = username.lower()
+    marker = "t.me/"
+    index = lowered.find(marker)
+    if index != -1:
+        username = username[index + len(marker) :]
+    username = username.split("?", 1)[0]
+    username = username.strip("/")
+    username = username.split("/", 1)[0]
+    if username.startswith("@"):
+        username = username[1:]
+    return username
+
+
+class TelegramChannel(models.Model):
+    username = models.CharField(max_length=255, unique=True, verbose_name=_("Username"))
+    enabled = models.BooleanField(default=True, verbose_name=_("Enabled"))
+    title = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Title"))
+    telegram_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Telegram ID"))
+    last_message_id = models.BigIntegerField(default=0, verbose_name=_("Last message id"))
+
+    class Meta:
+        verbose_name = _("Telegram channel")
+        verbose_name_plural = _("Telegram channels")
+        ordering = ["username"]
+
+    def save(self, *args, **kwargs):
+        self.username = normalize_telegram_username(self.username)
+        update_fields = kwargs.get("update_fields")
+        if self.pk is not None:
+            stored = TelegramChannel.objects.filter(pk=self.pk).values_list("username", flat=True).first()
+            if stored is not None and stored != self.username:
+                self.telegram_id = None
+                self.last_message_id = 0
+                if update_fields is not None:
+                    kwargs["update_fields"] = set(update_fields) | {
+                        "username",
+                        "telegram_id",
+                        "last_message_id",
+                    }
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:
+        return self.username
+
+
+class TelegramChannelMessage(models.Model):
+    channel = models.ForeignKey(
+        TelegramChannel,
+        related_name="messages",
+        on_delete=models.CASCADE,
+        verbose_name=_("Channel"),
+    )
+    message_id = models.BigIntegerField(verbose_name=_("Message id"))
+    sent_at = models.DateTimeField(verbose_name=_("Sent at"))
+    text = models.TextField(blank=True, default="", verbose_name=_("Text"))
+    sender_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Sender ID"))
+    sender_username = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name=_("Sender username"),
+    )
+
+    class Meta:
+        verbose_name = _("Telegram channel message")
+        verbose_name_plural = _("Telegram channel messages")
+        ordering = ["-sent_at", "-message_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["channel", "message_id"],
+                name="uniq_telegramchannelmessage_channel_message_id",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.channel_id}#{self.message_id}"
+
+
 class WhatsAppNumberCheck(CrmOrder):
     class Meta:
         proxy = True

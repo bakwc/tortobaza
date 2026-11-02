@@ -34,6 +34,7 @@ from crm.models import (
     YandexAddressResolveFailure,
 )
 from crm.telegram import crm_order_slot_datetime, sync_crm_order_to_telegram
+from crm.telegram_channels import sync_telegram_channels
 from crm.telegram_user import pending_telegram_phones, resolve_phone
 from crm.yandex_maps import resolve_yandex_maps_url
 from rsge.sync import sync_invoices, sync_waybills
@@ -216,3 +217,4 @@ class Command(BaseCommand):
         sync_rsge_document_links()
         notify_courier_departures(timezone.now())
         backup_database(now)
+        sync_telegram_channels()

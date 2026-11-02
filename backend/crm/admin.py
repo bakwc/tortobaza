@@ -25,6 +25,8 @@ from crm.models import (
     FinancialTransactionRule,
     FinancialTransactionRuleCondition,
     ResolvedTelegramPhone,
+    TelegramChannel,
+    TelegramChannelMessage,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
@@ -288,6 +290,32 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
             "admin/crm/whatsappgetnewqr/change_list.html",
             context,
         )
+
+
+@admin.register(TelegramChannel)
+class TelegramChannelAdmin(admin.ModelAdmin):
+    list_display = ["username", "enabled", "title", "telegram_id", "last_message_id"]
+    list_filter = ["enabled"]
+    search_fields = ["username", "title"]
+    readonly_fields = ["title", "telegram_id", "last_message_id"]
+
+
+@admin.register(TelegramChannelMessage)
+class TelegramChannelMessageAdmin(admin.ModelAdmin):
+    list_display = [
+        "sent_at",
+        "channel",
+        "message_id",
+        "sender_id",
+        "sender_username",
+        "text",
+    ]
+    list_filter = ["channel"]
+    search_fields = ["text", "sender_username"]
+    date_hierarchy = "sent_at"
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(ResolvedTelegramPhone)
