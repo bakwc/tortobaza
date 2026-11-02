@@ -828,6 +828,14 @@
     "closeCount": "Провести",
     "recountCount": "Пересчитать",
     "recountCountHint": "Ожидаемое пересчитывается по текущим движениям на дату инвентаризации.",
+    "blankTitle": "Ревизия продуктов",
+    "blankDate": "Дата",
+    "blankCategory": "Категория",
+    "blankProduct": "Продукт",
+    "blankRemaining": "Остаток",
+    "blankToBuy": "Нужно закупить",
+    "blankComment": "Комментарий",
+    "blankOther": "Прочее",
     "units": {
       "g": "г",
       "ml": "мл",
@@ -856,7 +864,8 @@
       "productions": "Производство",
       "finishedGoods": "Готовая продукция",
       "writeOffs": "Списания",
-      "inventoryCounts": "Инвентаризации"
+      "inventoryCounts": "Инвентаризации",
+      "printBlank": "Распечатать бланк"
     }
   },
   "rsge": {

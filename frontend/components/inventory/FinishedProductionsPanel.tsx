@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { GroupPicker } from "@/components/crm/GroupPicker";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardTitle, Field, QueryState, formatQuantity } from "@/components/menu/ui";
 import { useCan, useCurrentUser } from "@/hooks/useAuth";
-import { useFinishedProductions, useProducers, useTechCards } from "@/hooks/useStock";
+import { useFinishedProductions, useProducers, useTechCardCategories, useTechCards } from "@/hooks/useStock";
 import type { FinishedProduction, FinishedProductionBody, TechCard } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type LineDraft = {
   key: string;
@@ -75,9 +76,43 @@ export function FinishedProductionsPanel() {
   const productions = useFinishedProductions();
   const producers = useProducers(isStaff);
   const techCards = useTechCards();
+  const categories = useTechCardCategories();
   const [editing, setEditing] = useState<FinishedProduction | null>(null);
   const [draft, setDraft] = useState<FinishedDraft | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const cards = techCards.list.data ?? [];
+  const categoryByCard = new Map(cards.map((card) => [card.id, card.category]));
+  const rows = productions.list.data ?? [];
+  const query = search.trim().toLowerCase();
+  const categoryKey = (techCardId: number): string | null => {
+    const category = categoryByCard.get(techCardId);
+    if (category === undefined) {
+      if (techCards.list.isLoading) return null;
+      return "none";
+    }
+    if (category === null) return "none";
+    return String(category);
+  };
+  const matchesCategory = (row: FinishedProduction, key: string) =>
+    row.lines.some((line) => categoryKey(line.tech_card) === key);
+  const allGroups = [
+    ...(categories.list.data ?? []).map((category) => ({
+      key: String(category.id),
+      label: category.name,
+      count: rows.filter((row) => matchesCategory(row, String(category.id))).length,
+    })),
+    {
+      key: "none",
+      label: t("noCategory"),
+      count: rows.filter((row) => matchesCategory(row, "none")).length,
+    },
+  ].filter((group) => group.count > 0);
+  const visible = rows.filter((row) => {
+    const categoryOk = categoryFilter === "all" || matchesCategory(row, categoryFilter);
+    const nameOk = query === "" || row.lines.some((line) => line.name.toLowerCase().includes(query));
+    return categoryOk && nameOk;
+  });
   const userId = currentUser.data?.id;
   const canChange = (row: FinishedProduction | null) => {
     if (canEditAll) return true;
@@ -119,7 +154,44 @@ export function FinishedProductionsPanel() {
           ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--muted-2)]">{t("finishedProductionHint")}</p>
+        <div className="relative mt-5">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
+          <Input
+            value={search}
+            placeholder={t("searchTechCards")}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-11"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[{ key: "all", label: t("allCategories"), count: rows.length }, ...allGroups].map((chip) => (
+            <button
+              key={chip.key}
+              type="button"
+              onClick={() => setCategoryFilter(chip.key)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                categoryFilter === chip.key
+                  ? "bg-[var(--brand)] text-white"
+                  : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {chip.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px]",
+                  categoryFilter === chip.key ? "bg-white/25" : "bg-[var(--cream)]",
+                )}
+              >
+                {chip.count}
+              </span>
+            </button>
+          ))}
+        </div>
         <QueryState isLoading={productions.list.isLoading} isError={productions.list.isError}>
+          {visible.length === 0 ? (
+            <p className="mt-4 py-6 text-center text-sm text-[var(--muted-2)]">{t("nothingFound")}</p>
+          ) : (
           <table className="mt-4 w-full text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
               <tr>
@@ -130,7 +202,7 @@ export function FinishedProductionsPanel() {
               </tr>
             </thead>
             <tbody>
-              {(productions.list.data ?? []).map((row) => (
+              {visible.map((row) => (
                 <tr
                   key={row.id}
                   onClick={() => open(row)}
@@ -152,6 +224,7 @@ export function FinishedProductionsPanel() {
               ))}
             </tbody>
           </table>
+          )}
         </QueryState>
       </Card>
 

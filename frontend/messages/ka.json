@@ -828,6 +828,14 @@
     "closeCount": "გატარება",
     "recountCount": "გადათვლა",
     "recountCountHint": "მოსალოდნელი გადაითვლება ინვენტარიზაციის თარიღის მიმდინარე მოძრაობების მიხედვით.",
+    "blankTitle": "პროდუქტების რევიზია",
+    "blankDate": "თარიღი",
+    "blankCategory": "კატეგორია",
+    "blankProduct": "პროდუქტი",
+    "blankRemaining": "ნაშთი",
+    "blankToBuy": "შესასყიდი",
+    "blankComment": "კომენტარი",
+    "blankOther": "სხვა",
     "units": {
       "g": "გ",
       "ml": "მლ",
@@ -856,7 +864,8 @@
       "productions": "წარმოება",
       "finishedGoods": "მზა პროდუქცია",
       "writeOffs": "ჩამოწერები",
-      "inventoryCounts": "ინვენტარიზაციები"
+      "inventoryCounts": "ინვენტარიზაციები",
+      "printBlank": "ბლანკის ბეჭდვა"
     }
   },
   "rsge": {

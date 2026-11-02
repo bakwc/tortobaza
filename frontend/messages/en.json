@@ -828,6 +828,14 @@
     "closeCount": "Close count",
     "recountCount": "Recalculate",
     "recountCountHint": "Expected quantities are recalculated from the current movements on the inventory date.",
+    "blankTitle": "Product revision",
+    "blankDate": "Date",
+    "blankCategory": "Category",
+    "blankProduct": "Product",
+    "blankRemaining": "On hand",
+    "blankToBuy": "To buy",
+    "blankComment": "Comment",
+    "blankOther": "Other",
     "units": {
       "g": "g",
       "ml": "ml",
@@ -856,7 +864,8 @@
       "productions": "Production",
       "finishedGoods": "Finished goods",
       "writeOffs": "Write-offs",
-      "inventoryCounts": "Inventory counts"
+      "inventoryCounts": "Inventory counts",
+      "printBlank": "Print blank"
     }
   },
   "rsge": {

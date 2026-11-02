@@ -25,11 +25,11 @@ export function SectionShell({
   const allowed = useCan(permission);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 print:max-w-none print:p-0 md:py-12">
       <CrmAuthGate>
         {allowed ? (
-          <div className="grid gap-6">
-            <div className="flex items-start justify-between gap-2">
+          <div className="grid gap-6 print:gap-0">
+            <div className="flex items-start justify-between gap-2 print:hidden">
               <nav className="flex min-w-0 flex-1 flex-wrap gap-2">
                 {tabs.map((tab) => (
                   <Button key={tab.key} asChild variant={tab.key === active ? "primary" : "outline"}>
