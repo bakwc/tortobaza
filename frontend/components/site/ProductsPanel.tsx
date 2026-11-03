@@ -19,6 +19,7 @@ import {
   useSiteProductDetail,
   useSiteProducts,
   useSiteTechCards,
+  useSetShowHidden,
   useShowHidden,
 } from "@/hooks/useSite";
 import { Link } from "@/i18n/navigation";
@@ -91,6 +92,7 @@ export function ProductsPanel() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>(undefined);
   const showHidden = useShowHidden();
+  const setShowHidden = useSetShowHidden();
   const categories = useSiteCategories();
   const optionGroups = useSiteOptionGroups();
   const techCards = useSiteTechCards();
@@ -139,7 +141,7 @@ export function ProductsPanel() {
             </Button>
           ) : null}
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid items-end gap-3 sm:grid-cols-3">
           <Field label={t("search")}>
             <Input value={search} onChange={(event) => setSearch(event.target.value)} />
           </Field>
@@ -159,6 +161,7 @@ export function ProductsPanel() {
               ))}
             </NativeSelect>
           </Field>
+          <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
         </div>
         <QueryState isLoading={products.list.isLoading} isError={products.list.isError}>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

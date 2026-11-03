@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { api } from "@/lib/api";
 import type {
   SiteCategoryBody,
@@ -14,6 +15,19 @@ import type {
 export function useShowHidden(): boolean {
   const searchParams = useSearchParams();
   return searchParams.get("show_hidden") === "1";
+}
+
+export function useSetShowHidden(): (value: boolean) => void {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return (value: boolean) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set("show_hidden", "1");
+    else params.delete("show_hidden");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  };
 }
 
 function useInvalidateSite() {

@@ -13,6 +13,7 @@ import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { useCan } from "@/hooks/useAuth";
 import {
+  useSetShowHidden,
   useShowHidden,
   useSiteCategories,
   useSiteCategoryImageDelete,
@@ -58,6 +59,7 @@ export function CategoriesPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
   const showHidden = useShowHidden();
+  const setShowHidden = useSetShowHidden();
   const categories = useSiteCategories();
   const visibleCategories = (categories.list.data ?? []).filter((row) => showHidden || row.is_active);
   const uploadImage = useSiteCategoryImageUpload();
@@ -78,14 +80,17 @@ export function CategoriesPanel() {
   return (
     <div className="grid gap-6">
       <Card>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("categories")}</CardTitle>
-          {canEdit ? (
-            <Button type="button" size="sm" onClick={() => open(null)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("newCategory")}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+            {canEdit ? (
+              <Button type="button" size="sm" onClick={() => open(null)}>
+                <Plus className="mr-1 h-4 w-4" />
+                {t("newCategory")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <QueryState isLoading={categories.list.isLoading} isError={categories.list.isError}>
           <div className="mt-4 grid gap-3">

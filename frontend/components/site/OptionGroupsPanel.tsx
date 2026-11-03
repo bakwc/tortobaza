@@ -12,7 +12,13 @@ import { ImageCropEditor } from "@/components/site/ImageCropEditor";
 import { OptionImagePreview } from "@/components/site/ImageSitePreview";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { useCan } from "@/hooks/useAuth";
-import { useSiteOptionGroups, useSiteOptionImageDelete, useSiteOptionImageUpload } from "@/hooks/useSite";
+import {
+  useSetShowHidden,
+  useShowHidden,
+  useSiteOptionGroups,
+  useSiteOptionImageDelete,
+  useSiteOptionImageUpload,
+} from "@/hooks/useSite";
 import { defaultCenterCrop, type CropValues } from "@/lib/site/crop";
 import type { SiteOptionGroup } from "@/lib/api/site-schemas";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
@@ -101,6 +107,8 @@ function cropFromOption(option: OptionDraft): CropValues {
 export function OptionGroupsPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
+  const showHidden = useShowHidden();
+  const setShowHidden = useSetShowHidden();
   const groups = useSiteOptionGroups();
   const uploadOptionImage = useSiteOptionImageUpload();
   const deleteOptionImage = useSiteOptionImageDelete();
@@ -128,14 +136,17 @@ export function OptionGroupsPanel() {
   return (
     <div className="grid gap-6">
       <Card>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("optionGroups")}</CardTitle>
-          {canEdit ? (
-            <Button type="button" size="sm" onClick={() => open(null)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("newOptionGroup")}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+            {canEdit ? (
+              <Button type="button" size="sm" onClick={() => open(null)}>
+                <Plus className="mr-1 h-4 w-4" />
+                {t("newOptionGroup")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <QueryState isLoading={groups.list.isLoading} isError={groups.list.isError}>
           <div className="mt-4 grid gap-3">

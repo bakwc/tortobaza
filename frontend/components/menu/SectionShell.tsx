@@ -14,13 +14,11 @@ export function SectionShell({
   tabs,
   active,
   permission,
-  header,
   children,
 }: {
   tabs: SectionTab[];
   active: string;
   permission: string;
-  header?: ReactNode;
   children: ReactNode;
 }) {
   const t = useTranslations("crm");
@@ -39,7 +37,6 @@ export function SectionShell({
                   </Button>
                 ))}
               </nav>
-              {header ? <div className="shrink-0 self-center">{header}</div> : null}
               <div className="shrink-0">
                 <Suspense>
                   <CrmOverflowMenu />

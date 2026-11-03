@@ -12,6 +12,7 @@ import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from 
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { useCan } from "@/hooks/useAuth";
 import {
+  useSetShowHidden,
   useShowHidden,
   useSiteCategories,
   useSiteCategoryLandings,
@@ -55,6 +56,7 @@ export function LandingsPanel() {
   const canEdit = useCan("edit_catalog");
   const categories = useSiteCategories();
   const showHidden = useShowHidden();
+  const setShowHidden = useSetShowHidden();
   const landings = useSiteCategoryLandings();
   const visibleLandings = (landings.list.data ?? []).filter((row) => showHidden || row.is_active);
   const uploadImage = useSiteCategoryLandingImageUpload();
@@ -73,14 +75,17 @@ export function LandingsPanel() {
   return (
     <div className="grid gap-6">
       <Card>
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("landings")}</CardTitle>
-          {canEdit ? (
-            <Button type="button" size="sm" onClick={() => open(null)}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("newLanding")}
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+            {canEdit ? (
+              <Button type="button" size="sm" onClick={() => open(null)}>
+                <Plus className="mr-1 h-4 w-4" />
+                {t("newLanding")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <QueryState isLoading={landings.list.isLoading} isError={landings.list.isError}>
           <div className="mt-4 grid gap-3">
