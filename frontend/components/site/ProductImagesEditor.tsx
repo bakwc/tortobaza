@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
@@ -26,6 +26,14 @@ type PendingUpload = {
   alt_ru: string;
 };
 
+function cropFromImage(row: SiteProductImage): CropValues {
+  return {
+    crop_left: row.crop_left ?? 0,
+    crop_top: row.crop_top ?? 0,
+    crop_size: row.crop_size ?? 1,
+  };
+}
+
 export function ProductImagesEditor({
   productId,
   images,
@@ -33,6 +41,7 @@ export function ProductImagesEditor({
   price,
   canEdit,
   onRefresh,
+  flushRef,
 }: {
   productId: number;
   images: SiteProductImage[];
@@ -40,6 +49,7 @@ export function ProductImagesEditor({
   price: string;
   canEdit: boolean;
   onRefresh: () => void;
+  flushRef: RefObject<(() => Promise<void>) | null>;
 }) {
   const t = useTranslations("site");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -50,10 +60,98 @@ export function ProductImagesEditor({
   );
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [cropDrafts, setCropDrafts] = useState<Record<number, CropValues>>({});
+  const cropDraftsRef = useRef(cropDrafts);
+  cropDraftsRef.current = cropDrafts;
+  const debounceTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const sorted = [...images].sort((a, b) => a.position - b.position || a.id - b.id);
   const activeImage = sorted.find((row) => row.id === activeId) ?? null;
   const activePending = pending.find((row) => row.key === pendingKey) ?? null;
+
+  const scheduleCropSave = useCallback(
+    (imageId: number, crop: CropValues) => {
+      const existing = debounceTimersRef.current[imageId];
+      if (existing) clearTimeout(existing);
+      debounceTimersRef.current[imageId] = setTimeout(() => {
+        delete debounceTimersRef.current[imageId];
+        const sent = crop;
+        void mutations.patch
+          .mutateAsync({
+            imageId,
+            body: {
+              crop_left: sent.crop_left,
+              crop_top: sent.crop_top,
+              crop_size: sent.crop_size,
+            },
+          })
+          .then(() => {
+            onRefresh();
+            setCropDrafts((prev) => {
+              const current = prev[imageId];
+              if (
+                current &&
+                current.crop_left === sent.crop_left &&
+                current.crop_top === sent.crop_top &&
+                current.crop_size === sent.crop_size
+              ) {
+                const next = { ...prev };
+                delete next[imageId];
+                return next;
+              }
+              return prev;
+            });
+          });
+      }, 600);
+    },
+    [mutations.patch, onRefresh],
+  );
+
+  const flushCrops = useCallback(async () => {
+    for (const imageId of Object.keys(debounceTimersRef.current)) {
+      clearTimeout(debounceTimersRef.current[Number(imageId)]);
+    }
+    debounceTimersRef.current = {};
+    const drafts = cropDraftsRef.current;
+    const entries = Object.entries(drafts);
+    if (entries.length === 0) return;
+    await Promise.all(
+      entries.map(([imageId, crop]) =>
+        mutations.patch.mutateAsync({
+          imageId: Number(imageId),
+          body: {
+            crop_left: crop.crop_left,
+            crop_top: crop.crop_top,
+            crop_size: crop.crop_size,
+          },
+        }),
+      ),
+    );
+    onRefresh();
+    setCropDrafts((prev) => {
+      const next = { ...prev };
+      for (const [imageId, crop] of entries) {
+        const id = Number(imageId);
+        const current = next[id];
+        if (
+          current &&
+          current.crop_left === crop.crop_left &&
+          current.crop_top === crop.crop_top &&
+          current.crop_size === crop.crop_size
+        ) {
+          delete next[id];
+        }
+      }
+      return next;
+    });
+  }, [mutations.patch, onRefresh]);
+
+  useEffect(() => {
+    flushRef.current = flushCrops;
+    return () => {
+      flushRef.current = null;
+    };
+  }, [flushCrops, flushRef]);
 
   const pickFiles = async (files: FileList | null) => {
     if (!files || !canEdit) return;
@@ -123,11 +221,13 @@ export function ProductImagesEditor({
   const previewHeight = activePending?.height ?? activeImage?.image.height ?? 1;
   const previewCrop: CropValues = activePending
     ? activePending.crop
-    : {
-        crop_left: activeImage?.crop_left ?? 0,
-        crop_top: activeImage?.crop_top ?? 0,
-        crop_size: activeImage?.crop_size ?? 1,
-      };
+    : activeImage
+      ? (cropDrafts[activeImage.id] ?? cropFromImage(activeImage))
+      : {
+          crop_left: 0,
+          crop_top: 0,
+          crop_size: 1,
+        };
 
   return (
     <div className="grid gap-4">
@@ -221,17 +321,8 @@ export function ProductImagesEditor({
                       return;
                     }
                     if (activeImage) {
-                      mutations.patch.mutate(
-                        {
-                          imageId: activeImage.id,
-                          body: {
-                            crop_left: crop.crop_left,
-                            crop_top: crop.crop_top,
-                            crop_size: crop.crop_size,
-                          },
-                        },
-                        { onSuccess: onRefresh },
-                      );
+                      setCropDrafts((prev) => ({ ...prev, [activeImage.id]: crop }));
+                      scheduleCropSave(activeImage.id, crop);
                     }
                   }}
                 />

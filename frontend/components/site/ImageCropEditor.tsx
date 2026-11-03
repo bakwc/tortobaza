@@ -6,7 +6,13 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/menu/ui";
-import { cropPreviewStyle, defaultCenterCrop, type CropValues } from "@/lib/site/crop";
+import {
+  centerCrop,
+  cropPreviewStyle,
+  panCrop,
+  zoomCrop,
+  type CropValues,
+} from "@/lib/site/crop";
 
 export function ImageCropEditor({
   src,
@@ -38,34 +44,29 @@ export function ImageCropEditor({
   }, []);
 
   const preview = cropPreviewStyle(width, height, crop, frameSize);
-
-  const pan = (dx: number, dy: number) => {
-    const side = crop.crop_size * Math.min(width, height);
-    const maxLeft = width - side;
-    const maxTop = height - side;
-    if (maxLeft <= 0 && maxTop <= 0) return;
-    onChange({
-      ...crop,
-      crop_left: maxLeft > 0 ? Math.min(1, Math.max(0, crop.crop_left + dx / maxLeft)) : 0,
-      crop_top: maxTop > 0 ? Math.min(1, Math.max(0, crop.crop_top + dy / maxTop)) : 0,
-    });
-  };
+  const zoom = 1 / crop.crop_size;
 
   return (
     <div className="grid gap-3">
       <div
         ref={frameRef}
-        className="relative aspect-square w-full max-w-sm overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--cream)]"
+        className="relative aspect-square w-full max-w-sm touch-none cursor-grab overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--cream)] active:cursor-grabbing"
         onPointerDown={(event) => {
           dragRef.current = { x: event.clientX, y: event.clientY, crop };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
           if (!dragRef.current) return;
-          const dx = event.clientX - dragRef.current.x;
-          const dy = event.clientY - dragRef.current.y;
-          dragRef.current = { x: event.clientX, y: event.clientY, crop: dragRef.current.crop };
-          pan(-dx, -dy);
+          onChange(
+            panCrop(
+              width,
+              height,
+              dragRef.current.crop,
+              event.clientX - dragRef.current.x,
+              event.clientY - dragRef.current.y,
+              frameSize,
+            ),
+          );
         }}
         onPointerUp={(event) => {
           dragRef.current = null;
@@ -90,27 +91,24 @@ export function ImageCropEditor({
       <Field label={t("cropZoom")}>
         <Input
           type="range"
-          min={0.2}
-          max={1}
+          min={1}
+          max={5}
           step={0.01}
-          value={crop.crop_size}
-          onChange={(event) => onChange({ ...crop, crop_size: Number(event.target.value) })}
+          value={zoom}
+          onChange={(event) =>
+            onChange(zoomCrop(width, height, crop, 1 / Number(event.target.value)))
+          }
         />
       </Field>
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => onChange(defaultCenterCrop(width, height))}
-        >
+        <Button type="button" size="sm" variant="outline" onClick={() => onChange(centerCrop(crop))}>
           {t("cropCenter")}
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          onClick={() => onChange({ crop_left: 0, crop_top: 0, crop_size: 1 })}
+          onClick={() => onChange({ crop_left: 0.5, crop_top: 0.5, crop_size: 1 })}
         >
           {t("cropFit")}
         </Button>

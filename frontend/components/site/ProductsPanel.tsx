@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ExternalLink, Plus } from "lucide-react";
 
@@ -96,6 +96,7 @@ export function ProductsPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
   const detail = useSiteProductDetail(editingId);
+  const flushImagesRef = useRef<(() => Promise<void>) | null>(null);
 
   const open = (row: SiteProductListItem | null) => {
     products.save.reset();
@@ -225,19 +226,22 @@ export function ProductsPanel() {
               is_active: activeDraft.is_active,
               option_groups: activeDraft.option_groups,
             };
-            products.save.mutate(
-              { id: activeDraft.id, body },
-              {
-                onSuccess: (saved) => {
-                  if (activeDraft.id === null) {
-                    setEditingId(saved.id);
-                    setDraft(null);
-                  } else {
-                    close();
-                  }
+            void (async () => {
+              await flushImagesRef.current?.();
+              products.save.mutate(
+                { id: activeDraft.id, body },
+                {
+                  onSuccess: (saved) => {
+                    if (activeDraft.id === null) {
+                      setEditingId(saved.id);
+                      setDraft(null);
+                    } else {
+                      close();
+                    }
+                  },
                 },
-              },
-            );
+              );
+            })();
           }}
           onDelete={
             canEdit && activeDraft !== null && activeDraft.id !== null
@@ -444,6 +448,7 @@ export function ProductsPanel() {
                 price={activeDraft.base_price}
                 canEdit={canEdit}
                 onRefresh={() => detail.refetch()}
+                flushRef={flushImagesRef}
               />
             </div>
           ) : (
