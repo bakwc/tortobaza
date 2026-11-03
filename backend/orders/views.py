@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from decimal import Decimal
 
@@ -46,6 +47,8 @@ from orders.services import (
     get_promo_by_code,
     notify_order_paid_by_card,
 )
+
+logger = logging.getLogger("orders.monrem")
 
 
 class PickupLocationListView(generics.ListAPIView):
@@ -277,6 +280,29 @@ class LibertyCallbackView(APIView):
         payment.save()
         xml = callback_response_xml("0", "Ok", transactioncode)
         return HttpResponse(xml, content_type="text/xml")
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class MonremLogView(APIView):
+    outcome = ""
+
+    def get(self, request):
+        return self._handle(request)
+
+    def post(self, request):
+        return self._handle(request)
+
+    def _handle(self, request):
+        logger.info(
+            "monrem %s %s query=%s post=%s body=%s ip=%s",
+            self.outcome,
+            request.method,
+            request.META.get("QUERY_STRING", ""),
+            request.POST.dict(),
+            request.body.decode("utf-8", errors="replace"),
+            request.META.get("REMOTE_ADDR", ""),
+        )
+        return HttpResponse("OK")
 
 
 class PayPalConfigView(APIView):

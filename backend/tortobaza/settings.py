@@ -218,6 +218,10 @@ LOGGING = {
             "class": "logging.FileHandler",
             "filename": LOG_DIR / "inventory.log",
         },
+        "monrem_file": {
+            "class": "logging.FileHandler",
+            "filename": LOG_DIR / "monrem.log",
+        },
     },
     "loggers": {
         "crm.flowwow": {
@@ -226,6 +230,10 @@ LOGGING = {
         },
         "inventory": {
             "handlers": ["console", "inventory_file"],
+            "level": "INFO",
+        },
+        "orders.monrem": {
+            "handlers": ["console", "monrem_file"],
             "level": "INFO",
         },
     },
