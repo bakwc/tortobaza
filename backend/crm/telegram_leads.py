@@ -26,8 +26,9 @@ class LeadVerdict(BaseModel):
     is_lead: bool
 
 
-def classify_telegram_leads() -> None:
+def classify_leads(network_slug: str) -> None:
     pending = SocialMessage.objects.filter(
+        channel__network__slug=network_slug,
         keyword_match=True,
         potential_lead__isnull=True,
     ).order_by("id")
@@ -71,7 +72,7 @@ def build_lead_notification_html(message: SocialMessage) -> str:
     )
 
 
-def notify_recent_telegram_leads() -> None:
+def notify_recent_leads(network_slug: str) -> None:
     token = settings.TELEGRAM_BOT_TOKEN
     chat_id = settings.TELEGRAM_LEADS_CHAT_ID
     if not token or not chat_id:
@@ -79,6 +80,7 @@ def notify_recent_telegram_leads() -> None:
     cutoff = timezone.now() - timedelta(hours=24)
     pending = (
         SocialMessage.objects.filter(
+            channel__network__slug=network_slug,
             potential_lead=True,
             lead_notified=False,
             sent_at__gte=cutoff,

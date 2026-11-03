@@ -3,6 +3,7 @@ from django.urls import path
 from crm.telegram_views import (
     SocialKeywordDetailView,
     SocialKeywordListView,
+    SocialLeadsProcessView,
     SocialMessageIngestView,
     SocialMessageListView,
     SocialNetworkIngestView,
@@ -39,6 +40,11 @@ from crm.views import (
 
 urlpatterns = [
     path("social/networks/", SocialNetworkIngestView.as_view(), name="social-networks"),
+    path(
+        "social/networks/<slug:slug>/process-leads/",
+        SocialLeadsProcessView.as_view(),
+        name="social-process-leads",
+    ),
     path("social/messages/", SocialMessageIngestView.as_view(), name="social-messages-ingest"),
     path("crm/social/messages/", SocialMessageListView.as_view(), name="crm-social-messages"),
     path("crm/social/channels/", SocialSourceListView.as_view(), name="crm-social-channels"),

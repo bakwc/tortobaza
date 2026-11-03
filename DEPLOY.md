@@ -240,6 +240,10 @@ server {
     proxy_read_timeout 60s;
 
     # Django: API, admin, health, static and uploaded media
+    location ~ ^/api/social/networks/[^/]+/process-leads/$ {
+        proxy_pass http://tortobaza_backend_dev;
+        proxy_read_timeout 900s;
+    }
     location /api/    { proxy_pass http://tortobaza_backend_dev; }
     location /admin/  { proxy_pass http://tortobaza_backend_dev; }
     location /hijack/ { proxy_pass http://tortobaza_backend_dev; }
@@ -291,6 +295,10 @@ server {
     proxy_set_header Connection        "upgrade";
     proxy_read_timeout 60s;
 
+    location ~ ^/api/social/networks/[^/]+/process-leads/$ {
+        proxy_pass http://tortobaza_backend;
+        proxy_read_timeout 900s;
+    }
     location /api/    { proxy_pass http://tortobaza_backend; }
     location /admin/  { proxy_pass http://tortobaza_backend; }
     location /hijack/ { proxy_pass http://tortobaza_backend; }

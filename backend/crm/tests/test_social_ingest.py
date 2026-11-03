@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -175,3 +177,33 @@ class SocialIngestTests(TestCase):
         self.assertEqual(again.status_code, 200)
         self.assertEqual(SocialNetwork.objects.get(slug="telegram").sources.count(), 1)
         self.assertEqual(SocialMessage.objects.get().text, "ещё")
+
+    def test_process_leads_missing_token_is_forbidden(self):
+        response = self.client.post("/api/social/networks/threads/process-leads/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_process_leads_unknown_network(self):
+        response = self.client.post(
+            "/api/social/networks/threads/process-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_process_leads_telegram_is_rejected(self):
+        response = self.client.post(
+            "/api/social/networks/telegram/process-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    @patch("crm.telegram_views.notify_recent_leads")
+    @patch("crm.telegram_views.classify_leads")
+    def test_process_leads_runs_for_network(self, classify_leads, notify_recent_leads):
+        SocialNetwork.objects.create(slug="threads", name="Threads")
+        response = self.client.post(
+            "/api/social/networks/threads/process-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 204)
+        classify_leads.assert_called_once_with("threads")
+        notify_recent_leads.assert_called_once_with("threads")

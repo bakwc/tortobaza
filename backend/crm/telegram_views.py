@@ -22,6 +22,7 @@ from crm.serializers import (
     SocialSourceSerializer,
 )
 from crm.telegram_channels import _keyword_match, refresh_keyword_matches
+from crm.telegram_leads import classify_leads, notify_recent_leads
 
 PAGE_SIZE = 15
 
@@ -252,3 +253,19 @@ class SocialMessageIngestView(APIView):
             {"id": message.id, "keyword_match": message.keyword_match},
             status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SocialLeadsProcessView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug: str):
+        if not _ingest_authorized(request):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        get_object_or_404(SocialNetwork, slug=slug)
+        if slug == "telegram":
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        classify_leads(slug)
+        notify_recent_leads(slug)
+        return Response(status=status.HTTP_204_NO_CONTENT)
