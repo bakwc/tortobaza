@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCan, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -34,6 +34,7 @@ export function CrmOverflowMenu() {
   const t = useTranslations("crm");
   const logout = useLogout();
   const canViewOrders = useCan("view_orders");
+  const canViewLeads = useCan("view_leads");
   const canViewAnalytics = useCan("view_analytics");
   const canViewFinance = useCan("view_finance");
   const canViewEmployees = useCan("view_employees");
@@ -75,6 +76,17 @@ export function CrmOverflowMenu() {
             label: t("ordersSection"),
             icon: ClipboardList,
             active: isUnder(pathname, "/crm"),
+          },
+        ]
+      : []),
+    ...(canViewLeads
+      ? [
+          {
+            key: "leads",
+            href: "/leads",
+            label: t("leadsSection"),
+            icon: MessageSquare,
+            active: isUnder(pathname, "/leads"),
           },
         ]
       : []),

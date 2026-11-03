@@ -1,5 +1,12 @@
 from django.urls import path
 
+from crm.telegram_views import (
+    TelegramChannelDetailView,
+    TelegramChannelListView,
+    TelegramKeywordDetailView,
+    TelegramKeywordListView,
+    TelegramMessageListView,
+)
 from crm.views import (
     AnalyticsClientsView,
     AnalyticsEmployeesView,
@@ -29,6 +36,11 @@ from crm.views import (
 )
 
 urlpatterns = [
+    path("crm/telegram/messages/", TelegramMessageListView.as_view(), name="crm-telegram-messages"),
+    path("crm/telegram/channels/", TelegramChannelListView.as_view(), name="crm-telegram-channels"),
+    path("crm/telegram/channels/<int:pk>/", TelegramChannelDetailView.as_view(), name="crm-telegram-channel-detail"),
+    path("crm/telegram/keywords/", TelegramKeywordListView.as_view(), name="crm-telegram-keywords"),
+    path("crm/telegram/keywords/<int:pk>/", TelegramKeywordDetailView.as_view(), name="crm-telegram-keyword-detail"),
     path("webhooks/flowwow/", FlowwowWebhookView.as_view(), name="flowwow-webhook"),
     path("crm/analytics/overview/", AnalyticsOverviewView.as_view(), name="crm-analytics-overview"),
     path("crm/analytics/load/", AnalyticsLoadView.as_view(), name="crm-analytics-load"),

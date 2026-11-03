@@ -80,6 +80,8 @@ class SectionAccess(models.Model):
             ("view_costs", _("See costs, suppliers and supplies")),
             ("view_catalog", _("Catalog: view")),
             ("edit_catalog", _("Catalog: edit")),
+            ("view_leads", _("Leads: view")),
+            ("edit_leads", _("Leads: edit")),
         ]
 
     def __str__(self) -> str:

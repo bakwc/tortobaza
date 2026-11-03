@@ -62,6 +62,10 @@ import {
   ProductsPageSchema,
   PromoValidationSchema,
   SessionUserSchema,
+  TelegramChannelMessageSchema,
+  TelegramChannelSchema,
+  TelegramKeywordSchema,
+  TelegramMessageKindSchema,
   StartPaymentResponseSchema,
   LibertyPaymentEnabledSchema,
   PayPalCaptureResponseSchema,
@@ -129,6 +133,12 @@ import {
   type RsgePendingCount,
   type RsWaybill,
   type SessionUser,
+  type TelegramChannel,
+  type TelegramChannelBody,
+  type TelegramChannelMessage,
+  type TelegramKeyword,
+  type TelegramKeywordBody,
+  type TelegramMessageKind,
   type StartPaymentBody,
   type StartPaymentResponse,
   type PayPalCaptureBody,
@@ -853,6 +863,23 @@ export function endpoints(fetcher: Fetcher) {
       });
       return parse(TechCardCostSchema, raw).cost;
     },
+
+    async telegramMessages(kind: TelegramMessageKind, q: string): Promise<TelegramChannelMessage[]> {
+      const raw = await fetcher<unknown>("/api/crm/telegram/messages/", {
+        searchParams: { kind, q: q.trim() || undefined },
+      });
+      return parse(z.array(TelegramChannelMessageSchema), raw);
+    },
+    telegramChannels: resource<TelegramChannel, TelegramChannelBody>(
+      fetcher,
+      "/api/crm/telegram/channels/",
+      TelegramChannelSchema,
+    ),
+    telegramKeywords: resource<TelegramKeyword, TelegramKeywordBody>(
+      fetcher,
+      "/api/crm/telegram/keywords/",
+      TelegramKeywordSchema,
+    ),
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {
       const raw = await fetcher<unknown>("/api/crm/orders/", {

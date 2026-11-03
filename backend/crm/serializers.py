@@ -22,6 +22,9 @@ from crm.models import (
     FinancialAccount,
     FinancialTransaction,
     ResolvedTelegramPhone,
+    TelegramChannel,
+    TelegramChannelMessage,
+    TelegramKeyword,
 )
 from crm.paypal_link import assign_crm_payment_link
 from crm.phone import links_for_stored
@@ -1043,3 +1046,40 @@ class FinanceTransactionWriteSerializer(serializers.Serializer):
 class ExchangeRatesSerializer(serializers.Serializer):
     date = serializers.DateField()
     rates = serializers.DictField(child=serializers.CharField())
+
+
+class TelegramChannelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TelegramChannel
+        fields = ["id", "username", "enabled", "title", "telegram_id", "last_message_id"]
+        read_only_fields = ["title", "telegram_id", "last_message_id"]
+
+
+class TelegramKeywordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TelegramKeyword
+        fields = ["id", "word"]
+
+
+class TelegramChannelMessageSerializer(serializers.ModelSerializer):
+    channel_username = serializers.CharField(source="channel.username", read_only=True)
+    channel_title = serializers.CharField(source="channel.title", read_only=True)
+    url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TelegramChannelMessage
+        fields = [
+            "id",
+            "sent_at",
+            "text",
+            "sender_id",
+            "sender_username",
+            "keyword_match",
+            "potential_lead",
+            "channel_username",
+            "channel_title",
+            "url",
+        ]
+
+    def get_url(self, obj: TelegramChannelMessage) -> str:
+        return f"https://t.me/{obj.channel.username}/{obj.message_id}"

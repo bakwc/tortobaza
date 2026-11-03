@@ -16,6 +16,8 @@ export function SiteChrome({
   const hideChrome =
     pathname === "/crm" ||
     pathname.startsWith("/crm/") ||
+    pathname === "/leads" ||
+    pathname.startsWith("/leads/") ||
     pathname === "/finance" ||
     pathname.startsWith("/finance/") ||
     pathname === "/menu" ||
