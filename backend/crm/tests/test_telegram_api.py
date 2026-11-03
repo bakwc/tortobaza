@@ -81,7 +81,7 @@ class TelegramLeadsApiTests(TestCase):
         self.assertEqual(row["url"], "https://t.me/cakes/15")
 
     def test_messages_pagination(self):
-        for message_id in range(1, 52):
+        for message_id in range(1, 17):
             self._message(message_id, f"m{message_id}", False, None)
         self.client.force_authenticate(user=self.viewer)
         first = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 1})
@@ -89,13 +89,33 @@ class TelegramLeadsApiTests(TestCase):
         first_body = first.json()
         self.assertEqual(first_body["page"], 1)
         self.assertEqual(first_body["pages"], 2)
-        self.assertEqual(len(first_body["results"]), 50)
+        self.assertEqual(len(first_body["results"]), 15)
         second = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 2})
         self.assertEqual(second.status_code, 200)
         second_body = second.json()
         self.assertEqual(second_body["page"], 2)
         self.assertEqual(len(second_body["results"]), 1)
         self.assertEqual(second_body["results"][0]["text"], "m1")
+
+    def test_messages_channel_filter(self):
+        other = TelegramChannel.objects.create(username="other")
+        on_cakes = self._message(1, "cakes msg", False, None)
+        TelegramChannelMessage.objects.create(
+            channel=other,
+            message_id=2,
+            sent_at=self.sent_at,
+            text="other msg",
+            keyword_match=False,
+            potential_lead=None,
+        )
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.get(
+            "/api/crm/telegram/messages/",
+            {"kind": "all", "channel": self.channel.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        ids = [row["id"] for row in response.json()["results"]]
+        self.assertEqual(ids, [on_cakes.id])
 
     def test_viewer_cannot_create_channel(self):
         self.client.force_authenticate(user=self.viewer)

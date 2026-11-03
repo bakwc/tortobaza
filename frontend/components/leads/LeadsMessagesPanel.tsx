@@ -4,16 +4,24 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardTitle, QueryState } from "@/components/menu/ui";
+import { Card, CardTitle, NativeSelect, QueryState } from "@/components/menu/ui";
 import { LeadsShell } from "@/components/leads/LeadsShell";
-import { useTelegramMessages } from "@/hooks/useLeads";
+import { useTelegramChannels, useTelegramMessages } from "@/hooks/useLeads";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
 import type { TelegramMessageKind } from "@/lib/api/types";
+import { TelegramIcon } from "@/content/contacts/icons";
 
 function parseKind(value: string | null): TelegramMessageKind {
   if (value === "keyword" || value === "all") return value;
   return "lead";
+}
+
+function parseChannel(value: string | null): number | null {
+  if (value === null || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.floor(parsed);
 }
 
 function senderLabel(senderUsername: string, senderId: number | null): string {
@@ -31,11 +39,13 @@ function parsePage(value: string | null): number {
 function pageHref(
   pathname: string,
   kind: TelegramMessageKind,
+  channel: number | null,
   q: string,
   page: number,
 ): string {
   const params = new URLSearchParams();
   if (kind !== "lead") params.set("kind", kind);
+  if (channel !== null) params.set("channel", String(channel));
   const trimmed = q.trim();
   if (trimmed) params.set("q", trimmed);
   if (page > 1) params.set("page", String(page));
@@ -50,14 +60,17 @@ export function LeadsMessagesPanel() {
   const router = useRouter();
   const pathname = usePathname();
   const kind = parseKind(searchParams.get("kind"));
+  const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
   const page = parsePage(searchParams.get("page"));
-  const messages = useTelegramMessages(kind, q, page);
+  const channels = useTelegramChannels();
+  const messages = useTelegramMessages(kind, channel, q, page);
   const rows = messages.data?.results ?? [];
 
-  const setParams = (nextKind: TelegramMessageKind, nextQ: string) => {
+  const setParams = (nextKind: TelegramMessageKind, nextChannel: number | null, nextQ: string) => {
     const params = new URLSearchParams();
     if (nextKind !== "lead") params.set("kind", nextKind);
+    if (nextChannel !== null) params.set("channel", String(nextChannel));
     const trimmed = nextQ.trim();
     if (trimmed) params.set("q", trimmed);
     const query = params.toString();
@@ -75,11 +88,27 @@ export function LeadsMessagesPanel() {
       <div className="grid gap-4">
         <Card>
           <div className="grid gap-4">
-            <Input
-              value={q}
-              onChange={(event) => setParams(kind, event.target.value)}
-              placeholder={t("filterPlaceholder")}
-            />
+            <div className="grid gap-3 sm:grid-cols-[1fr_240px]">
+              <Input
+                value={q}
+                onChange={(event) => setParams(kind, channel, event.target.value)}
+                placeholder={t("filterPlaceholder")}
+              />
+              <NativeSelect
+                value={channel ?? ""}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setParams(kind, raw === "" ? null : Number(raw), q);
+                }}
+              >
+                <option value="">{t("allChannels")}</option>
+                {(channels.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.title || row.username}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
             <div className="flex flex-wrap gap-2">
               {kinds.map((item) => (
                 <Button
@@ -87,7 +116,7 @@ export function LeadsMessagesPanel() {
                   type="button"
                   variant={item.key === kind ? "primary" : "outline"}
                   size="sm"
-                  onClick={() => setParams(item.key, q)}
+                  onClick={() => setParams(item.key, channel, q)}
                 >
                   {item.label}
                 </Button>
@@ -101,56 +130,54 @@ export function LeadsMessagesPanel() {
             {rows.length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-2)]">{t("emptyMessages")}</p>
             ) : (
-              <table className="mt-4 w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-[var(--ink)]/50">
-                  <tr>
-                    <th className="py-2 pr-2">{t("sentAt")}</th>
-                    <th className="py-2 pr-2">{t("channel")}</th>
-                    <th className="py-2 pr-2">{t("sender")}</th>
-                    <th className="py-2 pr-2">{t("text")}</th>
-                    <th className="py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-t border-[var(--line)] align-top">
-                      <td className="py-2 pr-2 whitespace-nowrap text-[var(--muted-2)]">
+              <ul className="mt-4 divide-y divide-[var(--line)]">
+                {rows.map((row) => (
+                  <li key={row.id} className="py-4 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <p className="min-w-0 text-sm">
+                        <span className="font-medium text-[var(--ink)]">
+                          {row.channel_title || row.channel_username}
+                        </span>
+                        <span className="text-[var(--muted-2)]"> · </span>
+                        <span className="text-[var(--muted-2)]">
+                          {senderLabel(row.sender_username, row.sender_id)}
+                        </span>
+                      </p>
+                      <time className="shrink-0 text-xs text-[var(--muted-2)]">
                         {formatCrmDateTime(row.sent_at, locale)}
-                      </td>
-                      <td className="py-2 pr-2">
-                        {row.channel_title || row.channel_username}
-                      </td>
-                      <td className="py-2 pr-2 whitespace-nowrap">
-                        {senderLabel(row.sender_username, row.sender_id)}
-                      </td>
-                      <td className="py-2 pr-2 max-w-md whitespace-pre-wrap">{row.text || "—"}</td>
-                      <td className="py-2 text-right">
-                        <a
-                          href={row.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-[var(--brand)] hover:underline"
-                        >
+                      </time>
+                    </div>
+                    <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
+                      {row.text || "—"}
+                    </p>
+                    <div className="mt-3 flex justify-end">
+                      <Button asChild variant="outline" size="sm">
+                        <a href={row.url} target="_blank" rel="noopener noreferrer">
+                          <TelegramIcon className="mr-1 h-4 w-4" />
                           {t("openInTelegram")}
                         </a>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
             {messages.data && rows.length > 0 ? (
-              <div className="mt-4 flex items-center justify-between gap-3 text-sm text-[var(--ink)]">
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-4 text-sm text-[var(--ink)]">
                 <span>{t("page", { page: messages.data.page, pages: messages.data.pages })}</span>
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, q, messages.data.page - 1)}>{t("previous")}</Link>
+                      <Link href={pageHref(pathname, kind, channel, q, messages.data.page - 1)}>
+                        {t("previous")}
+                      </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, q, messages.data.page + 1)}>{t("next")}</Link>
+                      <Link href={pageHref(pathname, kind, channel, q, messages.data.page + 1)}>
+                        {t("next")}
+                      </Link>
                     </Button>
                   ) : null}
                 </div>

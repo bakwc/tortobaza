@@ -868,12 +868,14 @@ export function endpoints(fetcher: Fetcher) {
 
     async telegramMessages(
       kind: TelegramMessageKind,
+      channel: number | null,
       q: string,
       page: number,
     ): Promise<TelegramMessagesResponse> {
       const raw = await fetcher<unknown>("/api/crm/telegram/messages/", {
         searchParams: {
           kind,
+          channel: channel ?? undefined,
           q: q.trim() || undefined,
           page: page > 1 ? page : undefined,
         },

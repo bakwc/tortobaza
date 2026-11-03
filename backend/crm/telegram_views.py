@@ -16,7 +16,7 @@ from crm.serializers import (
 )
 from crm.telegram_channels import refresh_keyword_matches
 
-PAGE_SIZE = 50
+PAGE_SIZE = 15
 
 
 class TelegramMessageListView(APIView):
@@ -26,9 +26,12 @@ class TelegramMessageListView(APIView):
     def get(self, request):
         kind = request.query_params.get("kind", "lead")
         q = request.query_params.get("q", "")
+        channel_param = request.query_params.get("channel")
         page_param = request.query_params.get("page")
         page_number = 1 if page_param is None else int(page_param)
         qs = TelegramChannelMessage.objects.select_related("channel").order_by("-sent_at", "-message_id")
+        if channel_param is not None:
+            qs = qs.filter(channel_id=int(channel_param))
         if kind == "keyword":
             qs = qs.filter(keyword_match=True)
         elif kind == "all":
