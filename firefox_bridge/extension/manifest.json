@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "Firefox Bridge",
+  "version": "1.0.0",
+  "description": "Controls this Firefox from localhost",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "firefox-bridge@tortobaza.local"
+    }
+  },
+  "permissions": [
+    "nativeMessaging",
+    "tabs",
+    "<all_urls>",
+    "webNavigation"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  }
+}
