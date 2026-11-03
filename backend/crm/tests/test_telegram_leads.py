@@ -151,6 +151,7 @@ class NotifyTelegramLeadsTests(TestCase):
         text = call["payload"]["text"]
         self.assertIn("Cakes Chat", text)
         self.assertIn("где заказать торт?", text)
+        self.assertIn("02.11.2026, 15:00", text)
         self.assertIn("https://t.me/cakes/15", text)
         self.assertEqual(call["payload"]["parse_mode"], "HTML")
         row.refresh_from_db()

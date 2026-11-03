@@ -84,10 +84,12 @@ def build_lead_notification_html(message: SocialMessage) -> str:
     channel = message.channel
     label = _channel_label(channel)
     url = _lead_message_url(message)
+    posted = timezone.localtime(message.sent_at).strftime("%d.%m.%Y, %H:%M")
     return (
         f"В канале <b>{_esc(label)}</b> спрашивают:\n"
         f"{_esc(message.text)}\n"
         f"\n"
+        f"{posted}\n"
         f'<a href="{url}">сообщение</a>'
     )
 
