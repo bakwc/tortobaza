@@ -22,7 +22,20 @@ def _keyword_match(text: str, keywords: list[str]) -> bool:
     return False
 
 
+def refresh_keyword_matches() -> None:
+    keywords = [row.casefold() for row in TelegramKeyword.objects.values_list("word", flat=True)]
+    changed = []
+    for message in TelegramChannelMessage.objects.all().only("id", "text", "keyword_match").iterator():
+        matched = _keyword_match(message.text, keywords)
+        if message.keyword_match != matched:
+            message.keyword_match = matched
+            changed.append(message)
+    if changed:
+        TelegramChannelMessage.objects.bulk_update(changed, ["keyword_match"])
+
+
 def sync_telegram_channels() -> None:
+    refresh_keyword_matches()
     channels = list(TelegramChannel.objects.filter(enabled=True).order_by("id"))
     if not channels:
         return

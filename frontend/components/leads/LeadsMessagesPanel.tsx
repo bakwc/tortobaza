@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardTitle, QueryState } from "@/components/menu/ui";
 import { LeadsShell } from "@/components/leads/LeadsShell";
 import { useTelegramMessages } from "@/hooks/useLeads";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
 import type { TelegramMessageKind } from "@/lib/api/types";
 
@@ -22,6 +22,27 @@ function senderLabel(senderUsername: string, senderId: number | null): string {
   return "—";
 }
 
+function parsePage(value: string | null): number {
+  const parsed = Number(value ?? "1");
+  if (!Number.isFinite(parsed) || parsed < 1) return 1;
+  return Math.floor(parsed);
+}
+
+function pageHref(
+  pathname: string,
+  kind: TelegramMessageKind,
+  q: string,
+  page: number,
+): string {
+  const params = new URLSearchParams();
+  if (kind !== "lead") params.set("kind", kind);
+  const trimmed = q.trim();
+  if (trimmed) params.set("q", trimmed);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 export function LeadsMessagesPanel() {
   const t = useTranslations("leads");
   const locale = useLocale();
@@ -30,7 +51,9 @@ export function LeadsMessagesPanel() {
   const pathname = usePathname();
   const kind = parseKind(searchParams.get("kind"));
   const q = searchParams.get("q") ?? "";
-  const messages = useTelegramMessages(kind, q);
+  const page = parsePage(searchParams.get("page"));
+  const messages = useTelegramMessages(kind, q, page);
+  const rows = messages.data?.results ?? [];
 
   const setParams = (nextKind: TelegramMessageKind, nextQ: string) => {
     const params = new URLSearchParams();
@@ -75,7 +98,7 @@ export function LeadsMessagesPanel() {
         <Card>
           <CardTitle>{t("messages")}</CardTitle>
           <QueryState isLoading={messages.isLoading} isError={messages.isError}>
-            {(messages.data ?? []).length === 0 ? (
+            {rows.length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-2)]">{t("emptyMessages")}</p>
             ) : (
               <table className="mt-4 w-full text-sm">
@@ -89,7 +112,7 @@ export function LeadsMessagesPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(messages.data ?? []).map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.id} className="border-t border-[var(--line)] align-top">
                       <td className="py-2 pr-2 whitespace-nowrap text-[var(--muted-2)]">
                         {formatCrmDateTime(row.sent_at, locale)}
@@ -116,6 +139,23 @@ export function LeadsMessagesPanel() {
                 </tbody>
               </table>
             )}
+            {messages.data && rows.length > 0 ? (
+              <div className="mt-4 flex items-center justify-between gap-3 text-sm text-[var(--ink)]">
+                <span>{t("page", { page: messages.data.page, pages: messages.data.pages })}</span>
+                <div className="flex gap-2">
+                  {messages.data.page > 1 ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={pageHref(pathname, kind, q, messages.data.page - 1)}>{t("previous")}</Link>
+                    </Button>
+                  ) : null}
+                  {messages.data.page < messages.data.pages ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={pageHref(pathname, kind, q, messages.data.page + 1)}>{t("next")}</Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </QueryState>
         </Card>
       </div>

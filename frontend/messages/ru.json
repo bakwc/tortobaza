@@ -900,7 +900,10 @@
     "newKeyword": "Новое слово",
     "emptyMessages": "Сообщений нет",
     "emptyChannels": "Каналов нет",
-    "emptyKeywords": "Ключевых слов нет"
+    "emptyKeywords": "Ключевых слов нет",
+    "previous": "Назад",
+    "next": "Дальше",
+    "page": "Страница {page} из {pages}"
   },
   "rsge": {
     "waybills": "Накладные",

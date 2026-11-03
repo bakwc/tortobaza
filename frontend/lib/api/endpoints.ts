@@ -63,6 +63,7 @@ import {
   PromoValidationSchema,
   SessionUserSchema,
   TelegramChannelMessageSchema,
+  TelegramMessagesResponseSchema,
   TelegramChannelSchema,
   TelegramKeywordSchema,
   TelegramMessageKindSchema,
@@ -136,6 +137,7 @@ import {
   type TelegramChannel,
   type TelegramChannelBody,
   type TelegramChannelMessage,
+  type TelegramMessagesResponse,
   type TelegramKeyword,
   type TelegramKeywordBody,
   type TelegramMessageKind,
@@ -864,11 +866,19 @@ export function endpoints(fetcher: Fetcher) {
       return parse(TechCardCostSchema, raw).cost;
     },
 
-    async telegramMessages(kind: TelegramMessageKind, q: string): Promise<TelegramChannelMessage[]> {
+    async telegramMessages(
+      kind: TelegramMessageKind,
+      q: string,
+      page: number,
+    ): Promise<TelegramMessagesResponse> {
       const raw = await fetcher<unknown>("/api/crm/telegram/messages/", {
-        searchParams: { kind, q: q.trim() || undefined },
+        searchParams: {
+          kind,
+          q: q.trim() || undefined,
+          page: page > 1 ? page : undefined,
+        },
       });
-      return parse(z.array(TelegramChannelMessageSchema), raw);
+      return parse(TelegramMessagesResponseSchema, raw);
     },
     telegramChannels: resource<TelegramChannel, TelegramChannelBody>(
       fetcher,

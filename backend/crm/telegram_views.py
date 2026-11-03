@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -13,6 +14,9 @@ from crm.serializers import (
     TelegramChannelSerializer,
     TelegramKeywordSerializer,
 )
+from crm.telegram_channels import refresh_keyword_matches
+
+PAGE_SIZE = 50
 
 
 class TelegramMessageListView(APIView):
@@ -22,6 +26,8 @@ class TelegramMessageListView(APIView):
     def get(self, request):
         kind = request.query_params.get("kind", "lead")
         q = request.query_params.get("q", "")
+        page_param = request.query_params.get("page")
+        page_number = 1 if page_param is None else int(page_param)
         qs = TelegramChannelMessage.objects.select_related("channel").order_by("-sent_at", "-message_id")
         if kind == "keyword":
             qs = qs.filter(keyword_match=True)
@@ -29,12 +35,20 @@ class TelegramMessageListView(APIView):
             pass
         else:
             qs = qs.filter(potential_lead=True)
-        rows = list(qs)
         stripped = q.strip()
         if stripped:
             needle = stripped.casefold()
-            rows = [row for row in rows if needle in row.text.casefold()]
-        return Response(TelegramChannelMessageSerializer(rows, many=True).data)
+            rows = [row for row in qs if needle in row.text.casefold()]
+            page = Paginator(rows, PAGE_SIZE).page(page_number)
+        else:
+            page = Paginator(qs, PAGE_SIZE).page(page_number)
+        return Response(
+            {
+                "page": page.number,
+                "pages": page.paginator.num_pages,
+                "results": TelegramChannelMessageSerializer(page.object_list, many=True).data,
+            }
+        )
 
 
 class TelegramChannelListView(APIView):
@@ -92,6 +106,7 @@ class TelegramKeywordListView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
+        refresh_keyword_matches()
         return Response(self.serializer_class(instance).data, status=status.HTTP_201_CREATED)
 
 
@@ -110,10 +125,12 @@ class TelegramKeywordDetailView(APIView):
         serializer = self.serializer_class(instance, data=request.data)
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
+        refresh_keyword_matches()
         return Response(self.serializer_class(instance).data)
 
     @transaction.atomic
     def delete(self, request, pk: int):
         instance = get_object_or_404(TelegramKeyword.objects.all(), pk=pk)
         instance.delete()
+        refresh_keyword_matches()
         return Response(status=status.HTTP_204_NO_CONTENT)

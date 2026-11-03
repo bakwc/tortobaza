@@ -900,7 +900,10 @@
     "newKeyword": "ახალი სიტყვა",
     "emptyMessages": "შეტყობინებები არ არის",
     "emptyChannels": "არხები არ არის",
-    "emptyKeywords": "საკვანძო სიტყვები არ არის"
+    "emptyKeywords": "საკვანძო სიტყვები არ არის",
+    "previous": "წინა",
+    "next": "შემდეგი",
+    "page": "გვერდი {page} / {pages}"
   },
   "rsge": {
     "waybills": "ზედნადებები",

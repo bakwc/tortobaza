@@ -40,7 +40,7 @@ class TelegramLeadsApiTests(TestCase):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/telegram/messages/")
         self.assertEqual(response.status_code, 200)
-        ids = [row["id"] for row in response.json()]
+        ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [lead.id])
 
     def test_messages_kind_keyword(self):
@@ -50,7 +50,7 @@ class TelegramLeadsApiTests(TestCase):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/telegram/messages/", {"kind": "keyword"})
         self.assertEqual(response.status_code, 200)
-        ids = [row["id"] for row in response.json()]
+        ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(set(ids), {first.id, second.id})
         self.assertEqual(len(ids), 2)
 
@@ -60,7 +60,7 @@ class TelegramLeadsApiTests(TestCase):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/telegram/messages/", {"kind": "all"})
         self.assertEqual(response.status_code, 200)
-        ids = [row["id"] for row in response.json()]
+        ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [second.id, first.id])
 
     def test_messages_q_casefold_cyrillic(self):
@@ -69,15 +69,33 @@ class TelegramLeadsApiTests(TestCase):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "q": "торт"})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.json()), 1)
-        self.assertIn("торт", response.json()[0]["text"].casefold())
+        body = response.json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertIn("торт", body["results"][0]["text"].casefold())
 
     def test_message_url(self):
         msg = self._message(15, "lead", True, True)
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/telegram/messages/", {"kind": "all"})
-        row = next(item for item in response.json() if item["id"] == msg.id)
+        row = next(item for item in response.json()["results"] if item["id"] == msg.id)
         self.assertEqual(row["url"], "https://t.me/cakes/15")
+
+    def test_messages_pagination(self):
+        for message_id in range(1, 52):
+            self._message(message_id, f"m{message_id}", False, None)
+        self.client.force_authenticate(user=self.viewer)
+        first = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 1})
+        self.assertEqual(first.status_code, 200)
+        first_body = first.json()
+        self.assertEqual(first_body["page"], 1)
+        self.assertEqual(first_body["pages"], 2)
+        self.assertEqual(len(first_body["results"]), 50)
+        second = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 2})
+        self.assertEqual(second.status_code, 200)
+        second_body = second.json()
+        self.assertEqual(second_body["page"], 2)
+        self.assertEqual(len(second_body["results"]), 1)
+        self.assertEqual(second_body["results"][0]["text"], "m1")
 
     def test_viewer_cannot_create_channel(self):
         self.client.force_authenticate(user=self.viewer)
@@ -113,3 +131,28 @@ class TelegramLeadsApiTests(TestCase):
         deleted = self.client.delete(f"/api/crm/telegram/keywords/{keyword_id}/")
         self.assertEqual(deleted.status_code, 204)
         self.assertFalse(TelegramKeyword.objects.filter(pk=keyword_id).exists())
+
+    def test_keyword_change_rematches_stored_messages(self):
+        self.client.force_authenticate(user=self.editor)
+        medovik = self._message(1, "закажу медовик", False, None)
+        cake = self._message(2, "хочу торт", False, None)
+        created = self.client.post("/api/crm/telegram/keywords/", {"word": "медовик"}, format="json")
+        self.assertEqual(created.status_code, 201)
+        medovik.refresh_from_db()
+        cake.refresh_from_db()
+        self.assertIs(medovik.keyword_match, True)
+        self.assertIs(cake.keyword_match, False)
+        updated = self.client.put(
+            f"/api/crm/telegram/keywords/{created.json()['id']}/",
+            {"word": "торт"},
+            format="json",
+        )
+        self.assertEqual(updated.status_code, 200)
+        medovik.refresh_from_db()
+        cake.refresh_from_db()
+        self.assertIs(medovik.keyword_match, False)
+        self.assertIs(cake.keyword_match, True)
+        deleted = self.client.delete(f"/api/crm/telegram/keywords/{created.json()['id']}/")
+        self.assertEqual(deleted.status_code, 204)
+        cake.refresh_from_db()
+        self.assertIs(cake.keyword_match, False)

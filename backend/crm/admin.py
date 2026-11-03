@@ -34,6 +34,7 @@ from crm.models import (
 )
 from crm.transaction_rules import categorize_uncategorized_expenses
 from crm.telegram import schedule_crm_order_telegram_sync
+from crm.telegram_channels import refresh_keyword_matches
 from crm.telegram_user import resolve_phone
 from crm.website import sync_website_order_status_from_crm
 from orders.email import schedule_order_confirmed_email
@@ -297,6 +298,18 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
 class TelegramKeywordAdmin(admin.ModelAdmin):
     list_display = ["word"]
     search_fields = ["word"]
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        refresh_keyword_matches()
+
+    def delete_model(self, request, obj):
+        super().delete_model(request, obj)
+        refresh_keyword_matches()
+
+    def delete_queryset(self, request, queryset):
+        super().delete_queryset(request, queryset)
+        refresh_keyword_matches()
 
 
 @admin.register(TelegramChannel)

@@ -900,7 +900,10 @@
     "newKeyword": "New keyword",
     "emptyMessages": "No messages",
     "emptyChannels": "No channels",
-    "emptyKeywords": "No keywords"
+    "emptyKeywords": "No keywords",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}"
   },
   "rsge": {
     "waybills": "Waybills",

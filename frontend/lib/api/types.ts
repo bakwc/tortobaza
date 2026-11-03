@@ -1644,6 +1644,12 @@ export const TelegramChannelMessageSchema = z.object({
   url: z.string(),
 });
 
+export const TelegramMessagesResponseSchema = z.object({
+  page: z.number(),
+  pages: z.number(),
+  results: z.array(TelegramChannelMessageSchema),
+});
+
 export const WriteOffReasonSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -2055,6 +2061,7 @@ export type TelegramMessageKind = z.infer<typeof TelegramMessageKindSchema>;
 export type TelegramChannel = z.infer<typeof TelegramChannelSchema>;
 export type TelegramKeyword = z.infer<typeof TelegramKeywordSchema>;
 export type TelegramChannelMessage = z.infer<typeof TelegramChannelMessageSchema>;
+export type TelegramMessagesResponse = z.infer<typeof TelegramMessagesResponseSchema>;
 export type TelegramChannelBody = { username: string; enabled: boolean };
 export type TelegramKeywordBody = { word: string };
 export type WriteOffReasonBody = { name: string };

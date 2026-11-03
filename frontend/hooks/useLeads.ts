@@ -20,10 +20,10 @@ function useResource<T, B>(key: readonly string[], resource: Resource<T, B>) {
   return { list, save, remove };
 }
 
-export function useTelegramMessages(kind: TelegramMessageKind, q: string) {
+export function useTelegramMessages(kind: TelegramMessageKind, q: string, page: number) {
   return useQuery({
-    queryKey: ["leads", "messages", kind, q],
-    queryFn: () => api.telegramMessages(kind, q),
+    queryKey: ["leads", "messages", kind, q, page],
+    queryFn: () => api.telegramMessages(kind, q, page),
   });
 }
 

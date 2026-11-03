@@ -5,7 +5,7 @@ from unittest.mock import patch
 from django.test import TestCase, override_settings
 
 from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
-from crm.telegram_channels import sync_telegram_channels
+from crm.telegram_channels import refresh_keyword_matches, sync_telegram_channels
 
 
 @override_settings(
@@ -214,3 +214,53 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertEqual(TelegramChannelMessage.objects.get(message_id=11).text, long_text)
         self.assertIs(TelegramChannelMessage.objects.get(message_id=11).keyword_match, False)
         self.assertIs(TelegramChannelMessage.objects.get(message_id=12).keyword_match, True)
+
+    def test_sync_rematches_messages_already_stored(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        channel = TelegramChannel.objects.create(
+            username="cakes",
+            title="Cakes",
+            telegram_id=100,
+            last_message_id=7,
+        )
+        stored = TelegramChannelMessage.objects.create(
+            channel=channel,
+            message_id=7,
+            sent_at=now - timedelta(days=1),
+            text="нужен медовик на завтра",
+            keyword_match=False,
+        )
+        untouched = TelegramChannelMessage.objects.create(
+            channel=channel,
+            message_id=6,
+            sent_at=now - timedelta(days=2),
+            text="привет",
+            keyword_match=False,
+        )
+        TelegramKeyword.objects.create(word="Медовик")
+        fake_client, clients = self._client({"cakes": entity}, {100: []})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+        self.assertEqual(clients[0].calls[0]["kwargs"]["min_id"], 7)
+        stored.refresh_from_db()
+        untouched.refresh_from_db()
+        self.assertIs(stored.keyword_match, True)
+        self.assertIs(untouched.keyword_match, False)
+
+    def test_refresh_clears_match_when_keyword_is_gone(self):
+        channel = TelegramChannel.objects.create(username="cakes")
+        message = TelegramChannelMessage.objects.create(
+            channel=channel,
+            message_id=1,
+            sent_at=datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc),
+            text="нужен торт",
+            keyword_match=True,
+        )
+        refresh_keyword_matches()
+        message.refresh_from_db()
+        self.assertIs(message.keyword_match, False)
