@@ -9,9 +9,12 @@ from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
 from crm.telegram_user import _api_credentials
 
 _HISTORY_DAYS = 30
+_KEYWORD_MATCH_MAX_LENGTH = 450
 
 
 def _keyword_match(text: str, keywords: list[str]) -> bool:
+    if len(text) > _KEYWORD_MATCH_MAX_LENGTH:
+        return False
     folded = text.casefold()
     for word in keywords:
         if word in folded:

@@ -180,3 +180,37 @@ class SyncTelegramChannelsTests(TestCase):
             sync_telegram_channels()
         self.assertIs(TelegramChannelMessage.objects.get(message_id=9).keyword_match, True)
         self.assertIs(TelegramChannelMessage.objects.get(message_id=10).keyword_match, False)
+
+    def test_long_message_is_not_keyword_match(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        long_text = "торт " + "а" * 446
+        short_text = "торт " + "а" * 445
+        long_message = SimpleNamespace(
+            id=11,
+            action=None,
+            message=long_text,
+            date=now - timedelta(hours=2),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        short_message = SimpleNamespace(
+            id=12,
+            action=None,
+            message=short_text,
+            date=now - timedelta(hours=1),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        TelegramKeyword.objects.create(word="торт")
+        TelegramChannel.objects.create(username="cakes")
+        fake_client, _clients = self._client({"cakes": entity}, {100: [long_message, short_message]})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+        self.assertEqual(TelegramChannelMessage.objects.get(message_id=11).text, long_text)
+        self.assertIs(TelegramChannelMessage.objects.get(message_id=11).keyword_match, False)
+        self.assertIs(TelegramChannelMessage.objects.get(message_id=12).keyword_match, True)
