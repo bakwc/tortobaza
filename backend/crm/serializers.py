@@ -22,9 +22,10 @@ from crm.models import (
     FinancialAccount,
     FinancialTransaction,
     ResolvedTelegramPhone,
-    TelegramChannel,
-    TelegramChannelMessage,
-    TelegramKeyword,
+    SocialKeyword,
+    SocialMessage,
+    SocialNetwork,
+    SocialSource,
 )
 from crm.paypal_link import assign_crm_payment_link
 from crm.phone import links_for_stored
@@ -1048,26 +1049,43 @@ class ExchangeRatesSerializer(serializers.Serializer):
     rates = serializers.DictField(child=serializers.CharField())
 
 
-class TelegramChannelSerializer(serializers.ModelSerializer):
+class SocialSourceSerializer(serializers.ModelSerializer):
+    network_slug = serializers.CharField(source="network.slug", read_only=True)
+    network_name = serializers.CharField(source="network.name", read_only=True)
+
     class Meta:
-        model = TelegramChannel
-        fields = ["id", "username", "enabled", "title", "telegram_id", "last_message_id"]
-        read_only_fields = ["title", "telegram_id", "last_message_id"]
+        model = SocialSource
+        fields = [
+            "id",
+            "username",
+            "enabled",
+            "title",
+            "telegram_id",
+            "last_message_id",
+            "network_slug",
+            "network_name",
+        ]
+        read_only_fields = ["title", "telegram_id", "last_message_id", "network_slug", "network_name"]
+
+    def create(self, validated_data):
+        validated_data["network"] = SocialNetwork.objects.get(slug="telegram")
+        return super().create(validated_data)
 
 
-class TelegramKeywordSerializer(serializers.ModelSerializer):
+class SocialKeywordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TelegramKeyword
+        model = SocialKeyword
         fields = ["id", "word"]
 
 
-class TelegramChannelMessageSerializer(serializers.ModelSerializer):
+class SocialMessageSerializer(serializers.ModelSerializer):
     channel_username = serializers.CharField(source="channel.username", read_only=True)
     channel_title = serializers.CharField(source="channel.title", read_only=True)
-    url = serializers.SerializerMethodField()
+    network_slug = serializers.CharField(source="channel.network.slug", read_only=True)
+    network_name = serializers.CharField(source="channel.network.name", read_only=True)
 
     class Meta:
-        model = TelegramChannelMessage
+        model = SocialMessage
         fields = [
             "id",
             "sent_at",
@@ -1078,8 +1096,30 @@ class TelegramChannelMessageSerializer(serializers.ModelSerializer):
             "potential_lead",
             "channel_username",
             "channel_title",
+            "network_slug",
+            "network_name",
             "url",
         ]
 
-    def get_url(self, obj: TelegramChannelMessage) -> str:
-        return f"https://t.me/{obj.channel.username}/{obj.message_id}"
+
+class SocialNetworkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialNetwork
+        fields = ["id", "slug", "name"]
+
+
+class SocialMessageIngestSerializer(serializers.Serializer):
+    network = serializers.SlugField(max_length=64)
+    source_key = serializers.CharField(max_length=255)
+    source_title = serializers.CharField(max_length=255, allow_blank=True)
+    external_id = serializers.CharField(max_length=255)
+    url = serializers.CharField(max_length=2048)
+    text = serializers.CharField(allow_blank=True)
+    sent_at = serializers.DateTimeField()
+    sender_id = serializers.CharField(max_length=255, allow_blank=True)
+    sender_username = serializers.CharField(max_length=255, allow_blank=True)
+
+    def validate_network(self, value: str) -> str:
+        if not SocialNetwork.objects.filter(slug=value).exists():
+            raise serializers.ValidationError("Unknown network.")
+        return value

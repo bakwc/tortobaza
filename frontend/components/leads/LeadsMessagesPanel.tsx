@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle, NativeSelect, QueryState } from "@/components/menu/ui";
 import { LeadsShell } from "@/components/leads/LeadsShell";
-import { useTelegramChannels, useTelegramMessages } from "@/hooks/useLeads";
+import { useSocialChannels, useSocialMessages } from "@/hooks/useLeads";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
-import type { TelegramMessageKind } from "@/lib/api/types";
-import { TelegramIcon } from "@/content/contacts/icons";
+import type { SocialMessageKind } from "@/lib/api/types";
 
-function parseKind(value: string | null): TelegramMessageKind {
+function parseKind(value: string | null): SocialMessageKind {
   if (value === "keyword" || value === "all") return value;
   return "lead";
 }
@@ -24,7 +23,7 @@ function parseChannel(value: string | null): number | null {
   return Math.floor(parsed);
 }
 
-function senderLabel(senderUsername: string, senderId: number | null): string {
+function senderLabel(senderUsername: string, senderId: string | null): string {
   if (senderUsername) return `@${senderUsername}`;
   if (senderId !== null) return String(senderId);
   return "—";
@@ -38,7 +37,7 @@ function parsePage(value: string | null): number {
 
 function pageHref(
   pathname: string,
-  kind: TelegramMessageKind,
+  kind: SocialMessageKind,
   channel: number | null,
   q: string,
   page: number,
@@ -63,11 +62,11 @@ export function LeadsMessagesPanel() {
   const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
   const page = parsePage(searchParams.get("page"));
-  const channels = useTelegramChannels();
-  const messages = useTelegramMessages(kind, channel, q, page);
+  const channels = useSocialChannels();
+  const messages = useSocialMessages(kind, channel, q, page);
   const rows = messages.data?.results ?? [];
 
-  const setParams = (nextKind: TelegramMessageKind, nextChannel: number | null, nextQ: string) => {
+  const setParams = (nextKind: SocialMessageKind, nextChannel: number | null, nextQ: string) => {
     const params = new URLSearchParams();
     if (nextKind !== "lead") params.set("kind", nextKind);
     if (nextChannel !== null) params.set("channel", String(nextChannel));
@@ -77,7 +76,7 @@ export function LeadsMessagesPanel() {
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
 
-  const kinds: { key: TelegramMessageKind; label: string }[] = [
+  const kinds: { key: SocialMessageKind; label: string }[] = [
     { key: "lead", label: t("kindLead") },
     { key: "keyword", label: t("kindKeyword") },
     { key: "all", label: t("kindAll") },
@@ -104,7 +103,7 @@ export function LeadsMessagesPanel() {
                 <option value="">{t("allChannels")}</option>
                 {(channels.list.data ?? []).map((row) => (
                   <option key={row.id} value={row.id}>
-                    {row.title || row.username}
+                    {`${row.network_name}: ${row.title || row.username}`}
                   </option>
                 ))}
               </NativeSelect>
@@ -138,7 +137,7 @@ export function LeadsMessagesPanel() {
                         <span className="font-medium text-[var(--ink)]">
                           {row.channel_title || row.channel_username}
                         </span>
-                        <span className="text-[var(--muted-2)]"> · </span>
+                        <span className="text-[var(--muted-2)]"> · {row.network_name} · </span>
                         <span className="text-[var(--muted-2)]">
                           {senderLabel(row.sender_username, row.sender_id)}
                         </span>
@@ -153,8 +152,7 @@ export function LeadsMessagesPanel() {
                     <div className="mt-3 flex justify-end">
                       <Button asChild variant="outline" size="sm">
                         <a href={row.url} target="_blank" rel="noopener noreferrer">
-                          <TelegramIcon className="mr-1 h-4 w-4" />
-                          {t("openInTelegram")}
+                          {t("open")}
                         </a>
                       </Button>
                     </div>

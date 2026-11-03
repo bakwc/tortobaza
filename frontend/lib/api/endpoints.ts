@@ -62,11 +62,10 @@ import {
   ProductsPageSchema,
   PromoValidationSchema,
   SessionUserSchema,
-  TelegramChannelMessageSchema,
-  TelegramMessagesResponseSchema,
-  TelegramChannelSchema,
-  TelegramKeywordSchema,
-  TelegramMessageKindSchema,
+  SocialMessagesResponseSchema,
+  SocialChannelSchema,
+  SocialKeywordSchema,
+  SocialMessageKindSchema,
   StartPaymentResponseSchema,
   LibertyPaymentEnabledSchema,
   PayPalCaptureResponseSchema,
@@ -134,13 +133,12 @@ import {
   type RsgePendingCount,
   type RsWaybill,
   type SessionUser,
-  type TelegramChannel,
-  type TelegramChannelBody,
-  type TelegramChannelMessage,
-  type TelegramMessagesResponse,
-  type TelegramKeyword,
-  type TelegramKeywordBody,
-  type TelegramMessageKind,
+  type SocialChannel,
+  type SocialChannelBody,
+  type SocialMessagesResponse,
+  type SocialKeyword,
+  type SocialKeywordBody,
+  type SocialMessageKind,
   type StartPaymentBody,
   type StartPaymentResponse,
   type PayPalCaptureBody,
@@ -866,13 +864,13 @@ export function endpoints(fetcher: Fetcher) {
       return parse(TechCardCostSchema, raw).cost;
     },
 
-    async telegramMessages(
-      kind: TelegramMessageKind,
+    async socialMessages(
+      kind: SocialMessageKind,
       channel: number | null,
       q: string,
       page: number,
-    ): Promise<TelegramMessagesResponse> {
-      const raw = await fetcher<unknown>("/api/crm/telegram/messages/", {
+    ): Promise<SocialMessagesResponse> {
+      const raw = await fetcher<unknown>("/api/crm/social/messages/", {
         searchParams: {
           kind,
           channel: channel ?? undefined,
@@ -880,17 +878,17 @@ export function endpoints(fetcher: Fetcher) {
           page: page > 1 ? page : undefined,
         },
       });
-      return parse(TelegramMessagesResponseSchema, raw);
+      return parse(SocialMessagesResponseSchema, raw);
     },
-    telegramChannels: resource<TelegramChannel, TelegramChannelBody>(
+    socialChannels: resource<SocialChannel, SocialChannelBody>(
       fetcher,
-      "/api/crm/telegram/channels/",
-      TelegramChannelSchema,
+      "/api/crm/social/channels/",
+      SocialChannelSchema,
     ),
-    telegramKeywords: resource<TelegramKeyword, TelegramKeywordBody>(
+    socialKeywords: resource<SocialKeyword, SocialKeywordBody>(
       fetcher,
-      "/api/crm/telegram/keywords/",
-      TelegramKeywordSchema,
+      "/api/crm/social/keywords/",
+      SocialKeywordSchema,
     ),
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {

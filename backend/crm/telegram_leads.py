@@ -5,7 +5,7 @@ from django.utils import timezone
 from openai import OpenAI
 from pydantic import BaseModel
 
-from crm.models import TelegramChannelMessage
+from crm.models import SocialMessage
 from crm.telegram import _esc, _telegram_json
 
 LEAD_MODEL = "gpt-6.1-sol"
@@ -27,7 +27,7 @@ class LeadVerdict(BaseModel):
 
 
 def classify_telegram_leads() -> None:
-    pending = TelegramChannelMessage.objects.filter(
+    pending = SocialMessage.objects.filter(
         keyword_match=True,
         potential_lead__isnull=True,
     ).order_by("id")
@@ -55,11 +55,11 @@ def _channel_label(channel) -> str:
     return f"@{channel.username}"
 
 
-def _lead_message_url(message: TelegramChannelMessage) -> str:
-    return f"https://t.me/{message.channel.username}/{message.message_id}"
+def _lead_message_url(message: SocialMessage) -> str:
+    return message.url
 
 
-def build_lead_notification_html(message: TelegramChannelMessage) -> str:
+def build_lead_notification_html(message: SocialMessage) -> str:
     channel = message.channel
     label = _channel_label(channel)
     url = _lead_message_url(message)
@@ -78,7 +78,7 @@ def notify_recent_telegram_leads() -> None:
         return
     cutoff = timezone.now() - timedelta(hours=24)
     pending = (
-        TelegramChannelMessage.objects.filter(
+        SocialMessage.objects.filter(
             potential_lead=True,
             lead_notified=False,
             sent_at__gte=cutoff,

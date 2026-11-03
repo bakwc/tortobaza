@@ -1,11 +1,13 @@
 from django.urls import path
 
 from crm.telegram_views import (
-    TelegramChannelDetailView,
-    TelegramChannelListView,
-    TelegramKeywordDetailView,
-    TelegramKeywordListView,
-    TelegramMessageListView,
+    SocialKeywordDetailView,
+    SocialKeywordListView,
+    SocialMessageIngestView,
+    SocialMessageListView,
+    SocialNetworkIngestView,
+    SocialSourceDetailView,
+    SocialSourceListView,
 )
 from crm.views import (
     AnalyticsClientsView,
@@ -36,11 +38,13 @@ from crm.views import (
 )
 
 urlpatterns = [
-    path("crm/telegram/messages/", TelegramMessageListView.as_view(), name="crm-telegram-messages"),
-    path("crm/telegram/channels/", TelegramChannelListView.as_view(), name="crm-telegram-channels"),
-    path("crm/telegram/channels/<int:pk>/", TelegramChannelDetailView.as_view(), name="crm-telegram-channel-detail"),
-    path("crm/telegram/keywords/", TelegramKeywordListView.as_view(), name="crm-telegram-keywords"),
-    path("crm/telegram/keywords/<int:pk>/", TelegramKeywordDetailView.as_view(), name="crm-telegram-keyword-detail"),
+    path("social/networks/", SocialNetworkIngestView.as_view(), name="social-networks"),
+    path("social/messages/", SocialMessageIngestView.as_view(), name="social-messages-ingest"),
+    path("crm/social/messages/", SocialMessageListView.as_view(), name="crm-social-messages"),
+    path("crm/social/channels/", SocialSourceListView.as_view(), name="crm-social-channels"),
+    path("crm/social/channels/<int:pk>/", SocialSourceDetailView.as_view(), name="crm-social-channel-detail"),
+    path("crm/social/keywords/", SocialKeywordListView.as_view(), name="crm-social-keywords"),
+    path("crm/social/keywords/<int:pk>/", SocialKeywordDetailView.as_view(), name="crm-social-keyword-detail"),
     path("webhooks/flowwow/", FlowwowWebhookView.as_view(), name="flowwow-webhook"),
     path("crm/analytics/overview/", AnalyticsOverviewView.as_view(), name="crm-analytics-overview"),
     path("crm/analytics/load/", AnalyticsLoadView.as_view(), name="crm-analytics-load"),

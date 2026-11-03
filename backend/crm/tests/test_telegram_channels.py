@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
+from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
+
+
+def _source(**kwargs) -> SocialSource:
+    return SocialSource.objects.create(network=SocialNetwork.objects.get(slug="telegram"), **kwargs)
 from crm.telegram_channels import refresh_keyword_matches, sync_telegram_channels
 
 
@@ -58,7 +62,7 @@ class SyncTelegramChannelsTests(TestCase):
             sender_id=3,
             sender=SimpleNamespace(username="ann"),
         )
-        TelegramChannel.objects.create(username="https://t.me/cakes")
+        _source(username="https://t.me/cakes")
         fake_client, clients = self._client({"cakes": entity}, {100: [message]})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -74,13 +78,14 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertEqual(clients[0].api_id, 12345)
         self.assertEqual(clients[0].api_hash, "hash")
         self.assertEqual(clients[0].entities, ["cakes"])
-        row = TelegramChannelMessage.objects.get()
+        row = SocialMessage.objects.get()
         self.assertEqual(row.text, "hi")
-        self.assertEqual(row.message_id, 7)
-        self.assertEqual(row.sender_id, 3)
+        self.assertEqual(row.external_id, "7")
+        self.assertEqual(row.url, "https://t.me/cakes/7")
+        self.assertEqual(row.sender_id, "3")
         self.assertEqual(row.sender_username, "ann")
         self.assertEqual(row.sent_at, now - timedelta(days=1))
-        channel = TelegramChannel.objects.get()
+        channel = SocialSource.objects.get()
         self.assertEqual(channel.username, "cakes")
         self.assertEqual(channel.title, "Cakes")
         self.assertEqual(channel.telegram_id, 100)
@@ -89,18 +94,19 @@ class SyncTelegramChannelsTests(TestCase):
     def test_next_sync_uses_cursor_without_duplicates(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
         entity = SimpleNamespace(id=100, title="Cakes")
-        channel = TelegramChannel.objects.create(
+        channel = _source(
             username="cakes",
             title="Cakes",
             telegram_id=100,
             last_message_id=7,
         )
-        TelegramChannelMessage.objects.create(
+        SocialMessage.objects.create(
             channel=channel,
-            message_id=7,
+            external_id="7",
+            url="https://t.me/cakes/7",
             sent_at=now - timedelta(days=2),
             text="hi",
-            sender_id=3,
+            sender_id="3",
             sender_username="ann",
         )
         older = SimpleNamespace(
@@ -130,16 +136,16 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertEqual(kwargs["min_id"], 7)
         self.assertIs(kwargs["reverse"], True)
         self.assertNotIn("offset_date", kwargs)
-        self.assertEqual(TelegramChannelMessage.objects.count(), 2)
-        self.assertEqual(TelegramChannelMessage.objects.get(message_id=8).text, "again")
-        self.assertEqual(TelegramChannelMessage.objects.get(message_id=8).sender_username, "")
+        self.assertEqual(SocialMessage.objects.count(), 2)
+        self.assertEqual(SocialMessage.objects.get(external_id="8").text, "again")
+        self.assertEqual(SocialMessage.objects.get(external_id="8").sender_username, "")
         channel.refresh_from_db()
         self.assertEqual(channel.last_message_id, 8)
 
     def test_disabled_channel_is_not_read(self):
         entity = SimpleNamespace(id=100, title="Cakes")
-        TelegramChannel.objects.create(username="off", enabled=False)
-        TelegramChannel.objects.create(username="cakes", enabled=True)
+        _source(username="off", enabled=False)
+        _source(username="cakes", enabled=True)
         fake_client, clients = self._client({"cakes": entity}, {100: []})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -148,7 +154,7 @@ class SyncTelegramChannelsTests(TestCase):
             sync_telegram_channels()
         self.assertEqual(clients[0].entities, ["cakes"])
         self.assertEqual(len(clients[0].calls), 1)
-        self.assertEqual(TelegramChannelMessage.objects.count(), 0)
+        self.assertEqual(SocialMessage.objects.count(), 0)
 
     def test_keyword_match_is_case_insensitive(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -169,8 +175,8 @@ class SyncTelegramChannelsTests(TestCase):
             sender_id=3,
             sender=SimpleNamespace(username="ann"),
         )
-        TelegramKeyword.objects.create(word="торт")
-        TelegramChannel.objects.create(username="cakes")
+        SocialKeyword.objects.create(word="торт")
+        _source(username="cakes")
         fake_client, _clients = self._client({"cakes": entity}, {100: [match_message, no_match_message]})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -178,8 +184,8 @@ class SyncTelegramChannelsTests(TestCase):
             patch("crm.telegram_channels.timezone.now", return_value=now),
         ):
             sync_telegram_channels()
-        self.assertIs(TelegramChannelMessage.objects.get(message_id=9).keyword_match, True)
-        self.assertIs(TelegramChannelMessage.objects.get(message_id=10).keyword_match, False)
+        self.assertIs(SocialMessage.objects.get(external_id="9").keyword_match, True)
+        self.assertIs(SocialMessage.objects.get(external_id="10").keyword_match, False)
 
     def test_long_message_is_not_keyword_match(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -202,8 +208,8 @@ class SyncTelegramChannelsTests(TestCase):
             sender_id=3,
             sender=SimpleNamespace(username="ann"),
         )
-        TelegramKeyword.objects.create(word="торт")
-        TelegramChannel.objects.create(username="cakes")
+        SocialKeyword.objects.create(word="торт")
+        _source(username="cakes")
         fake_client, _clients = self._client({"cakes": entity}, {100: [long_message, short_message]})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -211,27 +217,28 @@ class SyncTelegramChannelsTests(TestCase):
             patch("crm.telegram_channels.timezone.now", return_value=now),
         ):
             sync_telegram_channels()
-        self.assertEqual(TelegramChannelMessage.objects.get(message_id=11).text, long_text)
-        self.assertIs(TelegramChannelMessage.objects.get(message_id=11).keyword_match, False)
-        self.assertIs(TelegramChannelMessage.objects.get(message_id=12).keyword_match, True)
+        self.assertEqual(SocialMessage.objects.get(external_id="11").text, long_text)
+        self.assertIs(SocialMessage.objects.get(external_id="11").keyword_match, False)
+        self.assertIs(SocialMessage.objects.get(external_id="12").keyword_match, True)
 
     def test_sync_leaves_stored_messages_untouched(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
         entity = SimpleNamespace(id=100, title="Cakes")
-        channel = TelegramChannel.objects.create(
+        channel = _source(
             username="cakes",
             title="Cakes",
             telegram_id=100,
             last_message_id=7,
         )
-        stored = TelegramChannelMessage.objects.create(
+        stored = SocialMessage.objects.create(
             channel=channel,
-            message_id=7,
+            external_id="7",
+            url="https://t.me/cakes/7",
             sent_at=now - timedelta(days=1),
             text="нужен медовик на завтра",
             keyword_match=False,
         )
-        TelegramKeyword.objects.create(word="Медовик")
+        SocialKeyword.objects.create(word="Медовик")
         fake_client, clients = self._client({"cakes": entity}, {100: []})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -244,10 +251,11 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertIs(stored.keyword_match, False)
 
     def test_refresh_clears_match_when_keyword_is_gone(self):
-        channel = TelegramChannel.objects.create(username="cakes")
-        message = TelegramChannelMessage.objects.create(
+        channel = _source(username="cakes")
+        message = SocialMessage.objects.create(
             channel=channel,
-            message_id=1,
+            external_id="1",
+            url="https://t.me/cakes/1",
             sent_at=datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc),
             text="нужен торт",
             keyword_match=True,

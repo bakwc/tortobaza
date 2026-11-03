@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
-from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
+from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
 
 
 class TelegramLeadsApiTests(TestCase):
@@ -14,7 +14,10 @@ class TelegramLeadsApiTests(TestCase):
         self.editor = User.objects.create_user(username="leads-edit", password="password")
         grant(self.viewer, "view_leads")
         grant(self.editor, "edit_leads")
-        self.channel = TelegramChannel.objects.create(username="cakes")
+        self.channel = SocialSource.objects.create(
+            network=SocialNetwork.objects.get(slug="telegram"),
+            username="cakes",
+        )
         self.sent_at = timezone.now()
 
     def _message(
@@ -23,10 +26,12 @@ class TelegramLeadsApiTests(TestCase):
         text: str,
         keyword_match: bool,
         potential_lead: bool | None,
-    ) -> TelegramChannelMessage:
-        return TelegramChannelMessage.objects.create(
+    ) -> SocialMessage:
+        external_id = str(message_id)
+        return SocialMessage.objects.create(
             channel=self.channel,
-            message_id=message_id,
+            external_id=external_id,
+            url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=self.sent_at,
             text=text,
             keyword_match=keyword_match,
@@ -38,7 +43,7 @@ class TelegramLeadsApiTests(TestCase):
         self._message(2, "просто чат", True, False)
         self._message(3, "торт", True, None)
         self.client.force_authenticate(user=self.viewer)
-        response = self.client.get("/api/crm/telegram/messages/")
+        response = self.client.get("/api/crm/social/messages/")
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [lead.id])
@@ -48,7 +53,7 @@ class TelegramLeadsApiTests(TestCase):
         second = self._message(2, "b", True, False)
         self._message(3, "c", False, None)
         self.client.force_authenticate(user=self.viewer)
-        response = self.client.get("/api/crm/telegram/messages/", {"kind": "keyword"})
+        response = self.client.get("/api/crm/social/messages/", {"kind": "keyword"})
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(set(ids), {first.id, second.id})
@@ -58,7 +63,7 @@ class TelegramLeadsApiTests(TestCase):
         first = self._message(1, "one", False, None)
         second = self._message(2, "two", True, False)
         self.client.force_authenticate(user=self.viewer)
-        response = self.client.get("/api/crm/telegram/messages/", {"kind": "all"})
+        response = self.client.get("/api/crm/social/messages/", {"kind": "all"})
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [second.id, first.id])
@@ -67,7 +72,7 @@ class TelegramLeadsApiTests(TestCase):
         self._message(1, "Хочу ТОРТ", True, True)
         self._message(2, "другое", True, True)
         self.client.force_authenticate(user=self.viewer)
-        response = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "q": "торт"})
+        response = self.client.get("/api/crm/social/messages/", {"kind": "all", "q": "торт"})
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertEqual(len(body["results"]), 1)
@@ -76,7 +81,7 @@ class TelegramLeadsApiTests(TestCase):
     def test_message_url(self):
         msg = self._message(15, "lead", True, True)
         self.client.force_authenticate(user=self.viewer)
-        response = self.client.get("/api/crm/telegram/messages/", {"kind": "all"})
+        response = self.client.get("/api/crm/social/messages/", {"kind": "all"})
         row = next(item for item in response.json()["results"] if item["id"] == msg.id)
         self.assertEqual(row["url"], "https://t.me/cakes/15")
 
@@ -84,13 +89,13 @@ class TelegramLeadsApiTests(TestCase):
         for message_id in range(1, 17):
             self._message(message_id, f"m{message_id}", False, None)
         self.client.force_authenticate(user=self.viewer)
-        first = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 1})
+        first = self.client.get("/api/crm/social/messages/", {"kind": "all", "page": 1})
         self.assertEqual(first.status_code, 200)
         first_body = first.json()
         self.assertEqual(first_body["page"], 1)
         self.assertEqual(first_body["pages"], 2)
         self.assertEqual(len(first_body["results"]), 15)
-        second = self.client.get("/api/crm/telegram/messages/", {"kind": "all", "page": 2})
+        second = self.client.get("/api/crm/social/messages/", {"kind": "all", "page": 2})
         self.assertEqual(second.status_code, 200)
         second_body = second.json()
         self.assertEqual(second_body["page"], 2)
@@ -98,11 +103,15 @@ class TelegramLeadsApiTests(TestCase):
         self.assertEqual(second_body["results"][0]["text"], "m1")
 
     def test_messages_channel_filter(self):
-        other = TelegramChannel.objects.create(username="other")
+        other = SocialSource.objects.create(
+            network=SocialNetwork.objects.get(slug="telegram"),
+            username="other",
+        )
         on_cakes = self._message(1, "cakes msg", False, None)
-        TelegramChannelMessage.objects.create(
+        SocialMessage.objects.create(
             channel=other,
-            message_id=2,
+            external_id="2",
+            url="https://t.me/other/2",
             sent_at=self.sent_at,
             text="other msg",
             keyword_match=False,
@@ -110,7 +119,7 @@ class TelegramLeadsApiTests(TestCase):
         )
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get(
-            "/api/crm/telegram/messages/",
+            "/api/crm/social/messages/",
             {"kind": "all", "channel": self.channel.id},
         )
         self.assertEqual(response.status_code, 200)
@@ -120,7 +129,7 @@ class TelegramLeadsApiTests(TestCase):
     def test_viewer_cannot_create_channel(self):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.post(
-            "/api/crm/telegram/channels/",
+            "/api/crm/social/channels/",
             {"username": "https://t.me/new_channel/", "enabled": True},
             format="json",
         )
@@ -129,7 +138,7 @@ class TelegramLeadsApiTests(TestCase):
     def test_editor_normalizes_channel_username(self):
         self.client.force_authenticate(user=self.editor)
         response = self.client.post(
-            "/api/crm/telegram/channels/",
+            "/api/crm/social/channels/",
             {"username": "https://t.me/new_channel/", "enabled": True},
             format="json",
         )
@@ -138,32 +147,32 @@ class TelegramLeadsApiTests(TestCase):
 
     def test_keyword_crud(self):
         self.client.force_authenticate(user=self.editor)
-        created = self.client.post("/api/crm/telegram/keywords/", {"word": "медовик"}, format="json")
+        created = self.client.post("/api/crm/social/keywords/", {"word": "медовик"}, format="json")
         self.assertEqual(created.status_code, 201)
         keyword_id = created.json()["id"]
         updated = self.client.put(
-            f"/api/crm/telegram/keywords/{keyword_id}/",
+            f"/api/crm/social/keywords/{keyword_id}/",
             {"word": "торт"},
             format="json",
         )
         self.assertEqual(updated.status_code, 200)
-        self.assertEqual(TelegramKeyword.objects.get(pk=keyword_id).word, "торт")
-        deleted = self.client.delete(f"/api/crm/telegram/keywords/{keyword_id}/")
+        self.assertEqual(SocialKeyword.objects.get(pk=keyword_id).word, "торт")
+        deleted = self.client.delete(f"/api/crm/social/keywords/{keyword_id}/")
         self.assertEqual(deleted.status_code, 204)
-        self.assertFalse(TelegramKeyword.objects.filter(pk=keyword_id).exists())
+        self.assertFalse(SocialKeyword.objects.filter(pk=keyword_id).exists())
 
     def test_keyword_change_rematches_stored_messages(self):
         self.client.force_authenticate(user=self.editor)
         medovik = self._message(1, "закажу медовик", False, None)
         cake = self._message(2, "хочу торт", False, None)
-        created = self.client.post("/api/crm/telegram/keywords/", {"word": "медовик"}, format="json")
+        created = self.client.post("/api/crm/social/keywords/", {"word": "медовик"}, format="json")
         self.assertEqual(created.status_code, 201)
         medovik.refresh_from_db()
         cake.refresh_from_db()
         self.assertIs(medovik.keyword_match, True)
         self.assertIs(cake.keyword_match, False)
         updated = self.client.put(
-            f"/api/crm/telegram/keywords/{created.json()['id']}/",
+            f"/api/crm/social/keywords/{created.json()['id']}/",
             {"word": "торт"},
             format="json",
         )
@@ -172,7 +181,7 @@ class TelegramLeadsApiTests(TestCase):
         cake.refresh_from_db()
         self.assertIs(medovik.keyword_match, False)
         self.assertIs(cake.keyword_match, True)
-        deleted = self.client.delete(f"/api/crm/telegram/keywords/{created.json()['id']}/")
+        deleted = self.client.delete(f"/api/crm/social/keywords/{created.json()['id']}/")
         self.assertEqual(deleted.status_code, 204)
         cake.refresh_from_db()
         self.assertIs(cake.keyword_match, False)

@@ -5,7 +5,7 @@ from django.utils import timezone
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 
-from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
+from crm.models import SocialKeyword, SocialMessage, SocialSource
 from crm.telegram_user import _api_credentials
 
 _HISTORY_DAYS = 30
@@ -23,22 +23,24 @@ def _keyword_match(text: str, keywords: list[str]) -> bool:
 
 
 def refresh_keyword_matches() -> None:
-    keywords = [row.casefold() for row in TelegramKeyword.objects.values_list("word", flat=True)]
+    keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
     changed = []
-    for message in TelegramChannelMessage.objects.all().only("id", "text", "keyword_match").iterator():
+    for message in SocialMessage.objects.all().only("id", "text", "keyword_match").iterator():
         matched = _keyword_match(message.text, keywords)
         if message.keyword_match != matched:
             message.keyword_match = matched
             changed.append(message)
     if changed:
-        TelegramChannelMessage.objects.bulk_update(changed, ["keyword_match"])
+        SocialMessage.objects.bulk_update(changed, ["keyword_match"])
 
 
 def sync_telegram_channels() -> None:
-    channels = list(TelegramChannel.objects.filter(enabled=True).order_by("id"))
+    channels = list(
+        SocialSource.objects.filter(enabled=True, network__slug="telegram").order_by("id")
+    )
     if not channels:
         return
-    keywords = [row.casefold() for row in TelegramKeyword.objects.values_list("word", flat=True)]
+    keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
     api_id, api_hash = _api_credentials()
     session = settings.TELEGRAM_USER_SESSION
     if not session:
@@ -68,14 +70,18 @@ def sync_telegram_channels() -> None:
                 sender = message.sender
                 if sender is not None and sender.username:
                     sender_username = sender.username
-                TelegramChannelMessage.objects.update_or_create(
+                sender_id = None
+                if message.sender_id is not None:
+                    sender_id = str(message.sender_id)
+                SocialMessage.objects.update_or_create(
                     channel=channel,
-                    message_id=message.id,
+                    external_id=str(message.id),
                     defaults={
                         "sent_at": message.date,
                         "text": text,
-                        "sender_id": message.sender_id,
+                        "sender_id": sender_id,
                         "sender_username": sender_username,
+                        "url": f"https://t.me/{channel.username}/{message.id}",
                         "keyword_match": _keyword_match(text, keywords),
                     },
                 )

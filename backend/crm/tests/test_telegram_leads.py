@@ -3,19 +3,24 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
+from crm.models import SocialMessage, SocialNetwork, SocialSource
 from crm.telegram_leads import LeadVerdict, classify_telegram_leads, notify_recent_telegram_leads
 
 
 class ClassifyTelegramLeadsTests(TestCase):
     def setUp(self):
-        self.channel = TelegramChannel.objects.create(username="cakes")
+        self.channel = SocialSource.objects.create(
+            network=SocialNetwork.objects.get(slug="telegram"),
+            username="cakes",
+        )
         self.sent_at = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
 
-    def _message(self, text: str, keyword_match: bool, potential_lead: bool | None) -> TelegramChannelMessage:
-        return TelegramChannelMessage.objects.create(
+    def _message(self, text: str, keyword_match: bool, potential_lead: bool | None) -> SocialMessage:
+        external_id = str(SocialMessage.objects.count() + 1)
+        return SocialMessage.objects.create(
             channel=self.channel,
-            message_id=TelegramChannelMessage.objects.count() + 1,
+            external_id=external_id,
+            url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=self.sent_at,
             text=text,
             keyword_match=keyword_match,
@@ -52,7 +57,11 @@ class ClassifyTelegramLeadsTests(TestCase):
 class NotifyTelegramLeadsTests(TestCase):
     def setUp(self):
         self.now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
-        self.channel = TelegramChannel.objects.create(username="cakes", title="Cakes Chat")
+        self.channel = SocialSource.objects.create(
+            network=SocialNetwork.objects.get(slug="telegram"),
+            username="cakes",
+            title="Cakes Chat",
+        )
         self.telegram_calls: list[dict] = []
 
     def _message(
@@ -63,14 +72,16 @@ class NotifyTelegramLeadsTests(TestCase):
         sent_at: datetime | None = None,
         potential_lead: bool | None = True,
         lead_notified: bool = False,
-    ) -> TelegramChannelMessage:
+    ) -> SocialMessage:
         if message_id is None:
-            message_id = TelegramChannelMessage.objects.count() + 1
+            message_id = SocialMessage.objects.count() + 1
         if sent_at is None:
             sent_at = self.now - timedelta(hours=1)
-        return TelegramChannelMessage.objects.create(
+        external_id = str(message_id)
+        return SocialMessage.objects.create(
             channel=self.channel,
-            message_id=message_id,
+            external_id=external_id,
+            url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=sent_at,
             text=text,
             keyword_match=True,

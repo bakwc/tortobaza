@@ -894,63 +894,90 @@ def normalize_telegram_username(value: str) -> str:
     return username
 
 
-class TelegramKeyword(models.Model):
+class SocialNetwork(models.Model):
+    slug = models.SlugField(max_length=64, unique=True, verbose_name=_("Slug"))
+    name = models.CharField(max_length=255, verbose_name=_("Name"))
+
+    class Meta:
+        verbose_name = _("Social network")
+        verbose_name_plural = _("Social networks")
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class SocialKeyword(models.Model):
     word = models.CharField(max_length=255, unique=True, verbose_name=_("Word"))
 
     class Meta:
-        verbose_name = _("Telegram keyword")
-        verbose_name_plural = _("Telegram keywords")
+        verbose_name = _("Social keyword")
+        verbose_name_plural = _("Social keywords")
         ordering = ["word"]
 
     def __str__(self) -> str:
         return self.word
 
 
-class TelegramChannel(models.Model):
-    username = models.CharField(max_length=255, unique=True, verbose_name=_("Username"))
+class SocialSource(models.Model):
+    network = models.ForeignKey(
+        SocialNetwork,
+        related_name="sources",
+        on_delete=models.CASCADE,
+        verbose_name=_("Network"),
+    )
+    username = models.CharField(max_length=255, verbose_name=_("Username"))
     enabled = models.BooleanField(default=True, verbose_name=_("Enabled"))
     title = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Title"))
     telegram_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Telegram ID"))
     last_message_id = models.BigIntegerField(default=0, verbose_name=_("Last message id"))
 
     class Meta:
-        verbose_name = _("Telegram channel")
-        verbose_name_plural = _("Telegram channels")
+        verbose_name = _("Social source")
+        verbose_name_plural = _("Social sources")
         ordering = ["username"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["network", "username"],
+                name="uniq_socialsource_network_username",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
-        self.username = normalize_telegram_username(self.username)
-        update_fields = kwargs.get("update_fields")
-        if self.pk is not None:
-            stored = TelegramChannel.objects.filter(pk=self.pk).values_list("username", flat=True).first()
-            if stored is not None and stored != self.username:
-                self.telegram_id = None
-                self.last_message_id = 0
-                if update_fields is not None:
-                    kwargs["update_fields"] = set(update_fields) | {
-                        "username",
-                        "telegram_id",
-                        "last_message_id",
-                    }
+        if self.network.slug == "telegram":
+            self.username = normalize_telegram_username(self.username)
+            update_fields = kwargs.get("update_fields")
+            if self.pk is not None:
+                stored = SocialSource.objects.filter(pk=self.pk).values_list("username", flat=True).first()
+                if stored is not None and stored != self.username:
+                    self.telegram_id = None
+                    self.last_message_id = 0
+                    if update_fields is not None:
+                        kwargs["update_fields"] = set(update_fields) | {
+                            "username",
+                            "telegram_id",
+                            "last_message_id",
+                        }
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return self.username
 
 
-class TelegramChannelMessage(models.Model):
+class SocialMessage(models.Model):
     channel = models.ForeignKey(
-        TelegramChannel,
+        SocialSource,
         related_name="messages",
         on_delete=models.CASCADE,
         verbose_name=_("Channel"),
     )
-    message_id = models.BigIntegerField(verbose_name=_("Message id"))
+    external_id = models.CharField(max_length=255, verbose_name=_("External id"))
+    url = models.CharField(max_length=2048, verbose_name=_("URL"))
     sent_at = models.DateTimeField(verbose_name=_("Sent at"))
     text = models.TextField(blank=True, default="", verbose_name=_("Text"))
-    sender_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Sender ID"))
+    sender_id = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Sender ID"))
     sender_username = models.CharField(
-        max_length=32,
+        max_length=255,
         blank=True,
         default="",
         verbose_name=_("Sender username"),
@@ -960,18 +987,18 @@ class TelegramChannelMessage(models.Model):
     lead_notified = models.BooleanField(default=False, verbose_name=_("Lead notified"))
 
     class Meta:
-        verbose_name = _("Telegram channel message")
-        verbose_name_plural = _("Telegram channel messages")
-        ordering = ["-sent_at", "-message_id"]
+        verbose_name = _("Social message")
+        verbose_name_plural = _("Social messages")
+        ordering = ["-sent_at", "-external_id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["channel", "message_id"],
-                name="uniq_telegramchannelmessage_channel_message_id",
+                fields=["channel", "external_id"],
+                name="uniq_socialmessage_channel_external_id",
             ),
         ]
 
     def __str__(self) -> str:
-        return f"{self.channel_id}#{self.message_id}"
+        return f"{self.channel_id}#{self.external_id}"
 
 
 class WhatsAppNumberCheck(CrmOrder):

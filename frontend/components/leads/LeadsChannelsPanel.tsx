@@ -9,18 +9,19 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
 import { LeadsShell } from "@/components/leads/LeadsShell";
 import { useCan } from "@/hooks/useAuth";
-import { useTelegramChannels } from "@/hooks/useLeads";
-import type { TelegramChannel, TelegramChannelBody } from "@/lib/api/types";
+import { useSocialChannels } from "@/hooks/useLeads";
+import type { SocialChannel, SocialChannelBody } from "@/lib/api/types";
 
 export function LeadsChannelsPanel() {
   const t = useTranslations("leads");
   const stock = useTranslations("stock");
   const canEdit = useCan("edit_leads");
-  const channels = useTelegramChannels();
+  const channels = useSocialChannels();
+  const rows = (channels.list.data ?? []).filter((row) => row.network_slug === "telegram");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<TelegramChannelBody | null>(null);
+  const [draft, setDraft] = useState<SocialChannelBody | null>(null);
 
-  const open = (row: TelegramChannel | null) => {
+  const open = (row: SocialChannel | null) => {
     channels.save.reset();
     channels.remove.reset();
     setEditingId(row ? row.id : null);
@@ -43,7 +44,7 @@ export function LeadsChannelsPanel() {
             ) : null}
           </div>
           <QueryState isLoading={channels.list.isLoading} isError={channels.list.isError}>
-            {(channels.list.data ?? []).length === 0 ? (
+            {rows.length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-2)]">{t("emptyChannels")}</p>
             ) : (
               <table className="mt-4 w-full text-sm">
@@ -55,7 +56,7 @@ export function LeadsChannelsPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(channels.list.data ?? []).map((row) => (
+                  {rows.map((row) => (
                     <tr
                       key={row.id}
                       onClick={() => open(row)}

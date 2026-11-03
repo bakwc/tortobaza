@@ -1615,39 +1615,43 @@ export const SupplierSchema = z.object({
   comment: z.string(),
 });
 
-export const TelegramMessageKindSchema = z.enum(["lead", "keyword", "all"]);
+export const SocialMessageKindSchema = z.enum(["lead", "keyword", "all"]);
 
-export const TelegramChannelSchema = z.object({
+export const SocialChannelSchema = z.object({
   id: z.number(),
   username: z.string(),
   enabled: z.boolean(),
   title: z.string(),
   telegram_id: z.number().nullable(),
   last_message_id: z.number(),
+  network_slug: z.string(),
+  network_name: z.string(),
 });
 
-export const TelegramKeywordSchema = z.object({
+export const SocialKeywordSchema = z.object({
   id: z.number(),
   word: z.string(),
 });
 
-export const TelegramChannelMessageSchema = z.object({
+export const SocialMessageSchema = z.object({
   id: z.number(),
   sent_at: z.string(),
   text: z.string(),
-  sender_id: z.number().nullable(),
+  sender_id: z.string().nullable(),
   sender_username: z.string(),
   keyword_match: z.boolean(),
   potential_lead: z.boolean().nullable(),
   channel_username: z.string(),
   channel_title: z.string(),
+  network_slug: z.string(),
+  network_name: z.string(),
   url: z.string(),
 });
 
-export const TelegramMessagesResponseSchema = z.object({
+export const SocialMessagesResponseSchema = z.object({
   page: z.number(),
   pages: z.number(),
-  results: z.array(TelegramChannelMessageSchema),
+  results: z.array(SocialMessageSchema),
 });
 
 export const WriteOffReasonSchema = z.object({
@@ -2057,13 +2061,13 @@ export type InventoryCount = z.infer<typeof InventoryCountSchema>;
 export type StockRow = z.infer<typeof StockRowSchema>;
 
 export type SupplierBody = { name: string; phone: string; comment: string };
-export type TelegramMessageKind = z.infer<typeof TelegramMessageKindSchema>;
-export type TelegramChannel = z.infer<typeof TelegramChannelSchema>;
-export type TelegramKeyword = z.infer<typeof TelegramKeywordSchema>;
-export type TelegramChannelMessage = z.infer<typeof TelegramChannelMessageSchema>;
-export type TelegramMessagesResponse = z.infer<typeof TelegramMessagesResponseSchema>;
-export type TelegramChannelBody = { username: string; enabled: boolean };
-export type TelegramKeywordBody = { word: string };
+export type SocialMessageKind = z.infer<typeof SocialMessageKindSchema>;
+export type SocialChannel = z.infer<typeof SocialChannelSchema>;
+export type SocialKeyword = z.infer<typeof SocialKeywordSchema>;
+export type SocialMessage = z.infer<typeof SocialMessageSchema>;
+export type SocialMessagesResponse = z.infer<typeof SocialMessagesResponseSchema>;
+export type SocialChannelBody = { username: string; enabled: boolean };
+export type SocialKeywordBody = { word: string };
 export type WriteOffReasonBody = { name: string };
 
 export type SupplyBody = {

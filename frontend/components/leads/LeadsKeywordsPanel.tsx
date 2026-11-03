@@ -9,18 +9,18 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, Field, QueryState } from "@/components/menu/ui";
 import { LeadsShell } from "@/components/leads/LeadsShell";
 import { useCan } from "@/hooks/useAuth";
-import { useTelegramKeywords } from "@/hooks/useLeads";
-import type { TelegramKeyword, TelegramKeywordBody } from "@/lib/api/types";
+import { useSocialKeywords } from "@/hooks/useLeads";
+import type { SocialKeyword, SocialKeywordBody } from "@/lib/api/types";
 
 export function LeadsKeywordsPanel() {
   const t = useTranslations("leads");
   const stock = useTranslations("stock");
   const canEdit = useCan("edit_leads");
-  const keywords = useTelegramKeywords();
+  const keywords = useSocialKeywords();
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [draft, setDraft] = useState<TelegramKeywordBody | null>(null);
+  const [draft, setDraft] = useState<SocialKeywordBody | null>(null);
 
-  const open = (row: TelegramKeyword | null) => {
+  const open = (row: SocialKeyword | null) => {
     keywords.save.reset();
     keywords.remove.reset();
     setEditingId(row ? row.id : null);

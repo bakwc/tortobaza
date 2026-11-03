@@ -25,9 +25,10 @@ from crm.models import (
     FinancialTransactionRule,
     FinancialTransactionRuleCondition,
     ResolvedTelegramPhone,
-    TelegramChannel,
-    TelegramChannelMessage,
-    TelegramKeyword,
+    SocialKeyword,
+    SocialMessage,
+    SocialNetwork,
+    SocialSource,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
@@ -294,8 +295,14 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(TelegramKeyword)
-class TelegramKeywordAdmin(admin.ModelAdmin):
+@admin.register(SocialNetwork)
+class SocialNetworkAdmin(admin.ModelAdmin):
+    list_display = ["slug", "name"]
+    search_fields = ["slug", "name"]
+
+
+@admin.register(SocialKeyword)
+class SocialKeywordAdmin(admin.ModelAdmin):
     list_display = ["word"]
     search_fields = ["word"]
 
@@ -312,20 +319,20 @@ class TelegramKeywordAdmin(admin.ModelAdmin):
         refresh_keyword_matches()
 
 
-@admin.register(TelegramChannel)
-class TelegramChannelAdmin(admin.ModelAdmin):
-    list_display = ["username", "enabled", "title", "telegram_id", "last_message_id"]
-    list_filter = ["enabled"]
+@admin.register(SocialSource)
+class SocialSourceAdmin(admin.ModelAdmin):
+    list_display = ["username", "network", "enabled", "title", "telegram_id", "last_message_id"]
+    list_filter = ["network", "enabled"]
     search_fields = ["username", "title"]
     readonly_fields = ["title", "telegram_id", "last_message_id"]
 
 
-@admin.register(TelegramChannelMessage)
-class TelegramChannelMessageAdmin(admin.ModelAdmin):
+@admin.register(SocialMessage)
+class SocialMessageAdmin(admin.ModelAdmin):
     list_display = [
         "sent_at",
         "channel",
-        "message_id",
+        "external_id",
         "sender_id",
         "sender_username",
         "keyword_match",
