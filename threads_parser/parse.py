@@ -157,7 +157,7 @@ def call(conn, buffer, counter, method, params):
 
 
 def search_day():
-    now = datetime.datetime.now().astimezone()
+    now = datetime.datetime.now(datetime.timezone.utc)
     day = now.date()
     if now.hour < 1:
         day = day - datetime.timedelta(days=1)
