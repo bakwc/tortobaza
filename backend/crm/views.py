@@ -254,11 +254,18 @@ class CrmOrderListView(APIView):
         month = query_serializer.validated_data.get("month")
         if month:
             year_str, month_str = month.split("-")
-            orders = with_order_relations(live_orders().filter(
+            orders = list(with_order_relations(live_orders().filter(
                 date__year=int(year_str),
                 date__month=int(month_str),
-            ))
-            serializer = CrmOrderSerializer(orders, many=True, context={"request": request})
+            )))
+            serializer = CrmDayOrderSerializer(
+                orders,
+                many=True,
+                context={
+                    "request": request,
+                    "client_order_counts": client_order_counts([order.id for order in orders]),
+                },
+            )
             return Response(
                 {
                     "month": month,

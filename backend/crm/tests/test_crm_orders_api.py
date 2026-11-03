@@ -245,6 +245,14 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(counts[after_deleted.id], 1)
         self.assertIsNone(counts[unknown.id])
 
+        month_response = self.client.get("/api/crm/orders/", {"month": "2026-08"})
+        self.assertEqual(month_response.status_code, 200)
+        month_counts = {row["id"]: row["client_order_count"] for row in month_response.json()["orders"]}
+        self.assertEqual(month_counts[repeat.id], 2)
+        self.assertEqual(month_counts[single.id], 1)
+        self.assertEqual(month_counts[after_deleted.id], 1)
+        self.assertIsNone(month_counts[unknown.id])
+
     def test_midnight_orders_sort_last(self):
         target_date = date(2026, 8, 25)
         midnight = CrmOrder.objects.create(

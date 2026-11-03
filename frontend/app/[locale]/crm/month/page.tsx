@@ -29,7 +29,7 @@ import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCan } from "@/hooks/useAuth";
 import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
-import type { CrmOrder } from "@/lib/api/types";
+import type { CrmDayOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
 import {
   crmOrderTotal,
@@ -61,8 +61,8 @@ function shiftMonth(yyyyMm: string, delta: number): string {
   return `${nextYear}-${nextMonth}`;
 }
 
-function groupOrdersByDate(orders: CrmOrder[]): { date: string; orders: CrmOrder[] }[] {
-  const groups: { date: string; orders: CrmOrder[] }[] = [];
+function groupOrdersByDate(orders: CrmDayOrder[]): { date: string; orders: CrmDayOrder[] }[] {
+  const groups: { date: string; orders: CrmDayOrder[] }[] = [];
   for (const order of orders) {
     const last = groups[groups.length - 1];
     if (last && last.date === order.date) {
@@ -284,7 +284,7 @@ function CrmMonthBoard() {
   );
 }
 
-function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
+function CrmMonthOrderRow({ order }: { order: CrmDayOrder }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
   const thumb = order.images[0];
@@ -360,6 +360,14 @@ function CrmMonthOrderRow({ order }: { order: CrmOrder }) {
                 {order.contact}
               </span>
             </p>
+            {order.client_order_count !== null && order.client_order_count >= 2 ? (
+              <span
+                title={t("repeatClient", { count: order.client_order_count })}
+                className="shrink-0 rounded-full bg-orange-500 px-1 py-px text-[10px] font-bold leading-none text-white"
+              >
+                {order.client_order_count}
+              </span>
+            ) : null}
             <span
               className={cn(
                 "hidden shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold sm:flex",

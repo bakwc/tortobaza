@@ -501,7 +501,7 @@ export const CrmOrdersResponseSchema = z.object({
 
 export const CrmMonthlyOrdersResponseSchema = z.object({
   month: z.string(),
-  orders: z.array(CrmOrderSchema),
+  orders: z.array(CrmDayOrderSchema),
 });
 
 export const CrmUnconfirmedOrdersResponseSchema = z.object({
