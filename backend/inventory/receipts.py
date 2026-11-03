@@ -19,7 +19,7 @@ pillow_heif.register_heif_opener()
 
 logger = logging.getLogger(__name__)
 
-RECEIPT_MODEL = "gpt-5.5"
+RECEIPT_MODEL = "gpt-6.1-sol"
 RECEIPT_TIMEOUT_SECONDS = 90
 MAX_EDGE = 2000
 

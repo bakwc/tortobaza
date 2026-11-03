@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from rsge.models import Invoice, Waybill
 
-TRANSLATE_MODEL = "gpt-5.5"
+TRANSLATE_MODEL = "gpt-6.1-sol"
 TRANSLATE_TIMEOUT_SECONDS = 90
 
 TRANSLATE_PROMPT = """You translate strings from Georgian tax waybills and invoices into Russian.

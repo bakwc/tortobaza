@@ -16,7 +16,7 @@ from menu.models import Ingredient
 from rsge.models import Waybill, WaybillGood
 
 _TB = ZoneInfo("Asia/Tbilisi")
-WAYBILL_MATCH_MODEL = "gpt-4.1-mini"
+WAYBILL_MATCH_MODEL = "gpt-6-luna"
 WAYBILL_MATCH_TIMEOUT_SECONDS = 90
 FACTOR_PLACES = Decimal("0.000001")
 MONEY_PLACES = Decimal("0.01")

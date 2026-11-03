@@ -11,7 +11,7 @@ from crm.analytics import weight_kg
 from crm.analytics_fillings import canonical_filling, canonical_names, normalize_text, stored_filling
 from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder
 
-_MODEL = "gpt-4.1-mini"
+_MODEL = "gpt-6-luna"
 _WEIGHT_Q = Decimal("0.001")
 _PRICE_Q = Decimal("0.01")
 _WEIGHT_GROUPS = frozenset({"weight", "size", "вес", "размер"})
