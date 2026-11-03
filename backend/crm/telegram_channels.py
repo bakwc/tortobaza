@@ -35,7 +35,6 @@ def refresh_keyword_matches() -> None:
 
 
 def sync_telegram_channels() -> None:
-    refresh_keyword_matches()
     channels = list(TelegramChannel.objects.filter(enabled=True).order_by("id"))
     if not channels:
         return

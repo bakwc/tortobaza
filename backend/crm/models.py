@@ -957,6 +957,7 @@ class TelegramChannelMessage(models.Model):
     )
     keyword_match = models.BooleanField(default=False, verbose_name=_("Keyword match"))
     potential_lead = models.BooleanField(null=True, blank=True, verbose_name=_("Potential lead"))
+    lead_notified = models.BooleanField(default=False, verbose_name=_("Lead notified"))
 
     class Meta:
         verbose_name = _("Telegram channel message")

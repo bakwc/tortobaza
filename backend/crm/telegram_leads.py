@@ -1,8 +1,12 @@
+from datetime import timedelta
+
 from django.conf import settings
+from django.utils import timezone
 from openai import OpenAI
 from pydantic import BaseModel
 
 from crm.models import TelegramChannelMessage
+from crm.telegram import _esc, _telegram_json
 
 LEAD_MODEL = "gpt-6.1-sol"
 LEAD_TIMEOUT_SECONDS = 90
@@ -43,3 +47,54 @@ def classify_telegram_leads() -> None:
             raise RuntimeError("Lead classification returned no data.")
         message.potential_lead = parsed.is_lead
         message.save(update_fields=["potential_lead"])
+
+
+def _channel_label(channel) -> str:
+    if channel.title:
+        return channel.title
+    return f"@{channel.username}"
+
+
+def _lead_message_url(message: TelegramChannelMessage) -> str:
+    return f"https://t.me/{message.channel.username}/{message.message_id}"
+
+
+def build_lead_notification_html(message: TelegramChannelMessage) -> str:
+    channel = message.channel
+    label = _channel_label(channel)
+    url = _lead_message_url(message)
+    return (
+        f"В канале <b>{_esc(label)}</b> спрашивают:\n"
+        f"{_esc(message.text)}\n"
+        f"\n"
+        f'<a href="{url}">сообщение</a>'
+    )
+
+
+def notify_recent_telegram_leads() -> None:
+    token = settings.TELEGRAM_BOT_TOKEN
+    chat_id = settings.TELEGRAM_CHAT_ID
+    if not token or not chat_id:
+        return
+    cutoff = timezone.now() - timedelta(hours=24)
+    pending = (
+        TelegramChannelMessage.objects.filter(
+            potential_lead=True,
+            lead_notified=False,
+            sent_at__gte=cutoff,
+        )
+        .select_related("channel")
+        .order_by("id")
+    )
+    for message in pending:
+        _telegram_json(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": build_lead_notification_html(message),
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            },
+        )
+        message.lead_notified = True
+        message.save(update_fields=["lead_notified"])

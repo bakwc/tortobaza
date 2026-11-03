@@ -1,10 +1,10 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
-from crm.telegram_leads import LeadVerdict, classify_telegram_leads
+from crm.telegram_leads import LeadVerdict, classify_telegram_leads, notify_recent_telegram_leads
 
 
 class ClassifyTelegramLeadsTests(TestCase):
@@ -46,3 +46,79 @@ class ClassifyTelegramLeadsTests(TestCase):
         openai_cls.return_value.responses.parse.return_value.output_parsed = None
         with self.assertRaises(RuntimeError):
             classify_telegram_leads()
+
+
+@override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_CHAT_ID="site-chat")
+class NotifyTelegramLeadsTests(TestCase):
+    def setUp(self):
+        self.now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        self.channel = TelegramChannel.objects.create(username="cakes", title="Cakes Chat")
+        self.telegram_calls: list[dict] = []
+
+    def _message(
+        self,
+        *,
+        text: str = "где заказать торт?",
+        message_id: int | None = None,
+        sent_at: datetime | None = None,
+        potential_lead: bool | None = True,
+        lead_notified: bool = False,
+    ) -> TelegramChannelMessage:
+        if message_id is None:
+            message_id = TelegramChannelMessage.objects.count() + 1
+        if sent_at is None:
+            sent_at = self.now - timedelta(hours=1)
+        return TelegramChannelMessage.objects.create(
+            channel=self.channel,
+            message_id=message_id,
+            sent_at=sent_at,
+            text=text,
+            keyword_match=True,
+            potential_lead=potential_lead,
+            lead_notified=lead_notified,
+        )
+
+    def _capture_telegram(self, method: str, payload: dict) -> dict:
+        self.telegram_calls.append({"method": method, "payload": payload})
+        return {"ok": True, "result": {"message_id": 1}}
+
+    @patch("crm.telegram_leads._telegram_json")
+    @patch("crm.telegram_leads.timezone.now")
+    def test_notifies_recent_lead_to_site_chat(self, now_mock, telegram_json):
+        now_mock.return_value = self.now
+        telegram_json.side_effect = self._capture_telegram
+        row = self._message(message_id=15)
+        notify_recent_telegram_leads()
+        self.assertEqual(len(self.telegram_calls), 1)
+        call = self.telegram_calls[0]
+        self.assertEqual(call["method"], "sendMessage")
+        self.assertEqual(call["payload"]["chat_id"], "site-chat")
+        text = call["payload"]["text"]
+        self.assertIn("Cakes Chat", text)
+        self.assertIn("где заказать торт?", text)
+        self.assertIn("https://t.me/cakes/15", text)
+        self.assertEqual(call["payload"]["parse_mode"], "HTML")
+        row.refresh_from_db()
+        self.assertIs(row.lead_notified, True)
+
+    @patch("crm.telegram_leads._telegram_json")
+    @patch("crm.telegram_leads.timezone.now")
+    def test_skips_old_non_lead_and_already_notified(self, now_mock, telegram_json):
+        now_mock.return_value = self.now
+        telegram_json.side_effect = self._capture_telegram
+        self._message(sent_at=self.now - timedelta(hours=25))
+        self._message(potential_lead=False, message_id=2)
+        self._message(lead_notified=True, message_id=3)
+        notify_recent_telegram_leads()
+        telegram_json.assert_not_called()
+
+    @patch("crm.telegram_leads._telegram_json")
+    @patch("crm.telegram_leads.timezone.now")
+    def test_no_settings_skips_send(self, now_mock, telegram_json):
+        now_mock.return_value = self.now
+        self._message()
+        with override_settings(TELEGRAM_BOT_TOKEN="", TELEGRAM_CHAT_ID="site-chat"):
+            notify_recent_telegram_leads()
+        with override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_CHAT_ID=""):
+            notify_recent_telegram_leads()
+        telegram_json.assert_not_called()

@@ -215,7 +215,7 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertIs(TelegramChannelMessage.objects.get(message_id=11).keyword_match, False)
         self.assertIs(TelegramChannelMessage.objects.get(message_id=12).keyword_match, True)
 
-    def test_sync_rematches_messages_already_stored(self):
+    def test_sync_leaves_stored_messages_untouched(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
         entity = SimpleNamespace(id=100, title="Cakes")
         channel = TelegramChannel.objects.create(
@@ -231,13 +231,6 @@ class SyncTelegramChannelsTests(TestCase):
             text="нужен медовик на завтра",
             keyword_match=False,
         )
-        untouched = TelegramChannelMessage.objects.create(
-            channel=channel,
-            message_id=6,
-            sent_at=now - timedelta(days=2),
-            text="привет",
-            keyword_match=False,
-        )
         TelegramKeyword.objects.create(word="Медовик")
         fake_client, clients = self._client({"cakes": entity}, {100: []})
         with (
@@ -248,9 +241,7 @@ class SyncTelegramChannelsTests(TestCase):
             sync_telegram_channels()
         self.assertEqual(clients[0].calls[0]["kwargs"]["min_id"], 7)
         stored.refresh_from_db()
-        untouched.refresh_from_db()
-        self.assertIs(stored.keyword_match, True)
-        self.assertIs(untouched.keyword_match, False)
+        self.assertIs(stored.keyword_match, False)
 
     def test_refresh_clears_match_when_keyword_is_gone(self):
         channel = TelegramChannel.objects.create(username="cakes")

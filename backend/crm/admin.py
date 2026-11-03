@@ -330,9 +330,10 @@ class TelegramChannelMessageAdmin(admin.ModelAdmin):
         "sender_username",
         "keyword_match",
         "potential_lead",
+        "lead_notified",
         "text",
     ]
-    list_filter = ["channel", "keyword_match", "potential_lead"]
+    list_filter = ["channel", "keyword_match", "potential_lead", "lead_notified"]
     search_fields = ["text", "sender_username"]
     date_hierarchy = "sent_at"
 
