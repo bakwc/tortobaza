@@ -73,7 +73,7 @@ def build_lead_notification_html(message: SocialMessage) -> str:
 
 def notify_recent_telegram_leads() -> None:
     token = settings.TELEGRAM_BOT_TOKEN
-    chat_id = settings.TELEGRAM_CHAT_ID
+    chat_id = settings.TELEGRAM_LEADS_CHAT_ID
     if not token or not chat_id:
         return
     cutoff = timezone.now() - timedelta(hours=24)

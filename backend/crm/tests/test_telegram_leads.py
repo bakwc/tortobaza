@@ -53,7 +53,7 @@ class ClassifyTelegramLeadsTests(TestCase):
             classify_telegram_leads()
 
 
-@override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_CHAT_ID="site-chat")
+@override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID="leads-chat")
 class NotifyTelegramLeadsTests(TestCase):
     def setUp(self):
         self.now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -103,7 +103,7 @@ class NotifyTelegramLeadsTests(TestCase):
         self.assertEqual(len(self.telegram_calls), 1)
         call = self.telegram_calls[0]
         self.assertEqual(call["method"], "sendMessage")
-        self.assertEqual(call["payload"]["chat_id"], "site-chat")
+        self.assertEqual(call["payload"]["chat_id"], "leads-chat")
         text = call["payload"]["text"]
         self.assertIn("Cakes Chat", text)
         self.assertIn("где заказать торт?", text)
@@ -128,8 +128,8 @@ class NotifyTelegramLeadsTests(TestCase):
     def test_no_settings_skips_send(self, now_mock, telegram_json):
         now_mock.return_value = self.now
         self._message()
-        with override_settings(TELEGRAM_BOT_TOKEN="", TELEGRAM_CHAT_ID="site-chat"):
+        with override_settings(TELEGRAM_BOT_TOKEN="", TELEGRAM_LEADS_CHAT_ID="leads-chat"):
             notify_recent_telegram_leads()
-        with override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_CHAT_ID=""):
+        with override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID=""):
             notify_recent_telegram_leads()
         telegram_json.assert_not_called()
