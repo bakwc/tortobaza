@@ -25,16 +25,16 @@ PAUSE_MIN = 1
 PAUSE_MAX = 5
 COUNT_EXPRESSION = """(() => document.querySelectorAll('a[href*="/post/"] time[datetime]').length)()"""
 EXTRACT_EXPRESSION = """(() => {
+  const CARD = '[data-pressable-container="true"]';
   const seen = new Set();
   const posts = [];
-  const links = document.querySelectorAll('a[href*="/post/"]');
-  for (const link of links) {
+  for (const link of document.querySelectorAll('a[href*="/post/"]')) {
     const time = link.querySelector("time[datetime]");
     if (!time) {
       continue;
     }
-    const card = link.closest('[data-pressable-container="true"]');
-    if (!card) {
+    const card = link.closest(CARD);
+    if (!card || card.parentElement.closest(CARD)) {
       continue;
     }
     const url = new URL(link.getAttribute("href"), location.origin).href;
@@ -42,42 +42,47 @@ EXTRACT_EXPRESSION = """(() => {
       continue;
     }
     seen.add(url);
-    let username = "";
-    const authors = card.querySelectorAll('a[href^="/@"]');
-    for (const author of authors) {
-      if (author.closest('[data-pressable-container="true"]') !== card) {
-        continue;
-      }
-      const path = author.getAttribute("href").split("?")[0];
-      const parts = path.split("/").filter(Boolean);
-      if (parts.length === 1 && parts[0].startsWith("@")) {
-        username = parts[0].slice(1);
-        break;
-      }
+    const username = new URL(url).pathname.split("/")[1].slice(1);
+    const author = [...card.querySelectorAll('a[href="/@' + username + '"]')].find(
+      (node) => node.closest(CARD) === card,
+    );
+    let header = link;
+    while (!header.contains(author)) {
+      header = header.parentElement;
     }
-    const texts = [];
-    const nodes = card.querySelectorAll('span[dir="auto"], div[dir="auto"]');
-    for (const node of nodes) {
-      if (node.closest('[data-pressable-container="true"]') !== card) {
-        continue;
-      }
-      const parent = node.parentElement;
+    const tag = header.querySelector('a[href*="serp_type=tags"]');
+    const place = [...card.querySelectorAll('a[href*="serp_type=location_tag"]')].find(
+      (node) => node.closest(CARD) === card,
+    );
+    const lines = [];
+    for (const span of card.querySelectorAll('span[dir="auto"]')) {
       if (
-        parent &&
-        parent.matches('span[dir="auto"], div[dir="auto"]') &&
-        parent.closest('[data-pressable-container="true"]') === card
+        span.closest(CARD) !== card ||
+        header.contains(span) ||
+        span.parentElement.closest('span[dir="auto"], a, button, [role="button"]')
       ) {
         continue;
       }
-      const value = node.innerText.trim();
-      if (!value || texts[texts.length - 1] === value) {
-        continue;
+      let value = "";
+      const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const parent = walker.currentNode.parentElement;
+        const box = parent.closest("div");
+        if (box && span.contains(box) && !parent.closest("a")) {
+          continue;
+        }
+        value += walker.currentNode.textContent;
       }
-      texts.push(value);
+      value = value.trim();
+      if (value) {
+        lines.push(value);
+      }
     }
     posts.push({
       username: username,
-      text: texts.join("\\n"),
+      location: place ? place.innerText.trim() : "",
+      topic: tag ? tag.innerText.trim() : "",
+      text: lines.join("\\n"),
       datetime: time.getAttribute("datetime"),
       url: url,
     });
@@ -182,18 +187,18 @@ def external_id(url):
     return value
 
 
-def message_body(post):
-    username = post["username"]
+def message_body(post, query):
     return {
-        "network": NETWORK,
-        "source_key": username,
-        "source_title": username,
+        "source_key": query,
+        "source_title": query,
         "external_id": external_id(post["url"]),
         "url": post["url"],
         "text": post["text"],
         "sent_at": post["datetime"],
         "sender_id": "",
-        "sender_username": username,
+        "sender_username": post["username"],
+        "location": post["location"],
+        "topic": post["topic"],
     }
 
 
@@ -206,20 +211,28 @@ def post_json(url, token, body):
     request = urllib.request.Request(url, data=payload, headers=headers, method="POST")
     with urllib.request.urlopen(request) as response:
         status = response.status
-        response.read()
-    return status
+        raw = response.read()
+    return status, raw
 
 
-def send_message(token, post):
-    status = post_json(INGEST_URL, token, message_body(post))
-    if status != 200 and status != 201:
+def send_batch(token, items):
+    status, raw = post_json(
+        INGEST_URL,
+        token,
+        {
+            "network": NETWORK,
+            "messages": [message_body(post, query) for post, query in items],
+        },
+    )
+    if status != 200:
         raise RuntimeError(f"ingest {status}")
-    log(f"ingest {status} {post['url']}")
+    payload = json.loads(raw.decode("utf-8"))
+    log(f"ingest {status} created {payload['created']} skipped {payload['skipped']}")
 
 
 def process_leads(token):
     log("process-leads")
-    status = post_json(PROCESS_URL, token, None)
+    status, _raw = post_json(PROCESS_URL, token, None)
     if status != 204:
         raise RuntimeError(f"process {status}")
     log(f"process-leads {status}")
@@ -317,6 +330,7 @@ def main():
         day = search_day()
         log(f"круг {day.isoformat()}")
         sent = set()
+        batch = []
         for query in QUERIES:
             log(f"поиск {query}")
             tab_id, posts = collect(conn, buffer, counter, search_url(query, day))
@@ -325,8 +339,9 @@ def main():
                     log(f"уже был {post['url']}")
                     continue
                 sent.add(post["url"])
-                send_message(token, post)
+                batch.append((post, query))
             close_tab(conn, buffer, counter, tab_id)
+        send_batch(token, batch)
         process_leads(token)
         pause = random.uniform(600, 780)
         log(f"сон {round(pause)} с")

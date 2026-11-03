@@ -16,6 +16,10 @@ function parseKind(value: string | null): SocialMessageKind {
   return "lead";
 }
 
+function parseNetwork(value: string | null): string {
+  return value ?? "";
+}
+
 function parseChannel(value: string | null): number | null {
   if (value === null || value === "") return null;
   const parsed = Number(value);
@@ -38,12 +42,14 @@ function parsePage(value: string | null): number {
 function pageHref(
   pathname: string,
   kind: SocialMessageKind,
+  network: string,
   channel: number | null,
   q: string,
   page: number,
 ): string {
   const params = new URLSearchParams();
   if (kind !== "lead") params.set("kind", kind);
+  if (network) params.set("network", network);
   if (channel !== null) params.set("channel", String(channel));
   const trimmed = q.trim();
   if (trimmed) params.set("q", trimmed);
@@ -59,16 +65,33 @@ export function LeadsMessagesPanel() {
   const router = useRouter();
   const pathname = usePathname();
   const kind = parseKind(searchParams.get("kind"));
+  const network = parseNetwork(searchParams.get("network"));
   const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
   const page = parsePage(searchParams.get("page"));
   const channels = useSocialChannels();
-  const messages = useSocialMessages(kind, channel, q, page);
+  const messages = useSocialMessages(kind, network, channel, q, page);
   const rows = messages.data?.results ?? [];
+  const channelRows = (channels.list.data ?? []).filter(
+    (row) => network === "" || row.network_slug === network,
+  );
+  const networks: { slug: string; name: string }[] = [];
+  const seenNetworks = new Set<string>();
+  for (const row of channels.list.data ?? []) {
+    if (seenNetworks.has(row.network_slug)) continue;
+    seenNetworks.add(row.network_slug);
+    networks.push({ slug: row.network_slug, name: row.network_name });
+  }
 
-  const setParams = (nextKind: SocialMessageKind, nextChannel: number | null, nextQ: string) => {
+  const setParams = (
+    nextKind: SocialMessageKind,
+    nextNetwork: string,
+    nextChannel: number | null,
+    nextQ: string,
+  ) => {
     const params = new URLSearchParams();
     if (nextKind !== "lead") params.set("kind", nextKind);
+    if (nextNetwork) params.set("network", nextNetwork);
     if (nextChannel !== null) params.set("channel", String(nextChannel));
     const trimmed = nextQ.trim();
     if (trimmed) params.set("q", trimmed);
@@ -87,21 +110,32 @@ export function LeadsMessagesPanel() {
       <div className="grid gap-4">
         <Card>
           <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-[1fr_240px]">
+            <div className="grid gap-3 sm:grid-cols-[1fr_200px_240px]">
               <Input
                 value={q}
-                onChange={(event) => setParams(kind, channel, event.target.value)}
+                onChange={(event) => setParams(kind, network, channel, event.target.value)}
                 placeholder={t("filterPlaceholder")}
               />
+              <NativeSelect
+                value={network}
+                onChange={(event) => setParams(kind, event.target.value, null, q)}
+              >
+                <option value="">{t("allNetworks")}</option>
+                {networks.map((row) => (
+                  <option key={row.slug} value={row.slug}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
               <NativeSelect
                 value={channel ?? ""}
                 onChange={(event) => {
                   const raw = event.target.value;
-                  setParams(kind, raw === "" ? null : Number(raw), q);
+                  setParams(kind, network, raw === "" ? null : Number(raw), q);
                 }}
               >
                 <option value="">{t("allChannels")}</option>
-                {(channels.list.data ?? []).map((row) => (
+                {channelRows.map((row) => (
                   <option key={row.id} value={row.id}>
                     {`${row.network_name}: ${row.title || row.username}`}
                   </option>
@@ -115,7 +149,7 @@ export function LeadsMessagesPanel() {
                   type="button"
                   variant={item.key === kind ? "primary" : "outline"}
                   size="sm"
-                  onClick={() => setParams(item.key, channel, q)}
+                  onClick={() => setParams(item.key, network, channel, q)}
                 >
                   {item.label}
                 </Button>
@@ -166,14 +200,14 @@ export function LeadsMessagesPanel() {
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, channel, q, messages.data.page - 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page - 1)}>
                         {t("previous")}
                       </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, channel, q, messages.data.page + 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page + 1)}>
                         {t("next")}
                       </Link>
                     </Button>

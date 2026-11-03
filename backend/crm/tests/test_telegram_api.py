@@ -126,6 +126,28 @@ class TelegramLeadsApiTests(TestCase):
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [on_cakes.id])
 
+    def test_messages_network_filter(self):
+        threads = SocialSource.objects.create(
+            network=SocialNetwork.objects.create(slug="threads", name="Threads"),
+            username="батуми торт",
+        )
+        self._message(1, "telegram msg", False, None)
+        SocialMessage.objects.create(
+            channel=threads,
+            external_id="2",
+            url="https://www.threads.com/@x/post/2",
+            sent_at=self.sent_at,
+            text="threads msg",
+        )
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.get(
+            "/api/crm/social/messages/",
+            {"kind": "all", "network": "threads"},
+        )
+        self.assertEqual(response.status_code, 200)
+        texts = [row["text"] for row in response.json()["results"]]
+        self.assertEqual(texts, ["threads msg"])
+
     def test_viewer_cannot_create_channel(self):
         self.client.force_authenticate(user=self.viewer)
         response = self.client.post(

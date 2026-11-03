@@ -8,9 +8,8 @@ from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
 TOKEN = "ingest-token"
 
 
-def _message_body(**overrides) -> dict:
-    body = {
-        "network": "facebook",
+def _item(**overrides) -> dict:
+    item = {
         "source_key": "group-123",
         "source_title": "Батуми чат",
         "external_id": "post-1",
@@ -19,9 +18,18 @@ def _message_body(**overrides) -> dict:
         "sent_at": "2026-11-03T12:00:00Z",
         "sender_id": "999",
         "sender_username": "ivan",
+        "location": "Batumi, Georgia",
+        "topic": "Батуми",
     }
-    body.update(overrides)
-    return body
+    item.update(overrides)
+    return item
+
+
+def _message_body(network: str = "facebook", messages: list[dict] | None = None) -> dict:
+    return {
+        "network": network,
+        "messages": [_item()] if messages is None else messages,
+    }
 
 
 @override_settings(SOCIAL_INGEST_TOKEN=TOKEN)
@@ -85,7 +93,7 @@ class SocialIngestTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(SocialMessage.objects.count(), 0)
 
-    def test_message_sets_keyword_match_and_repeat_keeps_lead_flag(self):
+    def test_batch_creates_messages_and_skips_duplicates(self):
         SocialKeyword.objects.create(word="торт")
         self.client.post(
             "/api/social/networks/",
@@ -95,88 +103,102 @@ class SocialIngestTests(TestCase):
         )
         created = self.client.post(
             "/api/social/messages/",
-            _message_body(),
+            _message_body(
+                messages=[
+                    _item(),
+                    _item(external_id="post-2", text="просто чат", source_key="other", source_title="Другой"),
+                    _item(external_id="post-1", text="повтор в батче", source_key="elsewhere"),
+                ]
+            ),
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
         )
-        self.assertEqual(created.status_code, 201)
-        self.assertIs(created.json()["keyword_match"], True)
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.json(), {"created": 2, "skipped": 1})
         stored = SocialMessage.objects.get(external_id="post-1")
-        stored.keyword_match = False
-        stored.save(update_fields=["keyword_match"])
-        same = self.client.post(
+        self.assertIs(stored.keyword_match, True)
+        self.assertEqual(stored.location, "Batumi, Georgia")
+        self.assertEqual(stored.topic, "Батуми")
+        self.assertEqual(stored.channel.username, "group-123")
+        self.assertEqual(stored.sender_id, "999")
+        missed = SocialMessage.objects.get(external_id="post-2")
+        self.assertIs(missed.keyword_match, False)
+        stored.potential_lead = False
+        stored.lead_notified = True
+        stored.save(update_fields=["potential_lead", "lead_notified"])
+        again = self.client.post(
             "/api/social/messages/",
-            _message_body(),
+            _message_body(
+                messages=[
+                    _item(text="хочу торт ещё", source_title="Новый чат", source_key="new-group"),
+                    _item(
+                        external_id="post-2",
+                        text="другой канал",
+                        source_key="third",
+                        source_title="Третий",
+                    ),
+                ]
+            ),
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
         )
-        self.assertEqual(same.status_code, 200)
+        self.assertEqual(again.status_code, 200)
+        self.assertEqual(again.json(), {"created": 0, "skipped": 2})
         stored.refresh_from_db()
-        self.assertIs(stored.keyword_match, False)
         self.assertEqual(stored.text, "хочу торт")
-        missed = self.client.post(
-            "/api/social/messages/",
-            _message_body(external_id="post-2", text="просто чат"),
-            format="json",
-            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
-        )
-        self.assertEqual(missed.status_code, 201)
-        self.assertIs(missed.json()["keyword_match"], False)
-        message = SocialMessage.objects.get(external_id="post-1")
-        message.potential_lead = False
-        message.lead_notified = True
-        message.save(update_fields=["potential_lead", "lead_notified"])
-        updated = self.client.post(
-            "/api/social/messages/",
-            _message_body(text="хочу торт ещё", source_title="Новый чат"),
-            format="json",
-            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
-        )
-        self.assertEqual(updated.status_code, 200)
-        message.refresh_from_db()
-        self.assertEqual(message.text, "хочу торт ещё")
-        self.assertIs(message.keyword_match, True)
-        self.assertIs(message.potential_lead, False)
-        self.assertIs(message.lead_notified, True)
-        self.assertEqual(message.sender_id, "999")
-        self.assertEqual(message.channel.network.slug, "facebook")
-        self.assertEqual(message.channel.username, "group-123")
-        self.assertEqual(message.channel.title, "Новый чат")
-        self.assertEqual(SocialSource.objects.filter(network__slug="facebook").count(), 1)
+        self.assertIs(stored.keyword_match, True)
+        self.assertIs(stored.potential_lead, False)
+        self.assertIs(stored.lead_notified, True)
+        self.assertEqual(stored.channel.username, "group-123")
+        self.assertEqual(stored.channel.title, "Батуми чат")
+        missed.refresh_from_db()
+        self.assertEqual(missed.text, "просто чат")
+        self.assertEqual(missed.channel.username, "other")
         self.assertEqual(SocialMessage.objects.count(), 2)
+        self.assertEqual(SocialSource.objects.filter(network__slug="facebook").count(), 2)
 
     def test_telegram_source_key_is_normalized(self):
         created = self.client.post(
             "/api/social/messages/",
             _message_body(
                 network="telegram",
-                source_key="https://t.me/cakes/",
-                source_title="Cakes",
-                external_id="15",
-                url="https://t.me/cakes/15",
+                messages=[
+                    _item(
+                        source_key="https://t.me/cakes/",
+                        source_title="Cakes",
+                        external_id="15",
+                        url="https://t.me/cakes/15",
+                    )
+                ],
             ),
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
         )
-        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.status_code, 200)
+        self.assertEqual(created.json(), {"created": 1, "skipped": 0})
         source = SocialSource.objects.get(username="cakes")
         self.assertEqual(source.network.slug, "telegram")
         again = self.client.post(
             "/api/social/messages/",
             _message_body(
                 network="telegram",
-                source_key="cakes",
-                source_title="Cakes",
-                external_id="15",
-                url="https://t.me/cakes/15",
-                text="ещё",
+                messages=[
+                    _item(
+                        source_key="cakes",
+                        source_title="Cakes",
+                        external_id="15",
+                        url="https://t.me/cakes/15",
+                        text="ещё",
+                    )
+                ],
             ),
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
         )
         self.assertEqual(again.status_code, 200)
+        self.assertEqual(again.json(), {"created": 0, "skipped": 1})
         self.assertEqual(SocialNetwork.objects.get(slug="telegram").sources.count(), 1)
-        self.assertEqual(SocialMessage.objects.get().text, "ещё")
+        self.assertEqual(SocialMessage.objects.get().text, "хочу торт")
 
     def test_process_leads_missing_token_is_forbidden(self):
         response = self.client.post("/api/social/networks/threads/process-leads/")

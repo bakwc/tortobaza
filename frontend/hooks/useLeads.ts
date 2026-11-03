@@ -22,13 +22,14 @@ function useResource<T, B>(key: readonly string[], resource: Resource<T, B>) {
 
 export function useSocialMessages(
   kind: SocialMessageKind,
+  network: string,
   channel: number | null,
   q: string,
   page: number,
 ) {
   return useQuery({
-    queryKey: ["leads", "messages", kind, channel, q, page],
-    queryFn: () => api.socialMessages(kind, channel, q, page),
+    queryKey: ["leads", "messages", kind, network, channel, q, page],
+    queryFn: () => api.socialMessages(kind, network, channel, q, page),
   });
 }
 

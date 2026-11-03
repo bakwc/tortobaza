@@ -973,6 +973,8 @@ class SocialMessage(models.Model):
     )
     external_id = models.CharField(max_length=255, verbose_name=_("External id"))
     url = models.CharField(max_length=2048, verbose_name=_("URL"))
+    location = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Location"))
+    topic = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Topic"))
     sent_at = models.DateTimeField(verbose_name=_("Sent at"))
     text = models.TextField(blank=True, default="", verbose_name=_("Text"))
     sender_id = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Sender ID"))

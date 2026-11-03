@@ -21,9 +21,26 @@ Return is_lead false when the product is mentioned incidentally (general chat, j
 
 Return only the structured verdict."""
 
+LEAD_GEO_PROMPT = """
+
+The business only delivers in Batumi and Georgia. Return is_lead false when the author is clearly looking for a confectionery in another city or country, or mentions a metro station, a district, or a street that is not in Batumi. Batumi has no metro. If no location is mentioned, decide as usual.
+
+The user message may start with "Post location: ..." and "Post topic: ...". A location or a topic that names another city or country means is_lead false. Batumi or Georgia means the geography fits. A topic may be unrelated to a place, for example "Cooking Threads"; ignore such a topic."""
+
 
 class LeadVerdict(BaseModel):
     is_lead: bool
+
+
+def _classifier_input(message: SocialMessage) -> str:
+    lines = []
+    if message.location:
+        lines.append(f"Post location: {message.location}")
+    if message.topic:
+        lines.append(f"Post topic: {message.topic}")
+    if lines:
+        return "\n".join(lines) + "\n\n" + message.text
+    return message.text
 
 
 def classify_leads(network_slug: str) -> None:
@@ -34,12 +51,15 @@ def classify_leads(network_slug: str) -> None:
     ).order_by("id")
     if not pending.exists():
         return
+    instructions = LEAD_PROMPT
+    if network_slug != "telegram":
+        instructions = LEAD_PROMPT + LEAD_GEO_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
     for message in pending:
         response = client.responses.parse(
             model=LEAD_MODEL,
-            instructions=LEAD_PROMPT,
-            input=message.text,
+            instructions=instructions,
+            input=_classifier_input(message),
             text_format=LeadVerdict,
             store=False,
         )

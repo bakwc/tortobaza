@@ -35,6 +35,7 @@ class ClassifyTelegramLeadsTests(TestCase):
         openai_cls.return_value.responses.parse.assert_called_once()
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertEqual(call["input"], "где заказать торт?")
+        self.assertNotIn("metro", call["instructions"])
         row.refresh_from_db()
         self.assertIs(row.potential_lead, True)
 
@@ -70,6 +71,30 @@ class ClassifyTelegramLeadsTests(TestCase):
         openai_cls.assert_not_called()
         row.refresh_from_db()
         self.assertIsNone(row.potential_lead)
+
+    @patch("crm.telegram_leads.OpenAI")
+    def test_threads_prompt_includes_geo_location_and_topic(self, openai_cls):
+        threads = SocialSource.objects.create(
+            network=SocialNetwork.objects.create(slug="threads", name="Threads"),
+            username="батуми торт",
+        )
+        SocialMessage.objects.create(
+            channel=threads,
+            external_id="1",
+            url="https://www.threads.com/@cakes/post/1",
+            sent_at=self.sent_at,
+            text="где заказать торт?",
+            location="Minsk, Belarus",
+            topic="торты минск",
+            keyword_match=True,
+        )
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=False)
+        classify_leads("threads")
+        call = openai_cls.return_value.responses.parse.call_args.kwargs
+        self.assertIn("metro", call["instructions"])
+        self.assertIn("Post location: Minsk, Belarus", call["input"])
+        self.assertIn("Post topic: торты минск", call["input"])
+        self.assertIn("где заказать торт?", call["input"])
 
 
 @override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID="leads-chat")

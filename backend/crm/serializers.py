@@ -1108,8 +1108,7 @@ class SocialNetworkSerializer(serializers.ModelSerializer):
         fields = ["id", "slug", "name"]
 
 
-class SocialMessageIngestSerializer(serializers.Serializer):
-    network = serializers.SlugField(max_length=64)
+class SocialMessageIngestItemSerializer(serializers.Serializer):
     source_key = serializers.CharField(max_length=255)
     source_title = serializers.CharField(max_length=255, allow_blank=True)
     external_id = serializers.CharField(max_length=255)
@@ -1118,6 +1117,13 @@ class SocialMessageIngestSerializer(serializers.Serializer):
     sent_at = serializers.DateTimeField()
     sender_id = serializers.CharField(max_length=255, allow_blank=True)
     sender_username = serializers.CharField(max_length=255, allow_blank=True)
+    location = serializers.CharField(max_length=255, allow_blank=True)
+    topic = serializers.CharField(max_length=255, allow_blank=True)
+
+
+class SocialMessageIngestSerializer(serializers.Serializer):
+    network = serializers.SlugField(max_length=64)
+    messages = SocialMessageIngestItemSerializer(many=True)
 
     def validate_network(self, value: str) -> str:
         if not SocialNetwork.objects.filter(slug=value).exists():

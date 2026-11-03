@@ -866,6 +866,7 @@ export function endpoints(fetcher: Fetcher) {
 
     async socialMessages(
       kind: SocialMessageKind,
+      network: string,
       channel: number | null,
       q: string,
       page: number,
@@ -873,6 +874,7 @@ export function endpoints(fetcher: Fetcher) {
       const raw = await fetcher<unknown>("/api/crm/social/messages/", {
         searchParams: {
           kind,
+          network: network || undefined,
           channel: channel ?? undefined,
           q: q.trim() || undefined,
           page: page > 1 ? page : undefined,

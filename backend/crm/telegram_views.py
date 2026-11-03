@@ -47,6 +47,7 @@ class SocialMessageListView(APIView):
     def get(self, request):
         kind = request.query_params.get("kind", "lead")
         q = request.query_params.get("q", "")
+        network_param = request.query_params.get("network")
         channel_param = request.query_params.get("channel")
         page_param = request.query_params.get("page")
         page_number = 1 if page_param is None else int(page_param)
@@ -54,6 +55,8 @@ class SocialMessageListView(APIView):
             "-sent_at",
             "-external_id",
         )
+        if network_param:
+            qs = qs.filter(channel__network__slug=network_param)
         if channel_param is not None:
             qs = qs.filter(channel_id=int(channel_param))
         if kind == "keyword":
@@ -196,63 +199,51 @@ class SocialMessageIngestView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         network = SocialNetwork.objects.get(slug=data["network"])
-        username = data["source_key"]
-        if network.slug == "telegram":
-            username = normalize_telegram_username(username)
-        source, _created = SocialSource.objects.get_or_create(
-            network=network,
-            username=username,
-            defaults={
-                "title": data["source_title"],
-                "enabled": True,
-            },
-        )
-        if source.title != data["source_title"]:
-            source.title = data["source_title"]
-            source.save(update_fields=["title"])
-        sender_id = data["sender_id"]
-        if sender_id == "":
-            sender_id = None
-        message = SocialMessage.objects.filter(channel=source, external_id=data["external_id"]).first()
-        if message is None:
-            keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
-            message = SocialMessage.objects.create(
-                channel=source,
-                external_id=data["external_id"],
-                sent_at=data["sent_at"],
-                text=data["text"],
-                sender_id=sender_id,
-                sender_username=data["sender_username"],
-                url=data["url"],
-                keyword_match=_keyword_match(data["text"], keywords),
-            )
-            created = True
-        else:
-            update_fields = []
-            if message.sent_at != data["sent_at"]:
-                message.sent_at = data["sent_at"]
-                update_fields.append("sent_at")
-            if message.text != data["text"]:
-                keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
-                message.text = data["text"]
-                message.keyword_match = _keyword_match(data["text"], keywords)
-                update_fields.extend(["text", "keyword_match"])
-            if message.sender_id != sender_id:
-                message.sender_id = sender_id
-                update_fields.append("sender_id")
-            if message.sender_username != data["sender_username"]:
-                message.sender_username = data["sender_username"]
-                update_fields.append("sender_username")
-            if message.url != data["url"]:
-                message.url = data["url"]
-                update_fields.append("url")
-            if update_fields:
-                message.save(update_fields=update_fields)
-            created = False
-        return Response(
-            {"id": message.id, "keyword_match": message.keyword_match},
-            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
-        )
+        keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
+        created_count = 0
+        skipped_count = 0
+        seen: set[str] = set()
+        with transaction.atomic():
+            for item in data["messages"]:
+                external_id = item["external_id"]
+                if (
+                    external_id in seen
+                    or SocialMessage.objects.filter(
+                        channel__network=network,
+                        external_id=external_id,
+                    ).exists()
+                ):
+                    skipped_count += 1
+                    continue
+                seen.add(external_id)
+                username = item["source_key"]
+                if network.slug == "telegram":
+                    username = normalize_telegram_username(username)
+                source, _created = SocialSource.objects.get_or_create(
+                    network=network,
+                    username=username,
+                    defaults={
+                        "title": item["source_title"],
+                        "enabled": True,
+                    },
+                )
+                sender_id = item["sender_id"]
+                if sender_id == "":
+                    sender_id = None
+                SocialMessage.objects.create(
+                    channel=source,
+                    external_id=external_id,
+                    sent_at=item["sent_at"],
+                    text=item["text"],
+                    sender_id=sender_id,
+                    sender_username=item["sender_username"],
+                    url=item["url"],
+                    location=item["location"],
+                    topic=item["topic"],
+                    keyword_match=_keyword_match(item["text"], keywords),
+                )
+                created_count += 1
+        return Response({"created": created_count, "skipped": skipped_count})
 
 
 @method_decorator(csrf_exempt, name="dispatch")
