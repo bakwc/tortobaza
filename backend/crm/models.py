@@ -894,6 +894,18 @@ def normalize_telegram_username(value: str) -> str:
     return username
 
 
+class TelegramKeyword(models.Model):
+    word = models.CharField(max_length=255, unique=True, verbose_name=_("Word"))
+
+    class Meta:
+        verbose_name = _("Telegram keyword")
+        verbose_name_plural = _("Telegram keywords")
+        ordering = ["word"]
+
+    def __str__(self) -> str:
+        return self.word
+
+
 class TelegramChannel(models.Model):
     username = models.CharField(max_length=255, unique=True, verbose_name=_("Username"))
     enabled = models.BooleanField(default=True, verbose_name=_("Enabled"))
@@ -943,6 +955,8 @@ class TelegramChannelMessage(models.Model):
         default="",
         verbose_name=_("Sender username"),
     )
+    keyword_match = models.BooleanField(default=False, verbose_name=_("Keyword match"))
+    potential_lead = models.BooleanField(null=True, blank=True, verbose_name=_("Potential lead"))
 
     class Meta:
         verbose_name = _("Telegram channel message")

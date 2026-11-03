@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from crm.models import TelegramChannel, TelegramChannelMessage
+from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
 from crm.telegram_channels import sync_telegram_channels
 
 
@@ -149,3 +149,34 @@ class SyncTelegramChannelsTests(TestCase):
         self.assertEqual(clients[0].entities, ["cakes"])
         self.assertEqual(len(clients[0].calls), 1)
         self.assertEqual(TelegramChannelMessage.objects.count(), 0)
+
+    def test_keyword_match_is_case_insensitive(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        match_message = SimpleNamespace(
+            id=9,
+            action=None,
+            message="Нужен ТОРТ",
+            date=now - timedelta(hours=2),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        no_match_message = SimpleNamespace(
+            id=10,
+            action=None,
+            message="привет всем",
+            date=now - timedelta(hours=1),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        TelegramKeyword.objects.create(word="торт")
+        TelegramChannel.objects.create(username="cakes")
+        fake_client, _clients = self._client({"cakes": entity}, {100: [match_message, no_match_message]})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+        self.assertIs(TelegramChannelMessage.objects.get(message_id=9).keyword_match, True)
+        self.assertIs(TelegramChannelMessage.objects.get(message_id=10).keyword_match, False)

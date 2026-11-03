@@ -5,16 +5,25 @@ from django.utils import timezone
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 
-from crm.models import TelegramChannel, TelegramChannelMessage
+from crm.models import TelegramChannel, TelegramChannelMessage, TelegramKeyword
 from crm.telegram_user import _api_credentials
 
 _HISTORY_DAYS = 30
+
+
+def _keyword_match(text: str, keywords: list[str]) -> bool:
+    folded = text.casefold()
+    for word in keywords:
+        if word in folded:
+            return True
+    return False
 
 
 def sync_telegram_channels() -> None:
     channels = list(TelegramChannel.objects.filter(enabled=True).order_by("id"))
     if not channels:
         return
+    keywords = [row.casefold() for row in TelegramKeyword.objects.values_list("word", flat=True)]
     api_id, api_hash = _api_credentials()
     session = settings.TELEGRAM_USER_SESSION
     if not session:
@@ -52,6 +61,7 @@ def sync_telegram_channels() -> None:
                         "text": text,
                         "sender_id": message.sender_id,
                         "sender_username": sender_username,
+                        "keyword_match": _keyword_match(text, keywords),
                     },
                 )
             channel.title = entity.title

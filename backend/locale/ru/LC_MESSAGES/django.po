@@ -721,6 +721,21 @@ msgstr "Найденный телефон Telegram"
 msgid "Resolved Telegram phones"
 msgstr "Найденные телефоны Telegram"
 
+msgid "Telegram keyword"
+msgstr "Ключевое слово Telegram"
+
+msgid "Telegram keywords"
+msgstr "Ключевые слова Telegram"
+
+msgid "Word"
+msgstr "Слово"
+
+msgid "Keyword match"
+msgstr "Подходящее по ключевым словам"
+
+msgid "Potential lead"
+msgstr "Потенциальный лид"
+
 msgid "Order"
 msgstr "Заказ"
 

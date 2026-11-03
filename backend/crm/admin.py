@@ -27,6 +27,7 @@ from crm.models import (
     ResolvedTelegramPhone,
     TelegramChannel,
     TelegramChannelMessage,
+    TelegramKeyword,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
@@ -292,6 +293,12 @@ class WhatsAppGetNewQrAdmin(admin.ModelAdmin):
         )
 
 
+@admin.register(TelegramKeyword)
+class TelegramKeywordAdmin(admin.ModelAdmin):
+    list_display = ["word"]
+    search_fields = ["word"]
+
+
 @admin.register(TelegramChannel)
 class TelegramChannelAdmin(admin.ModelAdmin):
     list_display = ["username", "enabled", "title", "telegram_id", "last_message_id"]
@@ -308,9 +315,11 @@ class TelegramChannelMessageAdmin(admin.ModelAdmin):
         "message_id",
         "sender_id",
         "sender_username",
+        "keyword_match",
+        "potential_lead",
         "text",
     ]
-    list_filter = ["channel"]
+    list_filter = ["channel", "keyword_match", "potential_lead"]
     search_fields = ["text", "sender_username"]
     date_hierarchy = "sent_at"
 
