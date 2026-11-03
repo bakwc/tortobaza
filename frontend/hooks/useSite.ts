@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
@@ -9,6 +10,11 @@ import type {
   SiteOptionGroupBody,
   SiteProductBody,
 } from "@/lib/api/site-schemas";
+
+export function useShowHidden(): boolean {
+  const searchParams = useSearchParams();
+  return searchParams.get("show_hidden") === "1";
+}
 
 function useInvalidateSite() {
   const client = useQueryClient();

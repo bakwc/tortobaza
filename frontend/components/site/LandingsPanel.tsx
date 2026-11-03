@@ -12,6 +12,7 @@ import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from 
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { useCan } from "@/hooks/useAuth";
 import {
+  useShowHidden,
   useSiteCategories,
   useSiteCategoryLandings,
   useSiteCategoryLandingImageDelete,
@@ -53,7 +54,9 @@ export function LandingsPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
   const categories = useSiteCategories();
+  const showHidden = useShowHidden();
   const landings = useSiteCategoryLandings();
+  const visibleLandings = (landings.list.data ?? []).filter((row) => showHidden || row.is_active);
   const uploadImage = useSiteCategoryLandingImageUpload();
   const deleteImage = useSiteCategoryLandingImageDelete();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -81,17 +84,24 @@ export function LandingsPanel() {
         </div>
         <QueryState isLoading={landings.list.isLoading} isError={landings.list.isError}>
           <div className="mt-4 grid gap-3">
-            {(landings.list.data ?? []).map((row) => (
+            {visibleLandings.map((row) => (
               <button
                 key={row.id}
                 type="button"
                 onClick={() => open(row)}
-                className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left hover:bg-[var(--cream)]"
+                className="flex items-center gap-4 rounded-2xl border border-[var(--line)] px-4 py-3 text-left hover:bg-[var(--cream)]"
               >
-                <p className="font-medium text-[var(--ink)]">{row.slug}</p>
-                <p className="text-sm text-[var(--muted-2)]">
-                  {row.source_name} · {row.page_slug_ru || row.page_slug_en || "—"}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-[var(--ink)]">{row.slug}</p>
+                  <p className="text-sm text-[var(--muted-2)]">
+                    {row.source_name} · {row.page_slug_ru || row.page_slug_en || "—"}
+                  </p>
+                </div>
+                {!row.is_active ? (
+                  <span className="shrink-0 rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted-2)]">
+                    {t("inactive")}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>

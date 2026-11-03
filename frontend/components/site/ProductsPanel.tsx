@@ -19,6 +19,7 @@ import {
   useSiteProductDetail,
   useSiteProducts,
   useSiteTechCards,
+  useShowHidden,
 } from "@/hooks/useSite";
 import { Link } from "@/i18n/navigation";
 import type { SiteProduct, SiteProductBody, SiteProductListItem } from "@/lib/api/site-schemas";
@@ -89,10 +90,13 @@ export function ProductsPanel() {
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>(undefined);
+  const showHidden = useShowHidden();
   const categories = useSiteCategories();
   const optionGroups = useSiteOptionGroups();
   const techCards = useSiteTechCards();
   const products = useSiteProducts({ category: categoryFilter, search });
+  const visibleCategories = (categories.list.data ?? []).filter((row) => showHidden || row.is_active);
+  const visibleProducts = (products.list.data ?? []).filter((row) => showHidden || row.is_active);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
   const detail = useSiteProductDetail(editingId);
@@ -148,7 +152,7 @@ export function ProductsPanel() {
               }}
             >
               <option value="">{t("allCategories")}</option>
-              {(categories.list.data ?? []).map((row) => (
+              {visibleCategories.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name_ru || row.name_en}
                 </option>
@@ -158,7 +162,7 @@ export function ProductsPanel() {
         </div>
         <QueryState isLoading={products.list.isLoading} isError={products.list.isError}>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(products.list.data ?? []).map((row) => (
+            {visibleProducts.map((row) => (
               <button
                 key={row.id}
                 type="button"

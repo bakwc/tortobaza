@@ -1265,6 +1265,7 @@
     "category": "კატეგორია",
     "allCategories": "ყველა კატეგორია",
     "inactive": "დამალული",
+    "showHidden": "დამალულის ჩვენება",
     "name": "სახელი",
     "slug": "Slug",
     "pageSlug": "გვერდის slug",

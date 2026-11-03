@@ -12,7 +12,12 @@ import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { useCan } from "@/hooks/useAuth";
-import { useSiteCategories, useSiteCategoryImageDelete, useSiteCategoryImageUpload } from "@/hooks/useSite";
+import {
+  useShowHidden,
+  useSiteCategories,
+  useSiteCategoryImageDelete,
+  useSiteCategoryImageUpload,
+} from "@/hooks/useSite";
 import type { SiteCategory, SiteCategoryBody } from "@/lib/api/site-schemas";
 
 type CategoryDraft = SiteCategoryBody & { id: number | null };
@@ -52,7 +57,9 @@ function draftFrom(row: SiteCategory | null, position: number): CategoryDraft {
 export function CategoriesPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
+  const showHidden = useShowHidden();
   const categories = useSiteCategories();
+  const visibleCategories = (categories.list.data ?? []).filter((row) => showHidden || row.is_active);
   const uploadImage = useSiteCategoryImageUpload();
   const deleteImage = useSiteCategoryImageDelete();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -82,7 +89,7 @@ export function CategoriesPanel() {
         </div>
         <QueryState isLoading={categories.list.isLoading} isError={categories.list.isError}>
           <div className="mt-4 grid gap-3">
-            {(categories.list.data ?? []).map((row) => (
+            {visibleCategories.map((row) => (
               <button
                 key={row.id}
                 type="button"
@@ -98,10 +105,15 @@ export function CategoriesPanel() {
                 ) : (
                   <span className="h-14 w-14 rounded-xl bg-[var(--cream)]" />
                 )}
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-medium text-[var(--ink)]">{row.name_ru || row.name_en}</p>
                   <p className="text-sm text-[var(--muted-2)]">{row.slug}</p>
                 </div>
+                {!row.is_active ? (
+                  <span className="shrink-0 rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted-2)]">
+                    {t("inactive")}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
