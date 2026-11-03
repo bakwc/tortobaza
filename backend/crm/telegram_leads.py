@@ -7,7 +7,7 @@ from crm.models import TelegramChannelMessage
 LEAD_MODEL = "gpt-6.1-sol"
 LEAD_TIMEOUT_SECONDS = 90
 
-LEAD_PROMPT = """You classify Telegram chat messages for a confectionery business Sweet Chill in Tbilisi.
+LEAD_PROMPT = """You classify Telegram chat messages for a confectionery business Sweet Chill in Batumi.
 
 Sweet Chill sells custom cakes, bento cakes, honey cakes (medovik), macarons, cupcakes, and related desserts.
 
