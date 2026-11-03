@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Option, Product, ProductOptionGroup
+from catalog.crop import crop_tuple
 from catalog.responsive_urls import list_primary_image
 
 
@@ -32,7 +33,8 @@ class CartItemProductSerializer(serializers.ModelSerializer):
         if first is None:
             return None
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
-        return list_primary_image(first.image.name, public_base_url)
+        crop = crop_tuple(first.crop_left, first.crop_top, first.crop_size)
+        return list_primary_image(first.image.name, public_base_url, crop)
 
 
 class CartItemReadSerializer(serializers.ModelSerializer):

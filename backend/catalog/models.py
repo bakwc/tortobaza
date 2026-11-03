@@ -192,6 +192,9 @@ class Option(models.Model):
     )
     name = models.CharField(max_length=120, verbose_name=_("Name"))
     image = models.ImageField(upload_to="options/", blank=True, verbose_name=_("Image"))
+    crop_left = models.FloatField(null=True, blank=True, verbose_name=_("Crop left"))
+    crop_top = models.FloatField(null=True, blank=True, verbose_name=_("Crop top"))
+    crop_size = models.FloatField(null=True, blank=True, verbose_name=_("Crop size"))
     price_delta = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -285,6 +288,9 @@ class ProductImage(models.Model):
     )
     image = models.ImageField(upload_to="products/", verbose_name=_("Image"))
     alt = models.CharField(max_length=200, blank=True, verbose_name=_("Alt text"))
+    crop_left = models.FloatField(null=True, blank=True, verbose_name=_("Crop left"))
+    crop_top = models.FloatField(null=True, blank=True, verbose_name=_("Crop top"))
+    crop_size = models.FloatField(null=True, blank=True, verbose_name=_("Crop size"))
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
 
     class Meta:

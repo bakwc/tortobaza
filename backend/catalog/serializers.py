@@ -8,6 +8,7 @@ from catalog.models import (
     ProductImage,
     ProductOptionGroup,
 )
+from catalog.crop import crop_tuple
 from catalog.responsive_urls import detail_image, list_primary_image
 
 
@@ -140,7 +141,8 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj: ProductImage) -> dict[str, str]:
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
-        return detail_image(obj.image.name, public_base_url)
+        crop = crop_tuple(obj.crop_left, obj.crop_top, obj.crop_size)
+        return detail_image(obj.image.name, public_base_url, crop)
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -155,7 +157,8 @@ class OptionSerializer(serializers.ModelSerializer):
         if not obj.image.name:
             return None
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
-        return list_primary_image(obj.image.name, public_base_url)
+        crop = crop_tuple(obj.crop_left, obj.crop_top, obj.crop_size)
+        return list_primary_image(obj.image.name, public_base_url, crop)
 
 
 class ProductOptionGroupSerializer(serializers.ModelSerializer):
@@ -210,7 +213,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         if first is None:
             return None
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
-        return list_primary_image(first.image.name, public_base_url)
+        crop = crop_tuple(first.crop_left, first.crop_top, first.crop_size)
+        return list_primary_image(first.image.name, public_base_url, crop)
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

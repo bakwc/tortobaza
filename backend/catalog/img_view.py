@@ -8,6 +8,8 @@ from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.views.decorators.http import require_GET
 from PIL import Image, ImageOps
 
+from catalog.crop import crop_box, parse_crop_param
+
 ALLOWED_DIMENSIONS = (96, 200, 400, 600, 800, 1200, 1600)
 
 
@@ -32,6 +34,8 @@ def _safe_source_path(relative_path: str) -> Path:
         root = media_root / "options"
     elif relative_path.startswith("categories/"):
         root = media_root / "categories"
+    elif relative_path.startswith("category_landings/"):
+        root = media_root / "category_landings"
     elif relative_path.startswith("crm_orders/"):
         root = media_root / "crm_orders"
     elif relative_path.startswith("tech_cards/"):
@@ -47,10 +51,13 @@ def _safe_source_path(relative_path: str) -> Path:
     return resolved
 
 
-def _cache_file_name(w: int | None, h: int | None) -> str:
+def _cache_file_name(w: int | None, h: int | None, crop: tuple[float, float, float] | None) -> str:
     wk = w if w is not None else 0
     hk = h if h is not None else 0
-    return f"w{wk}_h{hk}.webp"
+    if crop is None:
+        return f"w{wk}_h{hk}.webp"
+    left, top, size = crop
+    return f"w{wk}_h{hk}_c{left}_{top}_{size}.webp"
 
 
 def _scale_image(im: Image.Image, w: int | None, h: int | None) -> Image.Image:
@@ -99,16 +106,26 @@ def scaled_image(request, relative_path: str):
         return HttpResponseBadRequest("invalid w")
     if h is not None and h not in ALLOWED_DIMENSIONS:
         return HttpResponseBadRequest("invalid h")
+    crop_raw = request.GET.get("crop") or ""
+    crop = parse_crop_param(crop_raw)
+    if crop_raw and crop is None:
+        return HttpResponseBadRequest("invalid crop")
     source = _safe_source_path(relative_path)
     if not source.is_file():
         raise Http404()
     cache_dir = cache_dir_for(relative_path)
-    cache_name = _cache_file_name(w, h)
+    cache_name = _cache_file_name(w, h, crop)
     cache_path = cache_dir / cache_name
     if not cache_path.is_file():
         cache_dir.mkdir(parents=True, exist_ok=True)
         im = ImageOps.exif_transpose(Image.open(source))
         im = _ensure_rgb_or_rgba(im)
+        if crop is not None:
+            try:
+                box = crop_box(im.size[0], im.size[1], crop)
+            except ValueError:
+                return HttpResponseBadRequest("invalid crop")
+            im = im.crop(box)
         im = _scale_image(im, w, h)
         buf = io.BytesIO()
         im.save(

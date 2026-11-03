@@ -1,5 +1,18 @@
 import { ApiError } from "./client";
 import {
+  SiteCategoryLandingSchema,
+  SiteCategorySchema,
+  SiteOptionGroupSchema,
+  SiteProductImageSchema,
+  SiteProductListItemSchema,
+  SiteProductSchema,
+  SiteTechCardChoiceSchema,
+  type SiteCategoryBody,
+  type SiteCategoryLandingBody,
+  type SiteOptionGroupBody,
+  type SiteProductBody,
+} from "./site-schemas";
+import {
   AttendanceEventSchema,
   AttendanceSummarySchema,
   ScheduleGridSchema,
@@ -964,6 +977,152 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ address }),
       });
       return parse(ResolveGoogleAddressResponseSchema, raw);
+    },
+
+    siteCategories: resource<import("./site-schemas").SiteCategory, SiteCategoryBody>(
+      fetcher,
+      "/api/site/categories/",
+      SiteCategorySchema,
+    ),
+    siteCategoryLandings: resource<
+      import("./site-schemas").SiteCategoryLanding,
+      SiteCategoryLandingBody
+    >(fetcher, "/api/site/category-landings/", SiteCategoryLandingSchema),
+    siteOptionGroups: resource<import("./site-schemas").SiteOptionGroup, SiteOptionGroupBody>(
+      fetcher,
+      "/api/site/option-groups/",
+      SiteOptionGroupSchema,
+    ),
+    siteProducts: resource<import("./site-schemas").SiteProduct, SiteProductBody>(
+      fetcher,
+      "/api/site/products/",
+      SiteProductSchema,
+    ),
+    async listSiteProducts(params: {
+      category?: number;
+      search?: string;
+    }): Promise<import("./site-schemas").SiteProductListItem[]> {
+      const raw = await fetcher<unknown>("/api/site/products/", {
+        searchParams: {
+          category: params.category,
+          search: params.search?.trim() || undefined,
+        },
+      });
+      return parse(z.array(SiteProductListItemSchema), raw);
+    },
+    async getSiteProduct(id: number): Promise<import("./site-schemas").SiteProduct> {
+      const raw = await fetcher<unknown>(`/api/site/products/${id}/`);
+      return parse(SiteProductSchema, raw);
+    },
+    async createSiteProduct(body: SiteProductBody): Promise<import("./site-schemas").SiteProduct> {
+      const raw = await fetcher<unknown>("/api/site/products/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(SiteProductSchema, raw);
+    },
+    async updateSiteProduct(
+      id: number,
+      body: SiteProductBody,
+    ): Promise<import("./site-schemas").SiteProduct> {
+      const raw = await fetcher<unknown>(`/api/site/products/${id}/`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      return parse(SiteProductSchema, raw);
+    },
+    async uploadSiteCategoryImage(id: number, file: File): Promise<import("./site-schemas").SiteCategory> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>(`/api/site/categories/${id}/image/`, { method: "POST", body });
+      return parse(SiteCategorySchema, raw);
+    },
+    async deleteSiteCategoryImage(id: number): Promise<void> {
+      await fetcher<void>(`/api/site/categories/${id}/image/`, { method: "DELETE" });
+    },
+    async uploadSiteCategoryLandingImage(
+      id: number,
+      file: File,
+    ): Promise<import("./site-schemas").SiteCategoryLanding> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>(`/api/site/category-landings/${id}/image/`, { method: "POST", body });
+      return parse(SiteCategoryLandingSchema, raw);
+    },
+    async deleteSiteCategoryLandingImage(id: number): Promise<void> {
+      await fetcher<void>(`/api/site/category-landings/${id}/image/`, { method: "DELETE" });
+    },
+    async uploadSiteOptionImage(id: number, file: File): Promise<import("./site-schemas").SiteOptionGroup> {
+      const body = new FormData();
+      body.append("image", file);
+      const raw = await fetcher<unknown>(`/api/site/options/${id}/image/`, { method: "POST", body });
+      return parse(SiteOptionGroupSchema, raw);
+    },
+    async deleteSiteOptionImage(id: number): Promise<import("./site-schemas").SiteOptionGroup> {
+      const raw = await fetcher<unknown>(`/api/site/options/${id}/image/`, { method: "DELETE" });
+      return parse(SiteOptionGroupSchema, raw);
+    },
+    async uploadSiteProductImage(
+      productId: number,
+      file: File,
+      fields: {
+        alt_en?: string;
+        alt_ka?: string;
+        alt_ru?: string;
+        crop_left?: number | null;
+        crop_top?: number | null;
+        crop_size?: number | null;
+      },
+    ): Promise<import("./site-schemas").SiteProductImage> {
+      const body = new FormData();
+      body.append("image", file);
+      if (fields.alt_en !== undefined) body.append("alt_en", fields.alt_en);
+      if (fields.alt_ka !== undefined) body.append("alt_ka", fields.alt_ka);
+      if (fields.alt_ru !== undefined) body.append("alt_ru", fields.alt_ru);
+      if (fields.crop_left !== undefined && fields.crop_left !== null) {
+        body.append("crop_left", String(fields.crop_left));
+      }
+      if (fields.crop_top !== undefined && fields.crop_top !== null) {
+        body.append("crop_top", String(fields.crop_top));
+      }
+      if (fields.crop_size !== undefined && fields.crop_size !== null) {
+        body.append("crop_size", String(fields.crop_size));
+      }
+      const raw = await fetcher<unknown>(`/api/site/products/${productId}/images/`, { method: "POST", body });
+      return parse(SiteProductImageSchema, raw);
+    },
+    async patchSiteProductImage(
+      productId: number,
+      imageId: number,
+      body: {
+        position?: number;
+        alt_en?: string;
+        alt_ka?: string;
+        alt_ru?: string;
+        crop_left?: number | null;
+        crop_top?: number | null;
+        crop_size?: number | null;
+      },
+    ): Promise<import("./site-schemas").SiteProductImage> {
+      const raw = await fetcher<unknown>(`/api/site/products/${productId}/images/${imageId}/`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      return parse(SiteProductImageSchema, raw);
+    },
+    async deleteSiteProductImage(productId: number, imageId: number): Promise<void> {
+      await fetcher<void>(`/api/site/products/${productId}/images/${imageId}/`, { method: "DELETE" });
+    },
+    async reorderSiteProductImages(productId: number, ids: number[]): Promise<import("./site-schemas").SiteProductImage[]> {
+      const raw = await fetcher<unknown>(`/api/site/products/${productId}/images/reorder/`, {
+        method: "POST",
+        body: JSON.stringify({ ids }),
+      });
+      return parse(z.array(SiteProductImageSchema), raw);
+    },
+    async listSiteTechCards(): Promise<import("./site-schemas").SiteTechCardChoice[]> {
+      const raw = await fetcher<unknown>("/api/site/tech-cards/");
+      return parse(z.array(SiteTechCardChoiceSchema), raw);
     },
   };
 }

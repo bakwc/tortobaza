@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 
+from catalog.crop import crop_query, crop_tuple
 from catalog.models import Product
 
 G_NS = "http://base.google.com/ns/1.0"
@@ -15,10 +16,10 @@ DESCR_LIMIT = 5000
 ADDTL_IMAGE_LIMIT = 10
 
 
-def _image_link(rel: str, public_base_url: str) -> str:
+def _image_link(rel: str, public_base_url: str, crop: tuple[float, float, float] | None = None) -> str:
     rel_clean = rel.lstrip("/")
     base = f"{public_base_url.rstrip('/')}/api/img/{rel_clean}"
-    return f"{base}?w=1200"
+    return f"{base}?w=1200{crop_query(crop)}"
 
 
 def _feed_description(product: Product) -> str:
@@ -57,10 +58,15 @@ def meta_product_feed(request) -> HttpResponse:
         ET.SubElement(item, f"{G}title").text = product.name
         ET.SubElement(item, f"{G}description").text = _feed_description(product)
         ET.SubElement(item, f"{G}link").text = f"{base_url}/order/{product.slug}"
-        ET.SubElement(item, f"{G}image_link").text = _image_link(images[0].image.name, base_url)
+        first = images[0]
+        first_crop = crop_tuple(first.crop_left, first.crop_top, first.crop_size)
+        ET.SubElement(item, f"{G}image_link").text = _image_link(first.image.name, base_url, first_crop)
 
         for img in images[1 : 1 + ADDTL_IMAGE_LIMIT]:
-            ET.SubElement(item, f"{G}additional_image_link").text = _image_link(img.image.name, base_url)
+            img_crop = crop_tuple(img.crop_left, img.crop_top, img.crop_size)
+            ET.SubElement(item, f"{G}additional_image_link").text = _image_link(
+                img.image.name, base_url, img_crop
+            )
 
         ET.SubElement(item, f"{G}availability").text = "in stock"
         ET.SubElement(item, f"{G}condition").text = "new"
