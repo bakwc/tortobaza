@@ -53,15 +53,14 @@ class TelegramLeadsApiTests(TestCase):
 
     def test_messages_kind_potential(self):
         waiting = self._message(1, "жду", True, True)
-        self._message(2, "лид", True, True, True)
-        self._message(3, "нет", True, False, False)
+        accepted = self._message(2, "лид", True, True, True)
+        rejected = self._message(3, "отклонен", True, True, False)
+        self._message(4, "нет", True, False, False)
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/social/messages/", {"kind": "potential"})
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
-        self.assertEqual(ids, [waiting.id])
-        self.assertIsNone(response.json()["results"][0]["lead"])
-        self.assertIsNone(response.json()["results"][0]["context"])
+        self.assertEqual(ids, [rejected.id, accepted.id, waiting.id])
 
     def test_messages_kind_keyword(self):
         first = self._message(1, "a", True, True)

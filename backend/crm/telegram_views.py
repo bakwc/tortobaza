@@ -64,7 +64,7 @@ class SocialMessageListView(APIView):
         if kind == "keyword":
             qs = qs.filter(keyword_match=True)
         elif kind == "potential":
-            qs = qs.filter(potential_lead=True, lead__isnull=True)
+            qs = qs.filter(potential_lead=True)
         elif kind == "all":
             pass
         else:

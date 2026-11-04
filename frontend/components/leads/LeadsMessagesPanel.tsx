@@ -14,7 +14,7 @@ import { formatCrmDateTime } from "@/lib/format";
 import type { SocialMessage, SocialMessageKind } from "@/lib/api/types";
 
 function parseKind(value: string | null): SocialMessageKind {
-  if (value === "keyword" || value === "all") return value;
+  if (value === "keyword" || value === "all" || value === "potential") return value;
   return "lead";
 }
 
@@ -43,7 +43,6 @@ function parsePage(value: string | null): number {
 
 function pageHref(
   pathname: string,
-  section: "messages" | "potential",
   kind: SocialMessageKind,
   network: string,
   channel: number | null,
@@ -51,7 +50,7 @@ function pageHref(
   page: number,
 ): string {
   const params = new URLSearchParams();
-  if (section === "messages" && kind !== "lead") params.set("kind", kind);
+  if (kind !== "lead") params.set("kind", kind);
   if (network) params.set("network", network);
   if (channel !== null) params.set("channel", String(channel));
   const trimmed = q.trim();
@@ -61,14 +60,14 @@ function pageHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function LeadsMessagesPanel({ section }: { section: "messages" | "potential" }) {
+export function LeadsMessagesPanel() {
   const t = useTranslations("leads");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState<SocialMessage | null>(null);
-  const kind = section === "potential" ? "potential" : parseKind(searchParams.get("kind"));
+  const kind = parseKind(searchParams.get("kind"));
   const network = parseNetwork(searchParams.get("network"));
   const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
@@ -94,7 +93,7 @@ export function LeadsMessagesPanel({ section }: { section: "messages" | "potenti
     nextQ: string,
   ) => {
     const params = new URLSearchParams();
-    if (section === "messages" && nextKind !== "lead") params.set("kind", nextKind);
+    if (nextKind !== "lead") params.set("kind", nextKind);
     if (nextNetwork) params.set("network", nextNetwork);
     if (nextChannel !== null) params.set("channel", String(nextChannel));
     const trimmed = nextQ.trim();
@@ -105,12 +104,13 @@ export function LeadsMessagesPanel({ section }: { section: "messages" | "potenti
 
   const kinds: { key: SocialMessageKind; label: string }[] = [
     { key: "lead", label: t("kindLead") },
+    { key: "potential", label: t("potential") },
     { key: "keyword", label: t("kindKeyword") },
     { key: "all", label: t("kindAll") },
   ];
 
   return (
-    <LeadsShell section={section}>
+    <LeadsShell section="messages">
       <div className="grid gap-4">
         <Card>
           <div className="grid gap-4">
@@ -146,21 +146,19 @@ export function LeadsMessagesPanel({ section }: { section: "messages" | "potenti
                 ))}
               </NativeSelect>
             </div>
-            {section === "messages" ? (
-              <div className="flex flex-wrap gap-2">
-                {kinds.map((item) => (
-                  <Button
-                    key={item.key}
-                    type="button"
-                    variant={item.key === kind ? "primary" : "outline"}
-                    size="sm"
-                    onClick={() => setParams(item.key, network, channel, q)}
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {kinds.map((item) => (
+                <Button
+                  key={item.key}
+                  type="button"
+                  variant={item.key === kind ? "primary" : "outline"}
+                  size="sm"
+                  onClick={() => setParams(item.key, network, channel, q)}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </Card>
         <Card>
@@ -205,14 +203,14 @@ export function LeadsMessagesPanel({ section }: { section: "messages" | "potenti
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, section, kind, network, channel, q, messages.data.page - 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page - 1)}>
                         {t("previous")}
                       </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, section, kind, network, channel, q, messages.data.page + 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page + 1)}>
                         {t("next")}
                       </Link>
                     </Button>
