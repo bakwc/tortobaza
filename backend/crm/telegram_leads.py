@@ -27,6 +27,12 @@ The business only delivers in Batumi and Georgia. Return is_lead false when the 
 
 The user message may start with "Post location: ..." and "Post topic: ...". A location or a topic that names another city or country means is_lead false. Batumi or Georgia means the geography fits. A topic may be unrelated to a place, for example "Cooking Threads"; ignore such a topic."""
 
+LEAD_CONTEXT_PROMPT = """
+
+The user message is a thread of posts. The target post is marked with [target]. The other posts are the conversation around it: the post it replies to and the replies under it.
+
+Return is_lead false when the target post answers a question about another city or country, or about something unrelated to buying confectionery in Batumi. A reply that offers cakes only because someone asked what they could do for free, or that answers a request for another city, is not a lead."""
+
 
 class LeadVerdict(BaseModel):
     is_lead: bool
@@ -43,7 +49,21 @@ def _classifier_input(message: SocialMessage) -> str:
     return message.text
 
 
-def classify_leads(network_slug: str) -> None:
+def _verdict(client: OpenAI, instructions: str, content: str) -> bool:
+    response = client.responses.parse(
+        model=LEAD_MODEL,
+        instructions=instructions,
+        input=content,
+        text_format=LeadVerdict,
+        store=False,
+    )
+    parsed = response.output_parsed
+    if parsed is None:
+        raise RuntimeError("Lead classification returned no data.")
+    return parsed.is_lead
+
+
+def classify_leads(network_slug: str, potential: bool) -> None:
     pending = SocialMessage.objects.filter(
         channel__network__slug=network_slug,
         keyword_match=True,
@@ -56,18 +76,48 @@ def classify_leads(network_slug: str) -> None:
         instructions = LEAD_PROMPT + LEAD_GEO_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
     for message in pending:
-        response = client.responses.parse(
-            model=LEAD_MODEL,
-            instructions=instructions,
-            input=_classifier_input(message),
-            text_format=LeadVerdict,
-            store=False,
-        )
-        parsed = response.output_parsed
-        if parsed is None:
-            raise RuntimeError("Lead classification returned no data.")
-        message.potential_lead = parsed.is_lead
-        message.save(update_fields=["potential_lead"])
+        is_lead = _verdict(client, instructions, _classifier_input(message))
+        message.potential_lead = is_lead
+        update_fields = ["potential_lead"]
+        if not potential:
+            message.lead = is_lead
+            update_fields.append("lead")
+        message.save(update_fields=update_fields)
+
+
+def _verify_input(message: SocialMessage) -> str:
+    lines = []
+    if message.location:
+        lines.append(f"Post location: {message.location}")
+    if message.topic:
+        lines.append(f"Post topic: {message.topic}")
+    lines.append("Thread:")
+    for post in message.context:
+        marker = ""
+        if post["url"] == message.url:
+            marker = " [target]"
+        lines.append(f"@{post['username']}{marker}")
+        lines.append(post["text"])
+        lines.append(str(post["sent_at"]))
+        lines.append(post["url"])
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def verify_leads(network_slug: str) -> None:
+    pending = SocialMessage.objects.filter(
+        channel__network__slug=network_slug,
+        potential_lead=True,
+        lead__isnull=True,
+        context__isnull=False,
+    ).order_by("id")
+    if not pending.exists():
+        return
+    instructions = LEAD_PROMPT + LEAD_GEO_PROMPT + LEAD_CONTEXT_PROMPT
+    client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
+    for message in pending:
+        message.lead = _verdict(client, instructions, _verify_input(message))
+        message.save(update_fields=["lead"])
 
 
 def _channel_label(channel) -> str:
@@ -103,7 +153,7 @@ def notify_recent_leads(network_slug: str) -> None:
     pending = (
         SocialMessage.objects.filter(
             channel__network__slug=network_slug,
-            potential_lead=True,
+            lead=True,
             lead_notified=False,
             sent_at__gte=cutoff,
         )

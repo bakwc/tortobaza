@@ -26,6 +26,7 @@ class TelegramLeadsApiTests(TestCase):
         text: str,
         keyword_match: bool,
         potential_lead: bool | None,
+        lead: bool | None = None,
     ) -> SocialMessage:
         external_id = str(message_id)
         return SocialMessage.objects.create(
@@ -36,17 +37,31 @@ class TelegramLeadsApiTests(TestCase):
             text=text,
             keyword_match=keyword_match,
             potential_lead=potential_lead,
+            lead=lead,
         )
 
     def test_messages_default_kind_lead(self):
-        lead = self._message(1, "хочу торт", True, True)
-        self._message(2, "просто чат", True, False)
+        lead = self._message(1, "хочу торт", True, True, True)
+        self._message(2, "просто чат", True, False, False)
         self._message(3, "торт", True, None)
+        self._message(4, "жду проверку", True, True)
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get("/api/crm/social/messages/")
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [lead.id])
+
+    def test_messages_kind_potential(self):
+        waiting = self._message(1, "жду", True, True)
+        self._message(2, "лид", True, True, True)
+        self._message(3, "нет", True, False, False)
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.get("/api/crm/social/messages/", {"kind": "potential"})
+        self.assertEqual(response.status_code, 200)
+        ids = [row["id"] for row in response.json()["results"]]
+        self.assertEqual(ids, [waiting.id])
+        self.assertIsNone(response.json()["results"][0]["lead"])
+        self.assertIsNone(response.json()["results"][0]["context"])
 
     def test_messages_kind_keyword(self):
         first = self._message(1, "a", True, True)

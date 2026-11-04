@@ -1615,7 +1615,14 @@ export const SupplierSchema = z.object({
   comment: z.string(),
 });
 
-export const SocialMessageKindSchema = z.enum(["lead", "keyword", "all"]);
+export const SocialMessageKindSchema = z.enum(["lead", "keyword", "all", "potential"]);
+
+export const SocialMessageContextPostSchema = z.object({
+  username: z.string(),
+  text: z.string(),
+  sent_at: z.string(),
+  url: z.string(),
+});
 
 export const SocialChannelSchema = z.object({
   id: z.number(),
@@ -1641,6 +1648,10 @@ export const SocialMessageSchema = z.object({
   sender_username: z.string(),
   keyword_match: z.boolean(),
   potential_lead: z.boolean().nullable(),
+  lead: z.boolean().nullable(),
+  context: z.array(SocialMessageContextPostSchema).nullable(),
+  location: z.string(),
+  topic: z.string(),
   channel_username: z.string(),
   channel_title: z.string(),
   network_slug: z.string(),

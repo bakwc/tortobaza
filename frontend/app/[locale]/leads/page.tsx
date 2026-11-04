@@ -11,7 +11,7 @@ export default function LeadsMessagesPage() {
         </div>
       }
     >
-      <LeadsMessagesPanel />
+      <LeadsMessagesPanel section="messages" />
     </Suspense>
   );
 }

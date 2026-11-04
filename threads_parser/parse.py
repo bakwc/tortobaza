@@ -14,7 +14,10 @@ PORT = 47221
 QUERIES = ["батуми торт", "бенто батуми"]
 NETWORK = "threads"
 INGEST_URL = "https://sweet-chill.ge/api/social/messages/"
-PROCESS_URL = "https://sweet-chill.ge/api/social/networks/threads/process-leads/"
+PROCESS_URL = "https://sweet-chill.ge/api/social/networks/threads/process-leads/?potential=true"
+POTENTIAL_URL = "https://sweet-chill.ge/api/social/networks/threads/potential-leads/"
+CONTEXT_URL = "https://sweet-chill.ge/api/social/messages/{}/context/"
+VERIFY_URL = "https://sweet-chill.ge/api/social/networks/threads/verify-leads/"
 POST_LIMIT = 50
 TIMEOUT_MS = 30000
 POLL_S = 0.5
@@ -202,6 +205,20 @@ def message_body(post, query):
     }
 
 
+def get_json(url, token):
+    request = urllib.request.Request(
+        url,
+        headers={"Authorization": "Bearer " + token},
+        method="GET",
+    )
+    with urllib.request.urlopen(request) as response:
+        status = response.status
+        raw = response.read()
+    if status != 200:
+        raise RuntimeError(f"get {status}")
+    return json.loads(raw.decode("utf-8"))
+
+
 def post_json(url, token, body):
     headers = {"Authorization": "Bearer " + token}
     payload = b""
@@ -238,6 +255,29 @@ def process_leads(token):
     log(f"process-leads {status}")
 
 
+def potential_leads(token):
+    return get_json(POTENTIAL_URL, token)
+
+
+def send_context(token, message_id, context):
+    status, _raw = post_json(
+        CONTEXT_URL.format(message_id),
+        token,
+        {"context": context},
+    )
+    if status != 204:
+        raise RuntimeError(f"context {status}")
+    log(f"context {message_id} {status}")
+
+
+def verify_leads(token):
+    log("verify-leads")
+    status, _raw = post_json(VERIFY_URL, token, None)
+    if status != 204:
+        raise RuntimeError(f"verify {status}")
+    log(f"verify-leads {status}")
+
+
 def collect(conn, buffer, counter, url):
     log(f"вкладка {url}")
     created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
@@ -246,7 +286,8 @@ def collect(conn, buffer, counter, url):
     count = 0
     while count == 0:
         if time.monotonic() >= deadline:
-            raise RuntimeError("no posts")
+            log("постов нет")
+            return tab_id, []
         result = call(
             conn,
             buffer,
@@ -316,6 +357,54 @@ def collect(conn, buffer, counter, url):
     return tab_id, posts
 
 
+def collect_context(conn, buffer, counter, url):
+    log(f"контекст {url}")
+    created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
+    tab_id = created["id"]
+    deadline = time.monotonic() + POLL_DEADLINE_S
+    count = 0
+    while count == 0:
+        if time.monotonic() >= deadline:
+            log("постов нет")
+            close_tab(conn, buffer, counter, tab_id)
+            return []
+        result = call(
+            conn,
+            buffer,
+            counter,
+            "tabs.evaluate",
+            {
+                "tabId": tab_id,
+                "expression": COUNT_EXPRESSION,
+                "timeoutMs": TIMEOUT_MS,
+            },
+        )
+        count = result["value"]
+        if count == 0:
+            time.sleep(POLL_S)
+    result = call(
+        conn,
+        buffer,
+        counter,
+        "tabs.evaluate",
+        {
+            "tabId": tab_id,
+            "expression": EXTRACT_EXPRESSION,
+            "timeoutMs": TIMEOUT_MS,
+        },
+    )
+    close_tab(conn, buffer, counter, tab_id)
+    return [
+        {
+            "username": post["username"],
+            "text": post["text"],
+            "sent_at": post["datetime"],
+            "url": post["url"],
+        }
+        for post in result["value"]
+    ]
+
+
 def close_tab(conn, buffer, counter, tab_id):
     call(conn, buffer, counter, "tabs.close", {"tabId": tab_id})
     log(f"вкладка закрыта {tab_id}")
@@ -343,6 +432,11 @@ def main():
             close_tab(conn, buffer, counter, tab_id)
         send_batch(token, batch)
         process_leads(token)
+        for lead in potential_leads(token):
+            context = collect_context(conn, buffer, counter, lead["url"])
+            send_context(token, lead["id"], context)
+            time.sleep(random.uniform(PAUSE_MIN, PAUSE_MAX))
+        verify_leads(token)
         pause = random.uniform(600, 780)
         log(f"сон {round(pause)} с")
         time.sleep(pause)

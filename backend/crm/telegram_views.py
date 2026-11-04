@@ -16,13 +16,15 @@ from accounts.permissions import SectionPermission
 from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource, normalize_telegram_username
 from crm.serializers import (
     SocialKeywordSerializer,
+    SocialMessageContextSerializer,
     SocialMessageIngestSerializer,
     SocialMessageSerializer,
     SocialNetworkSerializer,
+    SocialPotentialLeadSerializer,
     SocialSourceSerializer,
 )
 from crm.telegram_channels import _keyword_match, refresh_keyword_matches
-from crm.telegram_leads import classify_leads, notify_recent_leads
+from crm.telegram_leads import classify_leads, notify_recent_leads, verify_leads
 
 PAGE_SIZE = 15
 
@@ -61,10 +63,12 @@ class SocialMessageListView(APIView):
             qs = qs.filter(channel_id=int(channel_param))
         if kind == "keyword":
             qs = qs.filter(keyword_match=True)
+        elif kind == "potential":
+            qs = qs.filter(potential_lead=True, lead__isnull=True)
         elif kind == "all":
             pass
         else:
-            qs = qs.filter(potential_lead=True)
+            qs = qs.filter(lead=True)
         stripped = q.strip()
         if stripped:
             needle = stripped.casefold()
@@ -257,6 +261,69 @@ class SocialLeadsProcessView(APIView):
         get_object_or_404(SocialNetwork, slug=slug)
         if slug == "telegram":
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        classify_leads(slug)
+        raw = request.query_params.get("potential", "false")
+        if raw not in ("true", "false"):
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        classify_leads(slug, raw == "true")
+        notify_recent_leads(slug)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SocialPotentialLeadsView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug: str):
+        if not _ingest_authorized(request):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        network = get_object_or_404(SocialNetwork, slug=slug)
+        if slug == "telegram":
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        rows = SocialMessage.objects.filter(
+            channel__network=network,
+            potential_lead=True,
+            lead__isnull=True,
+            context__isnull=True,
+        ).order_by("id")
+        return Response(SocialPotentialLeadSerializer(rows, many=True).data)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SocialMessageContextView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk: int):
+        if not _ingest_authorized(request):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        message = get_object_or_404(SocialMessage, pk=pk)
+        serializer = SocialMessageContextSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        message.context = [
+            {
+                "username": item["username"],
+                "text": item["text"],
+                "sent_at": item["sent_at"].isoformat(),
+                "url": item["url"],
+            }
+            for item in serializer.validated_data["context"]
+        ]
+        message.save(update_fields=["context"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class SocialLeadsVerifyView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, slug: str):
+        if not _ingest_authorized(request):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        get_object_or_404(SocialNetwork, slug=slug)
+        if slug == "telegram":
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        verify_leads(slug)
         notify_recent_leads(slug)
         return Response(status=status.HTTP_204_NO_CONTENT)

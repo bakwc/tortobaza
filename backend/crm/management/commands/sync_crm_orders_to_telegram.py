@@ -219,5 +219,5 @@ class Command(BaseCommand):
         notify_courier_departures(timezone.now())
         backup_database(now)
         sync_telegram_channels()
-        classify_leads("telegram")
+        classify_leads("telegram", False)
         notify_recent_leads("telegram")

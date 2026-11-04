@@ -227,5 +227,125 @@ class SocialIngestTests(TestCase):
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
         )
         self.assertEqual(response.status_code, 204)
-        classify_leads.assert_called_once_with("threads")
+        classify_leads.assert_called_once_with("threads", False)
         notify_recent_leads.assert_called_once_with("threads")
+
+    @patch("crm.telegram_views.notify_recent_leads")
+    @patch("crm.telegram_views.classify_leads")
+    def test_process_leads_potential_mode(self, classify_leads, notify_recent_leads):
+        SocialNetwork.objects.create(slug="threads", name="Threads")
+        response = self.client.post(
+            "/api/social/networks/threads/process-leads/?potential=true",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 204)
+        classify_leads.assert_called_once_with("threads", True)
+        notify_recent_leads.assert_called_once_with("threads")
+
+    def test_process_leads_rejects_bad_potential(self):
+        SocialNetwork.objects.create(slug="threads", name="Threads")
+        response = self.client.post(
+            "/api/social/networks/threads/process-leads/?potential=maybe",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_potential_leads_lists_rows_without_context(self):
+        network = SocialNetwork.objects.create(slug="threads", name="Threads")
+        source = SocialSource.objects.create(network=network, username="батуми торт")
+        waiting = SocialMessage.objects.create(
+            channel=source,
+            external_id="1",
+            url="https://www.threads.com/@a/post/1",
+            sent_at="2026-11-04T08:00:00Z",
+            text="бенто",
+            sender_username="a",
+            potential_lead=True,
+        )
+        SocialMessage.objects.create(
+            channel=source,
+            external_id="2",
+            url="https://www.threads.com/@a/post/2",
+            sent_at="2026-11-04T08:00:00Z",
+            text="есть контекст",
+            potential_lead=True,
+            context=[],
+        )
+        SocialMessage.objects.create(
+            channel=source,
+            external_id="3",
+            url="https://www.threads.com/@a/post/3",
+            sent_at="2026-11-04T08:00:00Z",
+            text="уже лид",
+            potential_lead=True,
+            lead=True,
+        )
+        missing = self.client.get("/api/social/networks/threads/potential-leads/")
+        self.assertEqual(missing.status_code, 403)
+        response = self.client.get(
+            "/api/social/networks/threads/potential-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual([row["id"] for row in body], [waiting.id])
+        self.assertEqual(body[0]["url"], waiting.url)
+        self.assertEqual(body[0]["text"], "бенто")
+        self.assertEqual(body[0]["sender_username"], "a")
+
+    def test_context_saves_thread(self):
+        network = SocialNetwork.objects.create(slug="threads", name="Threads")
+        source = SocialSource.objects.create(network=network, username="батуми торт")
+        row = SocialMessage.objects.create(
+            channel=source,
+            external_id="1",
+            url="https://www.threads.com/@a/post/1",
+            sent_at="2026-11-04T08:00:00Z",
+            text="бенто",
+            potential_lead=True,
+        )
+        missing = self.client.post(
+            f"/api/social/messages/{row.id}/context/",
+            {"context": []},
+            format="json",
+        )
+        self.assertEqual(missing.status_code, 403)
+        response = self.client.post(
+            f"/api/social/messages/{row.id}/context/",
+            {
+                "context": [
+                    {
+                        "username": "asker",
+                        "text": "вопрос",
+                        "sent_at": "2026-11-04T08:00:00Z",
+                        "url": "https://www.threads.com/@asker/post/parent",
+                    }
+                ]
+            },
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 204)
+        row.refresh_from_db()
+        self.assertEqual(row.context[0]["username"], "asker")
+        self.assertEqual(row.context[0]["text"], "вопрос")
+        self.assertEqual(row.context[0]["url"], "https://www.threads.com/@asker/post/parent")
+
+    @patch("crm.telegram_views.notify_recent_leads")
+    @patch("crm.telegram_views.verify_leads")
+    def test_verify_leads_runs_for_network(self, verify_leads, notify_recent_leads):
+        SocialNetwork.objects.create(slug="threads", name="Threads")
+        response = self.client.post(
+            "/api/social/networks/threads/verify-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 204)
+        verify_leads.assert_called_once_with("threads")
+        notify_recent_leads.assert_called_once_with("threads")
+
+    def test_verify_leads_telegram_is_rejected(self):
+        response = self.client.post(
+            "/api/social/networks/telegram/verify-leads/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 400)

@@ -1,15 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle, NativeSelect, QueryState } from "@/components/menu/ui";
+import { LeadMessageDialog } from "@/components/leads/LeadMessageDialog";
 import { LeadsShell } from "@/components/leads/LeadsShell";
 import { useSocialChannels, useSocialMessages } from "@/hooks/useLeads";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
-import type { SocialMessageKind } from "@/lib/api/types";
+import type { SocialMessage, SocialMessageKind } from "@/lib/api/types";
 
 function parseKind(value: string | null): SocialMessageKind {
   if (value === "keyword" || value === "all") return value;
@@ -41,6 +43,7 @@ function parsePage(value: string | null): number {
 
 function pageHref(
   pathname: string,
+  section: "messages" | "potential",
   kind: SocialMessageKind,
   network: string,
   channel: number | null,
@@ -48,7 +51,7 @@ function pageHref(
   page: number,
 ): string {
   const params = new URLSearchParams();
-  if (kind !== "lead") params.set("kind", kind);
+  if (section === "messages" && kind !== "lead") params.set("kind", kind);
   if (network) params.set("network", network);
   if (channel !== null) params.set("channel", String(channel));
   const trimmed = q.trim();
@@ -58,13 +61,14 @@ function pageHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function LeadsMessagesPanel() {
+export function LeadsMessagesPanel({ section }: { section: "messages" | "potential" }) {
   const t = useTranslations("leads");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const kind = parseKind(searchParams.get("kind"));
+  const [selected, setSelected] = useState<SocialMessage | null>(null);
+  const kind = section === "potential" ? "potential" : parseKind(searchParams.get("kind"));
   const network = parseNetwork(searchParams.get("network"));
   const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
@@ -90,7 +94,7 @@ export function LeadsMessagesPanel() {
     nextQ: string,
   ) => {
     const params = new URLSearchParams();
-    if (nextKind !== "lead") params.set("kind", nextKind);
+    if (section === "messages" && nextKind !== "lead") params.set("kind", nextKind);
     if (nextNetwork) params.set("network", nextNetwork);
     if (nextChannel !== null) params.set("channel", String(nextChannel));
     const trimmed = nextQ.trim();
@@ -106,7 +110,7 @@ export function LeadsMessagesPanel() {
   ];
 
   return (
-    <LeadsShell section="messages">
+    <LeadsShell section={section}>
       <div className="grid gap-4">
         <Card>
           <div className="grid gap-4">
@@ -142,19 +146,21 @@ export function LeadsMessagesPanel() {
                 ))}
               </NativeSelect>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {kinds.map((item) => (
-                <Button
-                  key={item.key}
-                  type="button"
-                  variant={item.key === kind ? "primary" : "outline"}
-                  size="sm"
-                  onClick={() => setParams(item.key, network, channel, q)}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </div>
+            {section === "messages" ? (
+              <div className="flex flex-wrap gap-2">
+                {kinds.map((item) => (
+                  <Button
+                    key={item.key}
+                    type="button"
+                    variant={item.key === kind ? "primary" : "outline"}
+                    size="sm"
+                    onClick={() => setParams(item.key, network, channel, q)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </Card>
         <Card>
@@ -166,30 +172,29 @@ export function LeadsMessagesPanel() {
               <ul className="mt-4 divide-y divide-[var(--line)]">
                 {rows.map((row) => (
                   <li key={row.id} className="py-4 first:pt-0 last:pb-0">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                      <p className="min-w-0 text-sm">
-                        <span className="font-medium text-[var(--ink)]">
-                          {row.channel_title || row.channel_username}
-                        </span>
-                        <span className="text-[var(--muted-2)]"> · {row.network_name} · </span>
-                        <span className="text-[var(--muted-2)]">
-                          {senderLabel(row.sender_username, row.sender_id)}
-                        </span>
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => setSelected(row)}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <p className="min-w-0 text-sm">
+                          <span className="font-medium text-[var(--ink)]">
+                            {row.channel_title || row.channel_username}
+                          </span>
+                          <span className="text-[var(--muted-2)]"> · {row.network_name} · </span>
+                          <span className="text-[var(--muted-2)]">
+                            {senderLabel(row.sender_username, row.sender_id)}
+                          </span>
+                        </p>
+                        <time className="shrink-0 text-xs text-[var(--muted-2)]">
+                          {formatCrmDateTime(row.sent_at, locale)}
+                        </time>
+                      </div>
+                      <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
+                        {row.text || "—"}
                       </p>
-                      <time className="shrink-0 text-xs text-[var(--muted-2)]">
-                        {formatCrmDateTime(row.sent_at, locale)}
-                      </time>
-                    </div>
-                    <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
-                      {row.text || "—"}
-                    </p>
-                    <div className="mt-3 flex justify-end">
-                      <Button asChild variant="outline" size="sm">
-                        <a href={row.url} target="_blank" rel="noopener noreferrer">
-                          {t("open")}
-                        </a>
-                      </Button>
-                    </div>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -200,14 +205,14 @@ export function LeadsMessagesPanel() {
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page - 1)}>
+                      <Link href={pageHref(pathname, section, kind, network, channel, q, messages.data.page - 1)}>
                         {t("previous")}
                       </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page + 1)}>
+                      <Link href={pageHref(pathname, section, kind, network, channel, q, messages.data.page + 1)}>
                         {t("next")}
                       </Link>
                     </Button>
@@ -218,6 +223,7 @@ export function LeadsMessagesPanel() {
           </QueryState>
         </Card>
       </div>
+      <LeadMessageDialog message={selected} onOpenChange={(open) => { if (!open) setSelected(null); }} />
     </LeadsShell>
   );
 }

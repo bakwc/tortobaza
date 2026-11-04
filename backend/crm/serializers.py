@@ -1094,12 +1094,33 @@ class SocialMessageSerializer(serializers.ModelSerializer):
             "sender_username",
             "keyword_match",
             "potential_lead",
+            "lead",
+            "context",
+            "location",
+            "topic",
             "channel_username",
             "channel_title",
             "network_slug",
             "network_name",
             "url",
         ]
+
+
+class SocialPotentialLeadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialMessage
+        fields = ["id", "url", "text", "sent_at", "sender_username"]
+
+
+class SocialMessageContextItemSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=255, allow_blank=True)
+    text = serializers.CharField(allow_blank=True)
+    sent_at = serializers.DateTimeField()
+    url = serializers.CharField(max_length=2048)
+
+
+class SocialMessageContextSerializer(serializers.Serializer):
+    context = SocialMessageContextItemSerializer(many=True)
 
 
 class SocialNetworkSerializer(serializers.ModelSerializer):

@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase, override_settings
 
 from crm.models import SocialMessage, SocialNetwork, SocialSource
-from crm.telegram_leads import LeadVerdict, classify_leads, notify_recent_leads
+from crm.telegram_leads import LeadVerdict, classify_leads, notify_recent_leads, verify_leads
 
 
 class ClassifyTelegramLeadsTests(TestCase):
@@ -31,19 +31,20 @@ class ClassifyTelegramLeadsTests(TestCase):
     def test_classifies_pending_keyword_matches(self, openai_cls):
         row = self._message("где заказать торт?", True, None)
         openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=True)
-        classify_leads("telegram")
+        classify_leads("telegram", False)
         openai_cls.return_value.responses.parse.assert_called_once()
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertEqual(call["input"], "где заказать торт?")
         self.assertNotIn("metro", call["instructions"])
         row.refresh_from_db()
         self.assertIs(row.potential_lead, True)
+        self.assertIs(row.lead, True)
 
     @patch("crm.telegram_leads.OpenAI")
     def test_skips_already_classified_and_non_keyword(self, openai_cls):
         self._message("где заказать торт?", True, False)
         self._message("просто чат", False, None)
-        classify_leads("telegram")
+        classify_leads("telegram", False)
         openai_cls.assert_not_called()
 
     @patch("crm.telegram_leads.OpenAI")
@@ -51,7 +52,7 @@ class ClassifyTelegramLeadsTests(TestCase):
         self._message("торт на день рождения", True, None)
         openai_cls.return_value.responses.parse.return_value.output_parsed = None
         with self.assertRaises(RuntimeError):
-            classify_leads("telegram")
+            classify_leads("telegram", False)
 
     @patch("crm.telegram_leads.OpenAI")
     def test_skips_other_network(self, openai_cls):
@@ -67,7 +68,7 @@ class ClassifyTelegramLeadsTests(TestCase):
             text="где заказать торт?",
             keyword_match=True,
         )
-        classify_leads("telegram")
+        classify_leads("telegram", False)
         openai_cls.assert_not_called()
         row.refresh_from_db()
         self.assertIsNone(row.potential_lead)
@@ -78,7 +79,7 @@ class ClassifyTelegramLeadsTests(TestCase):
             network=SocialNetwork.objects.create(slug="threads", name="Threads"),
             username="батуми торт",
         )
-        SocialMessage.objects.create(
+        row = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url="https://www.threads.com/@cakes/post/1",
@@ -89,12 +90,87 @@ class ClassifyTelegramLeadsTests(TestCase):
             keyword_match=True,
         )
         openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=False)
-        classify_leads("threads")
+        classify_leads("threads", False)
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertIn("metro", call["instructions"])
         self.assertIn("Post location: Minsk, Belarus", call["input"])
         self.assertIn("Post topic: торты минск", call["input"])
         self.assertIn("где заказать торт?", call["input"])
+        row.refresh_from_db()
+        self.assertIs(row.potential_lead, False)
+        self.assertIs(row.lead, False)
+
+    @patch("crm.telegram_leads.OpenAI")
+    def test_potential_mode_leaves_lead_unset(self, openai_cls):
+        threads = SocialSource.objects.create(
+            network=SocialNetwork.objects.create(slug="threads", name="Threads"),
+            username="батуми торт",
+        )
+        row = SocialMessage.objects.create(
+            channel=threads,
+            external_id="1",
+            url="https://www.threads.com/@cakes/post/1",
+            sent_at=self.sent_at,
+            text="где заказать торт?",
+            keyword_match=True,
+        )
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=True)
+        classify_leads("threads", True)
+        row.refresh_from_db()
+        self.assertIs(row.potential_lead, True)
+        self.assertIsNone(row.lead)
+
+    @patch("crm.telegram_leads.OpenAI")
+    def test_verify_leads_uses_thread_context(self, openai_cls):
+        threads = SocialSource.objects.create(
+            network=SocialNetwork.objects.create(slug="threads", name="Threads"),
+            username="батуми торт",
+        )
+        target = "https://www.threads.com/@cakes/post/1"
+        row = SocialMessage.objects.create(
+            channel=threads,
+            external_id="1",
+            url=target,
+            sent_at=self.sent_at,
+            text="Бенто тортик",
+            location="Vladivostok",
+            topic="",
+            keyword_match=True,
+            potential_lead=True,
+            context=[
+                {
+                    "username": "asker",
+                    "text": "Девушки Владивостока, что вы могли бы сделать бесплатно?",
+                    "sent_at": "2026-11-04T08:00:00Z",
+                    "url": "https://www.threads.com/@asker/post/parent",
+                },
+                {
+                    "username": "cakes",
+                    "text": "Бенто тортик",
+                    "sent_at": "2026-11-04T08:10:00Z",
+                    "url": target,
+                },
+            ],
+        )
+        SocialMessage.objects.create(
+            channel=threads,
+            external_id="2",
+            url="https://www.threads.com/@cakes/post/2",
+            sent_at=self.sent_at,
+            text="без контекста",
+            keyword_match=True,
+            potential_lead=True,
+        )
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=False)
+        verify_leads("threads")
+        openai_cls.return_value.responses.parse.assert_called_once()
+        call = openai_cls.return_value.responses.parse.call_args.kwargs
+        self.assertIn("[target]", call["instructions"])
+        self.assertIn("Post location: Vladivostok", call["input"])
+        self.assertIn("@cakes [target]", call["input"])
+        self.assertIn("Девушки Владивостока", call["input"])
+        row.refresh_from_db()
+        self.assertIs(row.lead, False)
 
 
 @override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID="leads-chat")
@@ -115,6 +191,7 @@ class NotifyTelegramLeadsTests(TestCase):
         message_id: int | None = None,
         sent_at: datetime | None = None,
         potential_lead: bool | None = True,
+        lead: bool | None = True,
         lead_notified: bool = False,
     ) -> SocialMessage:
         if message_id is None:
@@ -130,6 +207,7 @@ class NotifyTelegramLeadsTests(TestCase):
             text=text,
             keyword_match=True,
             potential_lead=potential_lead,
+            lead=lead,
             lead_notified=lead_notified,
         )
 
@@ -163,8 +241,9 @@ class NotifyTelegramLeadsTests(TestCase):
         now_mock.return_value = self.now
         telegram_json.side_effect = self._capture_telegram
         self._message(sent_at=self.now - timedelta(hours=25))
-        self._message(potential_lead=False, message_id=2)
+        self._message(potential_lead=False, lead=False, message_id=2)
         self._message(lead_notified=True, message_id=3)
+        self._message(lead=None, message_id=4)
         notify_recent_leads("telegram")
         telegram_json.assert_not_called()
 
