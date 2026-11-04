@@ -22,6 +22,7 @@ VERIFY_URL = "https://sweet-chill.ge/api/social/networks/threads/verify-leads/"
 PROFILE_URL = "https://www.threads.com/@{}"
 SSL_CONTEXT = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
 POST_LIMIT = 50
+LIGHT_POST_LIMIT = 25
 PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
 POLL_S = 0.5
@@ -139,7 +140,7 @@ def scroll_expression(distance, duration):
     )
 
 
-def take(posts, seen, found):
+def take(posts, seen, found, limit):
     added = False
     for post in found:
         if post["url"] in seen:
@@ -147,7 +148,7 @@ def take(posts, seen, found):
         seen.add(post["url"])
         posts.append(post)
         added = True
-        if len(posts) == POST_LIMIT:
+        if len(posts) == limit:
             break
     return added
 
@@ -290,7 +291,7 @@ def verify_leads(token):
     log(f"verify-leads {status}")
 
 
-def collect(conn, buffer, counter, url):
+def collect(conn, buffer, counter, url, limit):
     log(f"вкладка {url}")
     created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
     tab_id = created["id"]
@@ -327,10 +328,10 @@ def collect(conn, buffer, counter, url):
             "timeoutMs": TIMEOUT_MS,
         },
     )
-    take(posts, seen, result["value"])
+    take(posts, seen, result["value"], limit)
     report(len(posts))
     stuck = 0
-    while len(posts) < POST_LIMIT:
+    while len(posts) < limit:
         time.sleep(random.uniform(PAUSE_MIN, PAUSE_MAX))
         moved = call(
             conn,
@@ -357,7 +358,7 @@ def collect(conn, buffer, counter, url):
                 "timeoutMs": TIMEOUT_MS,
             },
         )
-        added = take(posts, seen, result["value"])
+        added = take(posts, seen, result["value"], limit)
         report(len(posts))
         if moved["value"] or added:
             stuck = 0
@@ -505,37 +506,56 @@ def close_tab(conn, buffer, counter, tab_id):
     log(f"вкладка закрыта {tab_id}")
 
 
+def run_cycle(conn, buffer, counter, token, queries, limit, kind):
+    day = search_day()
+    log(f"{kind} {day.isoformat()}")
+    sent = set()
+    batch = []
+    for query in queries:
+        log(f"поиск {query}")
+        tab_id, posts = collect(conn, buffer, counter, search_url(query, day), limit)
+        for post in posts:
+            if post["url"] in sent:
+                log(f"уже был {post['url']}")
+                continue
+            sent.add(post["url"])
+            batch.append((post, query))
+        close_tab(conn, buffer, counter, tab_id)
+    send_batch(token, batch)
+    process_leads(token)
+    for lead in potential_leads(token):
+        context = collect_context(conn, buffer, counter, lead["url"])
+        profile = collect_profile(conn, buffer, counter, lead["sender_username"])
+        send_context(token, lead["id"], context, profile)
+        time.sleep(random.uniform(PAUSE_MIN, PAUSE_MAX))
+    verify_leads(token)
+
+
+def cycle_pause():
+    pause = random.uniform(150, 210)
+    log(f"сон {round(pause)} с")
+    time.sleep(pause)
+
+
 def main():
     token = os.environ["SOCIAL_INGEST_TOKEN"]
     conn = socket.create_connection((HOST, PORT))
     buffer = bytearray()
     counter = [1]
     while True:
-        day = search_day()
-        log(f"круг {day.isoformat()}")
-        sent = set()
-        batch = []
-        for query in QUERIES:
-            log(f"поиск {query}")
-            tab_id, posts = collect(conn, buffer, counter, search_url(query, day))
-            for post in posts:
-                if post["url"] in sent:
-                    log(f"уже был {post['url']}")
-                    continue
-                sent.add(post["url"])
-                batch.append((post, query))
-            close_tab(conn, buffer, counter, tab_id)
-        send_batch(token, batch)
-        process_leads(token)
-        for lead in potential_leads(token):
-            context = collect_context(conn, buffer, counter, lead["url"])
-            profile = collect_profile(conn, buffer, counter, lead["sender_username"])
-            send_context(token, lead["id"], context, profile)
-            time.sleep(random.uniform(PAUSE_MIN, PAUSE_MAX))
-        verify_leads(token)
-        pause = random.uniform(600, 780)
-        log(f"сон {round(pause)} с")
-        time.sleep(pause)
+        run_cycle(conn, buffer, counter, token, QUERIES, POST_LIMIT, "тяжёлый")
+        for _ in range(random.randint(3, 4)):
+            cycle_pause()
+            run_cycle(
+                conn,
+                buffer,
+                counter,
+                token,
+                ["батуми торт"],
+                LIGHT_POST_LIMIT,
+                "лёгкий",
+            )
+        cycle_pause()
 
 
 if __name__ == "__main__":
