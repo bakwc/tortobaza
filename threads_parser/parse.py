@@ -22,7 +22,7 @@ VERIFY_URL = "https://sweet-chill.ge/api/social/networks/threads/verify-leads/"
 PROFILE_URL = "https://www.threads.com/@{}"
 SSL_CONTEXT = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
 POST_LIMIT = 50
-LIGHT_POST_LIMIT = 25
+LIGHT_POST_LIMIT = 38
 PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
 POLL_S = 0.5
@@ -180,13 +180,17 @@ def search_day():
     return day
 
 
-def search_url(query, day):
+def search_url(query, day, recent: bool):
+    params = {
+        "after_date": day.isoformat(),
+        "q": query,
+        "serp_type": "default",
+    }
+    if recent:
+        params["exact_match"] = "false"
+        params["filter"] = "recent"
     return "https://www.threads.com/search?" + urllib.parse.urlencode(
-        {
-            "after_date": day.isoformat(),
-            "q": query,
-            "serp_type": "default",
-        },
+        params,
         quote_via=urllib.parse.quote,
     )
 
@@ -506,14 +510,14 @@ def close_tab(conn, buffer, counter, tab_id):
     log(f"вкладка закрыта {tab_id}")
 
 
-def run_cycle(conn, buffer, counter, token, queries, limit, kind):
+def run_cycle(conn, buffer, counter, token, queries, limit, kind, recent: bool):
     day = search_day()
     log(f"{kind} {day.isoformat()}")
     sent = set()
     batch = []
     for query in queries:
         log(f"поиск {query}")
-        tab_id, posts = collect(conn, buffer, counter, search_url(query, day), limit)
+        tab_id, posts = collect(conn, buffer, counter, search_url(query, day, recent), limit)
         for post in posts:
             if post["url"] in sent:
                 log(f"уже был {post['url']}")
@@ -543,17 +547,18 @@ def main():
     buffer = bytearray()
     counter = [1]
     while True:
-        run_cycle(conn, buffer, counter, token, QUERIES, POST_LIMIT, "тяжёлый")
-        for _ in range(random.randint(3, 4)):
+        run_cycle(conn, buffer, counter, token, QUERIES, POST_LIMIT, "тяжёлый", False)
+        for _ in range(random.randint(2, 3)):
             cycle_pause()
             run_cycle(
                 conn,
                 buffer,
                 counter,
                 token,
-                ["батуми торт"],
+                ["батуми"],
                 LIGHT_POST_LIMIT,
                 "лёгкий",
+                True,
             )
         cycle_pause()
 
