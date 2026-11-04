@@ -329,6 +329,26 @@ class CrmDayOrderSerializer(CrmOrderSerializer):
         return self.context["client_order_counts"][instance.id]
 
 
+class CrmClientOrderHistorySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    weight = serializers.CharField()
+    filling = serializers.CharField()
+    status = serializers.CharField()
+    total = serializers.SerializerMethodField()
+    image = serializers.SerializerMethodField()
+
+    def get_total(self, instance: CrmOrder) -> str:
+        return str(instance.cake_price + instance.delivery_price)
+
+    def get_image(self, instance: CrmOrder) -> dict[str, str] | None:
+        images = list(instance.images.all())
+        if not images:
+            return None
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return detail_image(images[0].image.name, public_base_url)
+
+
 def _chef_identity_cached(user, cache: dict) -> tuple[str, str | None, str | None, str]:
     found = cache.get(user.id)
     if found is not None:

@@ -297,6 +297,7 @@
     "delivery": "Доставка",
     "pickup": "Самовывоз",
     "repeatClient": "Повторный клиент ({count})",
+    "clientOrdersTitle": "Повторный клиент · {count} заказов",
     "contact": "Получатель",
     "gift": "Подарок",
     "nickname": "Отправитель",

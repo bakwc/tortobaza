@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
+import { CrmClientOrdersDialog } from "@/components/crm/CrmClientOrdersDialog";
 import { CrmUnconfirmedOrdersLink } from "@/components/crm/CrmUnconfirmedOrdersLink";
 import { CrmPhoneList } from "@/components/crm/CrmContactLinks";
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
@@ -446,6 +447,7 @@ function CrmOrderCard({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
+  const [isClientOrdersOpen, setIsClientOrdersOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
   const resolveYandex = useResolveYandexAddress();
   const resolveGoogle = useResolveGoogleAddress();
@@ -785,9 +787,21 @@ function CrmOrderCard({
             </div>
 
             {order.client_order_count !== null && order.client_order_count >= 2 ? (
-              <span className="w-fit rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white">
-                {t("repeatClient", { count: order.client_order_count })}
-              </span>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsClientOrdersOpen(true)}
+                  className="w-fit cursor-pointer rounded-full bg-orange-500 px-3 py-1 text-xs font-bold text-white hover:bg-orange-600"
+                >
+                  {t("repeatClient", { count: order.client_order_count })}
+                </button>
+                <CrmClientOrdersDialog
+                  orderId={order.id}
+                  count={order.client_order_count}
+                  open={isClientOrdersOpen}
+                  onOpenChange={setIsClientOrdersOpen}
+                />
+              </>
             ) : null}
 
             <div className="flex flex-col gap-2.5 lg:gap-4">

@@ -570,16 +570,30 @@ def _link_customers(orders: list[CrmOrder]) -> tuple[dict[str, Customer], int]:
     return customers, unknown
 
 
+def _live_customer_rows() -> list[CrmOrder]:
+    return list(
+        CrmOrder.objects.filter(deleted=False)
+        .only(
+            "id",
+            "phones",
+            "contact",
+            "nickname",
+            "date",
+            "weight",
+            "filling",
+            "cake_price",
+            "delivery_price",
+            "status",
+        )
+        .order_by("date", "id")
+    )
+
+
 def client_order_counts(order_ids: list[int]) -> dict[int, int | None]:
     counts: dict[int, int | None] = {order_id: None for order_id in order_ids}
     if not order_ids:
         return counts
-    rows = list(
-        CrmOrder.objects.filter(deleted=False)
-        .only("id", "phones", "contact", "nickname")
-        .order_by("date", "id")
-    )
-    customers, _unknown = _link_customers(rows)
+    customers, _unknown = _link_customers(_live_customer_rows())
     wanted = set(order_ids)
     for customer in customers.values():
         total = len(customer.orders)
@@ -587,6 +601,15 @@ def client_order_counts(order_ids: list[int]) -> dict[int, int | None]:
             if order.id in wanted:
                 counts[order.id] = total
     return counts
+
+
+def client_orders(order_id: int) -> list[CrmOrder]:
+    customers, _unknown = _link_customers(_live_customer_rows())
+    for customer in customers.values():
+        for order in customer.orders:
+            if order.id == order_id:
+                return sorted(customer.orders, key=lambda item: (item.date, item.id), reverse=True)
+    return []
 
 
 def _label(value: str) -> str:

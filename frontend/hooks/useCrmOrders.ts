@@ -17,6 +17,7 @@ import type {
   CrmMapOrdersResponse,
   CrmMonthlyOrdersResponse,
   CrmUnconfirmedOrdersResponse,
+  CrmClientOrdersResponse,
   CrmOrder,
   CrmOrderEvent,
   CrmOrdersResponse,
@@ -139,6 +140,14 @@ export function useCrmSalaryDetail(userId: number, start: string, end: string, e
   return useQuery<CrmSalaryDetail>({
     queryKey: ["crm-salary-detail", userId, start, end] as const,
     queryFn: () => api.getCrmSalaryDetail(userId, start, end),
+    enabled,
+  });
+}
+
+export function useCrmClientOrders(orderId: number, enabled: boolean) {
+  return useQuery<CrmClientOrdersResponse>({
+    queryKey: ["crm-client-orders", orderId] as const,
+    queryFn: () => api.getCrmClientOrders(orderId),
     enabled,
   });
 }

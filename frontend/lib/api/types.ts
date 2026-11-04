@@ -494,6 +494,28 @@ export const CrmDayOrderSchema = CrmOrderSchema.extend({
   client_order_count: z.number().nullable(),
 });
 
+export const CrmClientOrderHistorySchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  weight: z.string(),
+  filling: z.string(),
+  status: z.enum([
+    "unconfirmed",
+    "new",
+    "in_work",
+    "ready",
+    "client_approved",
+    "in_delivery",
+    "delivered",
+  ]),
+  total: z.string(),
+  image: ResponsiveImageSchema.nullable(),
+});
+
+export const CrmClientOrdersResponseSchema = z.object({
+  orders: z.array(CrmClientOrderHistorySchema),
+});
+
 export const CrmOrdersResponseSchema = z.object({
   date: z.string(),
   orders: z.array(CrmDayOrderSchema),
@@ -1156,6 +1178,8 @@ export type ScheduleFillBody = {
 export type CrmOrderImage = z.infer<typeof CrmOrderImageSchema>;
 export type CrmOrder = z.infer<typeof CrmOrderSchema>;
 export type CrmDayOrder = z.infer<typeof CrmDayOrderSchema>;
+export type CrmClientOrderHistory = z.infer<typeof CrmClientOrderHistorySchema>;
+export type CrmClientOrdersResponse = z.infer<typeof CrmClientOrdersResponseSchema>;
 export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 export type AuditEventsResponse = z.infer<typeof AuditEventsResponseSchema>;

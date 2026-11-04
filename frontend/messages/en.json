@@ -297,6 +297,7 @@
     "delivery": "Delivery",
     "pickup": "Pickup",
     "repeatClient": "Repeat client ({count})",
+    "clientOrdersTitle": "Repeat client · {count} orders",
     "contact": "Recipient",
     "gift": "Gift",
     "nickname": "Sender",

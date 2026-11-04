@@ -297,6 +297,7 @@
     "delivery": "Delivery",
     "pickup": "Pickup",
     "repeatClient": "განმეორებითი კლიენტი ({count})",
+    "clientOrdersTitle": "განმეორებითი კლიენტი · {count} შეკვეთა",
     "contact": "Recipient",
     "gift": "საჩუქარი",
     "nickname": "Sender",

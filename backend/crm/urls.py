@@ -24,6 +24,7 @@ from crm.views import (
     CrmSalaryDetailView,
     CrmSalaryPayoutView,
     CrmOrderClientMapView,
+    CrmOrderClientOrdersView,
     CrmOrderClientView,
     CrmOrderDetailView,
     CrmOrderEventsView,
@@ -128,6 +129,11 @@ urlpatterns = [
         name="crm-order-payment-link",
     ),
     path("crm/orders/<int:pk>/events/", CrmOrderEventsView.as_view(), name="crm-order-events"),
+    path(
+        "crm/orders/<int:pk>/client-orders/",
+        CrmOrderClientOrdersView.as_view(),
+        name="crm-order-client-orders",
+    ),
     path(
         "crm/resolve-yandex-address/",
         ResolveYandexAddressView.as_view(),

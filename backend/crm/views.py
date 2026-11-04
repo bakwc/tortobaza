@@ -32,7 +32,7 @@ from attendance.salary import (
     compute_salary,
 )
 from catalog.responsive_urls import detail_image
-from crm.analytics import client_order_counts
+from crm.analytics import client_order_counts, client_orders
 from crm.analytics import clients as analytics_clients
 from crm.analytics import employees as analytics_employees
 from crm.analytics import overview as analytics_overview
@@ -63,6 +63,7 @@ from crm.serializers import (
     CrmExpensesDaySerializer,
     CrmExpensesMonthSerializer,
     CrmMapOrderSerializer,
+    CrmClientOrderHistorySerializer,
     CrmOrderClientSerializer,
     CrmOrderEventSerializer,
     CrmOrderItemCostSerializer,
@@ -409,6 +410,27 @@ class CrmOrderPaymentLinkView(APIView):
             )
         order = with_order_relations(live_orders()).get(pk=order.pk)
         return Response(CrmOrderSerializer(order, context=order_detail_context(request)).data)
+
+
+class CrmOrderClientOrdersView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, CrmOrderWritePermission]
+
+    def get(self, request, pk: int):
+        get_object_or_404(live_orders(), pk=pk)
+        linked = client_orders(pk)
+        orders = {
+            order.id: order
+            for order in CrmOrder.objects.filter(id__in=[order.id for order in linked]).prefetch_related(
+                "images"
+            )
+        }
+        serializer = CrmClientOrderHistorySerializer(
+            [orders[order.id] for order in linked],
+            many=True,
+            context={"request": request},
+        )
+        return Response({"orders": serializer.data})
 
 
 class CrmOrderEventsView(APIView):

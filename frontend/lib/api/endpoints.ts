@@ -23,6 +23,7 @@ import {
   CategoryLandingSchema,
   CategorySchema,
   CrmClientOrderSchema,
+  CrmClientOrdersResponseSchema,
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
   AnalyticsClientsSchema,
@@ -111,6 +112,7 @@ import {
   type CrmMapOrdersResponse,
   type CrmMonthlyOrdersResponse,
   type CrmUnconfirmedOrdersResponse,
+  type CrmClientOrdersResponse,
   type CrmOrder,
   type AuditEventsResponse,
   type CrmOrderEvent,
@@ -965,6 +967,11 @@ export function endpoints(fetcher: Fetcher) {
         },
       });
       return parse(AuditEventsResponseSchema, raw);
+    },
+
+    async getCrmClientOrders(id: number): Promise<CrmClientOrdersResponse> {
+      const raw = await fetcher<unknown>(`/api/crm/orders/${id}/client-orders/`);
+      return parse(CrmClientOrdersResponseSchema, raw);
     },
 
     async getCrmOrderEvents(id: number): Promise<CrmOrderEvent[]> {

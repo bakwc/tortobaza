@@ -253,6 +253,52 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(month_counts[after_deleted.id], 1)
         self.assertIsNone(month_counts[unknown.id])
 
+    def test_client_orders_lists_linked_orders_newest_first(self):
+        day = date(2026, 8, 25)
+        earlier = date(2026, 8, 1)
+        middle = date(2026, 8, 10)
+
+        def make(when: date, contact: str, deleted: bool, filling: str) -> CrmOrder:
+            return CrmOrder.objects.create(
+                date=when,
+                contact=contact,
+                fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+                weight="1kg",
+                filling=filling,
+                cake_price=Decimal("80.00"),
+                prepayment=Decimal("0.00"),
+                is_paid=False,
+                payment_type=CrmOrder.PAYMENT_CASH,
+                deleted=deleted,
+            )
+
+        current = make(day, "+995555111222", False, "Vanilla")
+        older = make(earlier, "+995555111222", False, "Chocolate")
+        middle_order = make(middle, "+995555111222", False, "Berry")
+        make(earlier, "+995555111222", True, "Deleted")
+        other = make(day, "+995555999888", False, "Other")
+        unknown = make(day, "Ann", False, "Unknown")
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"/api/crm/orders/{current.id}/client-orders/")
+        self.assertEqual(response.status_code, 200)
+        rows = response.json()["orders"]
+        self.assertEqual([row["id"] for row in rows], [current.id, middle_order.id, older.id])
+        self.assertEqual(rows[0]["date"], "2026-08-25")
+        self.assertEqual(rows[0]["weight"], "1kg")
+        self.assertEqual(rows[0]["filling"], "Vanilla")
+        self.assertEqual(rows[0]["status"], CrmOrder.STATUS_NEW)
+        self.assertEqual(rows[0]["total"], "80.00")
+        self.assertIsNone(rows[0]["image"])
+
+        other_response = self.client.get(f"/api/crm/orders/{other.id}/client-orders/")
+        self.assertEqual(other_response.status_code, 200)
+        self.assertEqual([row["id"] for row in other_response.json()["orders"]], [other.id])
+
+        unknown_response = self.client.get(f"/api/crm/orders/{unknown.id}/client-orders/")
+        self.assertEqual(unknown_response.status_code, 200)
+        self.assertEqual(unknown_response.json()["orders"], [])
+
     def test_midnight_orders_sort_last(self):
         target_date = date(2026, 8, 25)
         midnight = CrmOrder.objects.create(
