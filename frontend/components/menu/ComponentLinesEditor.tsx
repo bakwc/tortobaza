@@ -16,7 +16,18 @@ export type ComponentLineDraft = {
   unit_cost: string;
 };
 
-export type ComponentOption = { value: string; label: string; unit: MenuUnit; ingredient: boolean };
+export type ComponentOption = {
+  value: string;
+  label: string;
+  unit: MenuUnit;
+  ingredient: boolean;
+  grams_per_unit: string | null;
+};
+
+export function defaultQuantityUnit(option: ComponentOption): MenuUnit {
+  if (option.ingredient && option.grams_per_unit !== null) return "g";
+  return option.unit;
+}
 
 let draftCounter = 0;
 
@@ -85,6 +96,7 @@ export function componentOptions(
       label: `${ingredientLabel}: ${row.name}`,
       unit: row.unit,
       ingredient: true,
+      grams_per_unit: row.grams_per_unit,
     }));
   if (semiFilter !== "none") {
     for (const row of semiProducts) {
@@ -95,6 +107,7 @@ export function componentOptions(
         label: `${semiLabel}: ${row.name}`,
         unit: row.unit,
         ingredient: false,
+        grams_per_unit: null,
       });
     }
   }
@@ -110,6 +123,7 @@ export function finishedGoodOptions(
     label: `${label}: ${row.name}`,
     unit: "pcs",
     ingredient: false,
+    grams_per_unit: null,
   }));
 }
 
@@ -145,7 +159,8 @@ export function ComponentLinesEditor({
                 const next = options.find((row) => row.value === component);
                 update(line.key, {
                   component,
-                  quantity_unit: next === undefined ? line.quantity_unit : next.unit,
+                  quantity_unit:
+                    next === undefined ? line.quantity_unit : chooseQuantityUnit ? defaultQuantityUnit(next) : next.unit,
                 });
               }}
               placeholder={t("chooseComponent")}

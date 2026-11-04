@@ -35,6 +35,7 @@ import {
   QuantityUnitControl,
   componentOptions,
   componentValue,
+  defaultQuantityUnit,
   draftFromLine,
   emptyLine,
   linesToBody,
@@ -175,7 +176,7 @@ function withDefaultCompositions(
       if (option === undefined) continue;
       compositions[modifier.id] = {
         scales_by_weight: true,
-        lines: [{ ...emptyLine(), component: option.value, quantity_unit: option.unit }],
+        lines: [{ ...emptyLine(), component: option.value, quantity_unit: defaultQuantityUnit(option) }],
       };
     }
   }
