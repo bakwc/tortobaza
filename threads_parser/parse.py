@@ -4,6 +4,7 @@ import json
 import os
 import random
 import socket
+import ssl
 import sys
 import time
 import urllib.parse
@@ -18,7 +19,10 @@ PROCESS_URL = "https://sweet-chill.ge/api/social/networks/threads/process-leads/
 POTENTIAL_URL = "https://sweet-chill.ge/api/social/networks/threads/potential-leads/"
 CONTEXT_URL = "https://sweet-chill.ge/api/social/messages/{}/context/"
 VERIFY_URL = "https://sweet-chill.ge/api/social/networks/threads/verify-leads/"
+PROFILE_URL = "https://www.threads.com/@{}"
+SSL_CONTEXT = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
 POST_LIMIT = 50
+PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
 POLL_S = 0.5
 POLL_DEADLINE_S = 30
@@ -91,6 +95,14 @@ EXTRACT_EXPRESSION = """(() => {
     });
   }
   return posts;
+})()"""
+PROFILE_EXPRESSION = """(() => {
+  const title = document.querySelector('meta[property="og:title"]');
+  const description = document.querySelector('meta[property="og:description"]');
+  return {
+    title: title ? title.getAttribute("content").trim() : "",
+    description: description ? description.getAttribute("content").trim() : "",
+  };
 })()"""
 
 
@@ -211,7 +223,7 @@ def get_json(url, token):
         headers={"Authorization": "Bearer " + token},
         method="GET",
     )
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, context=SSL_CONTEXT) as response:
         status = response.status
         raw = response.read()
     if status != 200:
@@ -226,7 +238,7 @@ def post_json(url, token, body):
         headers["Content-Type"] = "application/json"
         payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, context=SSL_CONTEXT) as response:
         status = response.status
         raw = response.read()
     return status, raw
@@ -259,11 +271,11 @@ def potential_leads(token):
     return get_json(POTENTIAL_URL, token)
 
 
-def send_context(token, message_id, context):
+def send_context(token, message_id, context, profile):
     status, _raw = post_json(
         CONTEXT_URL.format(message_id),
         token,
-        {"context": context},
+        {"context": context, "profile": profile},
     )
     if status != 204:
         raise RuntimeError(f"context {status}")
@@ -405,6 +417,89 @@ def collect_context(conn, buffer, counter, url):
     ]
 
 
+def profile_posts(found, username):
+    posts = []
+    for post in found:
+        if post["username"] != username:
+            continue
+        posts.append(
+            {
+                "text": post["text"],
+                "sent_at": post["datetime"],
+                "url": post["url"],
+            }
+        )
+        if len(posts) == PROFILE_POST_LIMIT:
+            break
+    return posts
+
+
+def read_profile(conn, buffer, counter, tab_id):
+    result = call(
+        conn,
+        buffer,
+        counter,
+        "tabs.evaluate",
+        {
+            "tabId": tab_id,
+            "expression": PROFILE_EXPRESSION,
+            "timeoutMs": TIMEOUT_MS,
+        },
+    )
+    return result["value"]
+
+
+def collect_profile(conn, buffer, counter, username):
+    url = PROFILE_URL.format(username)
+    log(f"профиль {url}")
+    created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
+    tab_id = created["id"]
+    deadline = time.monotonic() + POLL_DEADLINE_S
+    count = 0
+    while count == 0:
+        if time.monotonic() >= deadline:
+            log("постов нет")
+            profile = read_profile(conn, buffer, counter, tab_id)
+            close_tab(conn, buffer, counter, tab_id)
+            return {
+                "title": profile["title"],
+                "description": profile["description"],
+                "posts": [],
+            }
+        result = call(
+            conn,
+            buffer,
+            counter,
+            "tabs.evaluate",
+            {
+                "tabId": tab_id,
+                "expression": COUNT_EXPRESSION,
+                "timeoutMs": TIMEOUT_MS,
+            },
+        )
+        count = result["value"]
+        if count == 0:
+            time.sleep(POLL_S)
+    profile = read_profile(conn, buffer, counter, tab_id)
+    result = call(
+        conn,
+        buffer,
+        counter,
+        "tabs.evaluate",
+        {
+            "tabId": tab_id,
+            "expression": EXTRACT_EXPRESSION,
+            "timeoutMs": TIMEOUT_MS,
+        },
+    )
+    close_tab(conn, buffer, counter, tab_id)
+    return {
+        "title": profile["title"],
+        "description": profile["description"],
+        "posts": profile_posts(result["value"], username),
+    }
+
+
 def close_tab(conn, buffer, counter, tab_id):
     call(conn, buffer, counter, "tabs.close", {"tabId": tab_id})
     log(f"вкладка закрыта {tab_id}")
@@ -434,7 +529,8 @@ def main():
         process_leads(token)
         for lead in potential_leads(token):
             context = collect_context(conn, buffer, counter, lead["url"])
-            send_context(token, lead["id"], context)
+            profile = collect_profile(conn, buffer, counter, lead["sender_username"])
+            send_context(token, lead["id"], context, profile)
             time.sleep(random.uniform(PAUSE_MIN, PAUSE_MAX))
         verify_leads(token)
         pause = random.uniform(600, 780)

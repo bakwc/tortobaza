@@ -151,6 +151,17 @@ class ClassifyTelegramLeadsTests(TestCase):
                     "url": target,
                 },
             ],
+            profile={
+                "title": "Cakes (@cakes)",
+                "description": "Владивосток",
+                "posts": [
+                    {
+                        "text": "доставка по Владивостоку",
+                        "sent_at": "2026-11-03T08:00:00Z",
+                        "url": "https://www.threads.com/@cakes/post/old",
+                    }
+                ],
+            },
         )
         SocialMessage.objects.create(
             channel=threads,
@@ -166,9 +177,13 @@ class ClassifyTelegramLeadsTests(TestCase):
         openai_cls.return_value.responses.parse.assert_called_once()
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertIn("[target]", call["instructions"])
+        self.assertIn("explicit sign the author is in Batumi", call["instructions"])
         self.assertIn("Post location: Vladivostok", call["input"])
         self.assertIn("@cakes [target]", call["input"])
         self.assertIn("Девушки Владивостока", call["input"])
+        self.assertIn("=== Профиль пользователя ===", call["input"])
+        self.assertIn("=== Последние сообщения пользователя ===", call["input"])
+        self.assertIn("доставка по Владивостоку", call["input"])
         row.refresh_from_db()
         self.assertIs(row.lead, False)
 

@@ -1119,8 +1119,21 @@ class SocialMessageContextItemSerializer(serializers.Serializer):
     url = serializers.CharField(max_length=2048)
 
 
+class SocialProfilePostSerializer(serializers.Serializer):
+    text = serializers.CharField(allow_blank=True)
+    sent_at = serializers.DateTimeField()
+    url = serializers.CharField(max_length=2048)
+
+
+class SocialProfileSerializer(serializers.Serializer):
+    title = serializers.CharField(allow_blank=True)
+    description = serializers.CharField(allow_blank=True)
+    posts = SocialProfilePostSerializer(many=True)
+
+
 class SocialMessageContextSerializer(serializers.Serializer):
     context = SocialMessageContextItemSerializer(many=True)
+    profile = SocialProfileSerializer()
 
 
 class SocialNetworkSerializer(serializers.ModelSerializer):

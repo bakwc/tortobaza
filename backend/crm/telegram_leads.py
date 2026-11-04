@@ -33,6 +33,12 @@ The user message is a thread of posts. The target post is marked with [target]. 
 
 Return is_lead false when the target post answers a question about another city or country, or about something unrelated to buying confectionery in Batumi. A reply that offers cakes only because someone asked what they could do for free, or that answers a request for another city, is not a lead."""
 
+LEAD_PROFILE_PROMPT = """
+
+The user message also contains the author's profile and their recent posts, under "=== Профиль пользователя ===" and "=== Последние сообщения пользователя ===".
+
+Decide the author's city from the post location, the post topic, the thread, the profile, and the recent posts. Return is_lead true only when there is an explicit sign the author is in Batumi. Return is_lead false when another city is indicated, including other cities in Georgia, or when the city cannot be determined."""
+
 
 class LeadVerdict(BaseModel):
     is_lead: bool
@@ -101,6 +107,17 @@ def _verify_input(message: SocialMessage) -> str:
         lines.append(str(post["sent_at"]))
         lines.append(post["url"])
         lines.append("")
+    profile = message.profile
+    lines.append("=== Профиль пользователя ===")
+    lines.append(profile["title"])
+    lines.append(profile["description"])
+    lines.append("")
+    lines.append("=== Последние сообщения пользователя ===")
+    for post in profile["posts"]:
+        lines.append(post["text"])
+        lines.append(str(post["sent_at"]))
+        lines.append(post["url"])
+        lines.append("")
     return "\n".join(lines).strip()
 
 
@@ -110,10 +127,11 @@ def verify_leads(network_slug: str) -> None:
         potential_lead=True,
         lead__isnull=True,
         context__isnull=False,
+        profile__isnull=False,
     ).order_by("id")
     if not pending.exists():
         return
-    instructions = LEAD_PROMPT + LEAD_GEO_PROMPT + LEAD_CONTEXT_PROMPT
+    instructions = LEAD_PROMPT + LEAD_GEO_PROMPT + LEAD_CONTEXT_PROMPT + LEAD_PROFILE_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
     for message in pending:
         message.lead = _verdict(client, instructions, _verify_input(message))

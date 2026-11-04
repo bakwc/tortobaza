@@ -300,6 +300,7 @@ class SocialMessageContextView(APIView):
         message = get_object_or_404(SocialMessage, pk=pk)
         serializer = SocialMessageContextSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        profile = serializer.validated_data["profile"]
         message.context = [
             {
                 "username": item["username"],
@@ -309,7 +310,19 @@ class SocialMessageContextView(APIView):
             }
             for item in serializer.validated_data["context"]
         ]
-        message.save(update_fields=["context"])
+        message.profile = {
+            "title": profile["title"],
+            "description": profile["description"],
+            "posts": [
+                {
+                    "text": item["text"],
+                    "sent_at": item["sent_at"].isoformat(),
+                    "url": item["url"],
+                }
+                for item in profile["posts"]
+            ],
+        }
+        message.save(update_fields=["context", "profile"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

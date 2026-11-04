@@ -310,6 +310,13 @@ class SocialIngestTests(TestCase):
             format="json",
         )
         self.assertEqual(missing.status_code, 403)
+        without_profile = self.client.post(
+            f"/api/social/messages/{row.id}/context/",
+            {"context": []},
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(without_profile.status_code, 400)
         response = self.client.post(
             f"/api/social/messages/{row.id}/context/",
             {
@@ -320,7 +327,18 @@ class SocialIngestTests(TestCase):
                         "sent_at": "2026-11-04T08:00:00Z",
                         "url": "https://www.threads.com/@asker/post/parent",
                     }
-                ]
+                ],
+                "profile": {
+                    "title": "Cakes (@cakes)",
+                    "description": "торты в Батуми",
+                    "posts": [
+                        {
+                            "text": "бенто на завтра",
+                            "sent_at": "2026-11-03T08:00:00Z",
+                            "url": "https://www.threads.com/@cakes/post/old",
+                        }
+                    ],
+                },
             },
             format="json",
             HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
@@ -330,6 +348,10 @@ class SocialIngestTests(TestCase):
         self.assertEqual(row.context[0]["username"], "asker")
         self.assertEqual(row.context[0]["text"], "вопрос")
         self.assertEqual(row.context[0]["url"], "https://www.threads.com/@asker/post/parent")
+        self.assertEqual(row.profile["title"], "Cakes (@cakes)")
+        self.assertEqual(row.profile["description"], "торты в Батуми")
+        self.assertEqual(row.profile["posts"][0]["text"], "бенто на завтра")
+        self.assertEqual(row.profile["posts"][0]["url"], "https://www.threads.com/@cakes/post/old")
 
     @patch("crm.telegram_views.notify_recent_leads")
     @patch("crm.telegram_views.verify_leads")
