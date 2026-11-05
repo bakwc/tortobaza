@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Resource } from "@/lib/api/endpoints";
-import type { StockComponentBody } from "@/lib/api/types";
+import type { StockComponentBody, TechCardBody } from "@/lib/api/types";
 
 const STOCK_KEYS = [["menu"], ["inventory"]] as const;
 
@@ -67,6 +67,37 @@ export function useModifierGroups() {
 
 export function useTechCardCategories() {
   return useResource(["menu", "tech-card-categories"], api.menuTechCardCategories);
+}
+
+export function useTechCardList() {
+  const invalidate = useInvalidateStock();
+  const list = useQuery({
+    queryKey: ["menu", "tech-cards-lite"],
+    queryFn: () => api.menuTechCardsLite(),
+  });
+  const save = useMutation({
+    mutationFn: ({ id, body }: { id: number | null; body: TechCardBody }) =>
+      id === null ? api.menuTechCards.create(body) : api.menuTechCards.update(id, body),
+    onSuccess: invalidate,
+  });
+  const remove = useMutation({
+    mutationFn: (id: number) => api.menuTechCards.remove(id),
+    onSuccess: invalidate,
+  });
+  const assignCategory = useMutation({
+    mutationFn: ({ ids, category }: { ids: number[]; category: number | null }) =>
+      api.assignTechCardCategory(ids, category),
+    onSuccess: invalidate,
+  });
+  return { list, save, remove, assignCategory };
+}
+
+export function useTechCard(id: number | null) {
+  return useQuery({
+    queryKey: ["menu", "tech-card", id],
+    queryFn: () => api.menuTechCards.get(id as number),
+    enabled: id !== null,
+  });
 }
 
 export function useTechCards() {

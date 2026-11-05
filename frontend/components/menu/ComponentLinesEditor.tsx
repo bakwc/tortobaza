@@ -124,7 +124,10 @@ export function componentOptions(
   return options;
 }
 
-export function techCardOptions(cards: TechCard[], label: string): ComponentOption[] {
+export function techCardOptions(
+  cards: Pick<TechCard, "id" | "name" | "kind" | "is_active">[],
+  label: string,
+): ComponentOption[] {
   return cards
     .filter((row) => row.is_active)
     .map((row) => ({

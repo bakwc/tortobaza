@@ -27,7 +27,8 @@ LIGHT_POST_LIMIT = 38
 PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
 SERVER_TIMEOUT_S = 30
-SERVER_RETRY_LIMIT = 3
+SERVER_RETRY_LIMIT = 30
+SERVER_RETRY_SLEEP_S = 20
 POLL_S = 0.5
 POLL_DEADLINE_S = 30
 SCROLL_MIN = 540
@@ -235,6 +236,14 @@ def read_http(request):
                 timeout=SERVER_TIMEOUT_S,
             ) as response:
                 return response.status, response.read()
+        except urllib.error.HTTPError as error:
+            if error.code != 500 or attempt == SERVER_RETRY_LIMIT:
+                raise
+            error.close()
+            attempt += 1
+            log(f"500 {request.full_url} повтор {attempt}")
+            time.sleep(SERVER_RETRY_SLEEP_S)
+            continue
         except urllib.error.URLError as error:
             if not isinstance(error.reason, TimeoutError) or attempt == SERVER_RETRY_LIMIT:
                 raise

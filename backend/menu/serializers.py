@@ -496,6 +496,35 @@ class TechCardCategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "position"]
 
 
+class TechCardListItemSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
+    components_count = serializers.IntegerField(read_only=True)
+    sections_count = serializers.IntegerField(read_only=True)
+    groups_count = serializers.IntegerField(read_only=True)
+    images = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TechCard
+        fields = [
+            "id",
+            "name",
+            "category",
+            "category_name",
+            "kind",
+            "basis_weight_kg",
+            "basis_quantity",
+            "sale_price",
+            "is_active",
+            "images",
+            "components_count",
+            "sections_count",
+            "groups_count",
+        ]
+
+    def get_images(self, instance: TechCard) -> list[dict]:
+        return menu_image_rows(instance.images.all(), self.context["request"])
+
+
 class TechCardSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
     lines = RecipeLineSerializer(many=True, write_only=True)

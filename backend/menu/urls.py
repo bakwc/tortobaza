@@ -24,6 +24,7 @@ from menu.views import (
     TechCardDetailView,
     TechCardImageCreateView,
     TechCardImageDeleteView,
+    TechCardListLiteView,
     TechCardListView,
 )
 
@@ -45,6 +46,7 @@ urlpatterns = [
     path("menu/tech-card-categories/", TechCardCategoryListView.as_view()),
     path("menu/tech-card-categories/<int:pk>/", TechCardCategoryDetailView.as_view()),
     path("menu/tech-cards/", TechCardListView.as_view()),
+    path("menu/tech-cards/lite/", TechCardListLiteView.as_view()),
     path("menu/tech-cards/assign-category/", AssignTechCardCategoryView.as_view()),
     path("menu/tech-cards/<int:pk>/", TechCardDetailView.as_view()),
     path("menu/tech-cards/<int:pk>/cost/", TechCardCostView.as_view()),

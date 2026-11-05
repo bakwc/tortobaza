@@ -1,5 +1,6 @@
 from django.contrib.admin.utils import NestedObjects
 from django.db import router, transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -37,6 +38,7 @@ from menu.serializers import (
     menu_image_rows,
     TechCardCategorySerializer,
     TechCardCostQuerySerializer,
+    TechCardListItemSerializer,
     TechCardSerializer,
 )
 
@@ -240,6 +242,24 @@ class TechCardCategoryDetailView(MenuDetailView):
 
     def get_queryset(self):
         return TechCardCategory.objects.all()
+
+
+class TechCardListLiteView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    def get(self, request):
+        queryset = (
+            TechCard.objects.select_related("category")
+            .prefetch_related("images")
+            .annotate(
+                components_count=Count("lines", distinct=True),
+                sections_count=Count("sections", distinct=True),
+                groups_count=Count("modifier_groups", distinct=True),
+            )
+        )
+        serializer = TechCardListItemSerializer(queryset, many=True, context=serializer_context(request))
+        return Response(serializer.data)
 
 
 class TechCardListView(MenuListView):

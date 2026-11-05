@@ -64,11 +64,12 @@ import {
   useMissingModifierLines,
   useModifierGroups,
   useSemiProducts,
+  useTechCard,
   useTechCardCategories,
   useTechCardImages,
-  useTechCards,
+  useTechCardList,
 } from "@/hooks/useStock";
-import type { ModifierGroup, TechCard } from "@/lib/api/types";
+import type { ModifierGroup, TechCard, TechCardListItem } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
@@ -207,15 +208,13 @@ function TechCardRow({
   row,
   basis,
   missing,
-  canSeeCosts,
   selecting,
   selected,
   onOpen,
 }: {
-  row: TechCard;
+  row: TechCardListItem;
   basis: string;
   missing: number;
-  canSeeCosts: boolean;
   selecting: boolean;
   selected: boolean;
   onOpen: () => void;
@@ -283,48 +282,38 @@ function TechCardRow({
         <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[var(--muted-2)]">
           <span className="flex items-center gap-1">
             <Layers className="h-3.5 w-3.5" />
-            {t("componentsCount", { count: componentsTotal(row) })}
+            {t("componentsCount", { count: row.components_count })}
           </span>
-          {row.sections.length > 0 ? (
+          {row.sections_count > 0 ? (
             <span className="flex items-center gap-1">
               <BookOpen className="h-3.5 w-3.5" />
-              {t("sectionsCount", { count: row.sections.length })}
+              {t("sectionsCount", { count: row.sections_count })}
             </span>
           ) : null}
-          {row.modifier_groups.some((link) => !link.is_global) ? (
+          {row.groups_count > 0 ? (
             <span className="flex items-center gap-1">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              {t("groupsCount", { count: row.modifier_groups.filter((link) => !link.is_global).length })}
+              {t("groupsCount", { count: row.groups_count })}
             </span>
           ) : null}
         </div>
       </div>
-      <span className="hidden shrink-0 items-center gap-1 rounded-full bg-[var(--cream)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] sm:flex">
+      <span className="hidden w-28 shrink-0 items-center justify-center gap-1 rounded-full bg-[var(--cream)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] sm:flex">
         <KindIcon className="h-3.5 w-3.5 text-[var(--brand)]" />
         {basis}
       </span>
-      {row.sale_price !== null ? (
-        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatMoney(row.sale_price)}
-          <span className="block text-[11px] font-normal text-[var(--muted-2)]">
-            {t("salePricePerPiece", { count: 1 })}
-          </span>
-        </span>
-      ) : null}
-      {canSeeCosts && row.cost_min !== undefined && row.cost_max !== undefined ? (
-        <span className="shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
-          {formatCostRange(
-            displayedCost(row.cost_min, row.kind, row.basis_quantity),
-            displayedCost(row.cost_max, row.kind, row.basis_quantity),
-            (values) => t("costRange", values),
-          )}
-          {row.kind === "piece" ? (
+      <span className="w-28 shrink-0 text-right text-sm font-bold tabular-nums text-[var(--ink)]">
+        {row.sale_price !== null ? (
+          <>
+            {formatMoney(row.sale_price)}
             <span className="block text-[11px] font-normal text-[var(--muted-2)]">
-              {t("costPerPiece", { count: 1 })}
+              {t("salePricePerPiece", { count: 1 })}
             </span>
-          ) : null}
-        </span>
-      ) : null}
+          </>
+        ) : (
+          "—"
+        )}
+      </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)] transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--brand)]" />
     </button>
   );
@@ -335,7 +324,7 @@ export function TechCardsPanel() {
   const units = useTranslations("stock.units");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const techCards = useTechCards();
+  const techCards = useTechCardList();
   const categories = useTechCardCategories();
   const groups = useModifierGroups();
   const ingredients = useIngredients();
@@ -347,7 +336,7 @@ export function TechCardsPanel() {
   const cardParam = searchParams.get("card");
   const paramId = cardParam === null ? null : Number(cardParam);
   const [mode, setMode] = useState<"view" | "edit" | null>(null);
-  const [viewing, setViewing] = useState<TechCard | null>(null);
+  const [openedId, setOpenedId] = useState<number | null>(null);
   const [ignoreCardParam, setIgnoreCardParam] = useState(false);
   const [draft, setDraft] = useState<TechCardDraft | null>(null);
   const [groupToAdd, setGroupToAdd] = useState("");
@@ -358,29 +347,24 @@ export function TechCardsPanel() {
   const [selected, setSelected] = useState<number[]>([]);
   const [assignCategory, setAssignCategory] = useState("");
   const requestedId = ignoreCardParam
-    ? viewing === null
-      ? null
-      : viewing.id
-    : viewing !== null
-      ? viewing.id
+    ? openedId
+    : openedId !== null
+      ? openedId
       : paramId !== null && Number.isFinite(paramId)
         ? paramId
         : null;
-  const current =
-    requestedId === null
-      ? null
-      : ((techCards.list.data ?? []).find((row) => row.id === requestedId) ??
-        (viewing !== null && viewing.id === requestedId ? viewing : null));
+  const card = useTechCard(requestedId);
+  const current = card.data ?? null;
 
   useEffect(() => {
     if (ignoreCardParam && cardParam === null) setIgnoreCardParam(false);
   }, [ignoreCardParam, cardParam]);
 
-  const openView = (row: TechCard) => {
+  const openView = (row: TechCardListItem) => {
     techCards.save.reset();
     techCards.remove.reset();
     setIgnoreCardParam(false);
-    setViewing(row);
+    setOpenedId(row.id);
     setDraft(null);
     setMode("view");
     setGroupToAdd("");
@@ -390,7 +374,7 @@ export function TechCardsPanel() {
     techCards.save.reset();
     techCards.remove.reset();
     setIgnoreCardParam(true);
-    setViewing(null);
+    setOpenedId(null);
     setDraft(draftFrom(null));
     setMode("edit");
     setGroupToAdd("");
@@ -406,7 +390,7 @@ export function TechCardsPanel() {
     setMode(null);
     setDraft(null);
     setIgnoreCardParam(true);
-    setViewing(null);
+    setOpenedId(null);
     router.replace("/menu", { scroll: false });
   };
   const cancelEdit = () => {
@@ -469,7 +453,7 @@ export function TechCardsPanel() {
     .map((group) => ({ ...group, cards: group.cards.filter((row) => row.name.toLowerCase().includes(query)) }))
     .filter((group) => group.cards.length > 0);
   const activeCount = cards.filter((row) => row.is_active).length;
-  const basisLabel = (row: TechCard) =>
+  const basisLabel = (row: Pick<TechCardListItem, "kind" | "basis_weight_kg" | "basis_quantity">) =>
     row.kind === "weighted" && row.basis_weight_kg !== null
       ? t("basisKg", { weight: row.basis_weight_kg })
       : row.basis_quantity !== null
@@ -521,7 +505,7 @@ export function TechCardsPanel() {
       {
         onSuccess: (saved) => {
           setIgnoreCardParam(false);
-          setViewing(saved);
+          setOpenedId(saved.id);
           setDraft(null);
           setMode("view");
           router.replace(`/menu?card=${saved.id}`, { scroll: false });
@@ -645,7 +629,6 @@ export function TechCardsPanel() {
                       row={row}
                       basis={basisLabel(row)}
                       missing={missingByCard.get(row.id) ?? 0}
-                      canSeeCosts={canSeeCosts}
                       selecting={selecting}
                       selected={selected.includes(row.id)}
                       onOpen={() => (selecting ? toggleSelected(row.id) : openView(row))}
@@ -965,7 +948,7 @@ export function TechCardsPanel() {
 
           {current ? (
             <MenuImages
-              images={(techCards.list.data ?? []).find((row) => row.id === current.id)?.images ?? current.images}
+              images={current.images}
               pending={images.upload.isPending || images.remove.isPending}
               onUpload={(file) => images.upload.mutate({ id: current.id, file })}
               onDelete={(imageId) => images.remove.mutate({ id: current.id, imageId })}

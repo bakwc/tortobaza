@@ -1488,6 +1488,22 @@ export const TechCardCategorySchema = z.object({
   position: z.number(),
 });
 
+export const TechCardListItemSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  category: z.number().nullable(),
+  category_name: z.string().nullable(),
+  kind: z.enum(["weighted", "piece"]),
+  basis_weight_kg: z.string().nullable(),
+  basis_quantity: z.number().int().nullable(),
+  sale_price: z.string().nullable(),
+  is_active: z.boolean(),
+  images: z.array(MenuImageSchema),
+  components_count: z.number(),
+  sections_count: z.number(),
+  groups_count: z.number(),
+});
+
 export const TechCardSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -1540,6 +1556,7 @@ export type TechCardGroup = z.infer<typeof TechCardGroupSchema>;
 export type TechCardModifierLine = z.infer<typeof TechCardModifierLineSchema>;
 export type TechCardSection = z.infer<typeof TechCardSectionSchema>;
 export type TechCardCategory = z.infer<typeof TechCardCategorySchema>;
+export type TechCardListItem = z.infer<typeof TechCardListItemSchema>;
 export type TechCard = z.infer<typeof TechCardSchema>;
 export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
 export type CatalogOption = z.infer<typeof CatalogOptionSchema>;

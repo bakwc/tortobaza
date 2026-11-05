@@ -171,6 +171,7 @@ import {
   SupplyTransactionSchema,
   TechCardCategorySchema,
   TechCardCostSchema,
+  TechCardListItemSchema,
   TechCardSchema,
   WriteOffReasonSchema,
   WriteOffSchema,
@@ -208,6 +209,7 @@ import {
   type SupplyTransaction,
   type TechCard,
   type TechCardBody,
+  type TechCardListItem,
   type TechCardCategory,
   type TechCardCategoryBody,
   type WriteOff,
@@ -303,6 +305,10 @@ export function endpoints(fetcher: Fetcher) {
       TechCardCategorySchema,
     ),
     menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    async menuTechCardsLite(): Promise<TechCardListItem[]> {
+      const raw = await fetcher<unknown>("/api/menu/tech-cards/lite/");
+      return parse(z.array(TechCardListItemSchema), raw);
+    },
     assignTechCardCategory(ids: number[], category: number | null): Promise<void> {
       return fetcher<void>("/api/menu/tech-cards/assign-category/", {
         method: "POST",
