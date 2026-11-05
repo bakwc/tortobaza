@@ -1,4 +1,7 @@
 from collections import defaultdict
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -21,6 +24,26 @@ Needs = dict[Component, Decimal]
 _HUNDRED = Decimal("100")
 _ONE = Decimal("1")
 _CENT = Decimal("0.01")
+
+_query_cache: ContextVar[dict | None] = ContextVar("menu_recipe_query_cache", default=None)
+
+
+@contextmanager
+def recipe_query_cache() -> Iterator[None]:
+    token = _query_cache.set({})
+    try:
+        yield
+    finally:
+        _query_cache.reset(token)
+
+
+def _cached(key: tuple, load: Callable[[], list]) -> list:
+    cache = _query_cache.get()
+    if cache is None:
+        return load()
+    if key not in cache:
+        cache[key] = load()
+    return cache[key]
 
 
 def gross_quantity(quantity: Decimal, loss_percent: Decimal) -> Decimal:
@@ -60,7 +83,17 @@ def _merge(target: Needs, source: Needs) -> None:
 
 
 def _semi_lines(semi_product: SemiProduct):
-    return semi_product.lines.select_related("ingredient", "semi_product")
+    return _cached(
+        ("semi_lines", semi_product.pk),
+        lambda: list(semi_product.lines.select_related("ingredient", "semi_product")),
+    )
+
+
+def _tech_card_lines(tech_card: TechCard):
+    return _cached(
+        ("tech_card_lines", tech_card.pk),
+        lambda: list(tech_card.lines.select_related("ingredient", "semi_product")),
+    )
 
 
 def _explode(component: Component, quantity: Decimal, needs: Needs, path: frozenset[int]) -> None:
@@ -265,7 +298,7 @@ def expand_order_item(
         else:
             weight_factor = _ONE
             line_factor = item_quantity / Decimal(tech_card.basis_quantity)
-        for line in tech_card.lines.select_related("ingredient", "semi_product"):
+        for line in _tech_card_lines(tech_card):
             _explode(
                 line.component,
                 line_component_quantity(line) * line_factor,

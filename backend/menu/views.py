@@ -21,7 +21,7 @@ from menu.models import (
     TechCardCategory,
     TechCardImage,
 )
-from menu.recipes import missing_modifier_compositions, tech_card_cost
+from menu.recipes import missing_modifier_compositions, recipe_query_cache, tech_card_cost
 from menu.serializers import (
     CatalogOptionSerializer,
     AssignIngredientCategorySerializer,
@@ -248,6 +248,10 @@ class TechCardListView(MenuListView):
 
     def get_queryset(self):
         return TechCard.objects.select_related("category").prefetch_related("images")
+
+    def get(self, request):
+        with recipe_query_cache():
+            return super().get(request)
 
 
 class TechCardDetailView(MenuDetailView):
