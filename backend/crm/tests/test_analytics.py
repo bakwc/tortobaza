@@ -237,6 +237,14 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(july["return_orders"], 1)
         self.assertEqual(july["return_revenue"], "50.00")
 
+    def test_phone_label_does_not_merge_different_phones(self):
+        _order(date=date(2026, 9, 6), contact="Номер телефона: +995 593 514 288", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 11, 5), contact="Номер телефона 557213780", cake_price=Decimal("20.00"))
+        report = clients()
+        self.assertEqual(report["unknown_orders"], 0)
+        self.assertEqual(report["clients"], 2)
+        self.assertEqual(report["repeat_clients"], 0)
+
     def test_same_nickname_without_phone_is_one_client(self):
         _order(date=date(2026, 6, 1), contact="-", nickname="oxxrana", cake_price=Decimal("10.00"))
         _order(date=date(2026, 7, 1), contact="-", nickname="Oxxrana", cake_price=Decimal("20.00"))

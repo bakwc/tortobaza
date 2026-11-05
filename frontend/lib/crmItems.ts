@@ -160,18 +160,48 @@ function roundCents(value: number): string {
   return (Math.round(value * 100) / 100).toFixed(2);
 }
 
+function nestedModifierSale(item: CrmItemDraft, card: TechCard, techCards: TechCard[], quantity: number): number {
+  let weightFactor = 1;
+  if (card.kind === "weighted") {
+    const weight = decimalOrNull(item.weight_kg);
+    if (weight === null || card.basis_weight_kg === null) return 0;
+    weightFactor = Number(weight) / Number(card.basis_weight_kg);
+  }
+  let extra = 0;
+  for (const row of item.modifiers) {
+    const modifierQuantity = Number(row.quantity || "1");
+    for (const line of card.modifier_lines) {
+      if (line.modifier !== row.modifier || line.nested_tech_card === null) continue;
+      const nested = findCard(techCards, line.nested_tech_card);
+      if (nested === undefined || nested.sale_price === null) continue;
+      let factor = modifierQuantity * quantity;
+      if (line.scales_by_weight) factor *= weightFactor;
+      const net = Number(line.quantity) * factor;
+      const sale = Number(nested.sale_price);
+      if (nested.kind === "weighted") {
+        if (nested.basis_weight_kg === null) continue;
+        extra += (sale * (net / 1000)) / Number(nested.basis_weight_kg);
+      } else {
+        extra += sale * net;
+      }
+    }
+  }
+  return extra;
+}
+
 export function crmItemSalePrice(item: CrmItemDraft, techCards: TechCard[]): string | null {
   const card = findCard(techCards, item.tech_card);
   if (card === undefined || card.sale_price === null) return null;
   const quantity = Number(item.quantity);
   if (!Number.isInteger(quantity) || quantity < 1) return null;
   const sale = Number(card.sale_price);
+  const extra = nestedModifierSale(item, card, techCards, quantity);
   if (card.kind === "weighted") {
     const weight = decimalOrNull(item.weight_kg);
     if (weight === null || card.basis_weight_kg === null) return null;
-    return roundCents((sale * Number(weight) * quantity) / Number(card.basis_weight_kg));
+    return roundCents((sale * Number(weight) * quantity) / Number(card.basis_weight_kg) + extra);
   }
-  return roundCents(sale * quantity);
+  return roundCents(sale * quantity + extra);
 }
 
 export function crmItemsPriceSum(items: CrmItemDraft[], techCards: TechCard[]): number {

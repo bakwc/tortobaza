@@ -7,6 +7,7 @@ import socket
 import ssl
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -25,6 +26,8 @@ POST_LIMIT = 50
 LIGHT_POST_LIMIT = 38
 PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
+SERVER_TIMEOUT_S = 30
+SERVER_RETRY_LIMIT = 3
 POLL_S = 0.5
 POLL_DEADLINE_S = 30
 SCROLL_MIN = 540
@@ -222,15 +225,33 @@ def message_body(post, query):
     }
 
 
+def read_http(request):
+    attempt = 0
+    while True:
+        try:
+            with urllib.request.urlopen(
+                request,
+                context=SSL_CONTEXT,
+                timeout=SERVER_TIMEOUT_S,
+            ) as response:
+                return response.status, response.read()
+        except urllib.error.URLError as error:
+            if not isinstance(error.reason, TimeoutError) or attempt == SERVER_RETRY_LIMIT:
+                raise
+        except TimeoutError:
+            if attempt == SERVER_RETRY_LIMIT:
+                raise
+        attempt += 1
+        log(f"timeout {request.full_url} повтор {attempt}")
+
+
 def get_json(url, token):
     request = urllib.request.Request(
         url,
         headers={"Authorization": "Bearer " + token},
         method="GET",
     )
-    with urllib.request.urlopen(request, context=SSL_CONTEXT) as response:
-        status = response.status
-        raw = response.read()
+    status, raw = read_http(request)
     if status != 200:
         raise RuntimeError(f"get {status}")
     return json.loads(raw.decode("utf-8"))
@@ -243,10 +264,7 @@ def post_json(url, token, body):
         headers["Content-Type"] = "application/json"
         payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
     request = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-    with urllib.request.urlopen(request, context=SSL_CONTEXT) as response:
-        status = response.status
-        raw = response.read()
-    return status, raw
+    return read_http(request)
 
 
 def send_batch(token, items):
@@ -295,10 +313,28 @@ def verify_leads(token):
     log(f"verify-leads {status}")
 
 
+def load_tab(conn, buffer, counter, url, label, run):
+    while True:
+        log(f"{label} {url}")
+        created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
+        tab_id = created["id"]
+        try:
+            return run(tab_id)
+        except RuntimeError as error:
+            if str(error) != "timeout":
+                raise
+            close_tab(conn, buffer, counter, tab_id)
+            log(f"таймаут {url}")
+
+
 def collect(conn, buffer, counter, url, limit):
-    log(f"вкладка {url}")
-    created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
-    tab_id = created["id"]
+    def run(tab_id):
+        return collect_posts(conn, buffer, counter, tab_id, limit)
+
+    return load_tab(conn, buffer, counter, url, "вкладка", run)
+
+
+def collect_posts(conn, buffer, counter, tab_id, limit):
     deadline = time.monotonic() + POLL_DEADLINE_S
     count = 0
     while count == 0:
@@ -375,16 +411,28 @@ def collect(conn, buffer, counter, url, limit):
 
 
 def collect_context(conn, buffer, counter, url):
-    log(f"контекст {url}")
-    created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
-    tab_id = created["id"]
-    deadline = time.monotonic() + POLL_DEADLINE_S
-    count = 0
-    while count == 0:
-        if time.monotonic() >= deadline:
-            log("постов нет")
-            close_tab(conn, buffer, counter, tab_id)
-            return []
+    def run(tab_id):
+        deadline = time.monotonic() + POLL_DEADLINE_S
+        count = 0
+        while count == 0:
+            if time.monotonic() >= deadline:
+                log("постов нет")
+                close_tab(conn, buffer, counter, tab_id)
+                return []
+            result = call(
+                conn,
+                buffer,
+                counter,
+                "tabs.evaluate",
+                {
+                    "tabId": tab_id,
+                    "expression": COUNT_EXPRESSION,
+                    "timeoutMs": TIMEOUT_MS,
+                },
+            )
+            count = result["value"]
+            if count == 0:
+                time.sleep(POLL_S)
         result = call(
             conn,
             buffer,
@@ -392,34 +440,22 @@ def collect_context(conn, buffer, counter, url):
             "tabs.evaluate",
             {
                 "tabId": tab_id,
-                "expression": COUNT_EXPRESSION,
+                "expression": EXTRACT_EXPRESSION,
                 "timeoutMs": TIMEOUT_MS,
             },
         )
-        count = result["value"]
-        if count == 0:
-            time.sleep(POLL_S)
-    result = call(
-        conn,
-        buffer,
-        counter,
-        "tabs.evaluate",
-        {
-            "tabId": tab_id,
-            "expression": EXTRACT_EXPRESSION,
-            "timeoutMs": TIMEOUT_MS,
-        },
-    )
-    close_tab(conn, buffer, counter, tab_id)
-    return [
-        {
-            "username": post["username"],
-            "text": post["text"],
-            "sent_at": post["datetime"],
-            "url": post["url"],
-        }
-        for post in result["value"]
-    ]
+        close_tab(conn, buffer, counter, tab_id)
+        return [
+            {
+                "username": post["username"],
+                "text": post["text"],
+                "sent_at": post["datetime"],
+                "url": post["url"],
+            }
+            for post in result["value"]
+        ]
+
+    return load_tab(conn, buffer, counter, url, "контекст", run)
 
 
 def profile_posts(found, username):
@@ -456,21 +492,35 @@ def read_profile(conn, buffer, counter, tab_id):
 
 def collect_profile(conn, buffer, counter, username):
     url = PROFILE_URL.format(username)
-    log(f"профиль {url}")
-    created = call(conn, buffer, counter, "tabs.create", {"url": url, "active": True})
-    tab_id = created["id"]
-    deadline = time.monotonic() + POLL_DEADLINE_S
-    count = 0
-    while count == 0:
-        if time.monotonic() >= deadline:
-            log("постов нет")
-            profile = read_profile(conn, buffer, counter, tab_id)
-            close_tab(conn, buffer, counter, tab_id)
-            return {
-                "title": profile["title"],
-                "description": profile["description"],
-                "posts": [],
-            }
+
+    def run(tab_id):
+        deadline = time.monotonic() + POLL_DEADLINE_S
+        count = 0
+        while count == 0:
+            if time.monotonic() >= deadline:
+                log("постов нет")
+                profile = read_profile(conn, buffer, counter, tab_id)
+                close_tab(conn, buffer, counter, tab_id)
+                return {
+                    "title": profile["title"],
+                    "description": profile["description"],
+                    "posts": [],
+                }
+            result = call(
+                conn,
+                buffer,
+                counter,
+                "tabs.evaluate",
+                {
+                    "tabId": tab_id,
+                    "expression": COUNT_EXPRESSION,
+                    "timeoutMs": TIMEOUT_MS,
+                },
+            )
+            count = result["value"]
+            if count == 0:
+                time.sleep(POLL_S)
+        profile = read_profile(conn, buffer, counter, tab_id)
         result = call(
             conn,
             buffer,
@@ -478,31 +528,18 @@ def collect_profile(conn, buffer, counter, username):
             "tabs.evaluate",
             {
                 "tabId": tab_id,
-                "expression": COUNT_EXPRESSION,
+                "expression": EXTRACT_EXPRESSION,
                 "timeoutMs": TIMEOUT_MS,
             },
         )
-        count = result["value"]
-        if count == 0:
-            time.sleep(POLL_S)
-    profile = read_profile(conn, buffer, counter, tab_id)
-    result = call(
-        conn,
-        buffer,
-        counter,
-        "tabs.evaluate",
-        {
-            "tabId": tab_id,
-            "expression": EXTRACT_EXPRESSION,
-            "timeoutMs": TIMEOUT_MS,
-        },
-    )
-    close_tab(conn, buffer, counter, tab_id)
-    return {
-        "title": profile["title"],
-        "description": profile["description"],
-        "posts": profile_posts(result["value"], username),
-    }
+        close_tab(conn, buffer, counter, tab_id)
+        return {
+            "title": profile["title"],
+            "description": profile["description"],
+            "posts": profile_posts(result["value"], username),
+        }
+
+    return load_tab(conn, buffer, counter, url, "профиль", run)
 
 
 def close_tab(conn, buffer, counter, tab_id):

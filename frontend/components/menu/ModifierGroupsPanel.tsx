@@ -10,12 +10,13 @@ import {
   componentRef,
   componentValue,
   newDraftKey,
+  techCardOptions,
 } from "@/components/menu/ComponentLinesEditor";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
-import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts } from "@/hooks/useStock";
+import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import type { Modifier, ModifierGroup } from "@/lib/api/types";
 
 type ModifierDraft = {
@@ -28,7 +29,9 @@ type ModifierDraft = {
 };
 
 function modifierComponent(modifier: Modifier): string {
-  if (modifier.ingredient === null && modifier.semi_product === null) return "";
+  if (modifier.ingredient === null && modifier.semi_product === null && modifier.nested_tech_card === null) {
+    return "";
+  }
   return componentValue(modifier);
 }
 
@@ -79,13 +82,17 @@ export function ModifierGroupsPanel() {
   const catalogOptions = useCatalogOptions();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
-  const components = componentOptions(
-    ingredients.list.data ?? [],
-    semiProducts.list.data ?? [],
-    "all",
-    t("ingredient"),
-    t("semiProduct"),
-  );
+  const techCards = useTechCards();
+  const components = [
+    ...componentOptions(
+      ingredients.list.data ?? [],
+      semiProducts.list.data ?? [],
+      "all",
+      t("ingredient"),
+      t("semiProduct"),
+    ),
+    ...techCardOptions(techCards.list.data ?? [], t("techCard")),
+  ];
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
 
@@ -173,7 +180,7 @@ export function ModifierGroupsPanel() {
                     name: row.name,
                     catalog_option: row.catalog_option,
                     ...(row.component === ""
-                      ? { ingredient: null, semi_product: null }
+                      ? { ingredient: null, semi_product: null, nested_tech_card: null }
                       : componentRef(row.component)),
                     is_active: row.is_active,
                   })),

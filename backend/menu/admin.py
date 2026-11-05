@@ -110,9 +110,10 @@ class TechCardModifierGroupInline(admin.TabularInline):
 
 class TechCardModifierLineInline(admin.TabularInline):
     model = TechCardModifierLine
+    fk_name = "tech_card"
     extra = 1
-    fields = ["modifier", "ingredient", "semi_product", "quantity", "quantity_unit", "loss_percent", "scales_by_weight", "position"]
-    autocomplete_fields = ["modifier", "ingredient", "semi_product"]
+    fields = ["modifier", "ingredient", "semi_product", "nested_tech_card", "quantity", "quantity_unit", "loss_percent", "scales_by_weight", "position"]
+    autocomplete_fields = ["modifier", "ingredient", "semi_product", "nested_tech_card"]
 
 
 @admin.register(TechCardCategory)

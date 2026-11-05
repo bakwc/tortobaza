@@ -1430,6 +1430,7 @@ export const ModifierSchema = z.object({
   catalog_option_label: z.string().nullable(),
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
+  nested_tech_card: z.number().nullable(),
   is_active: z.boolean(),
 });
 
@@ -1459,6 +1460,7 @@ export const TechCardGroupSchema = z.object({
 export const TechCardModifierLineSchema = RecipeLineSchema.extend({
   modifier: z.number(),
   scales_by_weight: z.boolean(),
+  nested_tech_card: z.number().nullable(),
 });
 
 export const TechCardSectionSchema = z.object({
@@ -1581,6 +1583,7 @@ export type ModifierGroupBody = {
     catalog_option: number | null;
     ingredient: number | null;
     semi_product: number | null;
+    nested_tech_card: number | null;
     is_active: boolean;
   }[];
 };
@@ -1599,7 +1602,11 @@ export type TechCardBody = {
   lines: RecipeLineBody[];
   sections: { name: string; method: string; lines: RecipeLineBody[] }[];
   modifier_groups: { group: number; is_required: boolean | null }[];
-  modifier_lines: (RecipeLineBody & { modifier: number; scales_by_weight: boolean })[];
+  modifier_lines: (RecipeLineBody & {
+    modifier: number;
+    scales_by_weight: boolean;
+    nested_tech_card: number | null;
+  })[];
 };
 
 export type CrmOrderItemCostBody = {

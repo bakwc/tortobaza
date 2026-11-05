@@ -17,6 +17,18 @@ from crm.phone import extract_phones
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
+_LABEL_WORDS = {
+    "номер",
+    "телефон",
+    "телефона",
+    "получатель",
+    "получателя",
+    "мессенджер",
+    "мессенджеры",
+    "ватсап",
+    "вотсап",
+    "whatsapp",
+}
 _DISTINCTIVE_LENGTH = 10
 _NICKNAME_LENGTH = 4
 _TOP_LIMIT = 20
@@ -478,8 +490,10 @@ def order_phones(order: CrmOrder) -> list[str]:
 
 
 def name_key(value: str) -> str:
-    stripped = re.sub(r"\d+", "", value)
-    normalized = re.sub(r"[^a-zа-я0-9]+", "", stripped.lower().replace("ё", "е"))
+    lowered = value.lower().replace("ё", "е")
+    words = re.findall(r"[a-zа-я0-9]+", lowered)
+    kept = [word for word in words if not word.isdigit() and word not in _LABEL_WORDS]
+    normalized = re.sub(r"\d+", "", "".join(kept))
     if normalized in _GENERIC_NAMES or len(normalized) < _DISTINCTIVE_LENGTH:
         return ""
     return normalized

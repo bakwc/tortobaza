@@ -274,6 +274,14 @@ class Modifier(models.Model):
         blank=True,
         verbose_name=_("Default semi-product"),
     )
+    nested_tech_card = models.ForeignKey(
+        "TechCard",
+        related_name="default_for_modifiers",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Default tech card"),
+    )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
@@ -284,7 +292,28 @@ class Modifier(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["group", "name"], name="uniq_menu_modifier_group_name"),
             models.CheckConstraint(
-                condition=models.Q(ingredient__isnull=True) | models.Q(semi_product__isnull=True),
+                condition=(
+                    models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=False,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=False,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=False,
+                    )
+                ),
                 name="menu_modifier_one_default_component",
             ),
         ]
@@ -356,6 +385,12 @@ class TechCard(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def unit(self) -> str:
+        if self.kind == self.KIND_WEIGHTED:
+            return UNIT_GRAM
+        return UNIT_PIECE
 
 
 class TechCardImage(models.Model):
@@ -491,6 +526,14 @@ class TechCardModifierLine(ComponentRef):
         validators=LOSS_PERCENT_VALIDATORS,
         verbose_name=_("Loss percent"),
     )
+    nested_tech_card = models.ForeignKey(
+        TechCard,
+        related_name="nested_in_modifier_lines",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
+    )
     scales_by_weight = models.BooleanField(default=True, verbose_name=_("Scales by weight"))
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
 
@@ -498,3 +541,33 @@ class TechCardModifierLine(ComponentRef):
         ordering = ["position", "id"]
         verbose_name = _("Tech card modifier line")
         verbose_name_plural = _("Tech card modifier lines")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        ingredient__isnull=False,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=False,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=False,
+                    )
+                ),
+                name="%(app_label)s_%(class)s_one_component",
+            ),
+        ]
+
+    @property
+    def component(self) -> Ingredient | SemiProduct | TechCard:
+        if self.ingredient_id is not None:
+            return self.ingredient
+        if self.semi_product_id is not None:
+            return self.semi_product
+        return self.nested_tech_card

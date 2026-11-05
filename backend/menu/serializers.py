@@ -30,6 +30,7 @@ from menu.recipes import (
     stock_line_cost,
     tech_card_cost,
     tech_card_cost_range,
+    tech_card_cycle_errors,
 )
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
@@ -311,11 +312,15 @@ class ModifierInputSerializer(serializers.Serializer):
     catalog_option = serializers.PrimaryKeyRelatedField(queryset=Option.objects.all(), allow_null=True)
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
+    nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     is_active = serializers.BooleanField()
 
     def validate(self, attrs):
-        if attrs["ingredient"] is not None and attrs["semi_product"] is not None:
-            raise serializers.ValidationError("Pass ingredient or semi_product, not both.")
+        chosen = [attrs["ingredient"], attrs["semi_product"], attrs["nested_tech_card"]]
+        if sum(item is not None for item in chosen) > 1:
+            raise serializers.ValidationError(
+                "Pass at most one of ingredient, semi_product or nested_tech_card."
+            )
         return attrs
 
 
@@ -351,6 +356,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "catalog_option_label": option_label(modifier.catalog_option),
                 "ingredient": modifier.ingredient_id,
                 "semi_product": modifier.semi_product_id,
+                "nested_tech_card": modifier.nested_tech_card_id,
                 "is_active": modifier.is_active,
             }
             for modifier in instance.modifiers.select_related("catalog_option__group")
@@ -412,6 +418,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "catalog_option": row["catalog_option"],
                 "ingredient": row["ingredient"],
                 "semi_product": row["semi_product"],
+                "nested_tech_card": row["nested_tech_card"],
                 "is_active": row["is_active"],
                 "position": position,
             }
@@ -462,6 +469,21 @@ class TechCardGroupInputSerializer(serializers.Serializer):
 class TechCardModifierLineInputSerializer(RecipeLineSerializer):
     modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all())
     scales_by_weight = serializers.BooleanField()
+    nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
+
+    def validate(self, attrs):
+        nested = attrs["nested_tech_card"]
+        if nested is not None:
+            if attrs["ingredient"] is not None or attrs["semi_product"] is not None:
+                raise serializers.ValidationError(
+                    "Pass exactly one of ingredient, semi_product or nested_tech_card."
+                )
+            if attrs["quantity_unit"] != nested.unit:
+                raise serializers.ValidationError(
+                    {"quantity_unit": "Quantity unit cannot be converted to the component unit."}
+                )
+            return attrs
+        return super().validate(attrs)
 
 
 class TechCardCategorySerializer(serializers.ModelSerializer):
@@ -540,10 +562,13 @@ class TechCardSerializer(serializers.ModelSerializer):
             for link in instance.modifier_groups.select_related("group")
         ]
         modifier_lines = []
-        for line in instance.modifier_lines.select_related("ingredient", "semi_product", "modifier"):
+        for line in instance.modifier_lines.select_related(
+            "ingredient", "semi_product", "nested_tech_card", "modifier"
+        ):
             payload = recipe_line_payload(line, stock_line_cost(line) if costs else None)
             payload["modifier"] = line.modifier_id
             payload["scales_by_weight"] = line.scales_by_weight
+            payload["nested_tech_card"] = line.nested_tech_card_id
             modifier_lines.append(payload)
         data["modifier_lines"] = modifier_lines
         data["missing_modifiers"] = [modifier.pk for modifier in missing_modifier_compositions(instance)]
@@ -645,6 +670,9 @@ class TechCardSerializer(serializers.ModelSerializer):
             )
         for position, line in enumerate(children["modifier_lines"]):
             TechCardModifierLine.objects.create(tech_card=instance, position=position, **line)
+        errors = tech_card_cycle_errors(instance)
+        if errors:
+            raise serializers.ValidationError({"modifier_lines": errors})
 
 
 class TechCardCostQuerySerializer(serializers.Serializer):

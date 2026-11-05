@@ -40,6 +40,7 @@ import {
   emptyLine,
   linesToBody,
   newDraftKey,
+  techCardOptions,
   type ComponentLineDraft,
   type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
@@ -171,7 +172,9 @@ function withDefaultCompositions(
   for (const link of draft.groups) {
     for (const modifier of groups.find((group) => group.id === link.group)?.modifiers ?? []) {
       if (!modifier.is_active || compositions[modifier.id]?.lines.length) continue;
-      if (modifier.ingredient === null && modifier.semi_product === null) continue;
+      if (modifier.ingredient === null && modifier.semi_product === null && modifier.nested_tech_card === null) {
+        continue;
+      }
       const option = options.find((row) => row.value === componentValue(modifier));
       if (option === undefined) continue;
       compositions[modifier.id] = {
@@ -433,13 +436,16 @@ export function TechCardsPanel() {
     );
   };
 
-  const options = componentOptions(
-    ingredients.list.data ?? [],
-    semiProducts.list.data ?? [],
-    "all",
-    t("ingredient"),
-    t("semiProduct"),
-  );
+  const options = [
+    ...componentOptions(
+      ingredients.list.data ?? [],
+      semiProducts.list.data ?? [],
+      "all",
+      t("ingredient"),
+      t("semiProduct"),
+    ),
+    ...techCardOptions(techCards.list.data ?? [], t("techCard")),
+  ];
   const allGroups = groups.list.data ?? [];
   const missingByCard = new Map<number, number>();
   for (const row of missing.data ?? []) {
@@ -822,7 +828,10 @@ export function TechCardsPanel() {
                             return {
                               key: String(line.id),
                               name: line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`,
-                              href: componentHref(line.ingredient, line.semi_product),
+                              href:
+                                line.nested_tech_card !== null
+                                  ? `/menu?card=${line.nested_tech_card}`
+                                  : componentHref(line.ingredient, line.semi_product),
                               tag: null,
                               amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
                               loss: loss === "0" ? "—" : `${loss}%`,

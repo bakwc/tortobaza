@@ -30,7 +30,7 @@ from crm.models import (
 from crm.paypal_link import assign_crm_payment_link
 from crm.phone import links_for_stored
 from menu.models import Ingredient, Modifier, SemiProduct, TechCard
-from menu.recipes import order_cost, order_item_errors
+from menu.recipes import modifiers_sale_price, order_cost, order_item_errors
 from orders.email import schedule_order_confirmed_email
 
 
@@ -135,7 +135,12 @@ class CrmOrderItemLineInputSerializer(serializers.Serializer):
 _CENT = Decimal("0.01")
 
 
-def crm_item_sale_price(tech_card: TechCard, quantity: int, weight_kg: Decimal | None) -> Decimal:
+def crm_item_sale_price(
+    tech_card: TechCard,
+    quantity: int,
+    weight_kg: Decimal | None,
+    modifiers: list[tuple[Modifier, int]],
+) -> Decimal:
     sale_price = tech_card.sale_price
     if sale_price is None:
         raise serializers.ValidationError("Tech card has no sale price.")
@@ -143,6 +148,7 @@ def crm_item_sale_price(tech_card: TechCard, quantity: int, weight_kg: Decimal |
         amount = sale_price * weight_kg / tech_card.basis_weight_kg * quantity
     else:
         amount = sale_price * quantity
+    amount += modifiers_sale_price(tech_card, weight_kg, quantity, modifiers)
     return amount.quantize(_CENT)
 
 
@@ -169,7 +175,12 @@ class CrmOrderItemInputSerializer(serializers.Serializer):
             raise serializers.ValidationError(errors)
         tech_card = attrs["tech_card"]
         if tech_card is not None:
-            attrs["price"] = crm_item_sale_price(tech_card, attrs["quantity"], attrs["weight_kg"])
+            attrs["price"] = crm_item_sale_price(
+                tech_card,
+                attrs["quantity"],
+                attrs["weight_kg"],
+                [(row["modifier"], row["quantity"]) for row in attrs["modifiers"]],
+            )
         return attrs
 
 

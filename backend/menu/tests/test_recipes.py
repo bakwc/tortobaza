@@ -3,20 +3,26 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from rest_framework.exceptions import ValidationError as ApiValidationError
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
 from crm.models import CrmOrder, CrmOrderItemLine
+from crm.serializers import crm_item_sale_price
 from menu.models import (
     UNIT_GRAM,
     UNIT_MILLILITER,
+    UNIT_PIECE,
     Ingredient,
+    Modifier,
     SemiProduct,
     SemiProductLine,
+    TechCard,
     TechCardLine,
+    TechCardModifierGroup,
+    TechCardModifierLine,
     TechCardSection,
 )
-from menu.serializers import RecipeLineSerializer
 from menu.recipes import (
     component_quantity,
     expand_order,
@@ -28,6 +34,7 @@ from menu.recipes import (
     tech_card_cost_range,
     validate_order_item,
 )
+from menu.serializers import ModifierGroupSerializer, RecipeLineSerializer, TechCardSerializer
 from menu.tests.fixtures import MenuFixture, add_item, make_crm_order
 
 
@@ -434,3 +441,167 @@ class LineCostApiTests(TestCase):
         self.assertNotIn("cost", sponge_body)
         for line in sponge_body["lines"]:
             self.assertNotIn("cost", line)
+
+
+class NestedTechCardTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+
+    def _layer(self, sale_price: Decimal | None) -> TechCard:
+        layer = TechCard.objects.create(
+            name="Layer",
+            kind=TechCard.KIND_WEIGHTED,
+            basis_weight_kg=Decimal("1"),
+            sale_price=sale_price,
+        )
+        TechCardLine.objects.create(
+            tech_card=layer,
+            ingredient=self.menu.flour,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        section = TechCardSection.objects.create(tech_card=layer, name="Soak", method="", position=0)
+        TechCardLine.objects.create(
+            tech_card=layer,
+            section=section,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("50"),
+            quantity_unit=UNIT_GRAM,
+        )
+        return layer
+
+    def _attach(self, parent: TechCard, nested: TechCard, quantity: Decimal, unit: str, scales: bool) -> Modifier:
+        modifier = Modifier.objects.create(group=self.menu.extras, name=nested.name, nested_tech_card=nested)
+        TechCardModifierGroup.objects.create(tech_card=parent, group=self.menu.extras, position=0)
+        TechCardModifierLine.objects.create(
+            tech_card=parent,
+            modifier=modifier,
+            nested_tech_card=nested,
+            quantity=quantity,
+            quantity_unit=unit,
+            scales_by_weight=scales,
+        )
+        return modifier
+
+    def test_piece_nested_card_adds_base_needs_only(self):
+        topper = TechCard.objects.create(name="Topper", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        TechCardLine.objects.create(
+            tech_card=topper,
+            ingredient=self.menu.paper,
+            quantity=Decimal("1"),
+            quantity_unit=UNIT_PIECE,
+        )
+        TechCardModifierGroup.objects.create(tech_card=topper, group=self.menu.decor, position=0)
+        TechCardModifierLine.objects.create(
+            tech_card=topper,
+            modifier=self.menu.photo,
+            ingredient=self.menu.ink,
+            quantity=Decimal("5"),
+            quantity_unit=UNIT_MILLILITER,
+            scales_by_weight=False,
+        )
+        modifier = self._attach(self.menu.cake, topper, Decimal("2"), UNIT_PIECE, False)
+        needs = expand_order_item(self.menu.cake, Decimal("2"), 1, [(modifier, 3)], [])
+        self.assertEqual(needs[self.menu.flour], Decimal("600"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("400"))
+        self.assertEqual(needs[self.menu.cream], Decimal("600"))
+        self.assertEqual(needs[self.menu.paper], Decimal("6"))
+        self.assertNotIn(self.menu.ink, needs)
+        self.assertEqual(
+            tech_card_cost(self.menu.cake, [(modifier, 3)], Decimal("2")),
+            Decimal("29.00"),
+        )
+
+    def test_weighted_nested_card_scales_base_lines_and_sections(self):
+        layer = self._layer(Decimal("40.00"))
+        modifier = self._attach(self.menu.bento, layer, Decimal("250"), UNIT_GRAM, True)
+        needs = expand_order_item(self.menu.bento, None, 2, [(modifier, 1)], [])
+        self.assertEqual(needs[self.menu.flour], Decimal("250"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("25"))
+        low, high = tech_card_cost_range(self.menu.bento, None)
+        self.assertEqual(low, Decimal("1.00"))
+        self.assertEqual(high, Decimal("1.31"))
+
+    def test_sale_price_includes_nested_card_and_skips_missing_price(self):
+        layer = self._layer(Decimal("40.00"))
+        modifier = self._attach(self.menu.cake, layer, Decimal("250"), UNIT_GRAM, True)
+        self.menu.cake.sale_price = Decimal("60.00")
+        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)])
+        self.assertEqual(price, Decimal("140.00"))
+        layer.sale_price = None
+        layer.save(update_fields=["sale_price"])
+        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)])
+        self.assertEqual(price, Decimal("120.00"))
+
+    def _card_payload(self, card: TechCard, modifier: Modifier, nested: TechCard) -> dict:
+        return {
+            "name": card.name,
+            "category": None,
+            "kind": card.kind,
+            "basis_weight_kg": None if card.basis_weight_kg is None else str(card.basis_weight_kg),
+            "basis_quantity": card.basis_quantity,
+            "method": "",
+            "is_active": True,
+            "lines": [],
+            "sections": [],
+            "modifier_groups": [{"group": modifier.group_id, "is_required": None}],
+            "modifier_lines": [
+                {
+                    "modifier": modifier.pk,
+                    "ingredient": None,
+                    "semi_product": None,
+                    "nested_tech_card": nested.pk,
+                    "quantity": "1",
+                    "quantity_unit": nested.unit,
+                    "loss_percent": "0",
+                    "scales_by_weight": False,
+                }
+            ],
+        }
+
+    def test_self_reference_is_rejected(self):
+        card = TechCard.objects.create(name="Loop", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        modifier = Modifier.objects.create(group=self.menu.extras, name="Loop")
+        serializer = TechCardSerializer(card, data=self._card_payload(card, modifier, card))
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        with self.assertRaises(ApiValidationError):
+            serializer.save()
+
+    def test_transitive_cycle_is_rejected(self):
+        first = TechCard.objects.create(name="First", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        second = TechCard.objects.create(name="Second", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        to_first = Modifier.objects.create(group=self.menu.extras, name="To first")
+        to_second = Modifier.objects.create(group=self.menu.filling, name="To second")
+        saved = TechCardSerializer(second, data=self._card_payload(second, to_first, first))
+        self.assertTrue(saved.is_valid(), saved.errors)
+        saved.save()
+        self.assertEqual(second.modifier_lines.get().nested_tech_card_id, first.pk)
+        cycle = TechCardSerializer(first, data=self._card_payload(first, to_second, second))
+        self.assertTrue(cycle.is_valid(), cycle.errors)
+        with self.assertRaises(ApiValidationError):
+            cycle.save()
+
+    def test_modifier_with_two_defaults_is_rejected(self):
+        serializer = ModifierGroupSerializer(
+            self.menu.extras,
+            data={
+                "name": self.menu.extras.name,
+                "selection_type": "multi",
+                "is_required": False,
+                "min_selections": 0,
+                "max_selections": None,
+                "position": 0,
+                "modifiers": [
+                    {
+                        "id": self.menu.balloon.pk,
+                        "name": "Balloon",
+                        "catalog_option": None,
+                        "ingredient": self.menu.flour.pk,
+                        "semi_product": self.menu.sponge.pk,
+                        "nested_tech_card": None,
+                        "is_active": True,
+                    }
+                ],
+            },
+        )
+        self.assertFalse(serializer.is_valid())

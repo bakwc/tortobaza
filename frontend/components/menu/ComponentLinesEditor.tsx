@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchSelect } from "@/components/menu/SearchSelect";
-import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct } from "@/lib/api/types";
+import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 
 export type ComponentLineDraft = {
   key: string;
@@ -40,24 +40,33 @@ export function componentValue(ref: {
   ingredient: number | null;
   semi_product: number | null;
   finished_good?: number | null;
+  nested_tech_card?: number | null;
 }): string {
   if (ref.finished_good != null) {
     return `finished_good:${ref.finished_good}`;
   }
+  if (ref.nested_tech_card != null) {
+    return `tech_card:${ref.nested_tech_card}`;
+  }
   return ref.ingredient !== null ? `ingredient:${ref.ingredient}` : `semi_product:${ref.semi_product}`;
 }
 
-export function componentRef(value: string): ComponentRefBody & { finished_good: number | null } {
+export function componentRef(
+  value: string,
+): ComponentRefBody & { finished_good: number | null; nested_tech_card: number | null } {
   const separator = value.indexOf(":");
   const kind = value.slice(0, separator);
   const pk = Number(value.slice(separator + 1));
   if (kind === "ingredient") {
-    return { ingredient: pk, semi_product: null, finished_good: null };
+    return { ingredient: pk, semi_product: null, finished_good: null, nested_tech_card: null };
   }
   if (kind === "finished_good") {
-    return { ingredient: null, semi_product: null, finished_good: pk };
+    return { ingredient: null, semi_product: null, finished_good: pk, nested_tech_card: null };
   }
-  return { ingredient: null, semi_product: pk, finished_good: null };
+  if (kind === "tech_card") {
+    return { ingredient: null, semi_product: null, finished_good: null, nested_tech_card: pk };
+  }
+  return { ingredient: null, semi_product: pk, finished_good: null, nested_tech_card: null };
 }
 
 export function emptyLine(): ComponentLineDraft {
@@ -70,6 +79,7 @@ export function draftFromLine(
     loss_percent?: string;
     quantity_unit: MenuUnit;
     finished_good?: number | null;
+    nested_tech_card?: number | null;
   },
 ): ComponentLineDraft {
   return {
@@ -112,6 +122,18 @@ export function componentOptions(
     }
   }
   return options;
+}
+
+export function techCardOptions(cards: TechCard[], label: string): ComponentOption[] {
+  return cards
+    .filter((row) => row.is_active)
+    .map((row) => ({
+      value: `tech_card:${row.id}`,
+      label: `${label}: ${row.name}`,
+      unit: row.kind === "weighted" ? "g" : "pcs",
+      ingredient: false,
+      grams_per_unit: null,
+    }));
 }
 
 export function finishedGoodOptions(

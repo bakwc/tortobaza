@@ -11,6 +11,7 @@ from menu.models import (
     ModifierGroup,
     SemiProduct,
     TechCard,
+    TechCardModifierLine,
 )
 
 Component = Ingredient | SemiProduct
@@ -169,10 +170,29 @@ def validate_order_item(
         raise ValidationError(errors)
 
 
+def _nested_base_needs(tech_card: TechCard, quantity: Decimal) -> Needs:
+    if tech_card.kind == TechCard.KIND_WEIGHTED:
+        return expand_order_item(tech_card, quantity / Decimal("1000"), 1, [], [])
+    return expand_order_item(tech_card, None, quantity, [], [])
+
+
+def _modifier_line_needs(line, factor: Decimal, needs: Needs) -> None:
+    if line.nested_tech_card_id is not None:
+        gross = line_component_quantity(line) * factor
+        _merge(needs, _nested_base_needs(line.nested_tech_card, gross))
+        return
+    _explode(
+        line.component,
+        line_component_quantity(line) * factor,
+        needs,
+        frozenset(),
+    )
+
+
 def expand_order_item(
     tech_card: TechCard | None,
     weight_kg: Decimal | None,
-    quantity: int,
+    quantity: int | Decimal,
     modifiers: list[tuple[Modifier, int]],
     lines: list[tuple[Component, Decimal]],
 ) -> Needs:
@@ -193,19 +213,14 @@ def expand_order_item(
                 frozenset(),
             )
         by_modifier = defaultdict(list)
-        for line in tech_card.modifier_lines.select_related("ingredient", "semi_product"):
+        for line in tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card"):
             by_modifier[line.modifier_id].append(line)
         for modifier, modifier_quantity in modifiers:
             for line in by_modifier[modifier.pk]:
                 factor = Decimal(modifier_quantity) * item_quantity
                 if line.scales_by_weight:
                     factor = factor * weight_factor
-                _explode(
-                    line.component,
-                    line_component_quantity(line) * factor,
-                    needs,
-                    frozenset(),
-                )
+                _modifier_line_needs(line, factor, needs)
     for component, line_quantity in lines:
         _explode(component, line_quantity, needs, frozenset())
     return needs
@@ -267,6 +282,10 @@ def semi_product_cost(semi_product: SemiProduct) -> Decimal:
 
 
 def stock_line_cost(line) -> Decimal:
+    if isinstance(line, TechCardModifierLine) and line.nested_tech_card_id is not None:
+        needs: Needs = {}
+        _modifier_line_needs(line, _ONE, needs)
+        return needs_cost(needs)
     return needs_cost(expand_component(line.component, line_component_quantity(line)))
 
 
@@ -291,12 +310,7 @@ def _modifier_lines_cost(lines, item_quantity: Decimal, weight_factor: Decimal) 
         factor = item_quantity
         if line.scales_by_weight:
             factor = factor * weight_factor
-        _explode(
-            line.component,
-            line_component_quantity(line) * factor,
-            needs,
-            frozenset(),
-        )
+        _modifier_line_needs(line, factor, needs)
     return _raw_cost(needs)
 
 
@@ -331,7 +345,7 @@ def tech_card_cost_range(
     item_quantity = Decimal(count)
     base = _raw_cost(expand_order_item(tech_card, weight_kg, count, [], []))
     lines_by_modifier: dict[int, list] = defaultdict(list)
-    for line in tech_card.modifier_lines.select_related("ingredient", "semi_product"):
+    for line in tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card"):
         lines_by_modifier[line.modifier_id].append(line)
     low = base
     high = base
@@ -348,6 +362,59 @@ def tech_card_cost_range(
 
 def order_cost(crm_order) -> Decimal:
     return needs_cost(expand_order(crm_order))
+
+
+def modifiers_sale_price(
+    tech_card: TechCard,
+    weight_kg: Decimal | None,
+    quantity: int,
+    modifiers: list[tuple[Modifier, int]],
+) -> Decimal:
+    if tech_card.kind == TechCard.KIND_WEIGHTED:
+        weight_factor = weight_kg / tech_card.basis_weight_kg
+    else:
+        weight_factor = _ONE
+    item_quantity = Decimal(quantity)
+    by_modifier: dict[int, list] = defaultdict(list)
+    for line in tech_card.modifier_lines.select_related("nested_tech_card"):
+        by_modifier[line.modifier_id].append(line)
+    total = Decimal("0")
+    for modifier, modifier_quantity in modifiers:
+        for line in by_modifier[modifier.pk]:
+            nested = line.nested_tech_card
+            if nested is None or nested.sale_price is None:
+                continue
+            factor = Decimal(modifier_quantity) * item_quantity
+            if line.scales_by_weight:
+                factor = factor * weight_factor
+            net = line.quantity * factor
+            if nested.kind == TechCard.KIND_WEIGHTED:
+                total += nested.sale_price * (net / Decimal("1000")) / nested.basis_weight_kg
+            else:
+                total += nested.sale_price * net
+    return total
+
+
+def _nested_tech_cards(pk: int) -> list[int]:
+    return list(
+        TechCardModifierLine.objects.filter(tech_card_id=pk, nested_tech_card__isnull=False).values_list(
+            "nested_tech_card_id", flat=True
+        )
+    )
+
+
+def tech_card_cycle_errors(instance: TechCard) -> list[str]:
+    visited: set[int] = set()
+    stack = _nested_tech_cards(instance.pk)
+    while stack:
+        pk = stack.pop()
+        if pk == instance.pk:
+            return [f"Tech card {instance.name} contains itself."]
+        if pk in visited:
+            continue
+        visited.add(pk)
+        stack.extend(_nested_tech_cards(pk))
+    return []
 
 
 def missing_modifier_compositions(tech_card: TechCard) -> list[Modifier]:
