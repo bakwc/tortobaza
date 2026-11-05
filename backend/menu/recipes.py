@@ -5,6 +5,7 @@ from contextvars import ContextVar
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 from django.utils.translation import gettext as _
 
 from menu.models import (
@@ -147,15 +148,28 @@ def _max_selections(group: ModifierGroup) -> int | None:
     return group.max_selections
 
 
+def _global_groups() -> list[ModifierGroup]:
+    return _cached(
+        ("global_groups",),
+        lambda: list(
+            ModifierGroup.objects.filter(is_global=True).prefetch_related(
+                Prefetch(
+                    "modifiers",
+                    queryset=Modifier.objects.select_related("ingredient", "semi_product", "nested_tech_card"),
+                )
+            )
+        ),
+    )
+
+
 def tech_card_group_links(tech_card: TechCard) -> list[TechCardModifierGroup]:
     links = list(tech_card.modifier_groups.select_related("group"))
     linked_ids = {link.group_id for link in links}
-    globals_qs = (
-        ModifierGroup.objects.filter(is_global=True)
-        .exclude(pk__in=linked_ids)
-        .exclude(modifiers__nested_tech_card=tech_card)
-    )
-    for group in globals_qs:
+    for group in _global_groups():
+        if group.pk in linked_ids:
+            continue
+        if any(modifier.nested_tech_card_id == tech_card.pk for modifier in group.modifiers.all()):
+            continue
         links.append(TechCardModifierGroup(tech_card=tech_card, group=group, is_required=None))
     return links
 
@@ -187,14 +201,15 @@ def tech_card_modifier_lines(tech_card: TechCard) -> list[TechCardModifierLine]:
     lines = list(
         tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card", "modifier")
     )
-    virtual_group_ids = [link.group_id for link in tech_card_group_links(tech_card) if link.pk is None]
-    modifiers = Modifier.objects.filter(group_id__in=virtual_group_ids, is_active=True).select_related(
-        "ingredient", "semi_product", "nested_tech_card"
-    )
-    for modifier in modifiers:
-        line = _virtual_modifier_line(tech_card, modifier)
-        if line is not None:
-            lines.append(line)
+    for link in tech_card_group_links(tech_card):
+        if link.pk is not None:
+            continue
+        for modifier in link.group.modifiers.all():
+            if not modifier.is_active:
+                continue
+            line = _virtual_modifier_line(tech_card, modifier)
+            if line is not None:
+                lines.append(line)
     return lines
 
 
