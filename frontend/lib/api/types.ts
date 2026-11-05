@@ -582,6 +582,7 @@ export const CrmSalaryPeriodEmployeeSchema = CrmSalaryEmployeeSchema.extend({
 export const CrmExpensesBreakdownSchema = z.object({
   salary: z.string(),
   rent: z.string(),
+  food_cost: z.string(),
   employees: z.array(CrmSalaryEmployeeSchema),
 });
 
@@ -589,6 +590,7 @@ export const CrmExpensesDaySchema = z.object({
   date: z.string(),
   salary: z.string(),
   rent: z.string(),
+  food_cost: z.string(),
   employees: z.array(CrmSalaryEmployeeSchema),
 });
 
@@ -596,6 +598,7 @@ export const CrmExpensesMonthSchema = z.object({
   month: z.string(),
   salary: z.string(),
   rent: z.string(),
+  food_cost: z.string(),
   employees: z.array(CrmSalaryEmployeeSchema),
   by_date: z.record(z.string(), CrmExpensesBreakdownSchema),
 });

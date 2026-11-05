@@ -11,7 +11,8 @@ from rest_framework.test import APIClient
 from accounts.models import UserProfile
 from accounts.permissions import grant
 from attendance.models import AttendanceEvent
-from crm.models import CrmSettings
+from crm.models import CrmOrder, CrmOrderItem, CrmOrderItemLine, CrmSettings
+from menu.tests.fixtures import MenuFixture
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _OPEN_NOW = timezone.make_aware(datetime(2026, 10, 29, 12, 0), _TB)
@@ -64,6 +65,7 @@ class CrmExpensesApiTests(TestCase):
                 "date": "2026-06-30",
                 "salary": "3.43",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": fixed.id,
@@ -87,6 +89,7 @@ class CrmExpensesApiTests(TestCase):
                 "date": "2026-06-15",
                 "salary": "80.00",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -113,6 +116,7 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["month"], "2026-06")
         self.assertEqual(data["salary"], "160.00")
         self.assertEqual(data["rent"], "0.00")
+        self.assertEqual(data["food_cost"], "0.00")
         self.assertEqual(
             data["employees"],
             [
@@ -125,6 +129,7 @@ class CrmExpensesApiTests(TestCase):
             {
                 "salary": "80.00",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -140,6 +145,7 @@ class CrmExpensesApiTests(TestCase):
             {
                 "salary": "80.00",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {"id": other.id, "name": "other", "hours": "4.00", "money": "80.00"}
                 ],
@@ -157,6 +163,7 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["date"], today.isoformat())
         self.assertEqual(data["salary"], "80.00")
         self.assertEqual(data["rent"], "0.00")
+        self.assertEqual(data["food_cost"], "0.00")
         self.assertEqual(
             data["employees"],
             [
@@ -184,6 +191,7 @@ class CrmExpensesApiTests(TestCase):
                 "date": "2026-06-15",
                 "salary": "80.00",
                 "rent": "100.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -208,6 +216,7 @@ class CrmExpensesApiTests(TestCase):
         self.assertEqual(data["month"], "2026-06")
         self.assertEqual(data["salary"], "80.00")
         self.assertEqual(data["rent"], "3000.00")
+        self.assertEqual(data["food_cost"], "0.00")
         self.assertEqual(
             data["employees"],
             [
@@ -224,6 +233,7 @@ class CrmExpensesApiTests(TestCase):
             {
                 "salary": "80.00",
                 "rent": "100.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -251,6 +261,7 @@ class CrmExpensesApiTests(TestCase):
                 "date": "2026-10-29",
                 "salary": "30.00",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -286,12 +297,15 @@ class CrmExpensesApiTests(TestCase):
             ],
         )
         self.assertEqual(data["by_date"]["2026-10-28"]["salary"], "0.00")
+        self.assertEqual(data["by_date"]["2026-10-28"]["food_cost"], "0.00")
         self.assertEqual(data["by_date"]["2026-10-28"]["employees"], [])
+        self.assertEqual(data["food_cost"], "0.00")
         self.assertEqual(
             data["by_date"]["2026-10-29"],
             {
                 "salary": "30.00",
                 "rent": "0.00",
+                "food_cost": "0.00",
                 "employees": [
                     {
                         "id": self.worker.id,
@@ -302,3 +316,52 @@ class CrmExpensesApiTests(TestCase):
                 ],
             },
         )
+
+    def test_food_cost_from_stated_items(self):
+        menu = MenuFixture()
+        order = CrmOrder.objects.create(
+            date=self.day,
+            contact="Anna",
+            weight="1 kg",
+            cake_price=Decimal("100.00"),
+        )
+        CrmOrderItem.objects.create(
+            order=order,
+            tech_card=menu.cake,
+            quantity=1,
+            weight_kg=Decimal("1.000"),
+        )
+        CrmOrderItem.objects.create(order=order, name="Custom", quantity=1)
+        CrmOrderItem.objects.create(order=order, tech_card=menu.cake, quantity=1, weight_kg=None)
+        line_item = CrmOrderItem.objects.create(order=order, name="Extra flour", quantity=1)
+        CrmOrderItemLine.objects.create(
+            item=line_item,
+            ingredient=menu.flour,
+            quantity=Decimal("100"),
+        )
+        deleted = CrmOrder.objects.create(
+            date=self.day,
+            contact="Gone",
+            weight="1",
+            cake_price=Decimal("50.00"),
+            deleted=True,
+        )
+        CrmOrderItem.objects.create(order=deleted, tech_card=menu.bento, quantity=1)
+        bare = CrmOrder.objects.create(
+            date=date(2026, 6, 16),
+            contact="Bare",
+            weight="1",
+            cake_price=Decimal("20.00"),
+        )
+        CrmOrderItem.objects.create(order=bare, name="No recipe", quantity=1)
+        self.client.force_authenticate(user=self.admin)
+        day = self.client.get("/api/crm/expenses/", {"date": "2026-06-15"})
+        self.assertEqual(day.status_code, 200)
+        self.assertEqual(day.json()["food_cost"], "11.00")
+        month = self.client.get("/api/crm/expenses/", {"month": "2026-06"})
+        self.assertEqual(month.status_code, 200)
+        data = month.json()
+        self.assertEqual(data["food_cost"], "11.00")
+        self.assertEqual(data["by_date"]["2026-06-15"]["food_cost"], "11.00")
+        self.assertEqual(data["by_date"]["2026-06-15"]["salary"], "0.00")
+        self.assertNotIn("2026-06-16", data["by_date"])

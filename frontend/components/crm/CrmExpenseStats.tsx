@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { House, Users } from "lucide-react";
+import { Cake, House, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCan } from "@/hooks/useAuth";
 import type { CrmSalaryEmployee } from "@/lib/api/types";
@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 export function CrmExpenseStats({
   salary,
   rent,
+  foodCost,
   employees,
   compact,
   detailed,
 }: {
   salary: string | undefined;
   rent: string | undefined;
+  foodCost: string | undefined;
   employees: CrmSalaryEmployee[] | undefined;
   compact: boolean;
   detailed: boolean;
@@ -25,7 +27,7 @@ export function CrmExpenseStats({
   if (!allowed) {
     return null;
   }
-  if (salary === undefined || rent === undefined || employees === undefined) {
+  if (salary === undefined || rent === undefined || foodCost === undefined || employees === undefined) {
     return null;
   }
 
@@ -33,6 +35,7 @@ export function CrmExpenseStats({
     <CrmExpenseBadge
       salary={salary}
       rent={rent}
+      foodCost={foodCost}
       employees={employees}
       compact={compact}
       detailed={detailed}
@@ -43,12 +46,14 @@ export function CrmExpenseStats({
 function CrmExpenseBadge({
   salary,
   rent,
+  foodCost,
   employees,
   compact,
   detailed,
 }: {
   salary: string;
   rent: string;
+  foodCost: string;
   employees: CrmSalaryEmployee[];
   compact: boolean;
   detailed: boolean;
@@ -56,7 +61,7 @@ function CrmExpenseBadge({
   const t = useTranslations("crm");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
-  const total = Number.parseFloat(salary) + Number.parseFloat(rent);
+  const total = Number.parseFloat(salary) + Number.parseFloat(rent) + Number.parseFloat(foodCost);
   const iconClass = compact ? "h-3 w-3" : "h-3.5 w-3.5";
 
   useEffect(() => {
@@ -99,7 +104,10 @@ function CrmExpenseBadge({
             {formatAedWhole(salary)}
             <span>+</span>
             <House className={iconClass} />
-            {formatAedWhole(rent)})
+            {formatAedWhole(rent)}
+            <span>+</span>
+            <Cake className={iconClass} />
+            {formatAedWhole(foodCost)})
           </span>
         ) : null}
       </button>
@@ -135,6 +143,8 @@ function CrmExpenseBadge({
           >
             {formatAed(rent)}
           </span>
+          <span className="col-span-2 border-t border-[var(--line)] pt-1">{t("expensesFoodCost")}</span>
+          <span className="border-t border-[var(--line)] pt-1 tabular-nums">{formatAed(foodCost)}</span>
         </span>
       ) : null}
     </span>

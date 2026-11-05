@@ -276,6 +276,7 @@
     "incomeHint": "First amount is total income. Second is income from paid orders.",
     "expenses": "Expenses:",
     "expensesRent": "Rent",
+    "expensesFoodCost": "Food cost",
     "loadError": "Could not load orders for this date. Please try again.",
     "emptyTitle": "No orders scheduled for this day",
     "emptyHint": "Use the arrows above to browse other days.",

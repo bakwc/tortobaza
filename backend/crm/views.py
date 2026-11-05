@@ -1,6 +1,7 @@
 import json
 from calendar import monthrange
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
@@ -94,7 +95,7 @@ from crm.telegram import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
 from inventory.services import sync_order_write_off
-from menu.recipes import expand_order_item, needs_cost
+from menu.recipes import expand_order_item, item_food_cost, needs_cost
 from orders.paypal import paypal_enabled
 from tortobaza.finance_db import current_finance_db
 
@@ -522,6 +523,29 @@ class ResolveGoogleAddressView(APIView):
         return Response({"url": url})
 
 
+def food_cost_by_date(start_date: date, end_date: date) -> dict[date, Decimal]:
+    orders = live_orders().filter(date__gte=start_date, date__lte=end_date).prefetch_related(
+        "items__tech_card",
+        "items__modifiers__modifier",
+        "items__lines__ingredient",
+        "items__lines__semi_product",
+        "items__lines__tech_card",
+    )
+    totals: dict[date, Decimal] = {}
+    for order in orders:
+        total = Decimal("0.00")
+        has_cost = False
+        for item in order.items.all():
+            cost = item_food_cost(item)
+            if cost is None:
+                continue
+            total += cost
+            has_cost = True
+        if has_cost:
+            totals[order.date] = totals.get(order.date, Decimal("0.00")) + total
+    return totals
+
+
 class CrmExpensesView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, SectionPermission("finance")]
@@ -538,19 +562,23 @@ class CrmExpensesView(APIView):
             end_date = date(year, month_num, monthrange(year, month_num)[1])
             result = compute_all_salaries(start_date, end_date)
             rent_day = daily_rent(start_date)
+            costs = food_cost_by_date(start_date, end_date)
+            days = set(result["by_date"]) | set(costs)
             serializer = CrmExpensesMonthSerializer(
                 {
                     "month": month,
                     "salary": result["total_money"],
                     "rent": monthly_rent(),
+                    "food_cost": sum(costs.values(), Decimal("0.00")),
                     "employees": result["employees"],
                     "by_date": {
                         day.isoformat(): {
-                            "salary": money,
+                            "salary": result["by_date"].get(day, Decimal("0.00")),
                             "rent": rent_day,
+                            "food_cost": costs.get(day, Decimal("0.00")),
                             "employees": result["employees_by_date"].get(day, []),
                         }
-                        for day, money in result["by_date"].items()
+                        for day in days
                     },
                 }
             )
@@ -559,11 +587,13 @@ class CrmExpensesView(APIView):
             _TB
         ).date()
         result = compute_all_salaries(target_date, target_date)
+        costs = food_cost_by_date(target_date, target_date)
         serializer = CrmExpensesDaySerializer(
             {
                 "date": target_date,
                 "salary": result["total_money"],
                 "rent": daily_rent(target_date),
+                "food_cost": costs.get(target_date, Decimal("0.00")),
                 "employees": result["employees"],
             }
         )

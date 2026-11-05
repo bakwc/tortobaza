@@ -373,6 +373,28 @@ def order_cost(crm_order) -> Decimal:
     return needs_cost(expand_order(crm_order))
 
 
+def item_food_cost(item) -> Decimal | None:
+    tech_card = item.tech_card
+    lines = list(item.lines.all())
+    if tech_card is None and len(lines) == 0:
+        return None
+    if (
+        tech_card is not None
+        and tech_card.kind == TechCard.KIND_WEIGHTED
+        and (item.weight_kg is None or item.weight_kg <= 0)
+    ):
+        return None
+    return needs_cost(
+        expand_order_item(
+            tech_card,
+            item.weight_kg,
+            item.quantity,
+            [(row.modifier, row.quantity) for row in item.modifiers.all()],
+            [(row.component, row.quantity) for row in lines],
+        )
+    )
+
+
 def modifier_lines_sale_price(
     lines,
     tech_card: TechCard,

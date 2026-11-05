@@ -822,6 +822,7 @@ class CrmSalaryPeriodEmployeeSerializer(CrmSalaryEmployeeSerializer):
 class CrmExpensesBreakdownSerializer(serializers.Serializer):
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)
+    food_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
     employees = CrmSalaryEmployeeSerializer(many=True)
 
 
@@ -829,6 +830,7 @@ class CrmExpensesDaySerializer(serializers.Serializer):
     date = serializers.DateField()
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)
+    food_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
     employees = CrmSalaryEmployeeSerializer(many=True)
 
 
@@ -836,6 +838,7 @@ class CrmExpensesMonthSerializer(serializers.Serializer):
     month = serializers.CharField()
     salary = serializers.DecimalField(max_digits=10, decimal_places=2)
     rent = serializers.DecimalField(max_digits=10, decimal_places=2)
+    food_cost = serializers.DecimalField(max_digits=10, decimal_places=2)
     employees = CrmSalaryEmployeeSerializer(many=True)
     by_date = serializers.DictField(child=CrmExpensesBreakdownSerializer())
 

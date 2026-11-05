@@ -211,6 +211,7 @@ function CrmMonthBoard() {
           <CrmExpenseStats
             salary={expensesQuery.data?.salary}
             rent={expensesQuery.data?.rent}
+            foodCost={expensesQuery.data?.food_cost}
             employees={expensesQuery.data?.employees}
             compact={false}
             detailed={true}
@@ -261,6 +262,11 @@ function CrmMonthBoard() {
                       expensesQuery.data
                         ? (expensesQuery.data.by_date[group.date]?.rent ??
                           dailyRentFromMonth(expensesQuery.data.rent, selectedMonth))
+                        : undefined
+                    }
+                    foodCost={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date]?.food_cost ?? "0.00")
                         : undefined
                     }
                     employees={

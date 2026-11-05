@@ -253,6 +253,7 @@ function CrmBoard() {
           <CrmExpenseStats
             salary={expensesQuery.data?.salary}
             rent={expensesQuery.data?.rent}
+            foodCost={expensesQuery.data?.food_cost}
             employees={expensesQuery.data?.employees}
             compact={false}
             detailed={true}
