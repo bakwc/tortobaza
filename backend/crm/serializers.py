@@ -30,7 +30,7 @@ from crm.models import (
 from crm.paypal_link import assign_crm_payment_link
 from crm.phone import links_for_stored
 from menu.models import Ingredient, Modifier, SemiProduct, TechCard
-from menu.recipes import modifiers_sale_price, order_cost, order_item_errors
+from menu.recipes import modifier_lines_sale_price, modifiers_sale_price, order_cost, order_item_errors
 from orders.email import schedule_order_confirmed_email
 
 
@@ -67,22 +67,46 @@ class CrmOrderImageSerializer(serializers.ModelSerializer):
         return detail_image(obj.image.name, public_base_url)
 
 
+def _surcharge(amount: Decimal) -> str | None:
+    quantized = amount.quantize(_CENT)
+    if quantized == 0:
+        return None
+    return str(quantized)
+
+
 class CrmOrderItemModifierSerializer(serializers.ModelSerializer):
     modifier_name = serializers.CharField(source="modifier.name", read_only=True)
     group = serializers.IntegerField(source="modifier.group_id", read_only=True)
+    price = serializers.SerializerMethodField()
 
     class Meta:
         model = CrmOrderItemModifier
-        fields = ["id", "modifier", "modifier_name", "group", "quantity"]
+        fields = ["id", "modifier", "modifier_name", "group", "quantity", "price"]
+
+    def get_price(self, obj: CrmOrderItemModifier) -> str | None:
+        card = obj.item.tech_card
+        if card is None:
+            return None
+        if card.kind == TechCard.KIND_WEIGHTED and (obj.item.weight_kg is None or card.basis_weight_kg is None):
+            return None
+        amount = modifier_lines_sale_price(
+            card.modifier_lines.all(),
+            card,
+            obj.item.weight_kg,
+            obj.item.quantity,
+            [(obj.modifier, obj.quantity)],
+        )
+        return _surcharge(amount)
 
 
 class CrmOrderItemLineSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     unit = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
 
     class Meta:
         model = CrmOrderItemLine
-        fields = ["id", "ingredient", "semi_product", "tech_card", "name", "unit", "quantity"]
+        fields = ["id", "ingredient", "semi_product", "tech_card", "name", "unit", "quantity", "price"]
 
     def get_name(self, obj: CrmOrderItemLine) -> str:
         return obj.component.name
@@ -90,10 +114,14 @@ class CrmOrderItemLineSerializer(serializers.ModelSerializer):
     def get_unit(self, obj: CrmOrderItemLine) -> str:
         return obj.component.unit
 
+    def get_price(self, obj: CrmOrderItemLine) -> str | None:
+        return _surcharge(extra_line_sale_price(obj.tech_card, obj.quantity))
+
 
 class CrmOrderItemSerializer(serializers.ModelSerializer):
     tech_card_name = serializers.CharField(source="tech_card.name", read_only=True, allow_null=True)
     tech_card_kind = serializers.CharField(source="tech_card.kind", read_only=True, allow_null=True)
+    base_price = serializers.SerializerMethodField()
     modifiers = CrmOrderItemModifierSerializer(many=True, read_only=True)
     lines = CrmOrderItemLineSerializer(many=True, read_only=True)
 
@@ -108,12 +136,30 @@ class CrmOrderItemSerializer(serializers.ModelSerializer):
             "quantity",
             "weight_kg",
             "price",
+            "base_price",
             "comment",
             "needs_review",
             "position",
             "modifiers",
             "lines",
         ]
+
+    def to_representation(self, instance):
+        for row in instance.modifiers.all():
+            row.item = instance
+        return super().to_representation(instance)
+
+    def get_base_price(self, obj: CrmOrderItem) -> str | None:
+        card = obj.tech_card
+        if card is None or card.sale_price is None:
+            return None
+        if card.kind == TechCard.KIND_WEIGHTED:
+            if obj.weight_kg is None or card.basis_weight_kg is None:
+                return None
+            amount = card.sale_price * obj.weight_kg / card.basis_weight_kg * obj.quantity
+        else:
+            amount = card.sale_price * obj.quantity
+        return str(amount.quantize(_CENT))
 
 
 class CrmOrderItemModifierInputSerializer(serializers.Serializer):
@@ -137,17 +183,18 @@ class CrmOrderItemLineInputSerializer(serializers.Serializer):
 _CENT = Decimal("0.01")
 
 
+def extra_line_sale_price(card: TechCard | None, quantity: Decimal) -> Decimal:
+    if card is None or card.sale_price is None:
+        return Decimal("0")
+    if card.kind == TechCard.KIND_WEIGHTED:
+        return card.sale_price * (quantity / Decimal("1000")) / card.basis_weight_kg
+    return card.sale_price * quantity
+
+
 def extra_lines_sale_price(lines: list[dict]) -> Decimal:
     total = Decimal("0")
     for row in lines:
-        card = row["tech_card"]
-        if card is None or card.sale_price is None:
-            continue
-        quantity = row["quantity"]
-        if card.kind == TechCard.KIND_WEIGHTED:
-            total += card.sale_price * (quantity / Decimal("1000")) / card.basis_weight_kg
-        else:
-            total += card.sale_price * quantity
+        total += extra_line_sale_price(row["tech_card"], row["quantity"])
     return total
 
 

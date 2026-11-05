@@ -5,15 +5,18 @@ import { Input, selectZeroOnFocus } from "@/components/ui/input";
 import { Field, NativeSelect } from "@/components/menu/ui";
 import type { TechCardGroup } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
+import { formatAed } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function GroupPicker({
   group,
   selected,
+  modifierPrice,
   onChange,
 }: {
   group: TechCardGroup;
   selected: CrmItemModifierDraft[];
+  modifierPrice: (modifierId: number) => string | null;
   onChange: (rows: CrmItemModifierDraft[]) => void;
 }) {
   const t = useTranslations("crm.items");
@@ -27,6 +30,7 @@ export function GroupPicker({
 
   if (group.selection_type === "single") {
     const current = inGroup[0];
+    const price = current === undefined ? null : modifierPrice(current.modifier);
     return (
       <Field label={label}>
         <div className="flex gap-2">
@@ -56,6 +60,11 @@ export function GroupPicker({
               className="w-20"
             />
           ) : null}
+          {price !== null ? (
+            <span className="flex items-center text-sm font-medium tabular-nums text-[var(--ink)]">
+              {formatAed(price)}
+            </span>
+          ) : null}
         </div>
       </Field>
     );
@@ -67,6 +76,7 @@ export function GroupPicker({
       <div className="flex flex-wrap gap-2">
         {group.modifiers.map((modifier) => {
           const row = inGroup.find((item) => item.modifier === modifier.id);
+          const price = row === undefined ? null : modifierPrice(modifier.id);
           return (
             <div
               key={modifier.id}
@@ -100,6 +110,7 @@ export function GroupPicker({
                   className="h-7 w-12 rounded-full border border-[var(--line)] px-2 text-center text-sm"
                 />
               ) : null}
+              {price !== null ? <span className="tabular-nums text-[var(--ink)]">{formatAed(price)}</span> : null}
             </div>
           );
         })}

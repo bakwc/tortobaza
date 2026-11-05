@@ -13,6 +13,7 @@ from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product
 from crm.models import CrmOrder, CrmOrderItem
 from inventory.models import StockMovement
+from menu.models import UNIT_PIECE, TechCardModifierLine
 from menu.tests.fixtures import MenuFixture
 from orders.models import Order
 from orders.services import create_order_from_cart
@@ -284,6 +285,9 @@ class CrmOrderItemsApiTests(TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         saved = CrmOrderItem.objects.get(order=self.order)
         self.assertEqual(saved.price, Decimal("180.00"))
+        body = response.json()["items"][0]
+        self.assertEqual(body["base_price"], "180.00")
+        self.assertIsNone(body["modifiers"][0]["price"])
         self.order.refresh_from_db()
         self.assertEqual(self.order.cake_price, Decimal("999.00"))
 
@@ -401,10 +405,13 @@ class CrmOrderItemsApiTests(TestCase):
         item = CrmOrderItem.objects.get(order=self.order)
         self.assertEqual(item.price, Decimal("40.00"))
         self.assertEqual(item.lines.get().tech_card_id, self.menu.cake.pk)
-        line = response.json()["items"][0]["lines"][0]
+        body = response.json()["items"][0]
+        self.assertEqual(body["base_price"], "10.00")
+        line = body["lines"][0]
         self.assertEqual(line["tech_card"], self.menu.cake.pk)
         self.assertEqual(line["name"], "Cake")
         self.assertEqual(line["unit"], "g")
+        self.assertEqual(line["price"], "30.00")
         movements = {
             movement.ingredient_id: movement.quantity
             for movement in StockMovement.objects.filter(crm_order=self.order)
@@ -451,6 +458,35 @@ class CrmOrderItemsApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(CrmOrderItem.objects.get(order=self.order).price, Decimal("10.00"))
+        body = response.json()["items"][0]
+        self.assertEqual(body["base_price"], "10.00")
+        self.assertIsNone(body["lines"][0]["price"])
+
+    def test_modifier_nested_tech_card_price_is_split(self):
+        self.menu.bento.sale_price = Decimal("10.00")
+        self.menu.bento.save(update_fields=["sale_price"])
+        TechCardModifierLine.objects.create(
+            tech_card=self.menu.cake,
+            modifier=self.menu.berries,
+            nested_tech_card=self.menu.bento,
+            quantity=Decimal("2"),
+            quantity_unit=UNIT_PIECE,
+            scales_by_weight=False,
+        )
+        self.client.force_authenticate(self.admin)
+        item = self._cake_item("2")
+        item["modifiers"] = [
+            {"modifier": self.menu.raspberry_filling.pk, "quantity": 1},
+            {"modifier": self.menu.berries.pk, "quantity": 1},
+        ]
+        response = self._put(self._payload(CrmOrder.STATUS_NEW, [item]))
+        self.assertEqual(response.status_code, 200, response.content)
+        body = response.json()["items"][0]
+        self.assertEqual(body["price"], "140.00")
+        self.assertEqual(body["base_price"], "120.00")
+        prices = {row["modifier"]: row["price"] for row in body["modifiers"]}
+        self.assertIsNone(prices[self.menu.raspberry_filling.pk])
+        self.assertEqual(prices[self.menu.berries.pk], "20.00")
 
     def test_order_item_cost_includes_extra_tech_card(self):
         self.client.force_authenticate(self.admin)

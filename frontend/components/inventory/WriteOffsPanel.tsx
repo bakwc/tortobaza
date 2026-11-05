@@ -219,6 +219,7 @@ export function WriteOffsPanel() {
             extraColumn={null}
             quantityLabel={t("quantity")}
             chooseQuantityUnit={false}
+            linePrice={null}
           />
         </EditorDialog>
       ) : null}

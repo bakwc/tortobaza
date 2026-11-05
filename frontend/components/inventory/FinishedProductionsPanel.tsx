@@ -351,6 +351,7 @@ export function FinishedProductionsPanel() {
                           key={group.id}
                           group={group}
                           selected={line.modifiers}
+                          modifierPrice={() => null}
                           onChange={(modifiers) => updateLine(line.key, { modifiers })}
                         />
                       ))}

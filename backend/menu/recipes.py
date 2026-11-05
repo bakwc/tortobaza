@@ -373,7 +373,8 @@ def order_cost(crm_order) -> Decimal:
     return needs_cost(expand_order(crm_order))
 
 
-def modifiers_sale_price(
+def modifier_lines_sale_price(
+    lines,
     tech_card: TechCard,
     weight_kg: Decimal | None,
     quantity: int,
@@ -385,7 +386,7 @@ def modifiers_sale_price(
         weight_factor = _ONE
     item_quantity = Decimal(quantity)
     by_modifier: dict[int, list] = defaultdict(list)
-    for line in tech_card.modifier_lines.select_related("nested_tech_card"):
+    for line in lines:
         by_modifier[line.modifier_id].append(line)
     total = Decimal("0")
     for modifier, modifier_quantity in modifiers:
@@ -402,6 +403,21 @@ def modifiers_sale_price(
             else:
                 total += nested.sale_price * net
     return total
+
+
+def modifiers_sale_price(
+    tech_card: TechCard,
+    weight_kg: Decimal | None,
+    quantity: int,
+    modifiers: list[tuple[Modifier, int]],
+) -> Decimal:
+    return modifier_lines_sale_price(
+        tech_card.modifier_lines.select_related("nested_tech_card"),
+        tech_card,
+        weight_kg,
+        quantity,
+        modifiers,
+    )
 
 
 def _nested_tech_cards(pk: int) -> list[int]:

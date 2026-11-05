@@ -1037,11 +1037,9 @@ function CrmOrderCard({
                     const prefix = item.quantity > 1 ? `${item.quantity} × ` : "";
                     const weight =
                       item.weight_kg === null ? "" : ` · ${formatItemWeight(item.weight_kg)} ${t("items.kg")}`;
-                    const modifiers = item.modifiers
-                      .map((row) =>
-                        row.quantity > 1 ? `${row.modifier_name} × ${row.quantity}` : row.modifier_name,
-                      )
-                      .join(", ");
+                    const hasSurcharge =
+                      item.modifiers.some((row) => row.price !== null) || item.lines.some((line) => line.price !== null);
+                    const headerPrice = hasSurcharge ? item.base_price : item.price;
                     return (
                       <li key={item.id} className="text-sm text-[var(--ink)]">
                         <p className="flex items-start gap-1.5 font-medium">
@@ -1056,13 +1054,28 @@ function CrmOrderCard({
                             {title}
                             {weight}
                           </span>
-                          {item.price !== null ? (
-                            <span className="shrink-0 tabular-nums">{formatAed(item.price)}</span>
+                          {headerPrice !== null ? (
+                            <span className="shrink-0 tabular-nums">{formatAed(headerPrice)}</span>
                           ) : null}
                         </p>
-                        {modifiers !== "" ? (
-                          <p className="text-xs text-[var(--muted-2)]">{modifiers}</p>
-                        ) : null}
+                        {item.modifiers.map((row) => (
+                          <p key={row.id} className="flex items-start gap-1.5 text-xs text-[var(--muted-2)]">
+                            <span className="min-w-0 flex-1">
+                              {row.quantity > 1 ? `${row.modifier_name} × ${row.quantity}` : row.modifier_name}
+                            </span>
+                            {row.price !== null ? (
+                              <span className="shrink-0 tabular-nums text-[var(--ink)]">{formatAed(row.price)}</span>
+                            ) : null}
+                          </p>
+                        ))}
+                        {item.lines.map((line) =>
+                          line.price === null ? null : (
+                            <p key={line.id} className="flex items-start gap-1.5 text-xs text-[var(--muted-2)]">
+                              <span className="min-w-0 flex-1">{line.name}</span>
+                              <span className="shrink-0 tabular-nums text-[var(--ink)]">{formatAed(line.price)}</span>
+                            </p>
+                          ),
+                        )}
                         {item.comment !== "" ? (
                           <p className="whitespace-pre-wrap text-xs text-[var(--muted-2)]">{item.comment}</p>
                         ) : null}

@@ -375,6 +375,7 @@ export const CrmOrderItemModifierSchema = z.object({
   modifier_name: z.string(),
   group: z.number(),
   quantity: z.number(),
+  price: z.string().nullable(),
 });
 
 export const CrmOrderItemLineSchema = z.object({
@@ -385,6 +386,7 @@ export const CrmOrderItemLineSchema = z.object({
   name: z.string(),
   unit: MenuUnitSchema,
   quantity: z.string(),
+  price: z.string().nullable(),
 });
 
 export const CrmOrderItemSchema = z.object({
@@ -396,6 +398,7 @@ export const CrmOrderItemSchema = z.object({
   quantity: z.number(),
   weight_kg: z.string().nullable(),
   price: z.string().nullable(),
+  base_price: z.string().nullable(),
   comment: z.string(),
   needs_review: z.boolean(),
   position: z.number(),

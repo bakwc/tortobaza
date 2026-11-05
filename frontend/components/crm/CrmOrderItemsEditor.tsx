@@ -16,7 +16,14 @@ import { GroupPicker } from "@/components/crm/GroupPicker";
 import { useCrmItemCost } from "@/hooks/useCrmOrders";
 import { useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import type { TechCard } from "@/lib/api/types";
-import { crmItemCostBody, crmItemSalePrice, emptyCrmItem, type CrmItemDraft } from "@/lib/crmItems";
+import {
+  crmExtraLineSale,
+  crmItemBaseSale,
+  crmItemCostBody,
+  crmModifierSale,
+  emptyCrmItem,
+  type CrmItemDraft,
+} from "@/lib/crmItems";
 import { formatAed } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +48,7 @@ function ItemEditor({
     .map((row) => ({ value: String(row.id), label: row.name }));
   const update = (patch: Partial<CrmItemDraft>) => onChange({ ...item, ...patch, needs_review: false });
   const cost = useCrmItemCost(card === undefined ? null : crmItemCostBody(item, card));
-  const price = crmItemSalePrice(item, techCards);
+  const price = crmItemBaseSale(item, techCards);
   const options = [
     ...componentOptions(
       ingredients.list.data ?? [],
@@ -149,6 +156,7 @@ function ItemEditor({
               key={group.id}
               group={group}
               selected={item.modifiers}
+              modifierPrice={(modifierId) => crmModifierSale(item, techCards, modifierId)}
               onChange={(modifiers) => update({ modifiers })}
             />
           ))}
@@ -165,6 +173,10 @@ function ItemEditor({
           extraColumn={null}
           quantityLabel={t("quantity")}
           chooseQuantityUnit={false}
+          linePrice={(line) => {
+            const sale = crmExtraLineSale(line, techCards);
+            return sale === null ? null : formatAed(sale);
+          }}
         />
       </div>
       <Field label={t("comment")}>

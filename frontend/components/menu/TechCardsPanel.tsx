@@ -981,6 +981,7 @@ export function TechCardsPanel() {
             extraColumn="loss"
             quantityLabel={t("quantity")}
             chooseQuantityUnit={true}
+            linePrice={null}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1024,6 +1025,7 @@ export function TechCardsPanel() {
                 extraColumn="loss"
                 quantityLabel={t("quantity")}
                 chooseQuantityUnit={true}
+                linePrice={null}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>

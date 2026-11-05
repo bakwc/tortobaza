@@ -638,6 +638,7 @@ export function SemiProductsPanel() {
             extraColumn="loss"
             quantityLabel={t("quantity")}
             chooseQuantityUnit={true}
+            linePrice={null}
           />
         </EditorDialog>
       ) : null}

@@ -156,6 +156,7 @@ export function ComponentLinesEditor({
   extraColumn,
   quantityLabel,
   chooseQuantityUnit,
+  linePrice,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -163,6 +164,7 @@ export function ComponentLinesEditor({
   extraColumn: "loss" | "unitCost" | null;
   quantityLabel: string;
   chooseQuantityUnit: boolean;
+  linePrice: ((line: ComponentLineDraft) => string | null) | null;
 }) {
   const t = useTranslations("stock");
   const update = (key: string, patch: Partial<ComponentLineDraft>) =>
@@ -172,6 +174,7 @@ export function ComponentLinesEditor({
     <div className="grid gap-2">
       {lines.map((line) => {
         const option = options.find((row) => row.value === line.component);
+        const price = linePrice === null ? null : linePrice(line);
         return (
           <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]">
             <SearchSelect
@@ -228,6 +231,9 @@ export function ComponentLinesEditor({
             ) : (
               <span className="hidden sm:block" />
             )}
+            {price !== null ? (
+              <span className="flex items-center text-sm font-medium tabular-nums text-[var(--ink)]">{price}</span>
+            ) : null}
             <Button
               type="button"
               variant="ghost"

@@ -122,7 +122,7 @@ def live_orders():
 def with_order_relations(orders):
     return orders.prefetch_related(
         "images",
-        "items__tech_card",
+        "items__tech_card__modifier_lines__nested_tech_card",
         "items__modifiers__modifier",
         "items__lines__ingredient",
         "items__lines__semi_product",
