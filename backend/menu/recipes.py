@@ -117,7 +117,12 @@ def _max_selections(group: ModifierGroup) -> int | None:
 def tech_card_group_links(tech_card: TechCard) -> list[TechCardModifierGroup]:
     links = list(tech_card.modifier_groups.select_related("group"))
     linked_ids = {link.group_id for link in links}
-    for group in ModifierGroup.objects.filter(is_global=True).exclude(pk__in=linked_ids):
+    globals_qs = (
+        ModifierGroup.objects.filter(is_global=True)
+        .exclude(pk__in=linked_ids)
+        .exclude(modifiers__nested_tech_card=tech_card)
+    )
+    for group in globals_qs:
         links.append(TechCardModifierGroup(tech_card=tech_card, group=group, is_required=None))
     return links
 
@@ -267,15 +272,16 @@ def expand_order_item(
                 needs,
                 frozenset(),
             )
-        by_modifier = defaultdict(list)
-        for line in tech_card_modifier_lines(tech_card):
-            by_modifier[line.modifier_id].append(line)
-        for modifier, modifier_quantity in modifiers:
-            for line in by_modifier[modifier.pk]:
-                factor = Decimal(modifier_quantity) * item_quantity
-                if line.scales_by_weight:
-                    factor = factor * weight_factor
-                _modifier_line_needs(line, factor, needs)
+        if modifiers:
+            by_modifier = defaultdict(list)
+            for line in tech_card_modifier_lines(tech_card):
+                by_modifier[line.modifier_id].append(line)
+            for modifier, modifier_quantity in modifiers:
+                for line in by_modifier[modifier.pk]:
+                    factor = Decimal(modifier_quantity) * item_quantity
+                    if line.scales_by_weight:
+                        factor = factor * weight_factor
+                    _modifier_line_needs(line, factor, needs)
     for component, line_quantity in lines:
         _merge(needs, line_needs(component, line_quantity))
     return needs
