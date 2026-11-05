@@ -119,6 +119,18 @@ class ExpandOrderItemTests(TestCase):
         needs = expand_order_item(None, None, 1, [], [(self.menu.sponge, Decimal("500"))])
         self.assertEqual(needs, {self.menu.flour: Decimal("300"), self.menu.sugar: Decimal("200")})
 
+    def test_piece_extra_tech_card_adds_base_needs(self):
+        needs = expand_order_item(self.menu.bento, None, 2, [], [(self.menu.frozen_cake, Decimal("3"))])
+        self.assertEqual(needs[self.menu.flour], Decimal("200"))
+        self.assertEqual(needs[self.menu.frozen_sponge], Decimal("1200"))
+
+    def test_weighted_extra_tech_card_adds_base_needs_in_grams(self):
+        needs = expand_order_item(self.menu.bento, None, 1, [], [(self.menu.cake, Decimal("500"))])
+        self.assertEqual(needs[self.menu.flour], Decimal("250"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("100"))
+        self.assertEqual(needs[self.menu.cream], Decimal("150"))
+        self.assertNotIn(self.menu.raspberry, needs)
+
 
 class ExpandSemiProductTests(TestCase):
     def test_proportional_to_yield(self):
@@ -526,12 +538,48 @@ class NestedTechCardTests(TestCase):
         layer = self._layer(Decimal("40.00"))
         modifier = self._attach(self.menu.cake, layer, Decimal("250"), UNIT_GRAM, True)
         self.menu.cake.sale_price = Decimal("60.00")
-        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)])
+        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)], [])
         self.assertEqual(price, Decimal("140.00"))
         layer.sale_price = None
         layer.save(update_fields=["sale_price"])
-        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)])
+        price = crm_item_sale_price(self.menu.cake, 1, Decimal("2"), [(modifier, 1)], [])
         self.assertEqual(price, Decimal("120.00"))
+
+    def test_sale_price_adds_extra_tech_card_quantity(self):
+        self.menu.bento.sale_price = Decimal("20.00")
+        layer = self._layer(Decimal("40.00"))
+        price = crm_item_sale_price(
+            self.menu.bento,
+            2,
+            None,
+            [],
+            [{"tech_card": layer, "quantity": Decimal("500")}],
+        )
+        self.assertEqual(price, Decimal("60.00"))
+        topper = TechCard.objects.create(
+            name="Topper",
+            kind=TechCard.KIND_PIECE,
+            basis_quantity=1,
+            sale_price=Decimal("15.00"),
+        )
+        price = crm_item_sale_price(
+            self.menu.bento,
+            2,
+            None,
+            [],
+            [{"tech_card": topper, "quantity": Decimal("3")}],
+        )
+        self.assertEqual(price, Decimal("85.00"))
+        topper.sale_price = None
+        topper.save(update_fields=["sale_price"])
+        price = crm_item_sale_price(
+            self.menu.bento,
+            2,
+            None,
+            [],
+            [{"tech_card": topper, "quantity": Decimal("3")}],
+        )
+        self.assertEqual(price, Decimal("40.00"))
 
     def _card_payload(self, card: TechCard, modifier: Modifier, nested: TechCard) -> dict:
         return {

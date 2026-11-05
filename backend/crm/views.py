@@ -126,6 +126,7 @@ def with_order_relations(orders):
         "items__modifiers__modifier",
         "items__lines__ingredient",
         "items__lines__semi_product",
+        "items__lines__tech_card",
     )
 
 
@@ -232,7 +233,10 @@ class CrmOrderItemCostView(APIView):
                 item["weight_kg"],
                 item["quantity"],
                 [(row["modifier"], row["quantity"]) for row in item["modifiers"]],
-                [(line["ingredient"] or line["semi_product"], line["quantity"]) for line in item["lines"]],
+                [
+                    (line["ingredient"] or line["semi_product"] or line["tech_card"], line["quantity"])
+                    for line in item["lines"]
+                ],
             )
         )
         return Response({"cost": str(cost)})

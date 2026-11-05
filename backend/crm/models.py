@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.translation import pgettext_lazy
 
 from crm.phone import phones_from_fields
-from menu.models import ComponentRef
+from menu.models import ComponentRef, Ingredient, SemiProduct, TechCard
 
 
 def generate_crm_client_token() -> str:
@@ -501,12 +501,50 @@ class CrmOrderItemLine(ComponentRef):
         on_delete=models.CASCADE,
         verbose_name=_("Order item"),
     )
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="crm_order_item_lines",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
+    )
     quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
 
     class Meta(ComponentRef.Meta):
         ordering = ["id"]
         verbose_name = _("CRM order item line")
         verbose_name_plural = _("CRM order item lines")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        ingredient__isnull=False,
+                        semi_product__isnull=True,
+                        tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=False,
+                        tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        tech_card__isnull=False,
+                    )
+                ),
+                name="%(app_label)s_%(class)s_one_component",
+            ),
+        ]
+
+    @property
+    def component(self) -> Ingredient | SemiProduct | TechCard:
+        if self.ingredient_id is not None:
+            return self.ingredient
+        if self.semi_product_id is not None:
+            return self.semi_product
+        return self.tech_card
 
 
 class FlowwowWebhookEvent(models.Model):

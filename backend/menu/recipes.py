@@ -176,6 +176,14 @@ def _nested_base_needs(tech_card: TechCard, quantity: Decimal) -> Needs:
     return expand_order_item(tech_card, None, quantity, [], [])
 
 
+def line_needs(component: Ingredient | SemiProduct | TechCard, quantity: Decimal) -> Needs:
+    if isinstance(component, TechCard):
+        return _nested_base_needs(component, quantity)
+    needs: Needs = {}
+    _explode(component, quantity, needs, frozenset())
+    return needs
+
+
 def _modifier_line_needs(line, factor: Decimal, needs: Needs) -> None:
     if line.nested_tech_card_id is not None:
         gross = line_component_quantity(line) * factor
@@ -194,7 +202,7 @@ def expand_order_item(
     weight_kg: Decimal | None,
     quantity: int | Decimal,
     modifiers: list[tuple[Modifier, int]],
-    lines: list[tuple[Component, Decimal]],
+    lines: list[tuple[Ingredient | SemiProduct | TechCard, Decimal]],
 ) -> Needs:
     needs: Needs = {}
     item_quantity = Decimal(quantity)
@@ -222,7 +230,7 @@ def expand_order_item(
                     factor = factor * weight_factor
                 _modifier_line_needs(line, factor, needs)
     for component, line_quantity in lines:
-        _explode(component, line_quantity, needs, frozenset())
+        _merge(needs, line_needs(component, line_quantity))
     return needs
 
 
@@ -232,6 +240,7 @@ def expand_order(crm_order) -> Needs:
         "modifiers__modifier",
         "lines__ingredient",
         "lines__semi_product",
+        "lines__tech_card",
     )
     for item in items:
         _merge(

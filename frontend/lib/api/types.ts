@@ -381,6 +381,7 @@ export const CrmOrderItemLineSchema = z.object({
   id: z.number(),
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
+  tech_card: z.number().nullable(),
   name: z.string(),
   unit: MenuUnitSchema,
   quantity: z.string(),
@@ -1609,12 +1610,17 @@ export type TechCardBody = {
   })[];
 };
 
+export type CrmOrderItemLineBody = ComponentRefBody & {
+  tech_card: number | null;
+  quantity: string;
+};
+
 export type CrmOrderItemCostBody = {
   tech_card: number;
   quantity: number;
   weight_kg: string | null;
   modifiers: { modifier: number; quantity: number }[];
-  lines: (ComponentRefBody & { quantity: string })[];
+  lines: CrmOrderItemLineBody[];
 };
 
 export type CrmOrderItemBody = {
@@ -1626,7 +1632,7 @@ export type CrmOrderItemBody = {
   comment: string;
   needs_review: boolean;
   modifiers: { modifier: number; quantity: number }[];
-  lines: (ComponentRefBody & { quantity: string })[];
+  lines: CrmOrderItemLineBody[];
 };
 
 export const InventoryComponentLineSchema = z.object({

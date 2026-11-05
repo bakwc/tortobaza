@@ -4,7 +4,12 @@ import { useTranslations } from "next-intl";
 import { Plus, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ComponentLinesEditor, componentOptions } from "@/components/menu/ComponentLinesEditor";
+import {
+  ComponentLinesEditor,
+  componentOptions,
+  techCardOptions,
+  type ComponentOption,
+} from "@/components/menu/ComponentLinesEditor";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Field, NativeSelect } from "@/components/menu/ui";
 import { GroupPicker } from "@/components/crm/GroupPicker";
@@ -31,19 +36,33 @@ function ItemEditor({
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
   const card = item.tech_card === null ? undefined : techCards.find((row) => row.id === item.tech_card);
-  const techCardOptions = techCards
+  const cardOptions = techCards
     .filter((row) => row.is_active || row.id === item.tech_card)
     .map((row) => ({ value: String(row.id), label: row.name }));
   const update = (patch: Partial<CrmItemDraft>) => onChange({ ...item, ...patch, needs_review: false });
   const cost = useCrmItemCost(card === undefined ? null : crmItemCostBody(item, card));
   const price = crmItemSalePrice(item, techCards);
-  const options = componentOptions(
-    ingredients.list.data ?? [],
-    semiProducts.list.data ?? [],
-    "all",
-    tStock("ingredient"),
-    tStock("semiProduct"),
-  );
+  const options = [
+    ...componentOptions(
+      ingredients.list.data ?? [],
+      semiProducts.list.data ?? [],
+      "all",
+      tStock("ingredient"),
+      tStock("semiProduct"),
+    ),
+    ...techCardOptions(techCards, t("techCard")),
+    ...techCards
+      .filter((row) => !row.is_active && item.lines.some((line) => line.component === `tech_card:${row.id}`))
+      .map(
+        (row): ComponentOption => ({
+          value: `tech_card:${row.id}`,
+          label: `${t("techCard")}: ${row.name}`,
+          unit: row.kind === "weighted" ? "g" : "pcs",
+          ingredient: false,
+          grams_per_unit: null,
+        }),
+      ),
+  ];
 
   return (
     <div
@@ -66,7 +85,7 @@ function ItemEditor({
       <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
         <Field label={t("techCard")}>
           <SearchSelect
-            options={techCardOptions}
+            options={cardOptions}
             value={item.tech_card === null ? "" : String(item.tech_card)}
             onChange={(value) => {
               const techCardId = Number(value);

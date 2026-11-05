@@ -358,6 +358,7 @@ class CrmOrderItemsApiTests(TestCase):
                     {
                         "ingredient": self.menu.flour.pk,
                         "semi_product": None,
+                        "tech_card": None,
                         "quantity": "100",
                     }
                 ],
@@ -366,6 +367,113 @@ class CrmOrderItemsApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["cost"], "27.00")
+
+    def test_extra_tech_card_line_adds_price_and_writes_off(self):
+        self.menu.bento.sale_price = Decimal("10.00")
+        self.menu.bento.save(update_fields=["sale_price"])
+        self.client.force_authenticate(self.admin)
+        response = self._put(
+            self._payload(
+                CrmOrder.STATUS_READY,
+                [
+                    {
+                        "tech_card": self.menu.bento.pk,
+                        "name": "",
+                        "quantity": 1,
+                        "weight_kg": None,
+                        "price": "1.00",
+                        "comment": "",
+                        "needs_review": False,
+                        "modifiers": [],
+                        "lines": [
+                            {
+                                "ingredient": None,
+                                "semi_product": None,
+                                "tech_card": self.menu.cake.pk,
+                                "quantity": "500",
+                            }
+                        ],
+                    }
+                ],
+            )
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        item = CrmOrderItem.objects.get(order=self.order)
+        self.assertEqual(item.price, Decimal("40.00"))
+        self.assertEqual(item.lines.get().tech_card_id, self.menu.cake.pk)
+        line = response.json()["items"][0]["lines"][0]
+        self.assertEqual(line["tech_card"], self.menu.cake.pk)
+        self.assertEqual(line["name"], "Cake")
+        self.assertEqual(line["unit"], "g")
+        movements = {
+            movement.ingredient_id: movement.quantity
+            for movement in StockMovement.objects.filter(crm_order=self.order)
+        }
+        self.assertEqual(
+            movements,
+            {
+                self.menu.flour.pk: Decimal("-250"),
+                self.menu.sugar.pk: Decimal("-100"),
+                self.menu.cream.pk: Decimal("-150"),
+            },
+        )
+
+    def test_extra_tech_card_without_sale_price_keeps_item_price(self):
+        self.menu.bento.sale_price = Decimal("10.00")
+        self.menu.bento.save(update_fields=["sale_price"])
+        self.menu.cake.sale_price = None
+        self.menu.cake.save(update_fields=["sale_price"])
+        self.client.force_authenticate(self.admin)
+        response = self._put(
+            self._payload(
+                CrmOrder.STATUS_NEW,
+                [
+                    {
+                        "tech_card": self.menu.bento.pk,
+                        "name": "",
+                        "quantity": 1,
+                        "weight_kg": None,
+                        "price": "1.00",
+                        "comment": "",
+                        "needs_review": False,
+                        "modifiers": [],
+                        "lines": [
+                            {
+                                "ingredient": None,
+                                "semi_product": None,
+                                "tech_card": self.menu.cake.pk,
+                                "quantity": "500",
+                            }
+                        ],
+                    }
+                ],
+            )
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(CrmOrderItem.objects.get(order=self.order).price, Decimal("10.00"))
+
+    def test_order_item_cost_includes_extra_tech_card(self):
+        self.client.force_authenticate(self.admin)
+        response = self.client.post(
+            "/api/crm/order-item-cost/",
+            {
+                "tech_card": self.menu.bento.pk,
+                "quantity": 1,
+                "weight_kg": None,
+                "modifiers": [],
+                "lines": [
+                    {
+                        "ingredient": None,
+                        "semi_product": None,
+                        "tech_card": self.menu.cake.pk,
+                        "quantity": "500",
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["cost"], "6.00")
 
     def test_order_item_cost_without_required_modifier(self):
         self.client.force_authenticate(self.admin)

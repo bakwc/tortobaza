@@ -23,7 +23,7 @@ from inventory.models import (
     WriteOffLine,
 )
 from menu.models import Ingredient, Modifier, SemiProduct, TechCard
-from menu.recipes import Component, Needs, expand_component, expand_order_item, expand_semi_product
+from menu.recipes import Component, Needs, expand_component, expand_order_item, expand_semi_product, line_needs
 
 StockItem = Ingredient | SemiProduct | FinishedGood
 
@@ -391,6 +391,7 @@ def order_stock_needs(crm_order: CrmOrder) -> tuple[Needs, dict[FinishedGood, De
         "modifiers__modifier",
         "lines__ingredient",
         "lines__semi_product",
+        "lines__tech_card",
     )
     for item in items:
         good = None
@@ -414,7 +415,7 @@ def order_stock_needs(crm_order: CrmOrder) -> tuple[Needs, dict[FinishedGood, De
             continue
         finished[good] = finished.get(good, Decimal("0")) + Decimal(item.quantity)
         for line in item.lines.all():
-            _merge(needs, expand_component(line.component, line.quantity))
+            _merge(needs, line_needs(line.component, line.quantity))
     return needs, finished
 
 

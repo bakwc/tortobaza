@@ -82,7 +82,7 @@ class CrmOrderItemLineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CrmOrderItemLine
-        fields = ["id", "ingredient", "semi_product", "name", "unit", "quantity"]
+        fields = ["id", "ingredient", "semi_product", "tech_card", "name", "unit", "quantity"]
 
     def get_name(self, obj: CrmOrderItemLine) -> str:
         return obj.component.name
@@ -124,15 +124,31 @@ class CrmOrderItemModifierInputSerializer(serializers.Serializer):
 class CrmOrderItemLineInputSerializer(serializers.Serializer):
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
 
     def validate(self, attrs):
-        if (attrs["ingredient"] is None) == (attrs["semi_product"] is None):
-            raise serializers.ValidationError("Pass either ingredient or semi_product.")
+        chosen = [attrs["ingredient"], attrs["semi_product"], attrs["tech_card"]]
+        if sum(value is not None for value in chosen) != 1:
+            raise serializers.ValidationError("Pass exactly one of ingredient, semi_product or tech_card.")
         return attrs
 
 
 _CENT = Decimal("0.01")
+
+
+def extra_lines_sale_price(lines: list[dict]) -> Decimal:
+    total = Decimal("0")
+    for row in lines:
+        card = row["tech_card"]
+        if card is None or card.sale_price is None:
+            continue
+        quantity = row["quantity"]
+        if card.kind == TechCard.KIND_WEIGHTED:
+            total += card.sale_price * (quantity / Decimal("1000")) / card.basis_weight_kg
+        else:
+            total += card.sale_price * quantity
+    return total
 
 
 def crm_item_sale_price(
@@ -140,6 +156,7 @@ def crm_item_sale_price(
     quantity: int,
     weight_kg: Decimal | None,
     modifiers: list[tuple[Modifier, int]],
+    lines: list[dict],
 ) -> Decimal:
     sale_price = tech_card.sale_price
     if sale_price is None:
@@ -149,6 +166,7 @@ def crm_item_sale_price(
     else:
         amount = sale_price * quantity
     amount += modifiers_sale_price(tech_card, weight_kg, quantity, modifiers)
+    amount += extra_lines_sale_price(lines)
     return amount.quantize(_CENT)
 
 
@@ -180,6 +198,7 @@ class CrmOrderItemInputSerializer(serializers.Serializer):
                 attrs["quantity"],
                 attrs["weight_kg"],
                 [(row["modifier"], row["quantity"]) for row in attrs["modifiers"]],
+                attrs["lines"],
             )
         return attrs
 
@@ -222,6 +241,7 @@ def replace_crm_order_items(order: CrmOrder, items: list[dict]) -> None:
                 item=crm_item,
                 ingredient=row["ingredient"],
                 semi_product=row["semi_product"],
+                tech_card=row["tech_card"],
                 quantity=row["quantity"],
             )
 

@@ -4,7 +4,7 @@ import {
   newDraftKey,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
-import type { CrmOrderItem, CrmOrderItemBody, CrmOrderItemCostBody, TechCard } from "@/lib/api/types";
+import type { CrmOrderItem, CrmOrderItemBody, CrmOrderItemCostBody, CrmOrderItemLineBody, TechCard } from "@/lib/api/types";
 
 export type CrmItemModifierDraft = { modifier: number; quantity: string };
 
@@ -48,12 +48,22 @@ export function crmItemDraftFromItem(item: CrmOrderItem): CrmItemDraft {
     modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: String(row.quantity) })),
     lines: item.lines.map((line) => ({
       key: newDraftKey(),
-      component: componentValue(line),
+      component: componentValue({ ...line, nested_tech_card: line.tech_card }),
       quantity: line.quantity,
       loss_percent: "0",
       unit_cost: "",
       quantity_unit: line.unit,
     })),
+  };
+}
+
+function orderLineBody(line: ComponentLineDraft, quantity: string): CrmOrderItemLineBody {
+  const ref = componentRef(line.component);
+  return {
+    ingredient: ref.ingredient,
+    semi_product: ref.semi_product,
+    tech_card: ref.nested_tech_card,
+    quantity,
   };
 }
 
@@ -77,10 +87,7 @@ export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrder
     comment: item.comment,
     needs_review: item.needs_review,
     modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: Number(row.quantity || "1") })),
-    lines: item.lines.map((line) => ({
-      ...componentRef(line.component),
-      quantity: line.quantity.replace(",", "."),
-    })),
+    lines: item.lines.map((line) => orderLineBody(line, line.quantity.replace(",", "."))),
   };
 }
 
@@ -99,7 +106,7 @@ export function crmItemCostBody(item: CrmItemDraft, card: TechCard): CrmOrderIte
   for (const line of item.lines) {
     const lineQuantity = decimalOrNull(line.quantity);
     if (line.component === "" || lineQuantity === null) return null;
-    lines.push({ ...componentRef(line.component), quantity: lineQuantity });
+    lines.push(orderLineBody(line, lineQuantity));
   }
   return {
     tech_card: card.id,
@@ -156,6 +163,27 @@ export function crmItemsFillingText(items: CrmItemDraft[], techCards: TechCard[]
   return names.join(", ");
 }
 
+function extraLinesSale(item: CrmItemDraft, techCards: TechCard[]): number {
+  let extra = 0;
+  for (const line of item.lines) {
+    const cardId = componentRef(line.component).nested_tech_card;
+    if (cardId === null) continue;
+    const card = findCard(techCards, cardId);
+    if (card === undefined || card.sale_price === null) continue;
+    const quantity = decimalOrNull(line.quantity);
+    if (quantity === null) continue;
+    const net = Number(quantity);
+    const sale = Number(card.sale_price);
+    if (card.kind === "weighted") {
+      if (card.basis_weight_kg === null) continue;
+      extra += (sale * (net / 1000)) / Number(card.basis_weight_kg);
+    } else {
+      extra += sale * net;
+    }
+  }
+  return extra;
+}
+
 function roundCents(value: number): string {
   return (Math.round(value * 100) / 100).toFixed(2);
 }
@@ -195,7 +223,7 @@ export function crmItemSalePrice(item: CrmItemDraft, techCards: TechCard[]): str
   const quantity = Number(item.quantity);
   if (!Number.isInteger(quantity) || quantity < 1) return null;
   const sale = Number(card.sale_price);
-  const extra = nestedModifierSale(item, card, techCards, quantity);
+  const extra = nestedModifierSale(item, card, techCards, quantity) + extraLinesSale(item, techCards);
   if (card.kind === "weighted") {
     const weight = decimalOrNull(item.weight_kg);
     if (weight === null || card.basis_weight_kg === null) return null;
