@@ -15,6 +15,7 @@ from menu.models import (
     UNIT_PIECE,
     Ingredient,
     Modifier,
+    ModifierGroup,
     SemiProduct,
     SemiProductLine,
     TechCard,
@@ -636,6 +637,7 @@ class NestedTechCardTests(TestCase):
                 "name": self.menu.extras.name,
                 "selection_type": "multi",
                 "is_required": False,
+                "is_global": False,
                 "min_selections": 0,
                 "max_selections": None,
                 "position": 0,
@@ -653,3 +655,48 @@ class NestedTechCardTests(TestCase):
             },
         )
         self.assertFalse(serializer.is_valid())
+
+
+class GlobalModifierGroupTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.menu.extras.is_global = True
+        self.menu.extras.is_required = True
+        self.menu.extras.save()
+        self.menu.balloon.ingredient = self.menu.paper
+        self.menu.balloon.save()
+
+    def test_required_global_group_must_be_selected(self):
+        with self.assertRaises(ValidationError):
+            validate_order_item(self.menu.bento, None, [])
+
+    def test_extra_selection_in_global_group_is_rejected(self):
+        self.menu.extras.selection_type = ModifierGroup.SELECTION_SINGLE
+        self.menu.extras.save()
+        candle = Modifier.objects.create(group=self.menu.extras, name="Candle", ingredient=self.menu.paper)
+        with self.assertRaises(ValidationError):
+            validate_order_item(self.menu.bento, None, [(self.menu.balloon, 1), (candle, 1)])
+
+    def test_consumption_uses_modifier_quantity_not_weight(self):
+        needs = expand_order_item(
+            self.menu.cake,
+            Decimal("2"),
+            3,
+            [(self.menu.raspberry_filling, 1), (self.menu.balloon, 4)],
+            [],
+        )
+        self.assertEqual(needs[self.menu.paper], Decimal("12"))
+
+    def test_explicit_link_overrides_global_default(self):
+        TechCardModifierGroup.objects.create(tech_card=self.menu.bento, group=self.menu.extras, position=0)
+        TechCardModifierLine.objects.create(
+            tech_card=self.menu.bento,
+            modifier=self.menu.balloon,
+            ingredient=self.menu.ink,
+            quantity=Decimal("5"),
+            quantity_unit=UNIT_MILLILITER,
+            scales_by_weight=False,
+        )
+        needs = expand_order_item(self.menu.bento, None, 2, [(self.menu.balloon, 1)], [])
+        self.assertEqual(needs[self.menu.ink], Decimal("10"))
+        self.assertNotIn(self.menu.paper, needs)

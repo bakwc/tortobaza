@@ -717,6 +717,7 @@
     "selectionSingle": "Single choice",
     "selectionMulti": "Multiple choice",
     "required": "Required",
+    "global": "Global",
     "optional": "Optional",
     "newModifierGroup": "New modifier group",
     "selectionType": "Selection type",

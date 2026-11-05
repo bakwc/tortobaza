@@ -138,6 +138,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
   }
   const compositions: Record<number, ModifierComposition> = {};
   for (const line of row.modifier_lines) {
+    if (line.is_global) continue;
     const entry = compositions[line.modifier] ?? { scales_by_weight: line.scales_by_weight, lines: [] };
     entry.lines.push(draftFromLine(line));
     compositions[line.modifier] = entry;
@@ -158,7 +159,9 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       method: section.method,
       lines: section.lines.map(draftFromLine),
     })),
-    groups: row.modifier_groups.map((link) => ({ group: link.group, is_required: link.is_required })),
+    groups: row.modifier_groups
+      .filter((link) => !link.is_global)
+      .map((link) => ({ group: link.group, is_required: link.is_required })),
     compositions,
   };
 }
@@ -288,10 +291,10 @@ function TechCardRow({
               {t("sectionsCount", { count: row.sections.length })}
             </span>
           ) : null}
-          {row.modifier_groups.length > 0 ? (
+          {row.modifier_groups.some((link) => !link.is_global) ? (
             <span className="flex items-center gap-1">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              {t("groupsCount", { count: row.modifier_groups.length })}
+              {t("groupsCount", { count: row.modifier_groups.filter((link) => !link.is_global).length })}
             </span>
           ) : null}
         </div>
@@ -790,10 +793,10 @@ export function TechCardsPanel() {
                   </span>
                 </p>
               ) : null}
-              {current.modifier_groups.length > 0 ? (
+              {current.modifier_groups.some((link) => !link.is_global) ? (
                 <div className="grid gap-4">
                   <RecipeHeading number={null} title={t("modifiers")} note="" />
-                  {current.modifier_groups.map((link) => (
+                  {current.modifier_groups.filter((link) => !link.is_global).map((link) => (
                     <div key={link.id} className="grid gap-1">
                       <p className="text-sm font-semibold text-[var(--ink)]">
                         {link.group_name}

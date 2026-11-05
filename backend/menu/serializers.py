@@ -31,6 +31,8 @@ from menu.recipes import (
     tech_card_cost,
     tech_card_cost_range,
     tech_card_cycle_errors,
+    tech_card_group_links,
+    tech_card_modifier_lines,
 )
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
@@ -334,6 +336,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             "name",
             "selection_type",
             "is_required",
+            "is_global",
             "min_selections",
             "max_selections",
             "position",
@@ -341,6 +344,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {
             "is_required": {"required": True},
+            "is_global": {"required": True},
             "min_selections": {"required": True},
             "max_selections": {"required": True},
             "position": {"required": True},
@@ -554,21 +558,21 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "effective_is_required": link.effective_is_required,
                 "min_selections": link.group.min_selections,
                 "max_selections": link.group.max_selections,
+                "is_global": link.pk is None,
                 "modifiers": [
                     {"id": modifier.pk, "name": modifier.name}
                     for modifier in link.group.modifiers.filter(is_active=True)
                 ],
             }
-            for link in instance.modifier_groups.select_related("group")
+            for link in tech_card_group_links(instance)
         ]
         modifier_lines = []
-        for line in instance.modifier_lines.select_related(
-            "ingredient", "semi_product", "nested_tech_card", "modifier"
-        ):
+        for line in tech_card_modifier_lines(instance):
             payload = recipe_line_payload(line, stock_line_cost(line) if costs else None)
             payload["modifier"] = line.modifier_id
             payload["scales_by_weight"] = line.scales_by_weight
             payload["nested_tech_card"] = line.nested_tech_card_id
+            payload["is_global"] = line.pk is None
             modifier_lines.append(payload)
         data["modifier_lines"] = modifier_lines
         data["missing_modifiers"] = [modifier.pk for modifier in missing_modifier_compositions(instance)]

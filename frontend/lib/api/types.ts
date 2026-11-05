@@ -1446,6 +1446,7 @@ export const ModifierGroupSchema = z.object({
   name: z.string(),
   selection_type: z.enum(["single", "multi"]),
   is_required: z.boolean(),
+  is_global: z.boolean(),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
   position: z.number(),
@@ -1453,21 +1454,24 @@ export const ModifierGroupSchema = z.object({
 });
 
 export const TechCardGroupSchema = z.object({
-  id: z.number(),
+  id: z.number().nullable(),
   group: z.number(),
   group_name: z.string(),
   selection_type: z.enum(["single", "multi"]),
   is_required: z.boolean().nullable(),
   effective_is_required: z.boolean(),
+  is_global: z.boolean(),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
   modifiers: z.array(z.object({ id: z.number(), name: z.string() })),
 });
 
 export const TechCardModifierLineSchema = RecipeLineSchema.extend({
+  id: z.number().nullable(),
   modifier: z.number(),
   scales_by_weight: z.boolean(),
   nested_tech_card: z.number().nullable(),
+  is_global: z.boolean(),
 });
 
 export const TechCardSectionSchema = z.object({
@@ -1581,6 +1585,7 @@ export type ModifierGroupBody = {
   name: string;
   selection_type: "single" | "multi";
   is_required: boolean;
+  is_global: boolean;
   min_selections: number;
   max_selections: number | null;
   position: number;

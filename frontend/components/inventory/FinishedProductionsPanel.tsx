@@ -348,7 +348,7 @@ export function FinishedProductionsPanel() {
                     <div className="grid gap-3">
                       {card.modifier_groups.map((group) => (
                         <GroupPicker
-                          key={group.id}
+                          key={group.group}
                           group={group}
                           selected={line.modifiers}
                           modifierPrice={() => null}

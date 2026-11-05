@@ -717,6 +717,7 @@
     "selectionSingle": "Один вариант",
     "selectionMulti": "Несколько вариантов",
     "required": "Обязательно",
+    "global": "Глобальная",
     "optional": "Необязательно",
     "newModifierGroup": "Новая группа модификаторов",
     "selectionType": "Тип выбора",

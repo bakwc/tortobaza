@@ -71,7 +71,8 @@ class ModifierInline(admin.TabularInline):
 
 @admin.register(ModifierGroup)
 class ModifierGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "selection_type", "is_required", "min_selections", "max_selections", "position"]
+    list_display = ["name", "selection_type", "is_required", "is_global", "min_selections", "max_selections", "position"]
+    list_filter = ["is_global", "is_required", "selection_type"]
     search_fields = ["name"]
     inlines = [ModifierInline]
 

@@ -717,6 +717,7 @@
     "selectionSingle": "ერთი ვარიანტი",
     "selectionMulti": "რამდენიმე ვარიანტი",
     "required": "სავალდებულო",
+    "global": "გლობალური",
     "optional": "არასავალდებულო",
     "newModifierGroup": "მოდიფიკატორების ახალი ჯგუფი",
     "selectionType": "არჩევის ტიპი",

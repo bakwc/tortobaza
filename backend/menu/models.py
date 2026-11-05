@@ -225,6 +225,7 @@ class ModifierGroup(models.Model):
         verbose_name=_("Selection type"),
     )
     is_required = models.BooleanField(default=False, verbose_name=_("Is required"))
+    is_global = models.BooleanField(default=False, verbose_name=_("Is global"))
     min_selections = models.PositiveIntegerField(default=0, verbose_name=_("Minimum selections"))
     max_selections = models.PositiveIntegerField(
         null=True,

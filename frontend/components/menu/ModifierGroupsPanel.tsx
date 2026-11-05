@@ -39,6 +39,7 @@ type GroupDraft = {
   name: string;
   selection_type: "single" | "multi";
   is_required: boolean;
+  is_global: boolean;
   min_selections: string;
   max_selections: string;
   position: number;
@@ -51,6 +52,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       name: "",
       selection_type: "single",
       is_required: false,
+      is_global: false,
       min_selections: "0",
       max_selections: "",
       position,
@@ -61,6 +63,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
     name: row.name,
     selection_type: row.selection_type,
     is_required: row.is_required,
+    is_global: row.is_global,
     min_selections: String(row.min_selections),
     max_selections: row.max_selections === null ? "" : String(row.max_selections),
     position: row.position,
@@ -144,6 +147,7 @@ export function ModifierGroupsPanel() {
                   <span className="text-xs text-[var(--muted-2)]">
                     {row.selection_type === "single" ? t("selectionSingle") : t("selectionMulti")}
                     {row.is_required ? ` · ${t("required")}` : ""}
+                    {row.is_global ? ` · ${t("global")}` : ""}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted-2)]">
@@ -172,6 +176,7 @@ export function ModifierGroupsPanel() {
                   name: draft.name,
                   selection_type: draft.selection_type,
                   is_required: draft.is_required,
+                  is_global: draft.is_global,
                   min_selections: Number(draft.min_selections || "0"),
                   max_selections: draft.max_selections === "" ? null : Number(draft.max_selections),
                   position: draft.position,
@@ -229,11 +234,16 @@ export function ModifierGroupsPanel() {
             ) : (
               <span className="hidden sm:col-span-2 sm:block" />
             )}
-            <div className="flex items-end pb-3">
+            <div className="flex items-end gap-4 pb-3">
               <CheckboxField
                 label={t("required")}
                 checked={draft.is_required}
                 onChange={(value) => setDraft({ ...draft, is_required: value })}
+              />
+              <CheckboxField
+                label={t("global")}
+                checked={draft.is_global}
+                onChange={(value) => setDraft({ ...draft, is_global: value })}
               />
             </div>
           </div>

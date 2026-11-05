@@ -11,6 +11,7 @@ from menu.models import (
     ModifierGroup,
     SemiProduct,
     TechCard,
+    TechCardModifierGroup,
     TechCardModifierLine,
 )
 
@@ -113,6 +114,52 @@ def _max_selections(group: ModifierGroup) -> int | None:
     return group.max_selections
 
 
+def tech_card_group_links(tech_card: TechCard) -> list[TechCardModifierGroup]:
+    links = list(tech_card.modifier_groups.select_related("group"))
+    linked_ids = {link.group_id for link in links}
+    for group in ModifierGroup.objects.filter(is_global=True).exclude(pk__in=linked_ids):
+        links.append(TechCardModifierGroup(tech_card=tech_card, group=group, is_required=None))
+    return links
+
+
+def _virtual_modifier_line(tech_card: TechCard, modifier: Modifier) -> TechCardModifierLine | None:
+    if modifier.ingredient_id is not None:
+        unit = modifier.ingredient.unit
+        fields = {"ingredient": modifier.ingredient}
+    elif modifier.semi_product_id is not None:
+        unit = modifier.semi_product.unit
+        fields = {"semi_product": modifier.semi_product}
+    elif modifier.nested_tech_card_id is not None:
+        unit = modifier.nested_tech_card.unit
+        fields = {"nested_tech_card": modifier.nested_tech_card}
+    else:
+        return None
+    return TechCardModifierLine(
+        tech_card=tech_card,
+        modifier=modifier,
+        quantity=Decimal("1"),
+        quantity_unit=unit,
+        loss_percent=Decimal("0"),
+        scales_by_weight=False,
+        **fields,
+    )
+
+
+def tech_card_modifier_lines(tech_card: TechCard) -> list[TechCardModifierLine]:
+    lines = list(
+        tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card", "modifier")
+    )
+    virtual_group_ids = [link.group_id for link in tech_card_group_links(tech_card) if link.pk is None]
+    modifiers = Modifier.objects.filter(group_id__in=virtual_group_ids, is_active=True).select_related(
+        "ingredient", "semi_product", "nested_tech_card"
+    )
+    for modifier in modifiers:
+        line = _virtual_modifier_line(tech_card, modifier)
+        if line is not None:
+            lines.append(line)
+    return lines
+
+
 def order_item_errors(
     tech_card: TechCard | None,
     weight_kg: Decimal | None,
@@ -127,7 +174,7 @@ def order_item_errors(
         errors.append(
             _("Tech card %(name)s is per kilogram, weight is required.") % {"name": tech_card.name}
         )
-    links = {link.group_id: link for link in tech_card.modifier_groups.select_related("group")}
+    links = {link.group_id: link for link in tech_card_group_links(tech_card)}
     counts: dict[int, int] = defaultdict(int)
     seen: set[int] = set()
     for modifier, quantity in modifiers:
@@ -221,7 +268,7 @@ def expand_order_item(
                 frozenset(),
             )
         by_modifier = defaultdict(list)
-        for line in tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card"):
+        for line in tech_card_modifier_lines(tech_card):
             by_modifier[line.modifier_id].append(line)
         for modifier, modifier_quantity in modifiers:
             for line in by_modifier[modifier.pk]:
@@ -354,11 +401,11 @@ def tech_card_cost_range(
     item_quantity = Decimal(count)
     base = _raw_cost(expand_order_item(tech_card, weight_kg, count, [], []))
     lines_by_modifier: dict[int, list] = defaultdict(list)
-    for line in tech_card.modifier_lines.select_related("ingredient", "semi_product", "nested_tech_card"):
+    for line in tech_card_modifier_lines(tech_card):
         lines_by_modifier[line.modifier_id].append(line)
     low = base
     high = base
-    for link in tech_card.modifier_groups.select_related("group"):
+    for link in tech_card_group_links(tech_card):
         costs = [
             _modifier_lines_cost(lines_by_modifier[modifier.pk], item_quantity, weight_factor)
             for modifier in link.group.modifiers.filter(is_active=True)
@@ -434,7 +481,7 @@ def modifiers_sale_price(
     modifiers: list[tuple[Modifier, int]],
 ) -> Decimal:
     return modifier_lines_sale_price(
-        tech_card.modifier_lines.select_related("nested_tech_card"),
+        tech_card_modifier_lines(tech_card),
         tech_card,
         weight_kg,
         quantity,

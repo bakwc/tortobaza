@@ -153,7 +153,7 @@ function ItemEditor({
         <div className="grid gap-4">
           {card.modifier_groups.map((group) => (
             <GroupPicker
-              key={group.id}
+              key={group.group}
               group={group}
               selected={item.modifiers}
               modifierPrice={(modifierId) => crmModifierSale(item, techCards, modifierId)}
