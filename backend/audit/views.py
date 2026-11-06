@@ -49,6 +49,7 @@ class AuditEventsView(APIView):
         model_name = request.query_params.get("model")
         object_id = request.query_params.get("object_id")
         query = request.query_params.get("q")
+        actor = request.query_params.get("actor")
         if start:
             queryset = queryset.filter(created_at__date__gte=date.fromisoformat(start))
         if end:
@@ -59,6 +60,8 @@ class AuditEventsView(APIView):
             queryset = queryset.filter(model=model_name)
         if object_id:
             queryset = queryset.filter(object_id=object_id)
+        if actor:
+            queryset = queryset.filter(actor_id=int(actor))
         if query:
             queryset = queryset.annotate(changes_text=Cast("changes", TextField())).filter(
                 Q(object_label__icontains=query)
@@ -98,3 +101,21 @@ class AuditEventsView(APIView):
                 ],
             }
         )
+
+
+class AuditActorsView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("history")]
+
+    def get(self, request):
+        actor_ids = list(
+            AuditEvent.objects.exclude(actor_id=None).values_list("actor_id", flat=True).distinct()
+        )
+        names = _actor_names(actor_ids)
+        actors = [
+            {"id": actor_id, "name": names[actor_id]}
+            for actor_id in actor_ids
+            if actor_id in names
+        ]
+        actors.sort(key=lambda row: row["name"].lower())
+        return Response(actors)

@@ -9,6 +9,7 @@ const clientFetcher: Fetcher = (path, options) =>
     headers: options?.headers,
     cache: options?.cache,
     next: options?.next,
+    signal: options?.signal,
   });
 
 export const api = endpoints(clientFetcher);

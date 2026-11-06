@@ -920,7 +920,13 @@
     "no": "Нет",
     "pending": "Не проверено",
     "target": "Это сообщение",
-    "emptyContext": "Контекста нет"
+    "emptyContext": "Контекста нет",
+    "history": "История обработки",
+    "historyFound": "Нашлось по ключевым словам",
+    "historyContext": "Контекст собран",
+    "historyClassifierLead": "Классификатор лида",
+    "historyClassifierVerify": "Проверка по контексту",
+    "emptyHistory": "Истории нет"
   },
   "rsge": {
     "waybills": "Накладные",
@@ -1146,6 +1152,8 @@
     "search": "Поиск",
     "app": "Раздел",
     "allApps": "Все разделы",
+    "user": "Пользователь",
+    "allUsers": "Все пользователи",
     "start": "С",
     "end": "По",
     "apply": "Показать",
@@ -1333,6 +1341,12 @@
     "previewProductPage": "Страница товара",
     "previewCart": "Корзина",
     "previewOption": "Опция на сайте",
-    "loading": "Загрузка…"
+    "loading": "Загрузка…",
+    "deleteConfirmQuestion": "Вы действительно хотите удалить?",
+    "deleteRelatedTitle": "Также будет удалено",
+    "deleteRelatedConfirm": "Точно продолжить?",
+    "deleteRelatedMore": "и ещё {count}",
+    "confirmDelete": "Удалить",
+    "cancelDelete": "Отмена"
   }
 }

@@ -45,6 +45,7 @@ import {
   CrmMapOrdersResponseSchema,
   CrmMonthlyOrdersResponseSchema,
   CrmUnconfirmedOrdersResponseSchema,
+  AuditActorSchema,
   AuditEventsResponseSchema,
   CrmOrderEventSchema,
   CrmOrderSchema,
@@ -114,6 +115,7 @@ import {
   type CrmUnconfirmedOrdersResponse,
   type CrmClientOrdersResponse,
   type CrmOrder,
+  type AuditActor,
   type AuditEventsResponse,
   type CrmOrderEvent,
   type CrmOrderItemCostBody,
@@ -878,6 +880,7 @@ export function endpoints(fetcher: Fetcher) {
       channel: number | null,
       q: string,
       page: number,
+      signal: AbortSignal,
     ): Promise<SocialMessagesResponse> {
       const raw = await fetcher<unknown>("/api/crm/social/messages/", {
         searchParams: {
@@ -887,6 +890,7 @@ export function endpoints(fetcher: Fetcher) {
           q: q.trim() || undefined,
           page: page > 1 ? page : undefined,
         },
+        signal,
       });
       return parse(SocialMessagesResponseSchema, raw);
     },
@@ -958,6 +962,7 @@ export function endpoints(fetcher: Fetcher) {
       end: string;
       app: string;
       q: string;
+      actor: string;
       model: string | null;
       objectId: string | null;
     }): Promise<AuditEventsResponse> {
@@ -968,11 +973,17 @@ export function endpoints(fetcher: Fetcher) {
           end: params.end || undefined,
           app: params.app || undefined,
           q: params.q || undefined,
+          actor: params.actor || undefined,
           model: params.model || undefined,
           object_id: params.objectId || undefined,
         },
       });
       return parse(AuditEventsResponseSchema, raw);
+    },
+
+    async getAuditActors(): Promise<AuditActor[]> {
+      const raw = await fetcher<unknown>("/api/audit/actors/");
+      return parse(z.array(AuditActorSchema), raw);
     },
 
     async getCrmClientOrders(id: number): Promise<CrmClientOrdersResponse> {
@@ -1082,6 +1093,12 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify(body),
       });
       return parse(SiteProductSchema, raw);
+    },
+    async deleteSiteProduct(id: number, confirm: boolean): Promise<void> {
+      await fetcher<void>(`/api/site/products/${id}/`, {
+        method: "DELETE",
+        searchParams: confirm ? { confirm: 1 } : undefined,
+      });
     },
     async uploadSiteCategoryImage(id: number, file: File): Promise<import("./site-schemas").SiteCategory> {
       const body = new FormData();

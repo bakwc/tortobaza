@@ -9,7 +9,9 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
+from cart.models import Cart, CartItem
 from catalog.models import Category, OptionGroup, Product, ProductImage, ProductOptionGroup
+from orders.models import Order, OrderItem
 
 
 class SiteApiTests(TestCase):
@@ -122,6 +124,70 @@ class SiteApiTests(TestCase):
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.json()["base_price"], "130.00")
         self.assertEqual(ProductOptionGroup.objects.filter(product_id=product_id).count(), 0)
+
+    def test_product_delete_asks_before_removing_cart_items(self):
+        self.client.force_authenticate(user=self.editor)
+        plain = Product.objects.create(
+            category=self.category,
+            name="Plain",
+            slug="plain-site",
+            description="",
+            base_price=Decimal("10.00"),
+            name_en="Plain",
+            name_ka="Plain",
+            name_ru="Простой",
+        )
+        held = self.client.delete(f"/api/site/products/{plain.pk}/")
+        self.assertEqual(held.status_code, 409)
+        self.assertEqual(held.json()["related"], [])
+        self.assertEqual(held.json()["related_total"], 0)
+        self.assertTrue(Product.objects.filter(pk=plain.pk).exists())
+
+        product = Product.objects.create(
+            category=self.category,
+            name="Honey",
+            slug="honey-site",
+            description="",
+            base_price=Decimal("20.00"),
+            name_en="Honey",
+            name_ka="Honey",
+            name_ru="Медовик",
+        )
+        cart = Cart.objects.create()
+        CartItem.objects.create(cart=cart, product=product, quantity=2)
+        order = Order.objects.create(
+            fulfillment_type=Order.FULFILLMENT_PICKUP,
+            payment_method=Order.PAYMENT_CASH,
+            customer_name="Site",
+            customer_phone="555000000",
+            customer_email="site@example.com",
+        )
+        order_item = OrderItem.objects.create(
+            order=order,
+            product=product,
+            product_name="Медовик",
+            unit_price=Decimal("20.00"),
+            quantity=2,
+            line_total=Decimal("40.00"),
+        )
+        blocked = self.client.delete(f"/api/site/products/{product.pk}/")
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["related"], [{"label": "Honey × 2"}])
+        self.assertEqual(blocked.json()["related_total"], 1)
+        self.assertTrue(Product.objects.filter(pk=product.pk).exists())
+        self.assertEqual(CartItem.objects.filter(product=product).count(), 1)
+
+        deleted = self.client.delete(f"/api/site/products/{product.pk}/?confirm=1")
+        self.assertEqual(deleted.status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=product.pk).exists())
+        self.assertEqual(CartItem.objects.filter(cart=cart).count(), 0)
+        order_item.refresh_from_db()
+        self.assertIsNone(order_item.product_id)
+        self.assertEqual(order_item.product_name, "Медовик")
+
+        removed = self.client.delete(f"/api/site/products/{plain.pk}/?confirm=1")
+        self.assertEqual(removed.status_code, 204)
+        self.assertFalse(Product.objects.filter(pk=plain.pk).exists())
 
     def test_product_image_upload_and_crop_patch(self):
         product = Product.objects.create(

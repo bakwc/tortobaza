@@ -1204,6 +1204,7 @@ class SocialMessageSerializer(serializers.ModelSerializer):
             "network_slug",
             "network_name",
             "url",
+            "processing_history",
         ]
 
 

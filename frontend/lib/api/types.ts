@@ -494,6 +494,11 @@ export const AuditEventsResponseSchema = z.object({
   results: z.array(AuditEventSchema),
 });
 
+export const AuditActorSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
 export const CrmDayOrderSchema = CrmOrderSchema.extend({
   client_order_count: z.number().nullable(),
 });
@@ -1190,6 +1195,7 @@ export type CrmClientOrdersResponse = z.infer<typeof CrmClientOrdersResponseSche
 export type CrmOrderEvent = z.infer<typeof CrmOrderEventSchema>;
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 export type AuditEventsResponse = z.infer<typeof AuditEventsResponseSchema>;
+export type AuditActor = z.infer<typeof AuditActorSchema>;
 export type CrmClientOrder = z.infer<typeof CrmClientOrderSchema>;
 export type CrmOrdersResponse = z.infer<typeof CrmOrdersResponseSchema>;
 export type CrmMonthlyOrdersResponse = z.infer<typeof CrmMonthlyOrdersResponseSchema>;
@@ -1705,6 +1711,24 @@ export const SocialKeywordSchema = z.object({
   word: z.string(),
 });
 
+export const SocialMessageProcessingEventSchema = z.discriminatedUnion("kind", [
+  z.object({
+    at: z.string(),
+    kind: z.literal("found"),
+  }),
+  z.object({
+    at: z.string(),
+    kind: z.literal("context"),
+  }),
+  z.object({
+    at: z.string(),
+    kind: z.literal("classify"),
+    classifier: z.enum(["lead", "verify"]),
+    verdict: z.boolean(),
+    explanation: z.string(),
+  }),
+]);
+
 export const SocialMessageSchema = z.object({
   id: z.number(),
   sent_at: z.string(),
@@ -1722,6 +1746,7 @@ export const SocialMessageSchema = z.object({
   network_slug: z.string(),
   network_name: z.string(),
   url: z.string(),
+  processing_history: z.array(SocialMessageProcessingEventSchema),
 });
 
 export const SocialMessagesResponseSchema = z.object({
@@ -2140,6 +2165,7 @@ export type SupplierBody = { name: string; phone: string; comment: string };
 export type SocialMessageKind = z.infer<typeof SocialMessageKindSchema>;
 export type SocialChannel = z.infer<typeof SocialChannelSchema>;
 export type SocialKeyword = z.infer<typeof SocialKeywordSchema>;
+export type SocialMessageProcessingEvent = z.infer<typeof SocialMessageProcessingEventSchema>;
 export type SocialMessage = z.infer<typeof SocialMessageSchema>;
 export type SocialMessagesResponse = z.infer<typeof SocialMessagesResponseSchema>;
 export type SocialChannelBody = { username: string; enabled: boolean };

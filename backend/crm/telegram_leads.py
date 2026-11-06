@@ -5,7 +5,7 @@ from django.utils import timezone
 from openai import OpenAI
 from pydantic import BaseModel
 
-from crm.models import SocialMessage
+from crm.models import SocialMessage, append_processing_event
 from crm.telegram import _esc, _telegram_json
 
 LEAD_MODEL = "gpt-6.1-sol"
@@ -19,7 +19,7 @@ The user message is the text of one Telegram message. Decide whether the author 
 
 Return is_lead false when the product is mentioned incidentally (general chat, jokes, news, someone else's business, unrelated context) and there is no sign the author wants to buy or order from a confectionery.
 
-Return only the structured verdict."""
+Return is_lead and explanation. explanation is one short sentence in Russian stating why this verdict was chosen."""
 
 LEAD_GEO_PROMPT = """
 
@@ -42,6 +42,7 @@ Decide the author's city from the post location, the post topic, the thread, the
 
 class LeadVerdict(BaseModel):
     is_lead: bool
+    explanation: str
 
 
 def _classifier_input(message: SocialMessage) -> str:
@@ -55,7 +56,7 @@ def _classifier_input(message: SocialMessage) -> str:
     return message.text
 
 
-def _verdict(client: OpenAI, instructions: str, content: str) -> bool:
+def _verdict(client: OpenAI, instructions: str, content: str) -> LeadVerdict:
     response = client.responses.parse(
         model=LEAD_MODEL,
         instructions=instructions,
@@ -66,7 +67,7 @@ def _verdict(client: OpenAI, instructions: str, content: str) -> bool:
     parsed = response.output_parsed
     if parsed is None:
         raise RuntimeError("Lead classification returned no data.")
-    return parsed.is_lead
+    return parsed
 
 
 def classify_leads(network_slug: str, potential: bool) -> None:
@@ -82,12 +83,21 @@ def classify_leads(network_slug: str, potential: bool) -> None:
         instructions = LEAD_PROMPT + LEAD_GEO_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
     for message in pending:
-        is_lead = _verdict(client, instructions, _classifier_input(message))
-        message.potential_lead = is_lead
-        update_fields = ["potential_lead"]
+        verdict = _verdict(client, instructions, _classifier_input(message))
+        message.potential_lead = verdict.is_lead
+        update_fields = ["potential_lead", "processing_history"]
         if not potential:
-            message.lead = is_lead
+            message.lead = verdict.is_lead
             update_fields.append("lead")
+        append_processing_event(
+            message,
+            {
+                "kind": "classify",
+                "classifier": "lead",
+                "verdict": verdict.is_lead,
+                "explanation": verdict.explanation,
+            },
+        )
         message.save(update_fields=update_fields)
 
 
@@ -134,8 +144,18 @@ def verify_leads(network_slug: str) -> None:
     instructions = LEAD_PROMPT + LEAD_GEO_PROMPT + LEAD_CONTEXT_PROMPT + LEAD_PROFILE_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
     for message in pending:
-        message.lead = _verdict(client, instructions, _verify_input(message))
-        message.save(update_fields=["lead"])
+        verdict = _verdict(client, instructions, _verify_input(message))
+        message.lead = verdict.is_lead
+        append_processing_event(
+            message,
+            {
+                "kind": "classify",
+                "classifier": "verify",
+                "verdict": verdict.is_lead,
+                "explanation": verdict.explanation,
+            },
+        )
+        message.save(update_fields=["lead", "processing_history"])
 
 
 def _channel_label(channel) -> str:

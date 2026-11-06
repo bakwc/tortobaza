@@ -117,12 +117,15 @@ class SocialIngestTests(TestCase):
         self.assertEqual(created.json(), {"created": 2, "skipped": 1})
         stored = SocialMessage.objects.get(external_id="post-1")
         self.assertIs(stored.keyword_match, True)
+        self.assertEqual(len(stored.processing_history), 1)
+        self.assertEqual(stored.processing_history[0]["kind"], "found")
         self.assertEqual(stored.location, "Batumi, Georgia")
         self.assertEqual(stored.topic, "Батуми")
         self.assertEqual(stored.channel.username, "group-123")
         self.assertEqual(stored.sender_id, "999")
         missed = SocialMessage.objects.get(external_id="post-2")
         self.assertIs(missed.keyword_match, False)
+        self.assertEqual(missed.processing_history, [])
         stored.potential_lead = False
         stored.lead_notified = True
         stored.save(update_fields=["potential_lead", "lead_notified"])
@@ -352,6 +355,8 @@ class SocialIngestTests(TestCase):
         self.assertEqual(row.profile["description"], "торты в Батуми")
         self.assertEqual(row.profile["posts"][0]["text"], "бенто на завтра")
         self.assertEqual(row.profile["posts"][0]["url"], "https://www.threads.com/@cakes/post/old")
+        self.assertEqual(len(row.processing_history), 1)
+        self.assertEqual(row.processing_history[0]["kind"], "context")
 
     @patch("crm.telegram_views.notify_recent_leads")
     @patch("crm.telegram_views.verify_leads")

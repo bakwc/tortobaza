@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatCrmDateTime } from "@/lib/format";
-import type { SocialMessage } from "@/lib/api/types";
+import type { SocialMessage, SocialMessageProcessingEvent } from "@/lib/api/types";
 
 function senderLabel(senderUsername: string, senderId: string | null): string {
   if (senderUsername) return `@${senderUsername}`;
@@ -16,6 +16,19 @@ function flagText(value: boolean | null, yes: string, no: string, pending: strin
   if (value === null) return pending;
   if (value) return yes;
   return no;
+}
+
+function historyTitle(
+  event: SocialMessageProcessingEvent,
+  found: string,
+  context: string,
+  lead: string,
+  verify: string,
+): string {
+  if (event.kind === "found") return found;
+  if (event.kind === "context") return context;
+  if (event.classifier === "lead") return lead;
+  return verify;
 }
 
 export function LeadMessageDialog({
@@ -69,6 +82,36 @@ export function LeadMessageDialog({
                 {`${t("lead")}: ${flagText(message.lead, t("yes"), t("no"), t("pending"))}`}
               </span>
             </div>
+            <h3 className="mt-6 text-sm font-semibold text-[var(--ink)]">{t("history")}</h3>
+            {message.processing_history.length === 0 ? (
+              <p className="mt-2 text-sm text-[var(--muted-2)]">{t("emptyHistory")}</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-[var(--line)]">
+                {message.processing_history.map((event, index) => (
+                  <li key={`${event.at}-${index}`} className="py-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <p className="text-sm font-medium text-[var(--ink)]">
+                        {historyTitle(
+                          event,
+                          t("historyFound"),
+                          t("historyContext"),
+                          t("historyClassifierLead"),
+                          t("historyClassifierVerify"),
+                        )}
+                      </p>
+                      <time className="shrink-0 text-xs text-[var(--muted-2)]">
+                        {formatCrmDateTime(event.at, locale)}
+                      </time>
+                    </div>
+                    {event.kind === "classify" ? (
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--ink)]">
+                        {`${flagText(event.verdict, t("yes"), t("no"), t("pending"))}. ${event.explanation}`}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
             <h3 className="mt-6 text-sm font-semibold text-[var(--ink)]">{t("context")}</h3>
             {context.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--muted-2)]">{t("emptyContext")}</p>

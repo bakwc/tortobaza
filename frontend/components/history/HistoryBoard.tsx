@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { SectionShell, type SectionTab } from "@/components/menu/SectionShell";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useAuditEvents } from "@/hooks/useAuditEvents";
+import { useAuditActors, useAuditEvents } from "@/hooks/useAuditEvents";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { AuditEvent } from "@/lib/api/types";
 
@@ -116,6 +116,8 @@ function HistoryBoardContent() {
   const end = searchParams.get("end") ?? "";
   const app = searchParams.get("app") ?? "";
   const q = searchParams.get("q") ?? "";
+  const actor = searchParams.get("actor") ?? "";
+  const actors = useAuditActors();
   const query = useAuditEvents(
     {
       page: Number.isFinite(page) && page > 0 ? page : 1,
@@ -123,6 +125,7 @@ function HistoryBoardContent() {
       end,
       app,
       q,
+      actor,
       model: null,
       objectId: null,
     },
@@ -134,7 +137,7 @@ function HistoryBoardContent() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const params = new URLSearchParams();
-    for (const key of ["start", "end", "app", "q"]) {
+    for (const key of ["start", "end", "app", "actor", "q"]) {
       const value = String(data.get(key) ?? "");
       if (value) params.set(key, value);
     }
@@ -143,7 +146,7 @@ function HistoryBoardContent() {
 
   return (
     <SectionShell active="history" permission="view_history" tabs={tabs}>
-      <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <label className="grid gap-1 text-sm text-[var(--ink)]">
           {t("start")}
           <input
@@ -177,6 +180,21 @@ function HistoryBoardContent() {
             ))}
           </select>
         </label>
+        <label className="grid gap-1 text-sm text-[var(--ink)]">
+          {t("user")}
+          <select
+            name="actor"
+            defaultValue={actor}
+            className="h-10 rounded-xl border border-[var(--line)] bg-white px-3"
+          >
+            <option value="">{t("allUsers")}</option>
+            {(actors.data ?? []).map((item) => (
+              <option key={item.id} value={String(item.id)}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="grid gap-1 text-sm text-[var(--ink)] lg:col-span-2">
           {t("search")}
           <input
@@ -186,7 +204,7 @@ function HistoryBoardContent() {
             className="h-10 rounded-xl border border-[var(--line)] bg-white px-3"
           />
         </label>
-        <div className="sm:col-span-2 lg:col-span-5">
+        <div className="sm:col-span-2 lg:col-span-6">
           <Button type="submit" size="sm">
             {t("apply")}
           </Button>

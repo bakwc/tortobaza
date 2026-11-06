@@ -184,8 +184,12 @@ class SyncTelegramChannelsTests(TestCase):
             patch("crm.telegram_channels.timezone.now", return_value=now),
         ):
             sync_telegram_channels()
-        self.assertIs(SocialMessage.objects.get(external_id="9").keyword_match, True)
-        self.assertIs(SocialMessage.objects.get(external_id="10").keyword_match, False)
+        matched = SocialMessage.objects.get(external_id="9")
+        missed = SocialMessage.objects.get(external_id="10")
+        self.assertIs(matched.keyword_match, True)
+        self.assertEqual([event["kind"] for event in matched.processing_history], ["found"])
+        self.assertIs(missed.keyword_match, False)
+        self.assertEqual(missed.processing_history, [])
 
     def test_long_message_is_not_keyword_match(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -263,3 +267,61 @@ class SyncTelegramChannelsTests(TestCase):
         refresh_keyword_matches()
         message.refresh_from_db()
         self.assertIs(message.keyword_match, False)
+        self.assertEqual(message.processing_history, [])
+
+    def test_refresh_records_found_once_when_match_appears(self):
+        channel = _source(username="cakes")
+        message = SocialMessage.objects.create(
+            channel=channel,
+            external_id="1",
+            url="https://t.me/cakes/1",
+            sent_at=datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc),
+            text="нужен торт",
+            keyword_match=False,
+        )
+        SocialKeyword.objects.create(word="торт")
+        refresh_keyword_matches()
+        message.refresh_from_db()
+        self.assertIs(message.keyword_match, True)
+        self.assertEqual([event["kind"] for event in message.processing_history], ["found"])
+        refresh_keyword_matches()
+        message.refresh_from_db()
+        self.assertEqual(len(message.processing_history), 1)
+
+    def test_sync_records_found_once_when_existing_message_starts_matching(self):
+        now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
+        entity = SimpleNamespace(id=100, title="Cakes")
+        channel = _source(
+            username="cakes",
+            title="Cakes",
+            telegram_id=100,
+            last_message_id=0,
+        )
+        stored = SocialMessage.objects.create(
+            channel=channel,
+            external_id="7",
+            url="https://t.me/cakes/7",
+            sent_at=now - timedelta(days=1),
+            text="нужен торт",
+            keyword_match=False,
+        )
+        SocialKeyword.objects.create(word="торт")
+        message = SimpleNamespace(
+            id=7,
+            action=None,
+            message="нужен торт",
+            date=now - timedelta(days=1),
+            sender_id=3,
+            sender=SimpleNamespace(username="ann"),
+        )
+        fake_client, _clients = self._client({"cakes": entity}, {100: [message]})
+        with (
+            patch("crm.telegram_channels.TelegramClient", fake_client),
+            patch("crm.telegram_channels.StringSession", side_effect=lambda value: value),
+            patch("crm.telegram_channels.timezone.now", return_value=now),
+        ):
+            sync_telegram_channels()
+            sync_telegram_channels()
+        stored.refresh_from_db()
+        self.assertIs(stored.keyword_match, True)
+        self.assertEqual([event["kind"] for event in stored.processing_history], ["found"])

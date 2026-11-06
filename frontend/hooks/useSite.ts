@@ -83,7 +83,8 @@ export function useSiteProducts(filters: { category?: number; search?: string })
     onSuccess: invalidate,
   });
   const remove = useMutation({
-    mutationFn: (id: number) => api.siteProducts.remove(id),
+    mutationFn: ({ id, confirm }: { id: number; confirm: boolean }) =>
+      api.deleteSiteProduct(id, confirm),
     onSuccess: invalidate,
   });
   return { list, save, remove };

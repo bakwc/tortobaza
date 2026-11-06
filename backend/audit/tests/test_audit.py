@@ -228,3 +228,49 @@ class AuditLogTests(TestCase):
         self.assertTrue(
             all(row["model"] == "ingredient" and row["object_id"] == "1" for row in body["results"])
         )
+
+    def test_actor_filter_returns_only_that_user(self):
+        AuditEvent.objects.create(
+            actor=self.finance,
+            action=AuditEvent.ACTION_CREATED,
+            app_label="menu",
+            model="ingredient",
+            object_id="1",
+            object_label="Flour",
+            database="default",
+            source=AuditEvent.SOURCE_USER,
+            changes={"name": {"old": None, "new": "Flour"}},
+        )
+        AuditEvent.objects.create(
+            actor=self.user,
+            action=AuditEvent.ACTION_UPDATED,
+            app_label="menu",
+            model="ingredient",
+            object_id="2",
+            object_label="Sugar",
+            database="default",
+            source=AuditEvent.SOURCE_USER,
+            changes={"name": {"old": "Sugar", "new": "Cane"}},
+        )
+        client = APIClient()
+        client.force_authenticate(user=self.staff)
+        denied = client.get("/api/audit/events/", {"actor": self.user.pk})
+        self.assertEqual(denied.status_code, 403)
+        denied_actors = client.get("/api/audit/actors/")
+        self.assertEqual(denied_actors.status_code, 403)
+        client.force_authenticate(user=self.finance)
+        response = client.get("/api/audit/events/", {"actor": self.user.pk})
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body["results"]), 1)
+        self.assertEqual(body["results"][0]["actor_id"], self.user.pk)
+        self.assertEqual(body["results"][0]["object_label"], "Sugar")
+        actors = client.get("/api/audit/actors/")
+        self.assertEqual(actors.status_code, 200)
+        self.assertEqual(
+            actors.json(),
+            [
+                {"id": self.finance.pk, "name": "finance"},
+                {"id": self.user.pk, "name": "worker"},
+            ],
+        )

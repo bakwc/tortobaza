@@ -1028,6 +1028,7 @@ class SocialMessage(models.Model):
     context = models.JSONField(null=True, blank=True, verbose_name=_("Context"))
     profile = models.JSONField(null=True, blank=True, verbose_name=_("Profile"))
     lead_notified = models.BooleanField(default=False, verbose_name=_("Lead notified"))
+    processing_history = models.JSONField(default=list, verbose_name=_("Processing history"))
 
     class Meta:
         verbose_name = _("Social message")
@@ -1042,6 +1043,13 @@ class SocialMessage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.channel_id}#{self.external_id}"
+
+
+def append_processing_event(message: SocialMessage, event: dict) -> None:
+    message.processing_history = [
+        *message.processing_history,
+        {"at": timezone.now().isoformat(), **event},
+    ]
 
 
 class WhatsAppNumberCheck(CrmOrder):

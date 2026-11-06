@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardTitle, NativeSelect, QueryState } from "@/components/menu/ui";
 import { LeadMessageDialog } from "@/components/leads/LeadMessageDialog";
 import { LeadsShell } from "@/components/leads/LeadsShell";
-import { useSocialChannels, useSocialMessages } from "@/hooks/useLeads";
+import { socialMessagesQueryKey, useSocialChannels, useSocialMessages } from "@/hooks/useLeads";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
 import type { SocialMessage, SocialMessageKind } from "@/lib/api/types";
+
+const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_TIMEOUT_MS = 8000;
 
 function parseKind(value: string | null): SocialMessageKind {
   if (value === "keyword" || value === "all" || value === "potential") return value;
@@ -66,14 +70,120 @@ export function LeadsMessagesPanel() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<SocialMessage | null>(null);
   const kind = parseKind(searchParams.get("kind"));
   const network = parseNetwork(searchParams.get("network"));
   const channel = parseChannel(searchParams.get("channel"));
   const q = searchParams.get("q") ?? "";
   const page = parsePage(searchParams.get("page"));
+  const [draft, setDraft] = useState(q);
+  const [searchQ, setSearchQ] = useState(q);
+  const urlQ = q.trim();
+  const searchTrim = searchQ.trim();
+  const queuedRef = useRef<string | null>(null);
+  const searchQRef = useRef(q);
+  const lastWrittenRef = useRef(urlQ);
+  const prevUrlQRef = useRef(urlQ);
+  const filtersRef = useRef({ kind, network, channel });
+  const fetchingRef = useRef(false);
+  const fetchStartedAtRef = useRef<number | null>(null);
+  const queryKeyRef = useRef(socialMessagesQueryKey(kind, network, channel, urlQ, page));
+  const applySearchRef = useRef<(trimmed: string) => void>(() => {});
+  const cancelSearchRef = useRef(() => {});
+  const urlJustChanged = prevUrlQRef.current !== urlQ;
+  prevUrlQRef.current = urlQ;
+  const searchAhead =
+    !urlJustChanged && lastWrittenRef.current === searchTrim && lastWrittenRef.current !== urlQ;
+  const effectiveQ = searchAhead ? searchTrim : urlQ;
+  const queryPage = searchAhead ? 1 : page;
+  searchQRef.current = searchQ;
+  queryKeyRef.current = socialMessagesQueryKey(kind, network, channel, effectiveQ, queryPage);
   const channels = useSocialChannels();
-  const messages = useSocialMessages(kind, network, channel, q, page);
+  const messages = useSocialMessages(kind, network, channel, effectiveQ, queryPage);
+  fetchingRef.current = messages.isFetching;
+  applySearchRef.current = (trimmed: string) => {
+    const filters = filtersRef.current;
+    queuedRef.current = null;
+    lastWrittenRef.current = trimmed;
+    if (trimmed === searchQRef.current.trim()) return;
+    searchQRef.current = trimmed;
+    setSearchQ(trimmed);
+    startTransition(() => {
+      router.replace(pageHref(pathname, filters.kind, filters.network, filters.channel, trimmed, 1));
+    });
+  };
+  cancelSearchRef.current = () => {
+    void queryClient.cancelQueries({ queryKey: queryKeyRef.current });
+  };
+
+  useEffect(() => {
+    filtersRef.current = { kind, network, channel };
+  }, [kind, network, channel]);
+
+  useEffect(() => {
+    if (q === searchQRef.current.trim()) return;
+    searchQRef.current = q;
+    queuedRef.current = null;
+    setSearchQ(q);
+    if (q !== lastWrittenRef.current) {
+      lastWrittenRef.current = q;
+      setDraft(q);
+    }
+  }, [q]);
+
+  useEffect(() => {
+    if (!messages.isFetching) {
+      fetchStartedAtRef.current = null;
+      return;
+    }
+    fetchStartedAtRef.current = Date.now();
+  }, [messages.isFetching, kind, network, channel, effectiveQ, queryPage]);
+
+  useEffect(() => {
+    const trimmed = draft.trim();
+    const id = setTimeout(() => {
+      if (fetchingRef.current) {
+        queuedRef.current = trimmed;
+        const startedAt = fetchStartedAtRef.current;
+        if (
+          startedAt !== null &&
+          Date.now() - startedAt >= SEARCH_TIMEOUT_MS &&
+          trimmed !== searchQRef.current.trim()
+        ) {
+          cancelSearchRef.current();
+          applySearchRef.current(trimmed);
+        }
+        return;
+      }
+      if (trimmed === searchQRef.current.trim()) return;
+      applySearchRef.current(trimmed);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(id);
+  }, [draft]);
+
+  useEffect(() => {
+    if (messages.isFetching) return;
+    const queued = queuedRef.current;
+    if (queued === null) return;
+    if (queued.trim() === searchQRef.current.trim()) {
+      queuedRef.current = null;
+      return;
+    }
+    applySearchRef.current(queued);
+  }, [messages.isFetching]);
+
+  useEffect(() => {
+    if (!messages.isFetching) return;
+    const id = setTimeout(() => {
+      const queued = queuedRef.current;
+      if (queued === null) return;
+      if (queued.trim() === searchQRef.current.trim()) return;
+      cancelSearchRef.current();
+      applySearchRef.current(queued);
+    }, SEARCH_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [messages.isFetching, kind, network, channel, effectiveQ, queryPage]);
   const rows = messages.data?.results ?? [];
   const channelRows = (channels.list.data ?? []).filter(
     (row) => network === "" || row.network_slug === network,
@@ -92,14 +202,17 @@ export function LeadsMessagesPanel() {
     nextChannel: number | null,
     nextQ: string,
   ) => {
-    const params = new URLSearchParams();
-    if (nextKind !== "lead") params.set("kind", nextKind);
-    if (nextNetwork) params.set("network", nextNetwork);
-    if (nextChannel !== null) params.set("channel", String(nextChannel));
     const trimmed = nextQ.trim();
-    if (trimmed) params.set("q", trimmed);
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname);
+    filtersRef.current = { kind: nextKind, network: nextNetwork, channel: nextChannel };
+    lastWrittenRef.current = trimmed;
+    queuedRef.current = null;
+    if (trimmed !== searchQRef.current.trim()) {
+      searchQRef.current = trimmed;
+      setSearchQ(trimmed);
+    }
+    startTransition(() => {
+      router.replace(pageHref(pathname, nextKind, nextNetwork, nextChannel, trimmed, 1));
+    });
   };
 
   const kinds: { key: SocialMessageKind; label: string }[] = [
@@ -116,13 +229,13 @@ export function LeadsMessagesPanel() {
           <div className="grid gap-4">
             <div className="grid gap-3 sm:grid-cols-[1fr_200px_240px]">
               <Input
-                value={q}
-                onChange={(event) => setParams(kind, network, channel, event.target.value)}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
                 placeholder={t("filterPlaceholder")}
               />
               <NativeSelect
                 value={network}
-                onChange={(event) => setParams(kind, event.target.value, null, q)}
+                onChange={(event) => setParams(kind, event.target.value, null, draft)}
               >
                 <option value="">{t("allNetworks")}</option>
                 {networks.map((row) => (
@@ -135,7 +248,7 @@ export function LeadsMessagesPanel() {
                 value={channel ?? ""}
                 onChange={(event) => {
                   const raw = event.target.value;
-                  setParams(kind, network, raw === "" ? null : Number(raw), q);
+                  setParams(kind, network, raw === "" ? null : Number(raw), draft);
                 }}
               >
                 <option value="">{t("allChannels")}</option>
@@ -153,7 +266,7 @@ export function LeadsMessagesPanel() {
                   type="button"
                   variant={item.key === kind ? "primary" : "outline"}
                   size="sm"
-                  onClick={() => setParams(item.key, network, channel, q)}
+                  onClick={() => setParams(item.key, network, channel, draft)}
                 >
                   {item.label}
                 </Button>
@@ -203,14 +316,14 @@ export function LeadsMessagesPanel() {
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page - 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, effectiveQ, messages.data.page - 1)}>
                         {t("previous")}
                       </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, q, messages.data.page + 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, effectiveQ, messages.data.page + 1)}>
                         {t("next")}
                       </Link>
                     </Button>

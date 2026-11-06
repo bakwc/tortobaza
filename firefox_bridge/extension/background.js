@@ -19,6 +19,10 @@ function requireParam(params, name) {
   }
 }
 
+function scriptable(url) {
+  return typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"));
+}
+
 function waitForTab(tabId, timeoutMs) {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -37,21 +41,24 @@ function waitForTab(tabId, timeoutMs) {
       resolve();
     }
 
-    function onUpdated(id, info) {
-      if (id === tabId && info.status === "complete") {
+    function consider(tab) {
+      if (tab.status === "complete" && scriptable(tab.url)) {
         settle(null);
       }
+    }
+
+    function onUpdated(id, info, tab) {
+      if (id !== tabId) {
+        return;
+      }
+      consider(tab);
     }
 
     const timer = setTimeout(() => {
       settle(new Error("timeout"));
     }, timeoutMs);
     browser.tabs.onUpdated.addListener(onUpdated);
-    browser.tabs.get(tabId).then((tab) => {
-      if (tab.status === "complete") {
-        settle(null);
-      }
-    }, (error) => {
+    browser.tabs.get(tabId).then(consider, (error) => {
       settle(error);
     });
   });

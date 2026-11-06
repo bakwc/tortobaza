@@ -920,7 +920,13 @@
     "no": "No",
     "pending": "Not checked",
     "target": "This message",
-    "emptyContext": "No context"
+    "emptyContext": "No context",
+    "history": "Processing history",
+    "historyFound": "Matched keywords",
+    "historyContext": "Context collected",
+    "historyClassifierLead": "Lead classifier",
+    "historyClassifierVerify": "Context check",
+    "emptyHistory": "No history"
   },
   "rsge": {
     "waybills": "Waybills",
@@ -1146,6 +1152,8 @@
     "search": "Search",
     "app": "Section",
     "allApps": "All sections",
+    "user": "User",
+    "allUsers": "All users",
     "start": "From",
     "end": "To",
     "apply": "Show",
@@ -1333,6 +1341,12 @@
     "previewProductPage": "Product page",
     "previewCart": "Cart",
     "previewOption": "Option on site",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "deleteConfirmQuestion": "Do you really want to delete this?",
+    "deleteRelatedTitle": "This will also be deleted",
+    "deleteRelatedConfirm": "Continue?",
+    "deleteRelatedMore": "and {count} more",
+    "confirmDelete": "Delete",
+    "cancelDelete": "Cancel"
   }
 }

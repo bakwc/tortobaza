@@ -6,6 +6,7 @@ import { ExternalLink, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
@@ -23,6 +24,7 @@ import {
   useShowHidden,
 } from "@/hooks/useSite";
 import { Link } from "@/i18n/navigation";
+import { ApiError } from "@/lib/api/client";
 import type { SiteProduct, SiteProductBody, SiteProductListItem } from "@/lib/api/site-schemas";
 
 type ProductDraft = SiteProductBody & { id: number | null };
@@ -79,6 +81,16 @@ function draftFrom(row: SiteProduct | null, categories: { id: number }[]): Produ
   };
 }
 
+function deletePreview(error: unknown): { labels: string[]; total: number } | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  const body = error.parsed<{ related: { label: string }[]; related_total: number }>();
+  if (body === null || !Array.isArray(body.related) || typeof body.related_total !== "number") return null;
+  return {
+    labels: body.related.map((row) => row.label),
+    total: body.related_total,
+  };
+}
+
 function displayName(row: SiteProductListItem, locale: SiteLocale): string {
   if (locale === "en") return row.name_en;
   if (locale === "ka") return row.name_ka;
@@ -101,12 +113,18 @@ export function ProductsPanel() {
   const visibleProducts = (products.list.data ?? []).filter((row) => showHidden || row.is_active);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
+  const [deletePrompt, setDeletePrompt] = useState<{
+    id: number;
+    labels: string[];
+    total: number;
+  } | null>(null);
   const detail = useSiteProductDetail(editingId);
   const flushImagesRef = useRef<(() => Promise<void>) | null>(null);
 
   const open = (row: SiteProductListItem | null) => {
     products.save.reset();
     products.remove.reset();
+    setDeletePrompt(null);
     if (row === null) {
       setEditingId(null);
       setDraft(draftFrom(null, categories.list.data ?? []));
@@ -119,6 +137,7 @@ export function ProductsPanel() {
   const close = () => {
     setEditingId(null);
     setDraft(null);
+    setDeletePrompt(null);
   };
 
   const activeDraft = useMemo(() => {
@@ -213,7 +232,11 @@ export function ProductsPanel() {
                 : activeDraft.slug
           }
           pending={products.save.isPending || (editingId !== null && detail.isLoading)}
-          error={products.save.error ?? products.remove.error ?? detail.error}
+          error={
+            products.save.error ??
+            (deletePreview(products.remove.error) ? null : products.remove.error) ??
+            detail.error
+          }
           submitLabel={canEdit && activeDraft ? t("save") : null}
           onSubmit={() => {
             if (!activeDraft) return;
@@ -252,7 +275,21 @@ export function ProductsPanel() {
           }}
           onDelete={
             canEdit && activeDraft !== null && activeDraft.id !== null
-              ? () => products.remove.mutate(activeDraft.id as number, { onSuccess: close })
+              ? () => {
+                  const id = activeDraft.id as number;
+                  setDeletePrompt(null);
+                  products.remove.mutate(
+                    { id, confirm: false },
+                    {
+                      onError: (error) => {
+                        const preview = deletePreview(error);
+                        if (preview) {
+                          setDeletePrompt({ id, labels: preview.labels, total: preview.total });
+                        }
+                      },
+                    },
+                  );
+                }
               : null
           }
           deletePending={products.remove.isPending}
@@ -461,6 +498,52 @@ export function ProductsPanel() {
           ) : (
             <p className="mt-6 text-sm text-[var(--muted-2)]">{t("saveBeforeImages")}</p>
           )}
+          {deletePrompt !== null ? (
+            <div className="mt-6 grid gap-3 rounded-2xl border border-[var(--line)] p-4">
+              {deletePrompt.total > 0 ? (
+                <>
+                  <p className="font-medium text-[var(--ink)]">{t("deleteRelatedTitle")}</p>
+                  <ul className="grid gap-1 text-sm text-[var(--ink)]">
+                    {deletePrompt.labels.map((label, index) => (
+                      <li key={`${label}-${index}`}>{label}</li>
+                    ))}
+                  </ul>
+                  {deletePrompt.total > deletePrompt.labels.length ? (
+                    <p className="text-sm text-[var(--muted-2)]">
+                      {t("deleteRelatedMore", {
+                        count: deletePrompt.total - deletePrompt.labels.length,
+                      })}
+                    </p>
+                  ) : null}
+                  <p className="text-sm text-[var(--ink)]">{t("deleteRelatedConfirm")}</p>
+                </>
+              ) : (
+                <p className="text-sm text-[var(--ink)]">{t("deleteConfirmQuestion")}</p>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() =>
+                    products.remove.mutate(
+                      { id: deletePrompt.id, confirm: true },
+                      { onSuccess: close },
+                    )
+                  }
+                  disabled={products.remove.isPending}
+                >
+                  {products.remove.isPending ? <Spinner className="h-4 w-4" /> : t("confirmDelete")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDeletePrompt(null)}
+                  disabled={products.remove.isPending}
+                >
+                  {t("cancelDelete")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
           </>
           )}
         </EditorDialog>

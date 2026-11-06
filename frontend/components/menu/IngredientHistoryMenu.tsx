@@ -86,6 +86,7 @@ function IngredientHistoryDialog({
       end: "",
       app: "menu",
       q: "",
+      actor: "",
       model: "ingredient",
       objectId: String(ingredientId),
     },

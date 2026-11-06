@@ -7,6 +7,7 @@ import socket
 import ssl
 import sys
 import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,6 +22,8 @@ POTENTIAL_URL = "https://sweet-chill.ge/api/social/networks/threads/potential-le
 CONTEXT_URL = "https://sweet-chill.ge/api/social/messages/{}/context/"
 VERIFY_URL = "https://sweet-chill.ge/api/social/networks/threads/verify-leads/"
 PROFILE_URL = "https://www.threads.com/@{}"
+ERROR_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "error.log")
+RESTART_SLEEP_S = 60
 SSL_CONTEXT = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
 POST_LIMIT = 50
 LIGHT_POST_LIMIT = 38
@@ -159,6 +162,14 @@ def take(posts, seen, found, limit):
 
 def log(message):
     print(message, file=sys.stderr, flush=True)
+
+
+def log_error(error):
+    stamp = datetime.datetime.now().isoformat(timespec="seconds")
+    with open(ERROR_LOG, "a", encoding="utf-8") as handle:
+        handle.write(f"\n{stamp}\n")
+        traceback.print_exception(type(error), error, error.__traceback__, file=handle)
+    log(f"ошибка {error}")
 
 
 def report(count):
@@ -587,8 +598,7 @@ def cycle_pause():
     time.sleep(pause)
 
 
-def main():
-    token = os.environ["SOCIAL_INGEST_TOKEN"]
+def run_forever(token):
     conn = socket.create_connection((HOST, PORT))
     buffer = bytearray()
     counter = [1]
@@ -607,6 +617,16 @@ def main():
                 True,
             )
         cycle_pause()
+
+
+def main():
+    token = os.environ["SOCIAL_INGEST_TOKEN"]
+    while True:
+        try:
+            run_forever(token)
+        except Exception as error:
+            log_error(error)
+            time.sleep(RESTART_SLEEP_S)
 
 
 if __name__ == "__main__":

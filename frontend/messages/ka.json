@@ -920,7 +920,13 @@
     "no": "არა",
     "pending": "შეუმოწმებელია",
     "target": "ეს შეტყობინება",
-    "emptyContext": "კონტექსტი არ არის"
+    "emptyContext": "კონტექსტი არ არის",
+    "history": "დამუშავების ისტორია",
+    "historyFound": "საკვანძო სიტყვებით მოიძებნა",
+    "historyContext": "კონტექსტი შეგროვდა",
+    "historyClassifierLead": "ლიდის კლასიფიკატორი",
+    "historyClassifierVerify": "კონტექსტით შემოწმება",
+    "emptyHistory": "ისტორია არ არის"
   },
   "rsge": {
     "waybills": "ზედნადებები",
@@ -1146,6 +1152,8 @@
     "search": "ძებნა",
     "app": "განყოფილება",
     "allApps": "ყველა განყოფილება",
+    "user": "მომხმარებელი",
+    "allUsers": "ყველა მომხმარებელი",
     "start": "დან",
     "end": "მდე",
     "apply": "ჩვენება",
@@ -1333,6 +1341,12 @@
     "previewProductPage": "გვერდი",
     "previewCart": "კალათა",
     "previewOption": "ოფცია",
-    "loading": "იტვირთება…"
+    "loading": "იტვირთება…",
+    "deleteConfirmQuestion": "ნამდვილად გსურთ წაშლა?",
+    "deleteRelatedTitle": "ასევე წაიშლება",
+    "deleteRelatedConfirm": "გავაგრძელოთ?",
+    "deleteRelatedMore": "და კიდევ {count}",
+    "confirmDelete": "წაშლა",
+    "cancelDelete": "გაუქმება"
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Resource } from "@/lib/api/endpoints";
 import type { SocialMessageKind } from "@/lib/api/types";
@@ -20,6 +20,16 @@ function useResource<T, B>(key: readonly string[], resource: Resource<T, B>) {
   return { list, save, remove };
 }
 
+export function socialMessagesQueryKey(
+  kind: SocialMessageKind,
+  network: string,
+  channel: number | null,
+  q: string,
+  page: number,
+) {
+  return ["leads", "messages", kind, network, channel, q, page] as const;
+}
+
 export function useSocialMessages(
   kind: SocialMessageKind,
   network: string,
@@ -28,8 +38,9 @@ export function useSocialMessages(
   page: number,
 ) {
   return useQuery({
-    queryKey: ["leads", "messages", kind, network, channel, q, page],
-    queryFn: () => api.socialMessages(kind, network, channel, q, page),
+    queryKey: socialMessagesQueryKey(kind, network, channel, q, page),
+    queryFn: ({ signal }) => api.socialMessages(kind, network, channel, q, page, signal),
+    placeholderData: keepPreviousData,
   });
 }
 

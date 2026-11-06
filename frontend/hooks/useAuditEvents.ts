@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { AuditEventsResponse } from "@/lib/api/types";
+import type { AuditActor, AuditEventsResponse } from "@/lib/api/types";
 
 export type AuditEventsQuery = {
   page: number;
@@ -10,6 +10,7 @@ export type AuditEventsQuery = {
   end: string;
   app: string;
   q: string;
+  actor: string;
   model: string | null;
   objectId: string | null;
 };
@@ -19,5 +20,12 @@ export function useAuditEvents(query: AuditEventsQuery, enabled: boolean) {
     queryKey: ["audit-events", query] as const,
     queryFn: () => api.getAuditEvents(query),
     enabled,
+  });
+}
+
+export function useAuditActors() {
+  return useQuery<AuditActor[]>({
+    queryKey: ["audit-actors"] as const,
+    queryFn: () => api.getAuditActors(),
   });
 }

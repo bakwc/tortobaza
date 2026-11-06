@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import SectionPermission
+from cart.models import CartItem
 from catalog.models import (
     Category,
     CategoryLanding,
@@ -41,6 +42,21 @@ def protected_objects(instance) -> list[str]:
     collector = NestedObjects(using=router.db_for_write(type(instance)))
     collector.collect([instance])
     return sorted({str(obj) for obj in collector.protected})
+
+
+def product_delete_blockers(product: Product) -> tuple[list[CartItem], list[str]]:
+    collector = NestedObjects(using=router.db_for_write(Product))
+    collector.collect([product])
+    cart_items = list(CartItem.objects.filter(product=product).order_by("id"))
+    cart_item_ids = {item.pk for item in cart_items}
+    extra = sorted(
+        {
+            str(obj)
+            for obj in collector.protected
+            if not isinstance(obj, CartItem) or obj.pk not in cart_item_ids
+        }
+    )
+    return cart_items, extra
 
 
 def delete_unless_protected(instance) -> Response:
@@ -270,6 +286,30 @@ class SiteProductDetailView(SiteDetailView):
         return Product.objects.select_related("category", "tech_card").prefetch_related(
             "images", "product_option_groups__option_group"
         )
+
+    @transaction.atomic
+    def delete(self, request, pk: int):
+        product = get_object_or_404(self.get_queryset(), pk=pk)
+        cart_items, extra = product_delete_blockers(product)
+        if extra:
+            return Response(
+                {"detail": "Object is in use.", "protected": extra},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if request.query_params.get("confirm") != "1":
+            return Response(
+                {
+                    "related": [
+                        {"label": f"{product.name} × {item.quantity}"} for item in cart_items[:8]
+                    ],
+                    "related_total": len(cart_items),
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        if cart_items:
+            CartItem.objects.filter(pk__in=[item.pk for item in cart_items]).delete()
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class SiteProductImageCreateView(APIView):

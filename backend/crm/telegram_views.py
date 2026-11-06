@@ -13,7 +13,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import SectionPermission
-from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource, normalize_telegram_username
+from crm.models import (
+    SocialKeyword,
+    SocialMessage,
+    SocialNetwork,
+    SocialSource,
+    append_processing_event,
+    normalize_telegram_username,
+)
 from crm.serializers import (
     SocialKeywordSerializer,
     SocialMessageContextSerializer,
@@ -234,7 +241,8 @@ class SocialMessageIngestView(APIView):
                 sender_id = item["sender_id"]
                 if sender_id == "":
                     sender_id = None
-                SocialMessage.objects.create(
+                matched = _keyword_match(item["text"], keywords)
+                row = SocialMessage(
                     channel=source,
                     external_id=external_id,
                     sent_at=item["sent_at"],
@@ -244,8 +252,11 @@ class SocialMessageIngestView(APIView):
                     url=item["url"],
                     location=item["location"],
                     topic=item["topic"],
-                    keyword_match=_keyword_match(item["text"], keywords),
+                    keyword_match=matched,
                 )
+                if matched:
+                    append_processing_event(row, {"kind": "found"})
+                row.save()
                 created_count += 1
         return Response({"created": created_count, "skipped": skipped_count})
 
@@ -322,7 +333,8 @@ class SocialMessageContextView(APIView):
                 for item in profile["posts"]
             ],
         }
-        message.save(update_fields=["context", "profile"])
+        append_processing_event(message, {"kind": "context"})
+        message.save(update_fields=["context", "profile", "processing_history"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

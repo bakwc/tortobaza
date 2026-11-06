@@ -30,15 +30,26 @@ class ClassifyTelegramLeadsTests(TestCase):
     @patch("crm.telegram_leads.OpenAI")
     def test_classifies_pending_keyword_matches(self, openai_cls):
         row = self._message("где заказать торт?", True, None)
-        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=True)
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
+            is_lead=True,
+            explanation="Автор спрашивает, где заказать торт.",
+        )
         classify_leads("telegram", False)
         openai_cls.return_value.responses.parse.assert_called_once()
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertEqual(call["input"], "где заказать торт?")
         self.assertNotIn("metro", call["instructions"])
+        self.assertIn("one short sentence in Russian", call["instructions"])
         row.refresh_from_db()
         self.assertIs(row.potential_lead, True)
         self.assertIs(row.lead, True)
+        self.assertEqual(len(row.processing_history), 1)
+        event = row.processing_history[0]
+        self.assertEqual(event["kind"], "classify")
+        self.assertEqual(event["classifier"], "lead")
+        self.assertIs(event["verdict"], True)
+        self.assertEqual(event["explanation"], "Автор спрашивает, где заказать торт.")
+        self.assertTrue(event["at"])
 
     @patch("crm.telegram_leads.OpenAI")
     def test_skips_already_classified_and_non_keyword(self, openai_cls):
@@ -89,7 +100,10 @@ class ClassifyTelegramLeadsTests(TestCase):
             topic="торты минск",
             keyword_match=True,
         )
-        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=False)
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
+            is_lead=False,
+            explanation="Автор ищет торт в Минске.",
+        )
         classify_leads("threads", False)
         call = openai_cls.return_value.responses.parse.call_args.kwargs
         self.assertIn("metro", call["instructions"])
@@ -99,6 +113,9 @@ class ClassifyTelegramLeadsTests(TestCase):
         row.refresh_from_db()
         self.assertIs(row.potential_lead, False)
         self.assertIs(row.lead, False)
+        self.assertEqual(row.processing_history[0]["classifier"], "lead")
+        self.assertIs(row.processing_history[0]["verdict"], False)
+        self.assertEqual(row.processing_history[0]["explanation"], "Автор ищет торт в Минске.")
 
     @patch("crm.telegram_leads.OpenAI")
     def test_potential_mode_leaves_lead_unset(self, openai_cls):
@@ -114,11 +131,16 @@ class ClassifyTelegramLeadsTests(TestCase):
             text="где заказать торт?",
             keyword_match=True,
         )
-        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=True)
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
+            is_lead=True,
+            explanation="Автор спрашивает, где заказать торт.",
+        )
         classify_leads("threads", True)
         row.refresh_from_db()
         self.assertIs(row.potential_lead, True)
         self.assertIsNone(row.lead)
+        self.assertEqual(row.processing_history[0]["classifier"], "lead")
+        self.assertIs(row.processing_history[0]["verdict"], True)
 
     @patch("crm.telegram_leads.OpenAI")
     def test_verify_leads_uses_thread_context(self, openai_cls):
@@ -172,7 +194,10 @@ class ClassifyTelegramLeadsTests(TestCase):
             keyword_match=True,
             potential_lead=True,
         )
-        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(is_lead=False)
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
+            is_lead=False,
+            explanation="Автор во Владивостоке.",
+        )
         verify_leads("threads")
         openai_cls.return_value.responses.parse.assert_called_once()
         call = openai_cls.return_value.responses.parse.call_args.kwargs
@@ -186,6 +211,12 @@ class ClassifyTelegramLeadsTests(TestCase):
         self.assertIn("доставка по Владивостоку", call["input"])
         row.refresh_from_db()
         self.assertIs(row.lead, False)
+        self.assertEqual(len(row.processing_history), 1)
+        event = row.processing_history[0]
+        self.assertEqual(event["kind"], "classify")
+        self.assertEqual(event["classifier"], "verify")
+        self.assertIs(event["verdict"], False)
+        self.assertEqual(event["explanation"], "Автор во Владивостоке.")
 
 
 @override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID="leads-chat")
