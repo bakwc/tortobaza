@@ -51,6 +51,7 @@ class ImportTechCardsTests(TestCase):
                         ],
                     }
                 ],
+                "existing_semi_products": [],
                 "modifier_groups": [
                     {
                         "name": "Основа",

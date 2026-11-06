@@ -363,6 +363,8 @@ class WebsiteOrderCrmSyncTests(TestCase):
         mock_now.return_value = self._frozen_now()
         order = create_order_from_cart(self.cart, self._payload(Order.PAYMENT_CARD), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
+        crm.status = CrmOrder.STATUS_NEW
+        crm.save(update_fields=["status"])
         user = User.objects.create_user(username="worker", password="password")
         grant(user, "view_orders")
         self.client.force_authenticate(user=user)

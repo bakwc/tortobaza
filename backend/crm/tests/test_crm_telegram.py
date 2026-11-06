@@ -697,6 +697,7 @@ class CrmTelegramTests(TestCase):
         order = self._create_order(delta=timedelta(hours=2), status=CrmOrder.STATUS_DELIVERED)
         sync_crm_order_to_telegram(order.pk)
         self.calls.clear()
+        order.refresh_from_db()
         order.telegram_payload_hash = crm_order_telegram_hash(order)
         order.save(update_fields=["telegram_payload_hash", "updated_at"])
         sync_crm_order_to_telegram(order.pk)
