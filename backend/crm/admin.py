@@ -25,9 +25,12 @@ from crm.models import (
     FinancialTransactionRule,
     FinancialTransactionRuleCondition,
     ResolvedTelegramPhone,
+    LeadVertical,
     SocialKeyword,
+    SocialLead,
     SocialMessage,
     SocialNetwork,
+    SocialSearchQuery,
     SocialSource,
     TelegramNumberCheck,
     WhatsAppGetNewQr,
@@ -301,9 +304,33 @@ class SocialNetworkAdmin(admin.ModelAdmin):
     search_fields = ["slug", "name"]
 
 
+@admin.register(LeadVertical)
+class LeadVerticalAdmin(admin.ModelAdmin):
+    list_display = ["name", "slug", "enabled", "telegram_chat_id"]
+    search_fields = ["name", "slug"]
+    list_filter = ["enabled"]
+
+
+@admin.register(SocialSearchQuery)
+class SocialSearchQueryAdmin(admin.ModelAdmin):
+    list_display = ["query", "kind", "recent", "post_limit", "enabled", "position"]
+    list_filter = ["kind", "enabled", "recent"]
+    search_fields = ["query"]
+
+
+@admin.register(SocialLead)
+class SocialLeadAdmin(admin.ModelAdmin):
+    list_display = ["message", "vertical", "keyword_match", "potential_lead", "lead", "lead_notified"]
+    list_filter = ["vertical", "keyword_match", "potential_lead", "lead", "lead_notified"]
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(SocialKeyword)
 class SocialKeywordAdmin(admin.ModelAdmin):
-    list_display = ["word"]
+    list_display = ["word", "vertical"]
+    list_filter = ["vertical"]
     search_fields = ["word"]
 
     def save_model(self, request, obj, form, change):
@@ -335,12 +362,9 @@ class SocialMessageAdmin(admin.ModelAdmin):
         "external_id",
         "sender_id",
         "sender_username",
-        "keyword_match",
-        "potential_lead",
-        "lead_notified",
         "text",
     ]
-    list_filter = ["channel", "keyword_match", "potential_lead", "lead_notified"]
+    list_filter = ["channel"]
     search_fields = ["text", "sender_username"]
     date_hierarchy = "sent_at"
 

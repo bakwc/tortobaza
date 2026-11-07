@@ -5,39 +5,11 @@ from django.utils import timezone
 from openai import OpenAI
 from pydantic import BaseModel
 
-from crm.models import SocialMessage, append_processing_event
+from crm.models import SocialLead, SocialMessage, append_processing_event
 from crm.telegram import _esc, _telegram_json
 
 LEAD_MODEL = "gpt-6.1-sol"
 LEAD_TIMEOUT_SECONDS = 90
-
-LEAD_PROMPT = """You classify Telegram chat messages for a confectionery business Sweet Chill in Batumi.
-
-Sweet Chill sells custom cakes, bento cakes, honey cakes (medovik), macarons, cupcakes, and related desserts.
-
-The user message is the text of one Telegram message. Decide whether the author is a potential sales lead: they are looking to buy or order confectionery (asking where to order, price, recommendations, availability, delivery, or describing what they want to order).
-
-Return is_lead false when the product is mentioned incidentally (general chat, jokes, news, someone else's business, unrelated context) and there is no sign the author wants to buy or order from a confectionery.
-
-Return is_lead and explanation. explanation is one short sentence in Russian stating why this verdict was chosen."""
-
-LEAD_GEO_PROMPT = """
-
-The business only delivers in Batumi and Georgia. Return is_lead false when the author is clearly looking for a confectionery in another city or country, or mentions a metro station, a district, or a street that is not in Batumi. Batumi has no metro. If no location is mentioned, decide as usual.
-
-The user message may start with "Post location: ..." and "Post topic: ...". A location or a topic that names another city or country means is_lead false. Batumi or Georgia means the geography fits. A topic may be unrelated to a place, for example "Cooking Threads"; ignore such a topic."""
-
-LEAD_CONTEXT_PROMPT = """
-
-The user message is a thread of posts. The target post is marked with [target]. The other posts are the conversation around it: the post it replies to and the replies under it.
-
-Return is_lead false when the target post answers a question about another city or country, or about something unrelated to buying confectionery in Batumi. A reply that offers cakes only because someone asked what they could do for free, or that answers a request for another city, is not a lead."""
-
-LEAD_PROFILE_PROMPT = """
-
-The user message also contains the author's profile and their recent posts, under "=== Профиль пользователя ===" and "=== Последние сообщения пользователя ===".
-
-Decide the author's city from the post location, the post topic, the thread, the profile, and the recent posts. Return is_lead true only when there is an explicit sign the author is in Batumi. Return is_lead false when another city is indicated, including other cities in Georgia, or when the city cannot be determined."""
 
 
 class LeadVerdict(BaseModel):
@@ -70,27 +42,40 @@ def _verdict(client: OpenAI, instructions: str, content: str) -> LeadVerdict:
     return parsed
 
 
+def _classify_instructions(lead: SocialLead, network_slug: str) -> str:
+    instructions = lead.vertical.prompt_classify
+    if network_slug != "telegram":
+        instructions = instructions + lead.vertical.prompt_geo
+    return instructions
+
+
 def classify_leads(network_slug: str, potential: bool) -> None:
-    pending = SocialMessage.objects.filter(
-        channel__network__slug=network_slug,
-        keyword_match=True,
-        potential_lead__isnull=True,
-    ).order_by("id")
+    pending = (
+        SocialLead.objects.filter(
+            message__channel__network__slug=network_slug,
+            keyword_match=True,
+            potential_lead__isnull=True,
+            vertical__enabled=True,
+        )
+        .select_related("message", "vertical")
+        .order_by("id")
+    )
     if not pending.exists():
         return
-    instructions = LEAD_PROMPT
-    if network_slug != "telegram":
-        instructions = LEAD_PROMPT + LEAD_GEO_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
-    for message in pending:
-        verdict = _verdict(client, instructions, _classifier_input(message))
-        message.potential_lead = verdict.is_lead
+    for lead in pending:
+        verdict = _verdict(
+            client,
+            _classify_instructions(lead, network_slug),
+            _classifier_input(lead.message),
+        )
+        lead.potential_lead = verdict.is_lead
         update_fields = ["potential_lead", "processing_history"]
         if not potential:
-            message.lead = verdict.is_lead
+            lead.lead = verdict.is_lead
             update_fields.append("lead")
         append_processing_event(
-            message,
+            lead,
             {
                 "kind": "classify",
                 "classifier": "lead",
@@ -98,7 +83,7 @@ def classify_leads(network_slug: str, potential: bool) -> None:
                 "explanation": verdict.explanation,
             },
         )
-        message.save(update_fields=update_fields)
+        lead.save(update_fields=update_fields)
 
 
 def _verify_input(message: SocialMessage) -> str:
@@ -131,23 +116,37 @@ def _verify_input(message: SocialMessage) -> str:
     return "\n".join(lines).strip()
 
 
+def _verify_instructions(lead: SocialLead) -> str:
+    vertical = lead.vertical
+    return (
+        vertical.prompt_classify
+        + vertical.prompt_geo
+        + vertical.prompt_context
+        + vertical.prompt_profile
+    )
+
+
 def verify_leads(network_slug: str) -> None:
-    pending = SocialMessage.objects.filter(
-        channel__network__slug=network_slug,
-        potential_lead=True,
-        lead__isnull=True,
-        context__isnull=False,
-        profile__isnull=False,
-    ).order_by("id")
+    pending = (
+        SocialLead.objects.filter(
+            message__channel__network__slug=network_slug,
+            potential_lead=True,
+            lead__isnull=True,
+            message__context__isnull=False,
+            message__profile__isnull=False,
+            vertical__enabled=True,
+        )
+        .select_related("message", "vertical")
+        .order_by("id")
+    )
     if not pending.exists():
         return
-    instructions = LEAD_PROMPT + LEAD_GEO_PROMPT + LEAD_CONTEXT_PROMPT + LEAD_PROFILE_PROMPT
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=LEAD_TIMEOUT_SECONDS)
-    for message in pending:
-        verdict = _verdict(client, instructions, _verify_input(message))
-        message.lead = verdict.is_lead
+    for lead in pending:
+        verdict = _verdict(client, _verify_instructions(lead), _verify_input(lead.message))
+        lead.lead = verdict.is_lead
         append_processing_event(
-            message,
+            lead,
             {
                 "kind": "classify",
                 "classifier": "verify",
@@ -155,7 +154,7 @@ def verify_leads(network_slug: str) -> None:
                 "explanation": verdict.explanation,
             },
         )
-        message.save(update_fields=["lead", "processing_history"])
+        lead.save(update_fields=["lead", "processing_history"])
 
 
 def _channel_label(channel) -> str:
@@ -184,29 +183,30 @@ def build_lead_notification_html(message: SocialMessage) -> str:
 
 def notify_recent_leads(network_slug: str) -> None:
     token = settings.TELEGRAM_BOT_TOKEN
-    chat_id = settings.TELEGRAM_LEADS_CHAT_ID
-    if not token or not chat_id:
+    if not token:
         return
     cutoff = timezone.now() - timedelta(hours=24)
     pending = (
-        SocialMessage.objects.filter(
-            channel__network__slug=network_slug,
+        SocialLead.objects.filter(
+            message__channel__network__slug=network_slug,
             lead=True,
             lead_notified=False,
-            sent_at__gte=cutoff,
+            message__sent_at__gte=cutoff,
+            vertical__enabled=True,
         )
-        .select_related("channel")
+        .exclude(vertical__telegram_chat_id="")
+        .select_related("message", "message__channel", "vertical")
         .order_by("id")
     )
-    for message in pending:
+    for lead in pending:
         _telegram_json(
             "sendMessage",
             {
-                "chat_id": chat_id,
-                "text": build_lead_notification_html(message),
+                "chat_id": lead.vertical.telegram_chat_id,
+                "text": build_lead_notification_html(lead.message),
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True,
             },
         )
-        message.lead_notified = True
-        message.save(update_fields=["lead_notified"])
+        lead.lead_notified = True
+        lead.save(update_fields=["lead_notified"])

@@ -22,9 +22,12 @@ from crm.models import (
     FinancialAccount,
     FinancialTransaction,
     ResolvedTelegramPhone,
+    LeadVertical,
     SocialKeyword,
+    SocialLead,
     SocialMessage,
     SocialNetwork,
+    SocialSearchQuery,
     SocialSource,
 )
 from crm.paypal_link import assign_crm_payment_link
@@ -1176,7 +1179,58 @@ class SocialSourceSerializer(serializers.ModelSerializer):
 class SocialKeywordSerializer(serializers.ModelSerializer):
     class Meta:
         model = SocialKeyword
-        fields = ["id", "word"]
+        fields = ["id", "word", "vertical"]
+
+
+class LeadVerticalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeadVertical
+        fields = [
+            "id",
+            "slug",
+            "name",
+            "enabled",
+            "telegram_chat_id",
+            "prompt_classify",
+            "prompt_geo",
+            "prompt_context",
+            "prompt_profile",
+        ]
+
+
+class SocialSearchQuerySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialSearchQuery
+        fields = ["id", "query", "kind", "recent", "post_limit", "enabled", "position"]
+
+    def validate_kind(self, value: str) -> str:
+        if value not in ("heavy", "light"):
+            raise serializers.ValidationError("Unknown kind.")
+        return value
+
+
+class SocialSearchQueryPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialSearchQuery
+        fields = ["query", "kind", "recent", "post_limit"]
+
+
+class SocialLeadSerializer(serializers.ModelSerializer):
+    vertical_slug = serializers.CharField(source="vertical.slug", read_only=True)
+    vertical_name = serializers.CharField(source="vertical.name", read_only=True)
+
+    class Meta:
+        model = SocialLead
+        fields = [
+            "id",
+            "vertical_slug",
+            "vertical_name",
+            "keyword_match",
+            "potential_lead",
+            "lead",
+            "lead_notified",
+            "processing_history",
+        ]
 
 
 class SocialMessageSerializer(serializers.ModelSerializer):
@@ -1184,6 +1238,7 @@ class SocialMessageSerializer(serializers.ModelSerializer):
     channel_title = serializers.CharField(source="channel.title", read_only=True)
     network_slug = serializers.CharField(source="channel.network.slug", read_only=True)
     network_name = serializers.CharField(source="channel.network.name", read_only=True)
+    leads = SocialLeadSerializer(many=True, read_only=True)
 
     class Meta:
         model = SocialMessage
@@ -1193,9 +1248,7 @@ class SocialMessageSerializer(serializers.ModelSerializer):
             "text",
             "sender_id",
             "sender_username",
-            "keyword_match",
-            "potential_lead",
-            "lead",
+            "leads",
             "context",
             "location",
             "topic",

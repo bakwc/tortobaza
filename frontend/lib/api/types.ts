@@ -1732,6 +1732,29 @@ export const SocialChannelSchema = z.object({
 export const SocialKeywordSchema = z.object({
   id: z.number(),
   word: z.string(),
+  vertical: z.number(),
+});
+
+export const LeadVerticalSchema = z.object({
+  id: z.number(),
+  slug: z.string(),
+  name: z.string(),
+  enabled: z.boolean(),
+  telegram_chat_id: z.string(),
+  prompt_classify: z.string(),
+  prompt_geo: z.string(),
+  prompt_context: z.string(),
+  prompt_profile: z.string(),
+});
+
+export const SocialSearchQuerySchema = z.object({
+  id: z.number(),
+  query: z.string(),
+  kind: z.enum(["heavy", "light"]),
+  recent: z.boolean(),
+  post_limit: z.number(),
+  enabled: z.boolean(),
+  position: z.number(),
 });
 
 export const SocialMessageProcessingEventSchema = z.discriminatedUnion("kind", [
@@ -1752,15 +1775,24 @@ export const SocialMessageProcessingEventSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+export const SocialLeadSchema = z.object({
+  id: z.number(),
+  vertical_slug: z.string(),
+  vertical_name: z.string(),
+  keyword_match: z.boolean(),
+  potential_lead: z.boolean().nullable(),
+  lead: z.boolean().nullable(),
+  lead_notified: z.boolean(),
+  processing_history: z.array(SocialMessageProcessingEventSchema),
+});
+
 export const SocialMessageSchema = z.object({
   id: z.number(),
   sent_at: z.string(),
   text: z.string(),
   sender_id: z.string().nullable(),
   sender_username: z.string(),
-  keyword_match: z.boolean(),
-  potential_lead: z.boolean().nullable(),
-  lead: z.boolean().nullable(),
+  leads: z.array(SocialLeadSchema),
   context: z.array(SocialMessageContextPostSchema).nullable(),
   location: z.string(),
   topic: z.string(),
@@ -2188,11 +2220,32 @@ export type SupplierBody = { name: string; phone: string; comment: string };
 export type SocialMessageKind = z.infer<typeof SocialMessageKindSchema>;
 export type SocialChannel = z.infer<typeof SocialChannelSchema>;
 export type SocialKeyword = z.infer<typeof SocialKeywordSchema>;
+export type LeadVertical = z.infer<typeof LeadVerticalSchema>;
+export type SocialSearchQuery = z.infer<typeof SocialSearchQuerySchema>;
+export type SocialLead = z.infer<typeof SocialLeadSchema>;
 export type SocialMessageProcessingEvent = z.infer<typeof SocialMessageProcessingEventSchema>;
 export type SocialMessage = z.infer<typeof SocialMessageSchema>;
 export type SocialMessagesResponse = z.infer<typeof SocialMessagesResponseSchema>;
 export type SocialChannelBody = { username: string; enabled: boolean };
-export type SocialKeywordBody = { word: string };
+export type SocialKeywordBody = { word: string; vertical: number };
+export type LeadVerticalBody = {
+  slug: string;
+  name: string;
+  enabled: boolean;
+  telegram_chat_id: string;
+  prompt_classify: string;
+  prompt_geo: string;
+  prompt_context: string;
+  prompt_profile: string;
+};
+export type SocialSearchQueryBody = {
+  query: string;
+  kind: "heavy" | "light";
+  recent: boolean;
+  post_limit: number;
+  enabled: boolean;
+  position: number;
+};
 export type WriteOffReasonBody = { name: string };
 
 export type SupplyBody = {

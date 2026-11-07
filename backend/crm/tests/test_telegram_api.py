@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
-from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
+from crm.models import LeadVertical, SocialKeyword, SocialLead, SocialMessage, SocialNetwork, SocialSource
 
 
 class TelegramLeadsApiTests(TestCase):
@@ -29,16 +29,21 @@ class TelegramLeadsApiTests(TestCase):
         lead: bool | None = None,
     ) -> SocialMessage:
         external_id = str(message_id)
-        return SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=self.channel,
             external_id=external_id,
             url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=self.sent_at,
             text=text,
+        )
+        SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=keyword_match,
             potential_lead=potential_lead,
             lead=lead,
         )
+        return message
 
     def test_messages_default_kind_lead(self):
         lead = self._message(1, "хочу торт", True, True, True)
@@ -128,8 +133,6 @@ class TelegramLeadsApiTests(TestCase):
             url="https://t.me/other/2",
             sent_at=self.sent_at,
             text="other msg",
-            keyword_match=False,
-            potential_lead=None,
         )
         self.client.force_authenticate(user=self.viewer)
         response = self.client.get(
@@ -139,6 +142,23 @@ class TelegramLeadsApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         ids = [row["id"] for row in response.json()["results"]]
         self.assertEqual(ids, [on_cakes.id])
+
+    def test_messages_vertical_filter(self):
+        cake = self._message(1, "торт", True, True, True)
+        makeup = self._message(2, "макияж", True, True, False)
+        SocialLead.objects.create(
+            message=makeup,
+            vertical=LeadVertical.objects.get(slug="beauty"),
+            keyword_match=True,
+            potential_lead=True,
+            lead=True,
+        )
+        self.client.force_authenticate(user=self.viewer)
+        beauty = self.client.get("/api/crm/social/messages/", {"vertical": "beauty"})
+        self.assertEqual(beauty.status_code, 200)
+        self.assertEqual([row["id"] for row in beauty.json()["results"]], [makeup.id])
+        sweet = self.client.get("/api/crm/social/messages/", {"vertical": "sweet_chill"})
+        self.assertEqual([row["id"] for row in sweet.json()["results"]], [cake.id])
 
     def test_messages_network_filter(self):
         threads = SocialSource.objects.create(
@@ -183,12 +203,24 @@ class TelegramLeadsApiTests(TestCase):
 
     def test_keyword_crud(self):
         self.client.force_authenticate(user=self.editor)
-        created = self.client.post("/api/crm/social/keywords/", {"word": "медовик"}, format="json")
+        sweet = LeadVertical.objects.get(slug="sweet_chill")
+        beauty = LeadVertical.objects.get(slug="beauty")
+        created = self.client.post(
+            "/api/crm/social/keywords/",
+            {"word": "медовик", "vertical": sweet.id},
+            format="json",
+        )
         self.assertEqual(created.status_code, 201)
         keyword_id = created.json()["id"]
+        same_word = self.client.post(
+            "/api/crm/social/keywords/",
+            {"word": "медовик", "vertical": beauty.id},
+            format="json",
+        )
+        self.assertEqual(same_word.status_code, 201)
         updated = self.client.put(
             f"/api/crm/social/keywords/{keyword_id}/",
-            {"word": "торт"},
+            {"word": "торт", "vertical": sweet.id},
             format="json",
         )
         self.assertEqual(updated.status_code, 200)
@@ -196,28 +228,30 @@ class TelegramLeadsApiTests(TestCase):
         deleted = self.client.delete(f"/api/crm/social/keywords/{keyword_id}/")
         self.assertEqual(deleted.status_code, 204)
         self.assertFalse(SocialKeyword.objects.filter(pk=keyword_id).exists())
+        self.assertTrue(SocialKeyword.objects.filter(pk=same_word.json()["id"]).exists())
 
     def test_keyword_change_rematches_stored_messages(self):
         self.client.force_authenticate(user=self.editor)
         medovik = self._message(1, "закажу медовик", False, None)
         cake = self._message(2, "хочу торт", False, None)
-        created = self.client.post("/api/crm/social/keywords/", {"word": "медовик"}, format="json")
+        sweet = LeadVertical.objects.get(slug="sweet_chill")
+        created = self.client.post(
+            "/api/crm/social/keywords/",
+            {"word": "медовик", "vertical": sweet.id},
+            format="json",
+        )
         self.assertEqual(created.status_code, 201)
-        medovik.refresh_from_db()
-        cake.refresh_from_db()
-        self.assertIs(medovik.keyword_match, True)
-        self.assertIs(cake.keyword_match, False)
+        self.assertIs(medovik.leads.get(vertical=sweet).keyword_match, True)
+        self.assertIs(cake.leads.get(vertical=sweet).keyword_match, False)
+        self.assertIs(medovik.leads.get(vertical__slug="beauty").keyword_match, False)
         updated = self.client.put(
             f"/api/crm/social/keywords/{created.json()['id']}/",
-            {"word": "торт"},
+            {"word": "торт", "vertical": sweet.id},
             format="json",
         )
         self.assertEqual(updated.status_code, 200)
-        medovik.refresh_from_db()
-        cake.refresh_from_db()
-        self.assertIs(medovik.keyword_match, False)
-        self.assertIs(cake.keyword_match, True)
+        self.assertIs(medovik.leads.get(vertical=sweet).keyword_match, False)
+        self.assertIs(cake.leads.get(vertical=sweet).keyword_match, True)
         deleted = self.client.delete(f"/api/crm/social/keywords/{created.json()['id']}/")
         self.assertEqual(deleted.status_code, 204)
-        cake.refresh_from_db()
-        self.assertIs(cake.keyword_match, False)
+        self.assertIs(cake.leads.get(vertical=sweet).keyword_match, False)

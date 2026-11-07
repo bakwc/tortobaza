@@ -14,9 +14,9 @@ import urllib.request
 
 HOST = "127.0.0.1"
 PORT = 47221
-QUERIES = ["батуми торт", "бенто батуми"]
 NETWORK = "threads"
 INGEST_URL = "https://sweet-chill.ge/api/social/messages/"
+QUERIES_URL = "https://sweet-chill.ge/api/social/search-queries/"
 PROCESS_URL = "https://sweet-chill.ge/api/social/networks/threads/process-leads/?potential=true"
 POTENTIAL_URL = "https://sweet-chill.ge/api/social/networks/threads/potential-leads/"
 CONTEXT_URL = "https://sweet-chill.ge/api/social/messages/{}/context/"
@@ -25,8 +25,6 @@ PROFILE_URL = "https://www.threads.com/@{}"
 ERROR_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "error.log")
 RESTART_SLEEP_S = 60
 SSL_CONTEXT = ssl.create_default_context(cafile="/etc/ssl/cert.pem")
-POST_LIMIT = 50
-LIGHT_POST_LIMIT = 38
 PROFILE_POST_LIMIT = 20
 TIMEOUT_MS = 30000
 SERVER_TIMEOUT_S = 30
@@ -310,6 +308,10 @@ def process_leads(token):
     log(f"process-leads {status}")
 
 
+def load_queries(token):
+    return get_json(QUERIES_URL, token)
+
+
 def potential_leads(token):
     return get_json(POTENTIAL_URL, token)
 
@@ -567,20 +569,26 @@ def close_tab(conn, buffer, counter, tab_id):
     log(f"вкладка закрыта {tab_id}")
 
 
-def run_cycle(conn, buffer, counter, token, queries, limit, kind, recent: bool):
+def run_cycle(conn, buffer, counter, token, queries, kind):
     day = search_day()
     log(f"{kind} {day.isoformat()}")
     sent = set()
     batch = []
     for query in queries:
-        log(f"поиск {query}")
-        tab_id, posts = collect(conn, buffer, counter, search_url(query, day, recent), limit)
+        log(f"поиск {query['query']}")
+        tab_id, posts = collect(
+            conn,
+            buffer,
+            counter,
+            search_url(query["query"], day, query["recent"]),
+            query["post_limit"],
+        )
         for post in posts:
             if post["url"] in sent:
                 log(f"уже был {post['url']}")
                 continue
             sent.add(post["url"])
-            batch.append((post, query))
+            batch.append((post, query["query"]))
         close_tab(conn, buffer, counter, tab_id)
     send_batch(token, batch)
     process_leads(token)
@@ -603,19 +611,13 @@ def run_forever(token):
     buffer = bytearray()
     counter = [1]
     while True:
-        run_cycle(conn, buffer, counter, token, QUERIES, POST_LIMIT, "тяжёлый", False)
+        queries = load_queries(token)
+        heavy = [row for row in queries if row["kind"] == "heavy"]
+        light = [row for row in queries if row["kind"] == "light"]
+        run_cycle(conn, buffer, counter, token, heavy, "тяжёлый")
         for _ in range(random.randint(2, 3)):
             cycle_pause()
-            run_cycle(
-                conn,
-                buffer,
-                counter,
-                token,
-                ["батуми"],
-                LIGHT_POST_LIMIT,
-                "лёгкий",
-                True,
-            )
+            run_cycle(conn, buffer, counter, token, light, "лёгкий")
         cycle_pause()
 
 

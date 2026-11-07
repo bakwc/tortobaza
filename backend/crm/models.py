@@ -945,16 +945,69 @@ class SocialNetwork(models.Model):
         return self.name
 
 
+class LeadVertical(models.Model):
+    slug = models.SlugField(max_length=64, unique=True, verbose_name=_("Slug"))
+    name = models.CharField(max_length=255, verbose_name=_("Name"))
+    enabled = models.BooleanField(default=True, verbose_name=_("Enabled"))
+    telegram_chat_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Telegram chat id"),
+    )
+    prompt_classify = models.TextField(verbose_name=_("Classify prompt"))
+    prompt_geo = models.TextField(verbose_name=_("Geo prompt"))
+    prompt_context = models.TextField(verbose_name=_("Context prompt"))
+    prompt_profile = models.TextField(verbose_name=_("Profile prompt"))
+
+    class Meta:
+        verbose_name = _("Lead vertical")
+        verbose_name_plural = _("Lead verticals")
+        ordering = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class SocialKeyword(models.Model):
-    word = models.CharField(max_length=255, unique=True, verbose_name=_("Word"))
+    vertical = models.ForeignKey(
+        LeadVertical,
+        related_name="keywords",
+        on_delete=models.CASCADE,
+        verbose_name=_("Vertical"),
+    )
+    word = models.CharField(max_length=255, verbose_name=_("Word"))
 
     class Meta:
         verbose_name = _("Social keyword")
         verbose_name_plural = _("Social keywords")
         ordering = ["word"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vertical", "word"],
+                name="uniq_socialkeyword_vertical_word",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.word
+
+
+class SocialSearchQuery(models.Model):
+    query = models.CharField(max_length=255, verbose_name=_("Query"))
+    kind = models.CharField(max_length=16, verbose_name=_("Kind"))
+    recent = models.BooleanField(default=False, verbose_name=_("Recent"))
+    post_limit = models.PositiveIntegerField(verbose_name=_("Post limit"))
+    enabled = models.BooleanField(default=True, verbose_name=_("Enabled"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        verbose_name = _("Social search query")
+        verbose_name_plural = _("Social search queries")
+        ordering = ["position", "id"]
+
+    def __str__(self) -> str:
+        return self.query
 
 
 class SocialSource(models.Model):
@@ -1022,12 +1075,8 @@ class SocialMessage(models.Model):
         default="",
         verbose_name=_("Sender username"),
     )
-    keyword_match = models.BooleanField(default=False, verbose_name=_("Keyword match"))
-    potential_lead = models.BooleanField(null=True, blank=True, verbose_name=_("Potential lead"))
-    lead = models.BooleanField(null=True, blank=True, verbose_name=_("Lead"))
     context = models.JSONField(null=True, blank=True, verbose_name=_("Context"))
     profile = models.JSONField(null=True, blank=True, verbose_name=_("Profile"))
-    lead_notified = models.BooleanField(default=False, verbose_name=_("Lead notified"))
     processing_history = models.JSONField(default=list, verbose_name=_("Processing history"))
 
     class Meta:
@@ -1045,9 +1094,43 @@ class SocialMessage(models.Model):
         return f"{self.channel_id}#{self.external_id}"
 
 
-def append_processing_event(message: SocialMessage, event: dict) -> None:
-    message.processing_history = [
-        *message.processing_history,
+class SocialLead(models.Model):
+    message = models.ForeignKey(
+        SocialMessage,
+        related_name="leads",
+        on_delete=models.CASCADE,
+        verbose_name=_("Message"),
+    )
+    vertical = models.ForeignKey(
+        LeadVertical,
+        related_name="social_leads",
+        on_delete=models.CASCADE,
+        verbose_name=_("Vertical"),
+    )
+    keyword_match = models.BooleanField(default=False, verbose_name=_("Keyword match"))
+    potential_lead = models.BooleanField(null=True, blank=True, verbose_name=_("Potential lead"))
+    lead = models.BooleanField(null=True, blank=True, verbose_name=_("Lead"))
+    lead_notified = models.BooleanField(default=False, verbose_name=_("Lead notified"))
+    processing_history = models.JSONField(default=list, verbose_name=_("Processing history"))
+
+    class Meta:
+        verbose_name = _("Social lead")
+        verbose_name_plural = _("Social leads")
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["message", "vertical"],
+                name="uniq_sociallead_message_vertical",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.message_id}:{self.vertical_id}"
+
+
+def append_processing_event(row: SocialMessage | SocialLead, event: dict) -> None:
+    row.processing_history = [
+        *row.processing_history,
         {"at": timezone.now().isoformat(), **event},
     ]
 

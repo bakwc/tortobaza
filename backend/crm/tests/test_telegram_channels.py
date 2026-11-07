@@ -4,12 +4,16 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
+from crm.models import LeadVertical, SocialKeyword, SocialLead, SocialMessage, SocialNetwork, SocialSource
+from crm.telegram_channels import refresh_keyword_matches, sync_telegram_channels
 
 
 def _source(**kwargs) -> SocialSource:
     return SocialSource.objects.create(network=SocialNetwork.objects.get(slug="telegram"), **kwargs)
-from crm.telegram_channels import refresh_keyword_matches, sync_telegram_channels
+
+
+def _sweet() -> LeadVertical:
+    return LeadVertical.objects.get(slug="sweet_chill")
 
 
 @override_settings(
@@ -175,7 +179,7 @@ class SyncTelegramChannelsTests(TestCase):
             sender_id=3,
             sender=SimpleNamespace(username="ann"),
         )
-        SocialKeyword.objects.create(word="торт")
+        SocialKeyword.objects.create(word="торт", vertical=_sweet())
         _source(username="cakes")
         fake_client, _clients = self._client({"cakes": entity}, {100: [match_message, no_match_message]})
         with (
@@ -184,8 +188,8 @@ class SyncTelegramChannelsTests(TestCase):
             patch("crm.telegram_channels.timezone.now", return_value=now),
         ):
             sync_telegram_channels()
-        matched = SocialMessage.objects.get(external_id="9")
-        missed = SocialMessage.objects.get(external_id="10")
+        matched = SocialMessage.objects.get(external_id="9").leads.get(vertical=_sweet())
+        missed = SocialMessage.objects.get(external_id="10").leads.get(vertical=_sweet())
         self.assertIs(matched.keyword_match, True)
         self.assertEqual([event["kind"] for event in matched.processing_history], ["found"])
         self.assertIs(missed.keyword_match, False)
@@ -212,7 +216,7 @@ class SyncTelegramChannelsTests(TestCase):
             sender_id=3,
             sender=SimpleNamespace(username="ann"),
         )
-        SocialKeyword.objects.create(word="торт")
+        SocialKeyword.objects.create(word="торт", vertical=_sweet())
         _source(username="cakes")
         fake_client, _clients = self._client({"cakes": entity}, {100: [long_message, short_message]})
         with (
@@ -222,8 +226,9 @@ class SyncTelegramChannelsTests(TestCase):
         ):
             sync_telegram_channels()
         self.assertEqual(SocialMessage.objects.get(external_id="11").text, long_text)
-        self.assertIs(SocialMessage.objects.get(external_id="11").keyword_match, False)
-        self.assertIs(SocialMessage.objects.get(external_id="12").keyword_match, True)
+        sweet = _sweet()
+        self.assertIs(SocialMessage.objects.get(external_id="11").leads.get(vertical=sweet).keyword_match, False)
+        self.assertIs(SocialMessage.objects.get(external_id="12").leads.get(vertical=sweet).keyword_match, True)
 
     def test_sync_leaves_stored_messages_untouched(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -240,9 +245,13 @@ class SyncTelegramChannelsTests(TestCase):
             url="https://t.me/cakes/7",
             sent_at=now - timedelta(days=1),
             text="нужен медовик на завтра",
+        )
+        SocialLead.objects.create(
+            message=stored,
+            vertical=_sweet(),
             keyword_match=False,
         )
-        SocialKeyword.objects.create(word="Медовик")
+        SocialKeyword.objects.create(word="Медовик", vertical=_sweet())
         fake_client, clients = self._client({"cakes": entity}, {100: []})
         with (
             patch("crm.telegram_channels.TelegramClient", fake_client),
@@ -251,8 +260,8 @@ class SyncTelegramChannelsTests(TestCase):
         ):
             sync_telegram_channels()
         self.assertEqual(clients[0].calls[0]["kwargs"]["min_id"], 7)
-        stored.refresh_from_db()
-        self.assertIs(stored.keyword_match, False)
+        lead = stored.leads.get(vertical=_sweet())
+        self.assertIs(lead.keyword_match, False)
 
     def test_refresh_clears_match_when_keyword_is_gone(self):
         channel = _source(username="cakes")
@@ -262,12 +271,16 @@ class SyncTelegramChannelsTests(TestCase):
             url="https://t.me/cakes/1",
             sent_at=datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc),
             text="нужен торт",
+        )
+        lead = SocialLead.objects.create(
+            message=message,
+            vertical=_sweet(),
             keyword_match=True,
         )
         refresh_keyword_matches()
-        message.refresh_from_db()
-        self.assertIs(message.keyword_match, False)
-        self.assertEqual(message.processing_history, [])
+        lead.refresh_from_db()
+        self.assertIs(lead.keyword_match, False)
+        self.assertEqual(lead.processing_history, [])
 
     def test_refresh_records_found_once_when_match_appears(self):
         channel = _source(username="cakes")
@@ -277,16 +290,15 @@ class SyncTelegramChannelsTests(TestCase):
             url="https://t.me/cakes/1",
             sent_at=datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc),
             text="нужен торт",
-            keyword_match=False,
         )
-        SocialKeyword.objects.create(word="торт")
+        SocialKeyword.objects.create(word="торт", vertical=_sweet())
         refresh_keyword_matches()
-        message.refresh_from_db()
-        self.assertIs(message.keyword_match, True)
-        self.assertEqual([event["kind"] for event in message.processing_history], ["found"])
+        lead = message.leads.get(vertical=_sweet())
+        self.assertIs(lead.keyword_match, True)
+        self.assertEqual([event["kind"] for event in lead.processing_history], ["found"])
         refresh_keyword_matches()
-        message.refresh_from_db()
-        self.assertEqual(len(message.processing_history), 1)
+        lead.refresh_from_db()
+        self.assertEqual(len(lead.processing_history), 1)
 
     def test_sync_records_found_once_when_existing_message_starts_matching(self):
         now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -303,9 +315,13 @@ class SyncTelegramChannelsTests(TestCase):
             url="https://t.me/cakes/7",
             sent_at=now - timedelta(days=1),
             text="нужен торт",
+        )
+        SocialLead.objects.create(
+            message=stored,
+            vertical=_sweet(),
             keyword_match=False,
         )
-        SocialKeyword.objects.create(word="торт")
+        SocialKeyword.objects.create(word="торт", vertical=_sweet())
         message = SimpleNamespace(
             id=7,
             action=None,
@@ -322,6 +338,6 @@ class SyncTelegramChannelsTests(TestCase):
         ):
             sync_telegram_channels()
             sync_telegram_channels()
-        stored.refresh_from_db()
-        self.assertIs(stored.keyword_match, True)
-        self.assertEqual([event["kind"] for event in stored.processing_history], ["found"])
+        lead = stored.leads.get(vertical=_sweet())
+        self.assertIs(lead.keyword_match, True)
+        self.assertEqual([event["kind"] for event in lead.processing_history], ["found"])

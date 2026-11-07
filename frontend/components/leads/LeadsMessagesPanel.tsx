@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardTitle, NativeSelect, QueryState } from "@/components/menu/ui";
 import { LeadMessageDialog } from "@/components/leads/LeadMessageDialog";
 import { LeadsShell } from "@/components/leads/LeadsShell";
-import { socialMessagesQueryKey, useSocialChannels, useSocialMessages } from "@/hooks/useLeads";
+import { socialMessagesQueryKey, useSocialChannels, useSocialMessages, useSocialVerticals } from "@/hooks/useLeads";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
 import type { SocialMessage, SocialMessageKind } from "@/lib/api/types";
@@ -50,6 +50,7 @@ function pageHref(
   kind: SocialMessageKind,
   network: string,
   channel: number | null,
+  vertical: string,
   q: string,
   page: number,
 ): string {
@@ -57,6 +58,7 @@ function pageHref(
   if (kind !== "lead") params.set("kind", kind);
   if (network) params.set("network", network);
   if (channel !== null) params.set("channel", String(channel));
+  if (vertical) params.set("vertical", vertical);
   const trimmed = q.trim();
   if (trimmed) params.set("q", trimmed);
   if (page > 1) params.set("page", String(page));
@@ -75,6 +77,7 @@ export function LeadsMessagesPanel() {
   const kind = parseKind(searchParams.get("kind"));
   const network = parseNetwork(searchParams.get("network"));
   const channel = parseChannel(searchParams.get("channel"));
+  const vertical = searchParams.get("vertical") ?? "";
   const q = searchParams.get("q") ?? "";
   const page = parsePage(searchParams.get("page"));
   const [draft, setDraft] = useState(q);
@@ -85,10 +88,10 @@ export function LeadsMessagesPanel() {
   const searchQRef = useRef(q);
   const lastWrittenRef = useRef(urlQ);
   const prevUrlQRef = useRef(urlQ);
-  const filtersRef = useRef({ kind, network, channel });
+  const filtersRef = useRef({ kind, network, channel, vertical });
   const fetchingRef = useRef(false);
   const fetchStartedAtRef = useRef<number | null>(null);
-  const queryKeyRef = useRef(socialMessagesQueryKey(kind, network, channel, urlQ, page));
+  const queryKeyRef = useRef(socialMessagesQueryKey(kind, network, channel, vertical, urlQ, page));
   const applySearchRef = useRef<(trimmed: string) => void>(() => {});
   const cancelSearchRef = useRef(() => {});
   const urlJustChanged = prevUrlQRef.current !== urlQ;
@@ -98,9 +101,10 @@ export function LeadsMessagesPanel() {
   const effectiveQ = searchAhead ? searchTrim : urlQ;
   const queryPage = searchAhead ? 1 : page;
   searchQRef.current = searchQ;
-  queryKeyRef.current = socialMessagesQueryKey(kind, network, channel, effectiveQ, queryPage);
+  queryKeyRef.current = socialMessagesQueryKey(kind, network, channel, vertical, effectiveQ, queryPage);
   const channels = useSocialChannels();
-  const messages = useSocialMessages(kind, network, channel, effectiveQ, queryPage);
+  const verticals = useSocialVerticals();
+  const messages = useSocialMessages(kind, network, channel, vertical, effectiveQ, queryPage);
   fetchingRef.current = messages.isFetching;
   applySearchRef.current = (trimmed: string) => {
     const filters = filtersRef.current;
@@ -110,7 +114,9 @@ export function LeadsMessagesPanel() {
     searchQRef.current = trimmed;
     setSearchQ(trimmed);
     startTransition(() => {
-      router.replace(pageHref(pathname, filters.kind, filters.network, filters.channel, trimmed, 1));
+      router.replace(
+        pageHref(pathname, filters.kind, filters.network, filters.channel, filters.vertical, trimmed, 1),
+      );
     });
   };
   cancelSearchRef.current = () => {
@@ -118,8 +124,8 @@ export function LeadsMessagesPanel() {
   };
 
   useEffect(() => {
-    filtersRef.current = { kind, network, channel };
-  }, [kind, network, channel]);
+    filtersRef.current = { kind, network, channel, vertical };
+  }, [kind, network, channel, vertical]);
 
   useEffect(() => {
     if (q === searchQRef.current.trim()) return;
@@ -138,7 +144,7 @@ export function LeadsMessagesPanel() {
       return;
     }
     fetchStartedAtRef.current = Date.now();
-  }, [messages.isFetching, kind, network, channel, effectiveQ, queryPage]);
+  }, [messages.isFetching, kind, network, channel, vertical, effectiveQ, queryPage]);
 
   useEffect(() => {
     const trimmed = draft.trim();
@@ -183,7 +189,7 @@ export function LeadsMessagesPanel() {
       applySearchRef.current(queued);
     }, SEARCH_TIMEOUT_MS);
     return () => clearTimeout(id);
-  }, [messages.isFetching, kind, network, channel, effectiveQ, queryPage]);
+  }, [messages.isFetching, kind, network, channel, vertical, effectiveQ, queryPage]);
   const rows = messages.data?.results ?? [];
   const channelRows = (channels.list.data ?? []).filter(
     (row) => network === "" || row.network_slug === network,
@@ -200,10 +206,16 @@ export function LeadsMessagesPanel() {
     nextKind: SocialMessageKind,
     nextNetwork: string,
     nextChannel: number | null,
+    nextVertical: string,
     nextQ: string,
   ) => {
     const trimmed = nextQ.trim();
-    filtersRef.current = { kind: nextKind, network: nextNetwork, channel: nextChannel };
+    filtersRef.current = {
+      kind: nextKind,
+      network: nextNetwork,
+      channel: nextChannel,
+      vertical: nextVertical,
+    };
     lastWrittenRef.current = trimmed;
     queuedRef.current = null;
     if (trimmed !== searchQRef.current.trim()) {
@@ -211,7 +223,7 @@ export function LeadsMessagesPanel() {
       setSearchQ(trimmed);
     }
     startTransition(() => {
-      router.replace(pageHref(pathname, nextKind, nextNetwork, nextChannel, trimmed, 1));
+      router.replace(pageHref(pathname, nextKind, nextNetwork, nextChannel, nextVertical, trimmed, 1));
     });
   };
 
@@ -227,15 +239,26 @@ export function LeadsMessagesPanel() {
       <div className="grid gap-4">
         <Card>
           <div className="grid gap-4">
-            <div className="grid gap-3 sm:grid-cols-[1fr_200px_240px]">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_180px_180px_220px]">
               <Input
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder={t("filterPlaceholder")}
               />
               <NativeSelect
+                value={vertical}
+                onChange={(event) => setParams(kind, network, channel, event.target.value, draft)}
+              >
+                <option value="">{t("allVerticals")}</option>
+                {(verticals.list.data ?? []).map((row) => (
+                  <option key={row.id} value={row.slug}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
+              <NativeSelect
                 value={network}
-                onChange={(event) => setParams(kind, event.target.value, null, draft)}
+                onChange={(event) => setParams(kind, event.target.value, null, vertical, draft)}
               >
                 <option value="">{t("allNetworks")}</option>
                 {networks.map((row) => (
@@ -248,7 +271,7 @@ export function LeadsMessagesPanel() {
                 value={channel ?? ""}
                 onChange={(event) => {
                   const raw = event.target.value;
-                  setParams(kind, network, raw === "" ? null : Number(raw), draft);
+                  setParams(kind, network, raw === "" ? null : Number(raw), vertical, draft);
                 }}
               >
                 <option value="">{t("allChannels")}</option>
@@ -266,7 +289,7 @@ export function LeadsMessagesPanel() {
                   type="button"
                   variant={item.key === kind ? "primary" : "outline"}
                   size="sm"
-                  onClick={() => setParams(item.key, network, channel, draft)}
+                  onClick={() => setParams(item.key, network, channel, vertical, draft)}
                 >
                   {item.label}
                 </Button>
@@ -305,6 +328,14 @@ export function LeadsMessagesPanel() {
                       <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
                         {row.text || "—"}
                       </p>
+                      {row.leads.some((lead) => lead.lead) ? (
+                        <p className="mt-2 text-xs text-[var(--muted-2)]">
+                          {row.leads
+                            .filter((lead) => lead.lead)
+                            .map((lead) => lead.vertical_name)
+                            .join(", ")}
+                        </p>
+                      ) : null}
                     </button>
                   </li>
                 ))}
@@ -316,14 +347,14 @@ export function LeadsMessagesPanel() {
                 <div className="flex gap-2">
                   {messages.data.page > 1 ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, effectiveQ, messages.data.page - 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, vertical, effectiveQ, messages.data.page - 1)}>
                         {t("previous")}
                       </Link>
                     </Button>
                   ) : null}
                   {messages.data.page < messages.data.pages ? (
                     <Button asChild variant="outline" size="sm">
-                      <Link href={pageHref(pathname, kind, network, channel, effectiveQ, messages.data.page + 1)}>
+                      <Link href={pageHref(pathname, kind, network, channel, vertical, effectiveQ, messages.data.page + 1)}>
                         {t("next")}
                       </Link>
                     </Button>

@@ -68,6 +68,8 @@ import {
   SocialMessagesResponseSchema,
   SocialChannelSchema,
   SocialKeywordSchema,
+  LeadVerticalSchema,
+  SocialSearchQuerySchema,
   SocialMessageKindSchema,
   StartPaymentResponseSchema,
   LibertyPaymentEnabledSchema,
@@ -144,6 +146,10 @@ import {
   type SocialMessagesResponse,
   type SocialKeyword,
   type SocialKeywordBody,
+  type LeadVertical,
+  type LeadVerticalBody,
+  type SocialSearchQuery,
+  type SocialSearchQueryBody,
   type SocialMessageKind,
   type StartPaymentBody,
   type StartPaymentResponse,
@@ -887,6 +893,7 @@ export function endpoints(fetcher: Fetcher) {
       kind: SocialMessageKind,
       network: string,
       channel: number | null,
+      vertical: string,
       q: string,
       page: number,
       signal: AbortSignal,
@@ -896,6 +903,7 @@ export function endpoints(fetcher: Fetcher) {
           kind,
           network: network || undefined,
           channel: channel ?? undefined,
+          vertical: vertical || undefined,
           q: q.trim() || undefined,
           page: page > 1 ? page : undefined,
         },
@@ -908,11 +916,41 @@ export function endpoints(fetcher: Fetcher) {
       "/api/crm/social/channels/",
       SocialChannelSchema,
     ),
-    socialKeywords: resource<SocialKeyword, SocialKeywordBody>(
+    socialVerticals: resource<LeadVertical, LeadVerticalBody>(
       fetcher,
-      "/api/crm/social/keywords/",
-      SocialKeywordSchema,
+      "/api/crm/social/verticals/",
+      LeadVerticalSchema,
     ),
+    socialSearchQueries: resource<SocialSearchQuery, SocialSearchQueryBody>(
+      fetcher,
+      "/api/crm/social/search-queries/",
+      SocialSearchQuerySchema,
+    ),
+    socialKeywords: {
+      async list(vertical: number): Promise<SocialKeyword[]> {
+        const raw = await fetcher<unknown>("/api/crm/social/keywords/", {
+          searchParams: { vertical },
+        });
+        return parse(z.array(SocialKeywordSchema), raw);
+      },
+      async create(body: SocialKeywordBody): Promise<SocialKeyword> {
+        const raw = await fetcher<unknown>("/api/crm/social/keywords/", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        return parse(SocialKeywordSchema, raw);
+      },
+      async update(id: number, body: SocialKeywordBody): Promise<SocialKeyword> {
+        const raw = await fetcher<unknown>(`/api/crm/social/keywords/${id}/`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        return parse(SocialKeywordSchema, raw);
+      },
+      async remove(id: number): Promise<void> {
+        await fetcher<void>(`/api/crm/social/keywords/${id}/`, { method: "DELETE" });
+      },
+    },
 
     async getCrmOrders(date?: string): Promise<CrmOrdersResponse> {
       const raw = await fetcher<unknown>("/api/crm/orders/", {

@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from crm.models import SocialKeyword, SocialMessage, SocialNetwork, SocialSource
+from crm.models import LeadVertical, SocialKeyword, SocialLead, SocialMessage, SocialNetwork, SocialSource
 
 TOKEN = "ingest-token"
 
@@ -94,7 +94,10 @@ class SocialIngestTests(TestCase):
         self.assertEqual(SocialMessage.objects.count(), 0)
 
     def test_batch_creates_messages_and_skips_duplicates(self):
-        SocialKeyword.objects.create(word="торт")
+        SocialKeyword.objects.create(
+            word="торт",
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
+        )
         self.client.post(
             "/api/social/networks/",
             {"slug": "facebook", "name": "Facebook"},
@@ -116,19 +119,23 @@ class SocialIngestTests(TestCase):
         self.assertEqual(created.status_code, 200)
         self.assertEqual(created.json(), {"created": 2, "skipped": 1})
         stored = SocialMessage.objects.get(external_id="post-1")
-        self.assertIs(stored.keyword_match, True)
-        self.assertEqual(len(stored.processing_history), 1)
-        self.assertEqual(stored.processing_history[0]["kind"], "found")
+        sweet = stored.leads.get(vertical__slug="sweet_chill")
+        self.assertIs(sweet.keyword_match, True)
+        self.assertEqual(len(sweet.processing_history), 1)
+        self.assertEqual(sweet.processing_history[0]["kind"], "found")
+        self.assertEqual(stored.processing_history, [])
+        self.assertIs(stored.leads.get(vertical__slug="beauty").keyword_match, False)
         self.assertEqual(stored.location, "Batumi, Georgia")
         self.assertEqual(stored.topic, "Батуми")
         self.assertEqual(stored.channel.username, "group-123")
         self.assertEqual(stored.sender_id, "999")
         missed = SocialMessage.objects.get(external_id="post-2")
-        self.assertIs(missed.keyword_match, False)
-        self.assertEqual(missed.processing_history, [])
-        stored.potential_lead = False
-        stored.lead_notified = True
-        stored.save(update_fields=["potential_lead", "lead_notified"])
+        missed_lead = missed.leads.get(vertical__slug="sweet_chill")
+        self.assertIs(missed_lead.keyword_match, False)
+        self.assertEqual(missed_lead.processing_history, [])
+        sweet.potential_lead = False
+        sweet.lead_notified = True
+        sweet.save(update_fields=["potential_lead", "lead_notified"])
         again = self.client.post(
             "/api/social/messages/",
             _message_body(
@@ -148,10 +155,11 @@ class SocialIngestTests(TestCase):
         self.assertEqual(again.status_code, 200)
         self.assertEqual(again.json(), {"created": 0, "skipped": 2})
         stored.refresh_from_db()
+        sweet.refresh_from_db()
         self.assertEqual(stored.text, "хочу торт")
-        self.assertIs(stored.keyword_match, True)
-        self.assertIs(stored.potential_lead, False)
-        self.assertIs(stored.lead_notified, True)
+        self.assertIs(sweet.keyword_match, True)
+        self.assertIs(sweet.potential_lead, False)
+        self.assertIs(sweet.lead_notified, True)
         self.assertEqual(stored.channel.username, "group-123")
         self.assertEqual(stored.channel.title, "Батуми чат")
         missed.refresh_from_db()
@@ -256,6 +264,7 @@ class SocialIngestTests(TestCase):
     def test_potential_leads_lists_rows_without_context(self):
         network = SocialNetwork.objects.create(slug="threads", name="Threads")
         source = SocialSource.objects.create(network=network, username="батуми торт")
+        sweet = LeadVertical.objects.get(slug="sweet_chill")
         waiting = SocialMessage.objects.create(
             channel=source,
             external_id="1",
@@ -263,26 +272,25 @@ class SocialIngestTests(TestCase):
             sent_at="2026-11-04T08:00:00Z",
             text="бенто",
             sender_username="a",
-            potential_lead=True,
         )
-        SocialMessage.objects.create(
+        SocialLead.objects.create(message=waiting, vertical=sweet, potential_lead=True)
+        with_context = SocialMessage.objects.create(
             channel=source,
             external_id="2",
             url="https://www.threads.com/@a/post/2",
             sent_at="2026-11-04T08:00:00Z",
             text="есть контекст",
-            potential_lead=True,
             context=[],
         )
-        SocialMessage.objects.create(
+        SocialLead.objects.create(message=with_context, vertical=sweet, potential_lead=True)
+        decided = SocialMessage.objects.create(
             channel=source,
             external_id="3",
             url="https://www.threads.com/@a/post/3",
             sent_at="2026-11-04T08:00:00Z",
             text="уже лид",
-            potential_lead=True,
-            lead=True,
         )
+        SocialLead.objects.create(message=decided, vertical=sweet, potential_lead=True, lead=True)
         missing = self.client.get("/api/social/networks/threads/potential-leads/")
         self.assertEqual(missing.status_code, 403)
         response = self.client.get(
@@ -305,7 +313,6 @@ class SocialIngestTests(TestCase):
             url="https://www.threads.com/@a/post/1",
             sent_at="2026-11-04T08:00:00Z",
             text="бенто",
-            potential_lead=True,
         )
         missing = self.client.post(
             f"/api/social/messages/{row.id}/context/",
@@ -369,6 +376,23 @@ class SocialIngestTests(TestCase):
         self.assertEqual(response.status_code, 204)
         verify_leads.assert_called_once_with("threads")
         notify_recent_leads.assert_called_once_with("threads")
+
+    def test_search_queries_require_token_and_list_enabled(self):
+        missing = self.client.get("/api/social/search-queries/")
+        self.assertEqual(missing.status_code, 403)
+        response = self.client.get(
+            "/api/social/search-queries/",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [(row["query"], row["kind"], row["recent"], row["post_limit"]) for row in response.json()],
+            [
+                ("батуми торт", "heavy", False, 50),
+                ("бенто батуми", "heavy", False, 50),
+                ("батуми", "light", True, 38),
+            ],
+        )
 
     def test_verify_leads_telegram_is_rejected(self):
         response = self.client.post(

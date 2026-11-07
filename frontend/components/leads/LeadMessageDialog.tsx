@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatCrmDateTime } from "@/lib/format";
-import type { SocialMessage, SocialMessageProcessingEvent } from "@/lib/api/types";
+import type { SocialLead, SocialMessage, SocialMessageProcessingEvent } from "@/lib/api/types";
 
 function senderLabel(senderUsername: string, senderId: string | null): string {
   if (senderUsername) return `@${senderUsername}`;
@@ -16,6 +16,79 @@ function flagText(value: boolean | null, yes: string, no: string, pending: strin
   if (value === null) return pending;
   if (value) return yes;
   return no;
+}
+
+function LeadTrack({
+  lead,
+  yes,
+  no,
+  pending,
+  keywordMatch,
+  potentialLead,
+  leadLabel,
+  history,
+  emptyHistory,
+  found,
+  context,
+  classifierLead,
+  classifierVerify,
+  locale,
+}: {
+  lead: SocialLead;
+  yes: string;
+  no: string;
+  pending: string;
+  keywordMatch: string;
+  potentialLead: string;
+  leadLabel: string;
+  history: string;
+  emptyHistory: string;
+  found: string;
+  context: string;
+  classifierLead: string;
+  classifierVerify: string;
+  locale: string;
+}) {
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold text-[var(--ink)]">{lead.vertical_name}</h3>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+          {`${keywordMatch}: ${flagText(lead.keyword_match, yes, no, pending)}`}
+        </span>
+        <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+          {`${potentialLead}: ${flagText(lead.potential_lead, yes, no, pending)}`}
+        </span>
+        <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+          {`${leadLabel}: ${flagText(lead.lead, yes, no, pending)}`}
+        </span>
+      </div>
+      <h4 className="mt-4 text-sm font-semibold text-[var(--ink)]">{history}</h4>
+      {lead.processing_history.length === 0 ? (
+        <p className="mt-2 text-sm text-[var(--muted-2)]">{emptyHistory}</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-[var(--line)]">
+          {lead.processing_history.map((event, index) => (
+            <li key={`${event.at}-${index}`} className="py-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <p className="text-sm font-medium text-[var(--ink)]">
+                  {historyTitle(event, found, context, classifierLead, classifierVerify)}
+                </p>
+                <time className="shrink-0 text-xs text-[var(--muted-2)]">
+                  {formatCrmDateTime(event.at, locale)}
+                </time>
+              </div>
+              {event.kind === "classify" ? (
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--ink)]">
+                  {`${flagText(event.verdict, yes, no, pending)}. ${event.explanation}`}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function historyTitle(
@@ -71,17 +144,25 @@ export function LeadMessageDialog({
             <p className="mt-4 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-[var(--ink)]">
               {message.text || "—"}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
-                {`${t("keywordMatch")}: ${flagText(message.keyword_match, t("yes"), t("no"), t("pending"))}`}
-              </span>
-              <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
-                {`${t("potentialLead")}: ${flagText(message.potential_lead, t("yes"), t("no"), t("pending"))}`}
-              </span>
-              <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
-                {`${t("lead")}: ${flagText(message.lead, t("yes"), t("no"), t("pending"))}`}
-              </span>
-            </div>
+            {message.leads.map((lead) => (
+              <LeadTrack
+                key={lead.id}
+                lead={lead}
+                yes={t("yes")}
+                no={t("no")}
+                pending={t("pending")}
+                keywordMatch={t("keywordMatch")}
+                potentialLead={t("potentialLead")}
+                leadLabel={t("lead")}
+                history={t("history")}
+                emptyHistory={t("emptyHistory")}
+                found={t("historyFound")}
+                context={t("historyContext")}
+                classifierLead={t("historyClassifierLead")}
+                classifierVerify={t("historyClassifierVerify")}
+                locale={locale}
+              />
+            ))}
             <h3 className="mt-6 text-sm font-semibold text-[var(--ink)]">{t("history")}</h3>
             {message.processing_history.length === 0 ? (
               <p className="mt-2 text-sm text-[var(--muted-2)]">{t("emptyHistory")}</p>

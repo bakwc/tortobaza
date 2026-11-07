@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 
-from crm.models import SocialMessage, SocialNetwork, SocialSource
+from crm.models import LeadVertical, SocialLead, SocialMessage, SocialNetwork, SocialSource
 from crm.telegram_leads import LeadVerdict, classify_leads, notify_recent_leads, verify_leads
 
 
@@ -15,16 +15,28 @@ class ClassifyTelegramLeadsTests(TestCase):
         )
         self.sent_at = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
 
-    def _message(self, text: str, keyword_match: bool, potential_lead: bool | None) -> SocialMessage:
+    def _message(
+        self,
+        text: str,
+        keyword_match: bool,
+        potential_lead: bool | None,
+        lead: bool | None = None,
+        vertical_slug: str = "sweet_chill",
+    ) -> SocialLead:
         external_id = str(SocialMessage.objects.count() + 1)
-        return SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=self.channel,
             external_id=external_id,
             url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=self.sent_at,
             text=text,
+        )
+        return SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug=vertical_slug),
             keyword_match=keyword_match,
             potential_lead=potential_lead,
+            lead=lead,
         )
 
     @patch("crm.telegram_leads.OpenAI")
@@ -71,12 +83,16 @@ class ClassifyTelegramLeadsTests(TestCase):
             network=SocialNetwork.objects.create(slug="threads", name="Threads"),
             username="cakes",
         )
-        row = SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url="https://www.threads.net/@cakes/post/1",
             sent_at=self.sent_at,
             text="где заказать торт?",
+        )
+        row = SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=True,
         )
         classify_leads("telegram", False)
@@ -90,7 +106,7 @@ class ClassifyTelegramLeadsTests(TestCase):
             network=SocialNetwork.objects.create(slug="threads", name="Threads"),
             username="батуми торт",
         )
-        row = SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url="https://www.threads.com/@cakes/post/1",
@@ -98,6 +114,10 @@ class ClassifyTelegramLeadsTests(TestCase):
             text="где заказать торт?",
             location="Minsk, Belarus",
             topic="торты минск",
+        )
+        row = SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=True,
         )
         openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
@@ -123,12 +143,16 @@ class ClassifyTelegramLeadsTests(TestCase):
             network=SocialNetwork.objects.create(slug="threads", name="Threads"),
             username="батуми торт",
         )
-        row = SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url="https://www.threads.com/@cakes/post/1",
             sent_at=self.sent_at,
             text="где заказать торт?",
+        )
+        row = SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=True,
         )
         openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
@@ -149,7 +173,7 @@ class ClassifyTelegramLeadsTests(TestCase):
             username="батуми торт",
         )
         target = "https://www.threads.com/@cakes/post/1"
-        row = SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url=target,
@@ -157,8 +181,6 @@ class ClassifyTelegramLeadsTests(TestCase):
             text="Бенто тортик",
             location="Vladivostok",
             topic="",
-            keyword_match=True,
-            potential_lead=True,
             context=[
                 {
                     "username": "asker",
@@ -185,12 +207,22 @@ class ClassifyTelegramLeadsTests(TestCase):
                 ],
             },
         )
-        SocialMessage.objects.create(
+        row = SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
+            keyword_match=True,
+            potential_lead=True,
+        )
+        waiting = SocialMessage.objects.create(
             channel=threads,
             external_id="2",
             url="https://www.threads.com/@cakes/post/2",
             sent_at=self.sent_at,
             text="без контекста",
+        )
+        SocialLead.objects.create(
+            message=waiting,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=True,
             potential_lead=True,
         )
@@ -218,8 +250,32 @@ class ClassifyTelegramLeadsTests(TestCase):
         self.assertIs(event["verdict"], False)
         self.assertEqual(event["explanation"], "Автор во Владивостоке.")
 
+    @patch("crm.telegram_leads.OpenAI")
+    def test_classifies_each_vertical_with_its_prompt(self, openai_cls):
+        beauty = LeadVertical.objects.get(slug="beauty")
+        beauty.prompt_classify = "BEAUTY PROMPT one short sentence in Russian"
+        beauty.save(update_fields=["prompt_classify"])
+        message = self._message("нужен макияж и торт", True, None).message
+        SocialLead.objects.create(
+            message=message,
+            vertical=beauty,
+            keyword_match=True,
+        )
+        openai_cls.return_value.responses.parse.return_value.output_parsed = LeadVerdict(
+            is_lead=True,
+            explanation="Подходит.",
+        )
+        classify_leads("telegram", False)
+        instructions = [
+            call.kwargs["instructions"]
+            for call in openai_cls.return_value.responses.parse.call_args_list
+        ]
+        self.assertEqual(len(instructions), 2)
+        self.assertIn("confectionery", instructions[0])
+        self.assertEqual(instructions[1], "BEAUTY PROMPT one short sentence in Russian")
 
-@override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID="leads-chat")
+
+@override_settings(TELEGRAM_BOT_TOKEN="bot-token")
 class NotifyTelegramLeadsTests(TestCase):
     def setUp(self):
         self.now = datetime(2026, 11, 2, 12, 0, tzinfo=dt_timezone.utc)
@@ -228,6 +284,9 @@ class NotifyTelegramLeadsTests(TestCase):
             username="cakes",
             title="Cakes Chat",
         )
+        sweet = LeadVertical.objects.get(slug="sweet_chill")
+        sweet.telegram_chat_id = "leads-chat"
+        sweet.save(update_fields=["telegram_chat_id"])
         self.telegram_calls: list[dict] = []
 
     def _message(
@@ -239,18 +298,23 @@ class NotifyTelegramLeadsTests(TestCase):
         potential_lead: bool | None = True,
         lead: bool | None = True,
         lead_notified: bool = False,
-    ) -> SocialMessage:
+        vertical_slug: str = "sweet_chill",
+    ) -> SocialLead:
         if message_id is None:
             message_id = SocialMessage.objects.count() + 1
         if sent_at is None:
             sent_at = self.now - timedelta(hours=1)
         external_id = str(message_id)
-        return SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=self.channel,
             external_id=external_id,
             url=f"https://t.me/{self.channel.username}/{external_id}",
             sent_at=sent_at,
             text=text,
+        )
+        return SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug=vertical_slug),
             keyword_match=True,
             potential_lead=potential_lead,
             lead=lead,
@@ -298,9 +362,12 @@ class NotifyTelegramLeadsTests(TestCase):
     def test_no_settings_skips_send(self, now_mock, telegram_json):
         now_mock.return_value = self.now
         self._message()
-        with override_settings(TELEGRAM_BOT_TOKEN="", TELEGRAM_LEADS_CHAT_ID="leads-chat"):
+        with override_settings(TELEGRAM_BOT_TOKEN=""):
             notify_recent_leads("telegram")
-        with override_settings(TELEGRAM_BOT_TOKEN="bot-token", TELEGRAM_LEADS_CHAT_ID=""):
+        sweet = LeadVertical.objects.get(slug="sweet_chill")
+        sweet.telegram_chat_id = ""
+        sweet.save(update_fields=["telegram_chat_id"])
+        with override_settings(TELEGRAM_BOT_TOKEN="bot-token"):
             notify_recent_leads("telegram")
         telegram_json.assert_not_called()
 
@@ -312,14 +379,43 @@ class NotifyTelegramLeadsTests(TestCase):
             network=SocialNetwork.objects.create(slug="threads", name="Threads"),
             username="cakes",
         )
-        SocialMessage.objects.create(
+        message = SocialMessage.objects.create(
             channel=threads,
             external_id="1",
             url="https://www.threads.net/@cakes/post/1",
             sent_at=self.now - timedelta(hours=1),
             text="где заказать торт?",
+        )
+        SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
             keyword_match=True,
             potential_lead=True,
+            lead=True,
         )
         notify_recent_leads("telegram")
         telegram_json.assert_not_called()
+
+    @patch("crm.telegram_leads._telegram_json")
+    @patch("crm.telegram_leads.timezone.now")
+    def test_notifies_only_the_vertical_that_is_a_lead(self, now_mock, telegram_json):
+        now_mock.return_value = self.now
+        telegram_json.side_effect = self._capture_telegram
+        beauty = LeadVertical.objects.get(slug="beauty")
+        beauty.telegram_chat_id = "beauty-chat"
+        beauty.save(update_fields=["telegram_chat_id"])
+        row = self._message(message_id=15)
+        SocialLead.objects.create(
+            message=row.message,
+            vertical=beauty,
+            keyword_match=True,
+            potential_lead=True,
+            lead=False,
+        )
+        notify_recent_leads("telegram")
+        self.assertEqual(len(self.telegram_calls), 1)
+        self.assertEqual(self.telegram_calls[0]["payload"]["chat_id"], "leads-chat")
+        row.refresh_from_db()
+        self.assertIs(row.lead_notified, True)
+        beauty_lead = SocialLead.objects.get(message=row.message, vertical=beauty)
+        self.assertIs(beauty_lead.lead_notified, False)

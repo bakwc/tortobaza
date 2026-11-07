@@ -5,7 +5,7 @@ from django.utils import timezone
 from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
 
-from crm.models import SocialKeyword, SocialMessage, SocialSource, append_processing_event
+from crm.models import LeadVertical, SocialLead, SocialMessage, SocialSource, append_processing_event
 from crm.telegram_user import _api_credentials
 
 _HISTORY_DAYS = 30
@@ -22,24 +22,35 @@ def _keyword_match(text: str, keywords: list[str]) -> bool:
     return False
 
 
-def refresh_keyword_matches() -> None:
-    keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
-    changed = []
-    for message in SocialMessage.objects.all().only(
-        "id",
-        "text",
-        "keyword_match",
-        "processing_history",
-    ).iterator():
+def apply_keyword_matches(message: SocialMessage) -> None:
+    verticals = LeadVertical.objects.filter(enabled=True).prefetch_related("keywords")
+    existing = {lead.vertical_id: lead for lead in message.leads.all()}
+    for vertical in verticals:
+        keywords = [row.word.casefold() for row in vertical.keywords.all()]
         matched = _keyword_match(message.text, keywords)
-        if message.keyword_match == matched:
+        lead = existing.get(vertical.id)
+        if lead is None:
+            lead = SocialLead(
+                message=message,
+                vertical=vertical,
+                keyword_match=matched,
+                processing_history=[],
+            )
+            if matched:
+                append_processing_event(lead, {"kind": "found"})
+            lead.save()
+            continue
+        if lead.keyword_match == matched:
             continue
         if matched:
-            append_processing_event(message, {"kind": "found"})
-        message.keyword_match = matched
-        changed.append(message)
-    if changed:
-        SocialMessage.objects.bulk_update(changed, ["keyword_match", "processing_history"])
+            append_processing_event(lead, {"kind": "found"})
+        lead.keyword_match = matched
+        lead.save(update_fields=["keyword_match", "processing_history"])
+
+
+def refresh_keyword_matches() -> None:
+    for message in SocialMessage.objects.all().only("id", "text").iterator():
+        apply_keyword_matches(message)
 
 
 def sync_telegram_channels() -> None:
@@ -48,7 +59,6 @@ def sync_telegram_channels() -> None:
     )
     if not channels:
         return
-    keywords = [row.casefold() for row in SocialKeyword.objects.values_list("word", flat=True)]
     api_id, api_hash = _api_credentials()
     session = settings.TELEGRAM_USER_SESSION
     if not session:
@@ -81,7 +91,6 @@ def sync_telegram_channels() -> None:
                 sender_id = None
                 if message.sender_id is not None:
                     sender_id = str(message.sender_id)
-                matched = _keyword_match(text, keywords)
                 external_id = str(message.id)
                 stored = SocialMessage.objects.filter(
                     channel=channel,
@@ -96,10 +105,7 @@ def sync_telegram_channels() -> None:
                         sender_id=sender_id,
                         sender_username=sender_username,
                         url=f"https://t.me/{channel.username}/{message.id}",
-                        keyword_match=matched,
                     )
-                    if matched:
-                        append_processing_event(stored, {"kind": "found"})
                     stored.save()
                 else:
                     stored.sent_at = message.date
@@ -107,9 +113,6 @@ def sync_telegram_channels() -> None:
                     stored.sender_id = sender_id
                     stored.sender_username = sender_username
                     stored.url = f"https://t.me/{channel.username}/{message.id}"
-                    if matched and not stored.keyword_match:
-                        append_processing_event(stored, {"kind": "found"})
-                    stored.keyword_match = matched
                     stored.save(
                         update_fields=[
                             "sent_at",
@@ -117,10 +120,9 @@ def sync_telegram_channels() -> None:
                             "sender_id",
                             "sender_username",
                             "url",
-                            "keyword_match",
-                            "processing_history",
                         ]
                     )
+                apply_keyword_matches(stored)
             channel.title = entity.title
             channel.telegram_id = entity.id
             channel.last_message_id = last_message_id

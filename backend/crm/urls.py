@@ -1,6 +1,8 @@
 from django.urls import path
 
 from crm.telegram_views import (
+    LeadVerticalDetailView,
+    LeadVerticalListView,
     SocialKeywordDetailView,
     SocialKeywordListView,
     SocialLeadsProcessView,
@@ -10,6 +12,9 @@ from crm.telegram_views import (
     SocialMessageListView,
     SocialNetworkIngestView,
     SocialPotentialLeadsView,
+    SocialSearchQueryDetailView,
+    SocialSearchQueryIngestView,
+    SocialSearchQueryListView,
     SocialSourceDetailView,
     SocialSourceListView,
 )
@@ -62,6 +67,11 @@ urlpatterns = [
     ),
     path("social/messages/", SocialMessageIngestView.as_view(), name="social-messages-ingest"),
     path(
+        "social/search-queries/",
+        SocialSearchQueryIngestView.as_view(),
+        name="social-search-queries",
+    ),
+    path(
         "social/messages/<int:pk>/context/",
         SocialMessageContextView.as_view(),
         name="social-message-context",
@@ -71,6 +81,14 @@ urlpatterns = [
     path("crm/social/channels/<int:pk>/", SocialSourceDetailView.as_view(), name="crm-social-channel-detail"),
     path("crm/social/keywords/", SocialKeywordListView.as_view(), name="crm-social-keywords"),
     path("crm/social/keywords/<int:pk>/", SocialKeywordDetailView.as_view(), name="crm-social-keyword-detail"),
+    path("crm/social/verticals/", LeadVerticalListView.as_view(), name="crm-social-verticals"),
+    path("crm/social/verticals/<int:pk>/", LeadVerticalDetailView.as_view(), name="crm-social-vertical-detail"),
+    path("crm/social/search-queries/", SocialSearchQueryListView.as_view(), name="crm-social-search-queries"),
+    path(
+        "crm/social/search-queries/<int:pk>/",
+        SocialSearchQueryDetailView.as_view(),
+        name="crm-social-search-query-detail",
+    ),
     path("webhooks/flowwow/", FlowwowWebhookView.as_view(), name="flowwow-webhook"),
     path("crm/analytics/overview/", AnalyticsOverviewView.as_view(), name="crm-analytics-overview"),
     path("crm/analytics/pace/", AnalyticsPaceView.as_view(), name="crm-analytics-pace"),
