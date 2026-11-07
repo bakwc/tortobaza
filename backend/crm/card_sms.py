@@ -52,6 +52,10 @@ _DECIMAL_AMOUNT_RE = re.compile(r"\d+\.\d{2}")
 _NASHTI_RE = re.compile(r"nashti:\s*[A-Z]{3}[\d,]+\.\d{2}", re.IGNORECASE)
 _VISGAN_RE = re.compile(r"visgan:\s*(.+)", re.IGNORECASE)
 _INTERNALDATE_RE = re.compile(rb'INTERNALDATE "([^"]+)"')
+_TBC_AMOUNT_RE = re.compile(r"(\d+\.\d{2})([A-Z]{3})")
+_TBC_CARD_RE = re.compile(r"\(\*(\d{4})\)")
+_TBC_BALANCE_RE = re.compile(r"Balance:\s*(\d+\.\d{2})([A-Z]{3})")
+_TBC_DEPOSIT_RE = re.compile(r"Deposit Money:\s*(\d+\.\d{2})\s*([A-Z]{3})")
 
 
 @dataclass(frozen=True)
@@ -60,10 +64,11 @@ class ParsedCardSms:
     currency: str
     amount: Decimal
     merchant: str
-    sms_date: date
+    sms_date: date | None
     kind: str
     account_prefix: str
     account_suffix: str
+    card_type: str
 
 
 @dataclass(frozen=True)
@@ -107,7 +112,13 @@ def parse_card_sms(body: str) -> ParsedCardSms | None:
     payment = _parse_payment(lines)
     if payment is not None:
         return payment
-    return _parse_account_operation(lines)
+    operation = _parse_account_operation(lines)
+    if operation is not None:
+        return operation
+    card = _parse_tbc_card(lines)
+    if card is not None:
+        return card
+    return _parse_tbc_deposit(lines)
 
 
 def import_card_sms() -> None:
@@ -164,6 +175,8 @@ def _match_row(row: CardSmsMessage) -> None:
     parsed = parse_card_sms(row.raw_body)
     if parsed is not None and parsed.account_prefix != "":
         found = _matching_masked_accounts(parsed.account_prefix, parsed.account_suffix, row.currency)
+    elif parsed is not None and parsed.card_type != "":
+        found = _matching_card_types(parsed.card_type, row.currency)
     elif row.card_last4 == "":
         found = _matching_named_accounts(BOG_BUSINESS_GEL, row.currency)
     else:
@@ -185,6 +198,15 @@ def _match_row(row: CardSmsMessage) -> None:
     row.finance_db = alias
     row.status = CardSmsMessage.STATUS_INSERTED
     row.save()
+
+
+def _matching_card_types(card_type: str, currency: str) -> list[tuple[str, int]]:
+    found: list[tuple[str, int]] = []
+    for alias in _FINANCE_DBS:
+        with use_finance_db(alias):
+            for account in FinancialAccount.objects.filter(currency=currency, card_type=card_type):
+                found.append((alias, account.pk))
+    return found
 
 
 def _matching_accounts(card_last4: str, currency: str) -> list[tuple[str, int]]:
@@ -370,6 +392,7 @@ def _parse_purchase(lines: list[str]) -> ParsedCardSms | None:
         kind=CardSmsMessage.KIND_EXPENSE,
         account_prefix="",
         account_suffix="",
+        card_type="",
     )
 
 
@@ -397,6 +420,7 @@ def _parse_payment(lines: list[str]) -> ParsedCardSms | None:
         kind=CardSmsMessage.KIND_EXPENSE,
         account_prefix=account_match.group(1),
         account_suffix=account_match.group(2),
+        card_type="",
     )
 
 
@@ -429,7 +453,77 @@ def _parse_account_operation(lines: list[str]) -> ParsedCardSms | None:
         kind=kind,
         account_prefix="",
         account_suffix="",
+        card_type="",
     )
+
+
+def _parse_tbc_card(lines: list[str]) -> ParsedCardSms | None:
+    amount_match = _TBC_AMOUNT_RE.fullmatch(lines[0])
+    if amount_match is None:
+        return None
+    card_index = _single_index(lines, _tbc_card_line)
+    balance_index = _single_index(lines, _tbc_balance_line)
+    if card_index is None or balance_index is None:
+        return None
+    if card_index != 1 or balance_index <= card_index or balance_index != len(lines) - 1:
+        return None
+    card_match = _TBC_CARD_RE.fullmatch(lines[card_index])
+    balance_match = _TBC_BALANCE_RE.fullmatch(lines[balance_index])
+    if card_match is None or balance_match is None:
+        return None
+    if balance_match.group(2) != amount_match.group(2):
+        return None
+    merchant_lines = lines[card_index + 1 : balance_index]
+    if len(merchant_lines) == 0:
+        return None
+    amount = Decimal(amount_match.group(1)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return ParsedCardSms(
+        card_last4=card_match.group(1),
+        currency=amount_match.group(2),
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=None,
+        kind=CardSmsMessage.KIND_EXPENSE,
+        account_prefix="",
+        account_suffix="",
+        card_type="",
+    )
+
+
+def _parse_tbc_deposit(lines: list[str]) -> ParsedCardSms | None:
+    deposit = _TBC_DEPOSIT_RE.fullmatch(lines[0])
+    if deposit is None:
+        return None
+    date_index = _single_index(lines, _sms_date)
+    if date_index is None or date_index < 2 or date_index == len(lines) - 1:
+        return None
+    card_type_lines = lines[1:date_index]
+    merchant_lines = lines[date_index + 1 :]
+    if len(card_type_lines) != 1 or len(merchant_lines) == 0:
+        return None
+    sms_date = _sms_date(lines[date_index])
+    if sms_date is None:
+        return None
+    amount = Decimal(deposit.group(1)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return ParsedCardSms(
+        card_last4="",
+        currency=deposit.group(2),
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_INCOME,
+        account_prefix="",
+        account_suffix="",
+        card_type=card_type_lines[0],
+    )
+
+
+def _tbc_card_line(line: str) -> bool:
+    return _TBC_CARD_RE.fullmatch(line) is not None
+
+
+def _tbc_balance_line(line: str) -> bool:
+    return _TBC_BALANCE_RE.fullmatch(line) is not None
 
 
 def _parse_unparsed() -> None:
@@ -446,7 +540,10 @@ def _apply_parsed(row: CardSmsMessage, body: str) -> None:
     row.currency = parsed.currency
     row.amount = parsed.amount
     row.merchant = parsed.merchant
-    row.sms_date = parsed.sms_date
+    if parsed.sms_date is None:
+        row.sms_date = timezone.localtime(row.received_at).date()
+    else:
+        row.sms_date = parsed.sms_date
     row.kind = parsed.kind
     row.status = CardSmsMessage.STATUS_UNMATCHED
     row.save()

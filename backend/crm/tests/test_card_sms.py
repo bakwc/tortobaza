@@ -39,6 +39,9 @@ PAYMENT_HTML = (
     "You received: 112.50 PLUS<br/>Total: 433,767.95 PLUS<br/>29.10.2026"
 )
 PAYMENT_IBAN = "GE30BG0000000000001239GEL"
+TBC_EXPENSE_HTML = "7.10GEL<br/>(*1911)<br/>LTD KEEPZ.ME*YANDEX GO<br/>Balance: 2146.99GEL"
+TBC_ATM_HTML = "2000.00GEL<br/>(*1911)<br/>ATM TBC-1075 (RECAN)<br/>Balance: 2227.72GEL"
+TBC_DEPOSIT_HTML = "Deposit Money: 105.00 GEL<br/>MC GOLD<br/>06/11/2026<br/>LEVANI MUNJISHVILI"
 
 
 class FakeIMAP:
@@ -361,6 +364,109 @@ class CardSmsTests(TestCase):
         _import([])
         self.assertEqual(len(_transactions("default")), 1)
         self.assertEqual(CardSmsMessage.objects.get().status, CardSmsMessage.STATUS_INSERTED)
+
+    def test_parse_tbc_sms(self):
+        expense = parse_card_sms(html_to_text(TBC_EXPENSE_HTML))
+        self.assertIsNotNone(expense)
+        self.assertEqual(expense.currency, "GEL")
+        self.assertEqual(expense.amount, Decimal("7.10"))
+        self.assertEqual(expense.card_last4, "1911")
+        self.assertEqual(expense.merchant, "LTD KEEPZ.ME*YANDEX GO")
+        self.assertIsNone(expense.sms_date)
+        self.assertEqual(expense.kind, CardSmsMessage.KIND_EXPENSE)
+        self.assertEqual(expense.card_type, "")
+        atm = parse_card_sms(html_to_text(TBC_ATM_HTML))
+        self.assertIsNotNone(atm)
+        self.assertEqual(atm.currency, "GEL")
+        self.assertEqual(atm.amount, Decimal("2000.00"))
+        self.assertEqual(atm.card_last4, "1911")
+        self.assertEqual(atm.merchant, "ATM TBC-1075 (RECAN)")
+        self.assertIsNone(atm.sms_date)
+        self.assertEqual(atm.kind, CardSmsMessage.KIND_EXPENSE)
+        deposit = parse_card_sms(html_to_text(TBC_DEPOSIT_HTML))
+        self.assertIsNotNone(deposit)
+        self.assertEqual(deposit.currency, "GEL")
+        self.assertEqual(deposit.amount, Decimal("105.00"))
+        self.assertEqual(deposit.card_last4, "")
+        self.assertEqual(deposit.card_type, "MC GOLD")
+        self.assertEqual(deposit.merchant, "LEVANI MUNJISHVILI")
+        self.assertEqual(deposit.sms_date, date(2026, 11, 6))
+        self.assertEqual(deposit.kind, CardSmsMessage.KIND_INCOME)
+
+    def test_tbc_expense_uses_received_date_and_card(self):
+        account = _account("TBC", "GEL", "1911", "personal")
+        _account("BOG business GEL", "GEL", "", "default")
+        _import(
+            [
+                _message("<tbc-out@gmail.com>", TBC_EXPENSE_HTML),
+                _message("<tbc-atm@gmail.com>", TBC_ATM_HTML),
+            ]
+        )
+        rows = _transactions("personal")
+        self.assertEqual(len(rows), 2)
+        by_external_id = {row.external_id: row for row in rows}
+        expense = by_external_id["<tbc-out@gmail.com>"]
+        atm = by_external_id["<tbc-atm@gmail.com>"]
+        self.assertEqual(expense.account_id, account.pk)
+        self.assertEqual(expense.amount, Decimal("-7.10"))
+        self.assertEqual(expense.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(expense.counterparty_name, "LTD KEEPZ.ME*YANDEX GO")
+        self.assertEqual(expense.date, date(2026, 10, 27))
+        self.assertEqual(atm.account_id, account.pk)
+        self.assertEqual(atm.amount, Decimal("-2000.00"))
+        self.assertEqual(atm.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(atm.counterparty_name, "ATM TBC-1075 (RECAN)")
+        self.assertEqual(atm.date, date(2026, 10, 27))
+        self.assertEqual(_transactions("default"), [])
+
+    def test_tbc_deposit_matches_card_type(self):
+        account = _account("TBC", "GEL", "1911", "personal")
+        with use_finance_db("personal"):
+            account.card_type = "MC GOLD"
+            account.save(update_fields=["card_type"])
+        _account("BOG business GEL", "GEL", "", "default")
+        _import([_message("<tbc-in@gmail.com>", TBC_DEPOSIT_HTML)])
+        rows = _transactions("personal")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertEqual(rows[0].amount, Decimal("105.00"))
+        self.assertEqual(rows[0].kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(rows[0].income_type, FinancialTransaction.INCOME_TRANSFER)
+        self.assertEqual(rows[0].counterparty_name, "LEVANI MUNJISHVILI")
+        self.assertEqual(rows[0].date, date(2026, 11, 6))
+        self.assertEqual(_transactions("default"), [])
+        stored = CardSmsMessage.objects.get(message_id="<tbc-in@gmail.com>")
+        self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored.card_last4, "")
+        self.assertEqual(stored.finance_db, "personal")
+        self.assertEqual(stored.transaction_id, rows[0].pk)
+
+    def test_tbc_deposit_ignores_bog_business(self):
+        _account("BOG business GEL", "GEL", "", "default")
+        _import([_message("<tbc-in@gmail.com>", TBC_DEPOSIT_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        self.assertEqual(_transactions("personal"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_UNMATCHED)
+        self.assertEqual(row.amount, Decimal("105.00"))
+        self.assertEqual(row.merchant, "LEVANI MUNJISHVILI")
+        self.assertEqual(row.kind, CardSmsMessage.KIND_INCOME)
+
+    def test_tbc_deposit_ambiguous_when_card_type_matches_twice(self):
+        first = _account("One", "GEL", "", "default")
+        second = _account("Two", "GEL", "", "personal")
+        with use_finance_db("default"):
+            first.card_type = "MC GOLD"
+            first.save(update_fields=["card_type"])
+        with use_finance_db("personal"):
+            second.card_type = "MC GOLD"
+            second.save(update_fields=["card_type"])
+        _import([_message("<tbc-in@gmail.com>", TBC_DEPOSIT_HTML)])
+        self.assertEqual(_transactions("default"), [])
+        self.assertEqual(_transactions("personal"), [])
+        row = CardSmsMessage.objects.get()
+        self.assertEqual(row.status, CardSmsMessage.STATUS_AMBIGUOUS)
+        self.assertIsNone(row.transaction_id)
 
     def test_cards_field_keeps_last_four_digits(self):
         account = FinancialAccount(

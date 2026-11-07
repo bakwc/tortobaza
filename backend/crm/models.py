@@ -570,6 +570,7 @@ class FinancialAccount(models.Model):
     iban = models.CharField(max_length=34, blank=True, verbose_name=_("IBAN"))
     currency = models.CharField(max_length=3, default="GEL", verbose_name=_("Currency"))
     cards = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Cards"))
+    card_type = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Card type"))
 
     class Meta:
         verbose_name = _("Financial account")
@@ -577,6 +578,7 @@ class FinancialAccount(models.Model):
 
     def clean(self):
         super().clean()
+        self.card_type = self.card_type.strip()
         raw = self.cards.strip()
         if raw == "":
             self.cards = ""

@@ -425,7 +425,7 @@ class TelegramNumberCheckAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialAccount)
 class FinancialAccountAdmin(admin.ModelAdmin):
-    list_display = ["name", "kind", "bank_name", "iban", "currency", "cards"]
+    list_display = ["name", "kind", "bank_name", "iban", "currency", "cards", "card_type"]
     search_fields = ["name", "bank_name", "iban"]
 
 
