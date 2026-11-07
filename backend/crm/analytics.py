@@ -124,6 +124,65 @@ def overview(today: date) -> dict:
     }
 
 
+def pace(month: str, today: date) -> dict:
+    orders = _live_orders()
+    customers, _unknown = _link_customers(orders)
+    repeat_ids = {order.id for customer in customers.values() for order in customer.orders[1:]}
+    previous = _previous_month(month)
+    before = _previous_month(previous)
+    current_month = _month_key(today)
+    return {
+        "month": month,
+        "today": today.isoformat(),
+        "months": [
+            _pace_month(key, key == current_month, today, orders, repeat_ids)
+            for key in (month, previous, before)
+        ],
+    }
+
+
+def _pace_month(
+    month: str,
+    partial: bool,
+    today: date,
+    orders: list[CrmOrder],
+    repeat_ids: set[int],
+) -> dict:
+    start, last = _month_bounds(month)
+    end = today if partial else last
+    by_date: dict[date, list[CrmOrder]] = defaultdict(list)
+    for order in orders:
+        if start <= order.date <= end:
+            by_date[order.date].append(order)
+    revenue = Decimal("0")
+    count = 0
+    repeat = 0
+    channels = {"flowwow": Decimal("0"), "website": Decimal("0"), "direct": Decimal("0")}
+    days = []
+    cursor = start
+    while cursor <= end:
+        for order in by_date[cursor]:
+            amount = _order_revenue(order)
+            revenue += amount
+            count += 1
+            if order.id in repeat_ids:
+                repeat += 1
+            channels[_channel(order)] += amount
+        days.append(
+            {
+                "day": cursor.day,
+                "revenue": _money(revenue),
+                "orders": count,
+                "repeat_orders": repeat,
+                "flowwow": _money(channels["flowwow"]),
+                "website": _money(channels["website"]),
+                "direct": _money(channels["direct"]),
+            }
+        )
+        cursor += timedelta(days=1)
+    return {"month": month, "partial": partial, "days": days}
+
+
 def production(month: str, today: date) -> dict:
     start, end = windows(month, today)[:2]
     orders = _live_orders()

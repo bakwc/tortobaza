@@ -30,6 +30,7 @@ import {
   AnalyticsEmployeesSchema,
   AnalyticsLoadSchema,
   AnalyticsOverviewSchema,
+  AnalyticsPaceSchema,
   AnalyticsProductsSchema,
   CrmSalariesSchema,
   CrmSalaryDetailSchema,
@@ -93,6 +94,7 @@ import {
   type AnalyticsEmployees,
   type AnalyticsLoad,
   type AnalyticsOverview,
+  type AnalyticsPace,
   type AnalyticsProducts,
   type CrmSalaries,
   type CrmSalaryDetail,
@@ -753,6 +755,13 @@ export function endpoints(fetcher: Fetcher) {
     async getAnalyticsOverview(): Promise<AnalyticsOverview> {
       const raw = await fetcher<unknown>("/api/crm/analytics/overview/");
       return parse(AnalyticsOverviewSchema, raw);
+    },
+
+    async getAnalyticsPace(month: string): Promise<AnalyticsPace> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/pace/", {
+        searchParams: { month },
+      });
+      return parse(AnalyticsPaceSchema, raw);
     },
 
     async getAnalyticsLoad(month: string): Promise<AnalyticsLoad> {

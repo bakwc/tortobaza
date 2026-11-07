@@ -13,10 +13,11 @@ import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { Link } from "@/i18n/navigation";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
-export type AnalyticsSection = "overview" | "load" | "clients" | "products" | "employees";
+export type AnalyticsSection = "overview" | "pace" | "load" | "clients" | "products" | "employees";
 
 const SECTIONS: { section: AnalyticsSection; href: string }[] = [
   { section: "overview", href: "/analytics" },
+  { section: "pace", href: "/analytics/pace" },
   { section: "load", href: "/analytics/load" },
   { section: "clients", href: "/analytics/clients" },
   { section: "products", href: "/analytics/products" },
@@ -51,7 +52,7 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
   const currentQuery = searchParams.toString();
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
-  const showPeriod = section === "load" || section === "products" || section === "employees";
+  const showPeriod = section === "pace" || section === "load" || section === "products" || section === "employees";
 
   if (!allowed) {
     return (

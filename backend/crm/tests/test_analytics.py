@@ -11,7 +11,7 @@ from accounts.models import UserProfile
 from accounts.permissions import grant
 from attendance.models import AttendanceEvent
 from attendance.salary import daily_monthly_share
-from crm.analytics import clients, employees, overview, production, weight_kg, windows
+from crm.analytics import clients, employees, overview, pace, production, weight_kg, windows
 from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder, CrmOrderEvent
 from orders.models import Order
 
@@ -317,6 +317,82 @@ class AnalyticsApiTests(TestCase):
         self.client.force_authenticate(user=self.finance)
         response = self.client.get("/api/crm/analytics/clients/")
         self.assertEqual(response.status_code, 200)
+
+    def test_pace_requires_analytics_permission(self):
+        response = self.client.get("/api/crm/analytics/pace/")
+        self.assertEqual(response.status_code, 403)
+        self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/crm/analytics/pace/", {"month": "2026-01"})
+        self.assertEqual(response.status_code, 403)
+        self.client.force_authenticate(user=self.finance)
+        response = self.client.get("/api/crm/analytics/pace/", {"month": "2026-01"})
+        self.assertEqual(response.status_code, 200)
+
+
+class AnalyticsPaceTests(TestCase):
+    def test_current_month_stops_at_today_and_crosses_the_year(self):
+        client = "555111111"
+        _order(date=date(2025, 11, 1), contact=client, cake_price=Decimal("5.00"))
+        _order(date=date(2025, 12, 15), contact=client, cake_price=Decimal("7.00"))
+        _order(
+            date=date(2025, 12, 31),
+            contact="555222222",
+            cake_price=Decimal("3.00"),
+            website_order=_website_order(),
+        )
+        _order(
+            date=date(2026, 1, 1),
+            contact=client,
+            cake_price=Decimal("10.00"),
+            payment_type=CrmOrder.PAYMENT_FLOWWOW,
+        )
+        _order(
+            date=date(2026, 1, 2),
+            contact="555222222",
+            cake_price=Decimal("4.00"),
+            delivery_price=Decimal("1.00"),
+        )
+        _order(date=date(2026, 1, 3), contact="-", nickname="Флао", cake_price=Decimal("8.00"))
+        _order(date=date(2026, 1, 2), cake_price=Decimal("50.00"), deleted=True)
+        _order(date=date(2026, 1, 4), contact=client, cake_price=Decimal("100.00"))
+        report = pace("2026-01", date(2026, 1, 3))
+        self.assertEqual(report["month"], "2026-01")
+        self.assertEqual(report["today"], "2026-01-03")
+        self.assertEqual([row["month"] for row in report["months"]], ["2026-01", "2025-12", "2025-11"])
+        self.assertEqual([row["partial"] for row in report["months"]], [True, False, False])
+        january, december, november = report["months"]
+        self.assertEqual([row["day"] for row in january["days"]], [1, 2, 3])
+        self.assertEqual(len(december["days"]), 31)
+        self.assertEqual(len(november["days"]), 30)
+        self.assertEqual(january["days"][0]["revenue"], "10.00")
+        self.assertEqual(january["days"][0]["orders"], 1)
+        self.assertEqual(january["days"][0]["repeat_orders"], 1)
+        self.assertEqual(january["days"][0]["flowwow"], "10.00")
+        self.assertEqual(january["days"][0]["website"], "0.00")
+        self.assertEqual(january["days"][0]["direct"], "0.00")
+        self.assertEqual(january["days"][1]["revenue"], "15.00")
+        self.assertEqual(january["days"][1]["orders"], 2)
+        self.assertEqual(january["days"][1]["repeat_orders"], 2)
+        self.assertEqual(january["days"][1]["flowwow"], "10.00")
+        self.assertEqual(january["days"][1]["website"], "0.00")
+        self.assertEqual(january["days"][1]["direct"], "5.00")
+        self.assertEqual(january["days"][2]["revenue"], "23.00")
+        self.assertEqual(january["days"][2]["orders"], 3)
+        self.assertEqual(january["days"][2]["repeat_orders"], 2)
+        self.assertEqual(january["days"][2]["direct"], "13.00")
+        self.assertEqual(december["days"][14]["revenue"], "7.00")
+        self.assertEqual(december["days"][14]["orders"], 1)
+        self.assertEqual(december["days"][14]["repeat_orders"], 1)
+        self.assertEqual(december["days"][30]["revenue"], "10.00")
+        self.assertEqual(december["days"][30]["orders"], 2)
+        self.assertEqual(december["days"][30]["repeat_orders"], 1)
+        self.assertEqual(december["days"][30]["website"], "3.00")
+        self.assertEqual(december["days"][30]["direct"], "7.00")
+        self.assertEqual(november["days"][0]["revenue"], "5.00")
+        self.assertEqual(november["days"][0]["orders"], 1)
+        self.assertEqual(november["days"][0]["repeat_orders"], 0)
+        self.assertEqual(november["days"][29]["revenue"], "5.00")
+        self.assertEqual(november["days"][29]["orders"], 1)
 
 
 class AnalyticsEmployeesTests(TestCase):

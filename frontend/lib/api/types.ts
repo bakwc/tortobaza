@@ -731,6 +731,28 @@ export const AnalyticsHorizonDaySchema = z.object({
   kilograms: z.string(),
 });
 
+export const AnalyticsPaceDaySchema = z.object({
+  day: z.number(),
+  revenue: z.string(),
+  orders: z.number(),
+  repeat_orders: z.number(),
+  flowwow: z.string(),
+  website: z.string(),
+  direct: z.string(),
+});
+
+export const AnalyticsPaceMonthSchema = z.object({
+  month: z.string(),
+  partial: z.boolean(),
+  days: z.array(AnalyticsPaceDaySchema),
+});
+
+export const AnalyticsPaceSchema = z.object({
+  month: z.string(),
+  today: z.string(),
+  months: z.array(AnalyticsPaceMonthSchema),
+});
+
 export const AnalyticsLoadSchema = z.object({
   month: z.string(),
   start: z.string(),
@@ -1218,6 +1240,7 @@ export type CrmSalaries = z.infer<typeof CrmSalariesSchema>;
 export type CrmSalaryDetail = z.infer<typeof CrmSalaryDetailSchema>;
 export type AnalyticsOverview = z.infer<typeof AnalyticsOverviewSchema>;
 export type AnalyticsOverviewPayment = z.infer<typeof AnalyticsOverviewPaymentSchema>;
+export type AnalyticsPace = z.infer<typeof AnalyticsPaceSchema>;
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;

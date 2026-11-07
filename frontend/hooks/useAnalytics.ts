@@ -7,6 +7,7 @@ import type {
   AnalyticsEmployees,
   AnalyticsLoad,
   AnalyticsOverview,
+  AnalyticsPace,
   AnalyticsProducts,
 } from "@/lib/api/types";
 
@@ -14,6 +15,14 @@ export function useAnalyticsOverview() {
   return useQuery<AnalyticsOverview>({
     queryKey: ["analytics-overview"] as const,
     queryFn: () => api.getAnalyticsOverview(),
+    staleTime: 0,
+  });
+}
+
+export function useAnalyticsPace(month: string) {
+  return useQuery<AnalyticsPace>({
+    queryKey: ["analytics-pace", month] as const,
+    queryFn: () => api.getAnalyticsPace(month),
     staleTime: 0,
   });
 }
