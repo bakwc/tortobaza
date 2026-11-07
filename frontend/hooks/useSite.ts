@@ -157,9 +157,11 @@ export function useSiteProductImages(productId: number | null) {
   const invalidate = useInvalidateSite();
   const upload = useMutation({
     mutationFn: ({
+      targetId,
       file,
       fields,
     }: {
+      targetId: number;
       file: File;
       fields: {
         alt_en?: string;
@@ -169,7 +171,7 @@ export function useSiteProductImages(productId: number | null) {
         crop_top?: number | null;
         crop_size?: number | null;
       };
-    }) => api.uploadSiteProductImage(productId as number, file, fields),
+    }) => api.uploadSiteProductImage(targetId, file, fields),
     onSuccess: invalidate,
   });
   const patch = useMutation({

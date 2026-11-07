@@ -43,13 +43,13 @@ export function ProductImagesEditor({
   onRefresh,
   flushRef,
 }: {
-  productId: number;
+  productId: number | null;
   images: SiteProductImage[];
   productName: string;
   price: string;
   canEdit: boolean;
   onRefresh: () => void;
-  flushRef: RefObject<(() => Promise<void>) | null>;
+  flushRef: RefObject<((targetId: number) => Promise<void>) | null>;
 }) {
   const t = useTranslations("site");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -109,10 +109,11 @@ export function ProductImagesEditor({
     [mutations.patch, onRefresh],
   );
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (targetId: number) => {
     const rows = pendingRef.current;
     for (const row of rows) {
       await mutations.upload.mutateAsync({
+        targetId,
         file: row.file,
         fields: {
           alt_en: row.alt_en,
@@ -166,8 +167,7 @@ export function ProductImagesEditor({
         return next;
       });
     }
-    if (rows.length > 0 || entries.length > 0) onRefresh();
-  }, [mutations.upload, mutations.patch, onRefresh]);
+  }, [mutations.upload, mutations.patch]);
 
   useEffect(() => {
     flushRef.current = flush;

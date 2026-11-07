@@ -119,7 +119,7 @@ export function ProductsPanel() {
     total: number;
   } | null>(null);
   const detail = useSiteProductDetail(editingId);
-  const flushImagesRef = useRef<(() => Promise<void>) | null>(null);
+  const flushImagesRef = useRef<((targetId: number) => Promise<void>) | null>(null);
 
   const open = (row: SiteProductListItem | null) => {
     products.save.reset();
@@ -257,20 +257,14 @@ export function ProductsPanel() {
               option_groups: activeDraft.option_groups,
             };
             void (async () => {
-              await flushImagesRef.current?.();
-              products.save.mutate(
-                { id: activeDraft.id, body },
-                {
-                  onSuccess: (saved) => {
-                    if (activeDraft.id === null) {
-                      setEditingId(saved.id);
-                      setDraft(null);
-                    } else {
-                      close();
-                    }
-                  },
-                },
-              );
+              const saved = await products.save.mutateAsync({ id: activeDraft.id, body });
+              await flushImagesRef.current?.(saved.id);
+              if (activeDraft.id === null) {
+                setEditingId(saved.id);
+                setDraft(null);
+              } else {
+                close();
+              }
             })();
           }}
           onDelete={
@@ -483,21 +477,17 @@ export function ProductsPanel() {
               );
             })}
           </div>
-          {activeDraft.id !== null && productDetail ? (
-            <div className="mt-8 border-t border-[var(--line)] pt-6">
-              <ProductImagesEditor
-                productId={activeDraft.id}
-                images={productDetail.images}
-                productName={activeDraft[`name_${locale}`]}
-                price={activeDraft.base_price}
-                canEdit={canEdit}
-                onRefresh={() => detail.refetch()}
-                flushRef={flushImagesRef}
-              />
-            </div>
-          ) : (
-            <p className="mt-6 text-sm text-[var(--muted-2)]">{t("saveBeforeImages")}</p>
-          )}
+          <div className="mt-8 border-t border-[var(--line)] pt-6">
+            <ProductImagesEditor
+              productId={activeDraft.id}
+              images={productDetail?.images ?? []}
+              productName={activeDraft[`name_${locale}`]}
+              price={activeDraft.base_price}
+              canEdit={canEdit}
+              onRefresh={() => detail.refetch()}
+              flushRef={flushImagesRef}
+            />
+          </div>
           {deletePrompt !== null ? (
             <div className="mt-6 grid gap-3 rounded-2xl border border-[var(--line)] p-4">
               {deletePrompt.total > 0 ? (
