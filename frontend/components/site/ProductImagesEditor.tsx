@@ -61,6 +61,8 @@ export function ProductImagesEditor({
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [cropDrafts, setCropDrafts] = useState<Record<number, CropValues>>({});
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
   const cropDraftsRef = useRef(cropDrafts);
   cropDraftsRef.current = cropDrafts;
   const debounceTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
@@ -107,51 +109,72 @@ export function ProductImagesEditor({
     [mutations.patch, onRefresh],
   );
 
-  const flushCrops = useCallback(async () => {
+  const flush = useCallback(async () => {
+    const rows = pendingRef.current;
+    for (const row of rows) {
+      await mutations.upload.mutateAsync({
+        file: row.file,
+        fields: {
+          alt_en: row.alt_en,
+          alt_ka: row.alt_ka,
+          alt_ru: row.alt_ru,
+          crop_left: row.crop.crop_left,
+          crop_top: row.crop.crop_top,
+          crop_size: row.crop.crop_size,
+        },
+      });
+      URL.revokeObjectURL(row.url);
+    }
+    if (rows.length > 0) {
+      const uploaded = new Set(rows.map((row) => row.key));
+      setPending((current) => current.filter((item) => !uploaded.has(item.key)));
+      setPendingKey(null);
+    }
     for (const imageId of Object.keys(debounceTimersRef.current)) {
       clearTimeout(debounceTimersRef.current[Number(imageId)]);
     }
     debounceTimersRef.current = {};
     const drafts = cropDraftsRef.current;
     const entries = Object.entries(drafts);
-    if (entries.length === 0) return;
-    await Promise.all(
-      entries.map(([imageId, crop]) =>
-        mutations.patch.mutateAsync({
-          imageId: Number(imageId),
-          body: {
-            crop_left: crop.crop_left,
-            crop_top: crop.crop_top,
-            crop_size: crop.crop_size,
-          },
-        }),
-      ),
-    );
-    onRefresh();
-    setCropDrafts((prev) => {
-      const next = { ...prev };
-      for (const [imageId, crop] of entries) {
-        const id = Number(imageId);
-        const current = next[id];
-        if (
-          current &&
-          current.crop_left === crop.crop_left &&
-          current.crop_top === crop.crop_top &&
-          current.crop_size === crop.crop_size
-        ) {
-          delete next[id];
+    if (entries.length > 0) {
+      await Promise.all(
+        entries.map(([imageId, crop]) =>
+          mutations.patch.mutateAsync({
+            imageId: Number(imageId),
+            body: {
+              crop_left: crop.crop_left,
+              crop_top: crop.crop_top,
+              crop_size: crop.crop_size,
+            },
+          }),
+        ),
+      );
+      setCropDrafts((prev) => {
+        const next = { ...prev };
+        for (const [imageId, crop] of entries) {
+          const id = Number(imageId);
+          const current = next[id];
+          if (
+            current &&
+            current.crop_left === crop.crop_left &&
+            current.crop_top === crop.crop_top &&
+            current.crop_size === crop.crop_size
+          ) {
+            delete next[id];
+          }
         }
-      }
-      return next;
-    });
-  }, [mutations.patch, onRefresh]);
+        return next;
+      });
+    }
+    if (rows.length > 0 || entries.length > 0) onRefresh();
+  }, [mutations.upload, mutations.patch, onRefresh]);
 
   useEffect(() => {
-    flushRef.current = flushCrops;
+    flushRef.current = flush;
     return () => {
       flushRef.current = null;
     };
-  }, [flushCrops, flushRef]);
+  }, [flush, flushRef]);
 
   const pickFiles = async (files: FileList | null) => {
     if (!files || !canEdit) return;
@@ -175,30 +198,6 @@ export function ProductImagesEditor({
       setActiveId(null);
       setPendingKey(next[0].key);
     }
-  };
-
-  const uploadPending = (row: PendingUpload) => {
-    mutations.upload.mutate(
-      {
-        file: row.file,
-        fields: {
-          alt_en: row.alt_en,
-          alt_ka: row.alt_ka,
-          alt_ru: row.alt_ru,
-          crop_left: row.crop.crop_left,
-          crop_top: row.crop.crop_top,
-          crop_size: row.crop.crop_size,
-        },
-      },
-      {
-        onSuccess: () => {
-          URL.revokeObjectURL(row.url);
-          setPending((rows) => rows.filter((item) => item.key !== row.key));
-          setPendingKey(null);
-          onRefresh();
-        },
-      },
-    );
   };
 
   const move = (id: number, direction: -1 | 1) => {
@@ -353,11 +352,6 @@ export function ProductImagesEditor({
                     }}
                   />
                 </Field>
-                {activePending ? (
-                  <Button type="button" onClick={() => uploadPending(activePending)}>
-                    {t("uploadImage")}
-                  </Button>
-                ) : null}
               </>
             ) : null}
           </div>
