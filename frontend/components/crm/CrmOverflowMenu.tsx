@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookOpen, ChartColumn, ChevronDown, ClipboardList, Globe, History, LogOut, MessageSquare, Receipt, Users, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCan, useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -184,62 +184,72 @@ export function CrmOverflowMenu() {
   ];
 
   return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-label={t("menu")}
-        aria-expanded={open}
-        className="gap-1.5"
-      >
-        <span className="max-w-[160px] truncate">{displayName}</span>
-        <ChevronDown className={`h-4 w-4 ${open ? "rotate-180" : ""}`} />
-        <PendingBadge count={pendingCount} />
-      </Button>
-      {open ? (
-        <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
-                  item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
-                }`}
-                onClick={() => setOpen(false)}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-                {item.key === "rsge" && pendingCount > 0 ? (
-                  <span className="ml-auto">
-                    <PendingBadge count={pendingCount} />
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-          <div className="my-1 border-t border-[var(--line)]" />
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
-            onClick={() => {
-              setOpen(false);
-              logout.mutate(undefined, {
-                onSuccess: () => {
-                  window.location.reload();
-                },
-              });
-            }}
-            disabled={logout.isPending}
-          >
-            <LogOut className="h-4 w-4" />
-            {t("signOut")}
-          </button>
+    <div className="flex items-center gap-2">
+      {displayName !== "" ? (
+        <div className="flex select-none items-center gap-2" title={displayName}>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold uppercase text-white">
+            {displayName.charAt(0)}
+          </span>
+          <span className="hidden max-w-[140px] truncate text-sm font-medium text-[var(--ink)] sm:inline">{displayName}</span>
         </div>
       ) : null}
+      <div className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-label={t("menu")}
+          aria-expanded={open}
+          className={pendingCount > 0 ? "w-auto gap-1.5 px-2.5" : undefined}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+          <PendingBadge count={pendingCount} />
+        </Button>
+        {open ? (
+          <div className="absolute right-0 z-20 mt-2 min-w-[180px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  aria-current={item.active ? "page" : undefined}
+                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] ${
+                    item.active ? "bg-[var(--brand)]/15" : "hover:bg-[var(--cream)]"
+                  }`}
+                  onClick={() => setOpen(false)}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                  {item.key === "rsge" && pendingCount > 0 ? (
+                    <span className="ml-auto">
+                      <PendingBadge count={pendingCount} />
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+            <div className="my-1 border-t border-[var(--line)]" />
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-[var(--ink)] hover:bg-[var(--cream)] disabled:opacity-50"
+              onClick={() => {
+                setOpen(false);
+                logout.mutate(undefined, {
+                  onSuccess: () => {
+                    window.location.reload();
+                  },
+                });
+              }}
+              disabled={logout.isPending}
+            >
+              <LogOut className="h-4 w-4" />
+              {t("signOut")}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
