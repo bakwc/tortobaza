@@ -29,11 +29,13 @@ import { cn } from "@/lib/utils";
 
 function ItemEditor({
   item,
+  number,
   techCards,
   onChange,
   onRemove,
 }: {
   item: CrmItemDraft;
+  number: number;
   techCards: TechCard[];
   onChange: (item: CrmItemDraft) => void;
   onRemove: () => void;
@@ -73,6 +75,7 @@ function ItemEditor({
 
   return (
     <div
+      data-field-group={t("itemNumber", { number })}
       className={cn(
         "grid gap-4 rounded-2xl border p-4",
         item.needs_review ? "border-amber-300 bg-amber-50" : "border-[var(--line)]",
@@ -162,7 +165,7 @@ function ItemEditor({
           ))}
         </div>
       ) : null}
-      <div className="grid gap-2">
+      <div className="grid gap-2" data-field-group={card ? t("extraIngredients") : t("ingredients")}>
         <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
           {card ? t("extraIngredients") : t("ingredients")}
         </span>
@@ -202,10 +205,11 @@ export function CrmOrderItemsEditor({
   return (
     <div className="grid gap-3">
       <p className="text-xs text-[var(--muted-2)]">{t("hint")}</p>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <ItemEditor
           key={item.key}
           item={item}
+          number={index + 1}
           techCards={cards}
           onChange={(next) => onChange(items.map((row) => (row.key === item.key ? next : row)))}
           onRemove={() => onChange(items.filter((row) => row.key !== item.key))}

@@ -378,6 +378,7 @@
     "imagesHint": "You can select several files at once.",
     "imagesRemove": "Remove image",
     "saveOrder": "Save order",
+    "requiredFieldsMissing": "Fill in required fields: {fields}",
     "saveError": "Could not save the order. Please try again.",
     "loadOrderError": "Could not load this order.",
     "prevMonth": "Previous month",
@@ -522,7 +523,8 @@
       "extraIngredients": "Extra ingredients",
       "ingredients": "Ingredients",
       "comment": "Comment",
-      "addItem": "Add item"
+      "addItem": "Add item",
+      "itemNumber": "Item {number}"
     }
   },
   "finance": {

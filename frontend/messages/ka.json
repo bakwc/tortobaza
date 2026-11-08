@@ -378,6 +378,7 @@
     "imagesHint": "შეგიძლიათ რამდენიმე ფაილის ერთად ატვირთვა.",
     "imagesRemove": "სურათის წაშლა",
     "saveOrder": "შეკვეთის შენახვა",
+    "requiredFieldsMissing": "შეავსეთ სავალდებულო ველები: {fields}",
     "saveError": "შეკვეთის შენახვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "loadOrderError": "შეკვეთის ჩატვირთვა ვერ მოხერხდა.",
     "prevMonth": "წინა თვე",
@@ -522,7 +523,8 @@
       "extraIngredients": "დამატებითი ინგრედიენტები",
       "ingredients": "ინგრედიენტები",
       "comment": "კომენტარი",
-      "addItem": "პოზიციის დამატება"
+      "addItem": "პოზიციის დამატება",
+      "itemNumber": "პოზიცია {number}"
     }
   },
   "finance": {

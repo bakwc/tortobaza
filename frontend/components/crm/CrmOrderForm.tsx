@@ -56,6 +56,19 @@ function timeToMinutes(value: string): number {
   return hours * 60 + minutes;
 }
 
+function invalidFieldName(element: Element): string {
+  const parts: string[] = [];
+  let group = element.parentElement?.closest<HTMLElement>("[data-field-group]");
+  while (group) {
+    parts.unshift(group.dataset.fieldGroup as string);
+    group = group.parentElement?.closest<HTMLElement>("[data-field-group]");
+  }
+  const target = element.getAttribute("aria-hidden") === "true" ? element.nextElementSibling : element;
+  const labelText = element.closest("label")?.querySelector("span")?.textContent?.trim();
+  parts.push(labelText ? labelText : (target?.getAttribute("placeholder") ?? ""));
+  return parts.join(" → ");
+}
+
 function buildCrmOrderFormData(
   fields: CrmOrderWriteFields,
   images: File[],
@@ -190,6 +203,8 @@ export function CrmOrderForm(
   const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
     null,
   );
+  const [validationShown, setValidationShown] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   const selectableStatuses =
     props.mode === "edit"
@@ -231,6 +246,14 @@ export function CrmOrderForm(
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const invalid = Array.from(event.currentTarget.querySelectorAll("input:invalid, textarea:invalid"));
+    setValidationShown(true);
+    setMissingFields([...new Set(invalid.map(invalidFieldName))]);
+    if (invalid.length > 0) {
+      const first = invalid[0].getAttribute("aria-hidden") === "true" ? invalid[0].nextElementSibling : invalid[0];
+      first?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (!fields.when_ready && fields.time_start !== null) {
       if (!fields.time_end) {
         setTimeRangeError("timeEndRequired");
@@ -282,7 +305,12 @@ export function CrmOrderForm(
   ];
 
   return (
-    <form className="grid gap-6 pb-24" onSubmit={onSubmit}>
+    <form
+      noValidate
+      data-validated={validationShown ? "" : undefined}
+      className="grid gap-6 pb-24 [&[data-validated]_:is(input,textarea):invalid]:border-[var(--danger)] [&[data-validated]_:is(input,textarea):invalid]:bg-red-50 [&[data-validated]_input:invalid+input]:border-[var(--danger)] [&[data-validated]_input:invalid+input]:bg-red-50"
+      onSubmit={onSubmit}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/crm?date=${fields.date}`}
@@ -704,6 +732,11 @@ export function CrmOrderForm(
       {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--cream-soft)] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {missingFields.length > 0 ? (
+          <p className="mx-auto mb-2 w-full max-w-3xl px-4 text-sm font-medium text-[var(--danger)]">
+            {t("requiredFieldsMissing", { fields: missingFields.join(", ") })}
+          </p>
+        ) : null}
         <div className="mx-auto flex w-full max-w-3xl justify-end px-4">
           <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={pending}>
             {pending ? <Spinner className="h-4 w-4" /> : t("saveOrder")}
