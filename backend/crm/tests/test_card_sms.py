@@ -40,6 +40,9 @@ PAYMENT_HTML = (
 )
 PAYMENT_IBAN = "GE30BG0000000000001239GEL"
 TBC_EXPENSE_HTML = "7.10GEL<br/>(*1911)<br/>LTD KEEPZ.ME*YANDEX GO<br/>Balance: 2146.99GEL"
+TBC_EXPENSE_STAMP_HTML = (
+    "7.70GEL<br/>(*1911)<br/>LTD KEEPZ.ME*YANDEX GO<br/>Balance: 2254.64GEL <br/> <br/>08/11/26 08:55"
+)
 TBC_ATM_HTML = "2000.00GEL<br/>(*1911)<br/>ATM TBC-1075 (RECAN)<br/>Balance: 2227.72GEL"
 TBC_DEPOSIT_HTML = "Deposit Money: 105.00 GEL<br/>MC GOLD<br/>06/11/2026<br/>LEVANI MUNJISHVILI"
 
@@ -392,6 +395,16 @@ class CardSmsTests(TestCase):
         self.assertEqual(deposit.merchant, "LEVANI MUNJISHVILI")
         self.assertEqual(deposit.sms_date, date(2026, 11, 6))
         self.assertEqual(deposit.kind, CardSmsMessage.KIND_INCOME)
+
+    def test_parse_tbc_sms_with_stamp(self):
+        expense = parse_card_sms(html_to_text(TBC_EXPENSE_STAMP_HTML))
+        self.assertIsNotNone(expense)
+        self.assertEqual(expense.currency, "GEL")
+        self.assertEqual(expense.amount, Decimal("7.70"))
+        self.assertEqual(expense.card_last4, "1911")
+        self.assertEqual(expense.merchant, "LTD KEEPZ.ME*YANDEX GO")
+        self.assertEqual(expense.sms_date, date(2026, 11, 8))
+        self.assertEqual(expense.kind, CardSmsMessage.KIND_EXPENSE)
 
     def test_tbc_expense_uses_received_date_and_card(self):
         account = _account("TBC", "GEL", "1911", "personal")

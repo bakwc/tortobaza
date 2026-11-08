@@ -55,6 +55,7 @@ _INTERNALDATE_RE = re.compile(rb'INTERNALDATE "([^"]+)"')
 _TBC_AMOUNT_RE = re.compile(r"(\d+\.\d{2})([A-Z]{3})")
 _TBC_CARD_RE = re.compile(r"\(\*(\d{4})\)")
 _TBC_BALANCE_RE = re.compile(r"Balance:\s*(\d+\.\d{2})([A-Z]{3})")
+_TBC_STAMP_RE = re.compile(r"(\d{2})/(\d{2})/(\d{2}) (\d{2}):(\d{2})")
 _TBC_DEPOSIT_RE = re.compile(r"Deposit Money:\s*(\d+\.\d{2})\s*([A-Z]{3})")
 
 
@@ -465,7 +466,10 @@ def _parse_tbc_card(lines: list[str]) -> ParsedCardSms | None:
     balance_index = _single_index(lines, _tbc_balance_line)
     if card_index is None or balance_index is None:
         return None
-    if card_index != 1 or balance_index <= card_index or balance_index != len(lines) - 1:
+    if card_index != 1 or balance_index <= card_index:
+        return None
+    sms_date = _tbc_card_sms_date(lines, balance_index)
+    if balance_index != len(lines) - 1 and sms_date is None:
         return None
     card_match = _TBC_CARD_RE.fullmatch(lines[card_index])
     balance_match = _TBC_BALANCE_RE.fullmatch(lines[balance_index])
@@ -482,7 +486,7 @@ def _parse_tbc_card(lines: list[str]) -> ParsedCardSms | None:
         currency=amount_match.group(2),
         amount=amount,
         merchant=" ".join(merchant_lines),
-        sms_date=None,
+        sms_date=sms_date,
         kind=CardSmsMessage.KIND_EXPENSE,
         account_prefix="",
         account_suffix="",
@@ -524,6 +528,32 @@ def _tbc_card_line(line: str) -> bool:
 
 def _tbc_balance_line(line: str) -> bool:
     return _TBC_BALANCE_RE.fullmatch(line) is not None
+
+
+def _tbc_card_sms_date(lines: list[str], balance_index: int) -> date | None:
+    if balance_index == len(lines) - 1:
+        return None
+    if balance_index != len(lines) - 2:
+        return None
+    return _tbc_stamp_date(lines[-1])
+
+
+def _tbc_stamp_date(line: str) -> date | None:
+    match = _TBC_STAMP_RE.fullmatch(line)
+    if match is None:
+        return None
+    day = int(match.group(1))
+    month = int(match.group(2))
+    year = 2000 + int(match.group(3))
+    hour = int(match.group(4))
+    minute = int(match.group(5))
+    if month < 1 or month > 12:
+        return None
+    if day < 1 or day > calendar.monthrange(year, month)[1]:
+        return None
+    if hour > 23 or minute > 59:
+        return None
+    return date(year, month, day)
 
 
 def _parse_unparsed() -> None:
