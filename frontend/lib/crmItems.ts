@@ -53,6 +53,7 @@ export function crmItemDraftFromItem(item: CrmOrderItem): CrmItemDraft {
       loss_percent: "0",
       unit_cost: "",
       quantity_unit: line.unit,
+      suggestion: null,
     })),
   };
 }

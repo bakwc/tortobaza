@@ -866,7 +866,11 @@
       "techCards": "Tech cards",
       "ingredients": "Ingredients",
       "semiProducts": "Semi-products",
-      "modifierGroups": "Modifier groups"
+      "modifierGroups": "Modifier groups",
+      "importTechCard": "Import from file",
+      "recognizingTechCard": "Reading the tech card…",
+      "createSemiProduct": "Create semi-product",
+      "importedFrom": "Imported from {name}"
     },
     "inventory": {
       "title": "Inventory",

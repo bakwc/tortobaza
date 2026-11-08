@@ -69,6 +69,12 @@ export function useTechCardCategories() {
   return useResource(["menu", "tech-card-categories"], api.menuTechCardCategories);
 }
 
+export function useTechCardImport() {
+  return useMutation({
+    mutationFn: (file: File) => api.importTechCard(file),
+  });
+}
+
 export function useTechCardList() {
   const invalidate = useInvalidateStock();
   const list = useQuery({

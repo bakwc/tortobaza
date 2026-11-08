@@ -1557,6 +1557,34 @@ export const TechCardSchema = z.object({
   cost_max: z.string().optional(),
 });
 
+export const TechCardImportLineSchema = z.object({
+  original_text: z.string(),
+  name: z.string(),
+  quantity: z.string(),
+  unit: MenuUnitSchema,
+  loss_percent: z.string(),
+  ingredient_id: z.number().nullable(),
+  semi_product_id: z.number().nullable(),
+  suggested_kind: z.enum(["ingredient", "semi_product"]),
+});
+
+export const TechCardImportSectionSchema = z.object({
+  name: z.string(),
+  method: z.string(),
+  lines: z.array(TechCardImportLineSchema),
+});
+
+export const TechCardImportSchema = z.object({
+  name: z.string(),
+  kind: z.enum(["weighted", "piece"]),
+  basis_weight_kg: z.string().nullable(),
+  basis_quantity: z.number().int().nullable(),
+  method: z.string(),
+  lines: z.array(TechCardImportLineSchema),
+  sections: z.array(TechCardImportSectionSchema),
+  source_name: z.string(),
+});
+
 export const TechCardCostSchema = z.object({ cost: z.string() });
 
 export const MissingModifierLineSchema = z.object({
@@ -1588,6 +1616,8 @@ export type TechCardSection = z.infer<typeof TechCardSectionSchema>;
 export type TechCardCategory = z.infer<typeof TechCardCategorySchema>;
 export type TechCardListItem = z.infer<typeof TechCardListItemSchema>;
 export type TechCard = z.infer<typeof TechCardSchema>;
+export type TechCardImportLine = z.infer<typeof TechCardImportLineSchema>;
+export type TechCardImport = z.infer<typeof TechCardImportSchema>;
 export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
 export type CatalogOption = z.infer<typeof CatalogOptionSchema>;
 

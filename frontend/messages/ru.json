@@ -866,7 +866,11 @@
       "techCards": "Тех. карты",
       "ingredients": "Ингредиенты",
       "semiProducts": "Полуфабрикаты",
-      "modifierGroups": "Группы модификаторов"
+      "modifierGroups": "Группы модификаторов",
+      "importTechCard": "Импорт из файла",
+      "recognizingTechCard": "Читаем техкарту…",
+      "createSemiProduct": "Создать полуфабрикат",
+      "importedFrom": "Импорт из {name}"
     },
     "inventory": {
       "title": "Склад",

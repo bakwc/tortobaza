@@ -182,6 +182,7 @@ import {
   TechCardCategorySchema,
   TechCardCostSchema,
   TechCardListItemSchema,
+  TechCardImportSchema,
   TechCardSchema,
   WriteOffReasonSchema,
   WriteOffSchema,
@@ -219,6 +220,7 @@ import {
   type SupplyTransaction,
   type TechCard,
   type TechCardBody,
+  type TechCardImport,
   type TechCardListItem,
   type TechCardCategory,
   type TechCardCategoryBody,
@@ -315,6 +317,27 @@ export function endpoints(fetcher: Fetcher) {
       TechCardCategorySchema,
     ),
     menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    async importTechCard(file: File): Promise<TechCardImport> {
+      const body = new FormData();
+      body.append("file", file);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 200_000);
+      try {
+        const raw = await fetcher<unknown>("/api/menu/tech-cards/import/", {
+          method: "POST",
+          body,
+          signal: controller.signal,
+        });
+        return parse(TechCardImportSchema, raw);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw new ApiError(0, JSON.stringify({ detail: "Tech card recognition timed out." }));
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
+      }
+    },
     async menuTechCardsLite(): Promise<TechCardListItem[]> {
       const raw = await fetcher<unknown>("/api/menu/tech-cards/lite/");
       return parse(z.array(TechCardListItemSchema), raw);

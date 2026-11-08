@@ -866,7 +866,11 @@
       "techCards": "ტექ. ბარათები",
       "ingredients": "ინგრედიენტები",
       "semiProducts": "ნახევარფაბრიკატები",
-      "modifierGroups": "მოდიფიკატორების ჯგუფები"
+      "modifierGroups": "მოდიფიკატორების ჯგუფები",
+      "importTechCard": "ფაილიდან იმპორტი",
+      "recognizingTechCard": "ტექ. ბარათი იკითხება…",
+      "createSemiProduct": "ნახევარფაბრიკატის შექმნა",
+      "importedFrom": "იმპორტი {name}-დან"
     },
     "inventory": {
       "title": "საწყობი",

@@ -220,6 +220,8 @@ export function WriteOffsPanel() {
             quantityLabel={t("quantity")}
             chooseQuantityUnit={false}
             linePrice={null}
+            onCreateSuggestion={null}
+            suggestionPending={false}
           />
         </EditorDialog>
       ) : null}

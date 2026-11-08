@@ -177,6 +177,8 @@ function ItemEditor({
             const sale = crmExtraLineSale(line, techCards);
             return sale === null ? null : formatAed(sale);
           }}
+          onCreateSuggestion={null}
+          suggestionPending={false}
         />
       </div>
       <Field label={t("comment")}>

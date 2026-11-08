@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 
+export type LineSuggestion = {
+  name: string;
+  unit: MenuUnit;
+  kind: "ingredient" | "semi_product";
+  original_text: string;
+};
+
 export type ComponentLineDraft = {
   key: string;
   component: string;
@@ -14,6 +21,7 @@ export type ComponentLineDraft = {
   quantity_unit: MenuUnit;
   loss_percent: string;
   unit_cost: string;
+  suggestion: LineSuggestion | null;
 };
 
 export type ComponentOption = {
@@ -70,7 +78,15 @@ export function componentRef(
 }
 
 export function emptyLine(): ComponentLineDraft {
-  return { key: newDraftKey(), component: "", quantity: "", quantity_unit: "g", loss_percent: "0", unit_cost: "" };
+  return {
+    key: newDraftKey(),
+    component: "",
+    quantity: "",
+    quantity_unit: "g",
+    loss_percent: "0",
+    unit_cost: "",
+    suggestion: null,
+  };
 }
 
 export function draftFromLine(
@@ -89,6 +105,7 @@ export function draftFromLine(
     quantity_unit: line.quantity_unit,
     loss_percent: line.loss_percent ?? "0",
     unit_cost: "",
+    suggestion: null,
   };
 }
 
@@ -160,6 +177,8 @@ export function ComponentLinesEditor({
   quantityLabel,
   chooseQuantityUnit,
   linePrice,
+  onCreateSuggestion,
+  suggestionPending,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -168,6 +187,8 @@ export function ComponentLinesEditor({
   quantityLabel: string;
   chooseQuantityUnit: boolean;
   linePrice: ((line: ComponentLineDraft) => string | null) | null;
+  onCreateSuggestion: ((line: ComponentLineDraft, kind: "ingredient" | "semi_product") => void) | null;
+  suggestionPending: boolean;
 }) {
   const t = useTranslations("stock");
   const update = (key: string, patch: Partial<ComponentLineDraft>) =>
@@ -187,6 +208,7 @@ export function ComponentLinesEditor({
                 const next = options.find((row) => row.value === component);
                 update(line.key, {
                   component,
+                  suggestion: component === "" ? line.suggestion : null,
                   quantity_unit:
                     next === undefined ? line.quantity_unit : chooseQuantityUnit ? defaultQuantityUnit(next) : next.unit,
                 });
@@ -246,6 +268,31 @@ export function ComponentLinesEditor({
             >
               <Trash2 className="h-4 w-4" />
             </Button>
+            {line.component === "" && line.suggestion !== null && onCreateSuggestion !== null ? (
+              <div className="col-span-full grid gap-2">
+                <p className="text-xs text-[var(--muted-2)]">{line.suggestion.original_text}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={suggestionPending}
+                    onClick={() => onCreateSuggestion(line, "ingredient")}
+                  >
+                    {t("createIngredient")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={suggestionPending}
+                    onClick={() => onCreateSuggestion(line, "semi_product")}
+                  >
+                    {t("menu.createSemiProduct")}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
         );
       })}

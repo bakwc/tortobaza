@@ -639,6 +639,8 @@ export function SemiProductsPanel() {
             quantityLabel={t("quantity")}
             chooseQuantityUnit={true}
             linePrice={null}
+            onCreateSuggestion={null}
+            suggestionPending={false}
           />
         </EditorDialog>
       ) : null}

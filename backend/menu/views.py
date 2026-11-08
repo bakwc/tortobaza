@@ -1,9 +1,13 @@
+from pathlib import Path
+
 from django.contrib.admin.utils import NestedObjects
 from django.db import router, transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -23,6 +27,7 @@ from menu.models import (
     TechCardImage,
 )
 from menu.recipes import missing_modifier_compositions, recipe_query_cache, tech_card_cost
+from menu.tech_card_import.recognize import recognize_tech_card
 from menu.serializers import (
     CatalogOptionSerializer,
     AssignIngredientCategorySerializer,
@@ -389,6 +394,24 @@ class TechCardImageCreateView(MenuImageCreateView):
 class TechCardImageDeleteView(MenuImageDeleteView):
     image_model = TechCardImage
     parent_attr = "tech_card"
+
+
+IMPORT_EXTENSIONS = {"docx", "pages", "pdf"}
+
+
+class TechCardImportView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+    parser_classes = [MultiPartParser]
+
+    def post(self, request):
+        if "file" not in request.FILES:
+            raise ValidationError({"file": "Upload a docx, pages, or pdf file."})
+        upload = request.FILES["file"]
+        extension = Path(upload.name).suffix.lower().lstrip(".")
+        if extension not in IMPORT_EXTENSIONS:
+            raise ValidationError({"file": "Upload a docx, pages, or pdf file."})
+        return Response(recognize_tech_card(upload.name, upload.read()))
 
 
 class CatalogOptionListView(APIView):

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -17,6 +17,7 @@ import {
   SlidersHorizontal,
   Trash2,
   TriangleAlert,
+  Upload,
 } from "lucide-react";
 import { MarkdownEditor } from "@/components/menu/MarkdownEditor";
 import { MenuImages } from "@/components/menu/MenuImages";
@@ -28,6 +29,7 @@ import {
   type RecipeTableRow,
 } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -67,9 +69,10 @@ import {
   useTechCard,
   useTechCardCategories,
   useTechCardImages,
+  useTechCardImport,
   useTechCardList,
 } from "@/hooks/useStock";
-import type { ModifierGroup, TechCard, TechCardListItem } from "@/lib/api/types";
+import type { IngredientBody, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
@@ -118,6 +121,58 @@ function displayedCost(value: string, kind: TechCard["kind"], basisQuantity: num
 
 function emptySection(): SectionDraft {
   return { key: newDraftKey(), name: "", method: "", lines: [] };
+}
+
+function importLine(line: TechCardImportLine): ComponentLineDraft {
+  const component =
+    line.ingredient_id !== null
+      ? `ingredient:${line.ingredient_id}`
+      : line.semi_product_id !== null
+        ? `semi_product:${line.semi_product_id}`
+        : "";
+  return {
+    key: newDraftKey(),
+    component,
+    quantity: line.quantity,
+    quantity_unit: line.unit,
+    loss_percent: line.loss_percent,
+    unit_cost: "",
+    suggestion:
+      component === ""
+        ? { name: line.name, unit: line.unit, kind: line.suggested_kind, original_text: line.original_text }
+        : null,
+  };
+}
+
+function draftFromImport(row: TechCardImport): TechCardDraft {
+  return {
+    name: row.name,
+    category: null,
+    kind: row.kind,
+    basis_weight_kg: row.basis_weight_kg ?? "1",
+    basis_quantity: row.basis_quantity === null ? "1" : String(row.basis_quantity),
+    sale_price: "",
+    method: row.method,
+    is_active: true,
+    lines: row.lines.map(importLine),
+    sections: row.sections.map((section) => ({
+      key: newDraftKey(),
+      name: section.name,
+      method: section.method,
+      lines: section.lines.map(importLine),
+    })),
+    groups: [],
+    compositions: {},
+  };
+}
+
+function patchDraftLine(draft: TechCardDraft, key: string, patch: Partial<ComponentLineDraft>): TechCardDraft {
+  const apply = (line: ComponentLineDraft) => (line.key === key ? { ...line, ...patch } : line);
+  return {
+    ...draft,
+    lines: draft.lines.map(apply),
+    sections: draft.sections.map((section) => ({ ...section, lines: section.lines.map(apply) })),
+  };
 }
 
 function draftFrom(row: TechCard | null): TechCardDraft {
@@ -331,6 +386,8 @@ export function TechCardsPanel() {
   const semiProducts = useSemiProducts();
   const missing = useMissingModifierLines();
   const images = useTechCardImages();
+  const techCardImport = useTechCardImport();
+  const fileRef = useRef<HTMLInputElement>(null);
   const canSeeCosts = useCan("view_costs");
   const canEdit = useCan("edit_menu");
   const cardParam = searchParams.get("card");
@@ -346,6 +403,7 @@ export function TechCardsPanel() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [assignCategory, setAssignCategory] = useState("");
+  const [importedFrom, setImportedFrom] = useState<string | null>(null);
   const requestedId = ignoreCardParam
     ? openedId
     : openedId !== null
@@ -368,6 +426,7 @@ export function TechCardsPanel() {
     setDraft(null);
     setMode("view");
     setGroupToAdd("");
+    setImportedFrom(null);
     router.replace(`/menu?card=${row.id}`, { scroll: false });
   };
   const openNew = () => {
@@ -378,6 +437,7 @@ export function TechCardsPanel() {
     setDraft(draftFrom(null));
     setMode("edit");
     setGroupToAdd("");
+    setImportedFrom(null);
     router.replace("/menu", { scroll: false });
   };
   const openEdit = () => {
@@ -385,18 +445,91 @@ export function TechCardsPanel() {
     setDraft(withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options));
     setMode("edit");
     setGroupToAdd("");
+    setImportedFrom(null);
   };
   const close = () => {
     setMode(null);
     setDraft(null);
     setIgnoreCardParam(true);
     setOpenedId(null);
+    setImportedFrom(null);
     router.replace("/menu", { scroll: false });
   };
   const cancelEdit = () => {
     setDraft(null);
     if (current === null) close();
     else setMode("view");
+  };
+  const openImported = (file: File) => {
+    techCardImport.mutate(file, {
+      onSuccess: (result) => {
+        techCards.save.reset();
+        techCards.remove.reset();
+        setIgnoreCardParam(true);
+        setOpenedId(null);
+        setDraft(draftFromImport(result));
+        setImportedFrom(result.source_name);
+        setMode("edit");
+        setGroupToAdd("");
+        router.replace("/menu", { scroll: false });
+      },
+    });
+  };
+  const createSuggestion = (line: ComponentLineDraft, kind: "ingredient" | "semi_product") => {
+    if (line.suggestion === null) return;
+    const suggestion = line.suggestion;
+    if (kind === "ingredient") {
+      const body: IngredientBody = {
+        name: suggestion.name,
+        category: null,
+        unit: suggestion.unit,
+        is_active: true,
+        avg_cost: null,
+        cost_quantity: null,
+        grams_per_unit: null,
+        sale_price: null,
+      };
+      Reflect.deleteProperty(body, "avg_cost");
+      Reflect.deleteProperty(body, "cost_quantity");
+      ingredients.save.mutate(
+        { id: null, body },
+        {
+          onSuccess: (created) =>
+            setDraft((currentDraft) =>
+              currentDraft === null
+                ? currentDraft
+                : patchDraftLine(currentDraft, line.key, { component: `ingredient:${created.id}`, suggestion: null }),
+            ),
+        },
+      );
+      return;
+    }
+    semiProducts.save.mutate(
+      {
+        id: null,
+        body: {
+          name: suggestion.name,
+          category: null,
+          unit: suggestion.unit,
+          yield_quantity: line.quantity.replace(",", "."),
+          is_produced: false,
+          is_active: true,
+          method: "",
+          lines: [],
+        },
+      },
+      {
+        onSuccess: (created) =>
+          setDraft((currentDraft) =>
+            currentDraft === null
+              ? currentDraft
+              : patchDraftLine(currentDraft, line.key, {
+                  component: `semi_product:${created.id}`,
+                  suggestion: null,
+                }),
+          ),
+      },
+    );
   };
   const toggleSelecting = () => {
     setSelecting((value) => !value);
@@ -526,13 +659,36 @@ export function TechCardsPanel() {
             </Button>
             ) : null}
             {canEdit ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={techCardImport.isPending}
+              onClick={() => fileRef.current?.click()}
+            >
+              {techCardImport.isPending ? <Spinner className="mr-1.5 h-4 w-4" /> : <Upload className="mr-1.5 h-4 w-4" />}
+              {techCardImport.isPending ? t("menu.recognizingTechCard") : t("menu.importTechCard")}
+            </Button>
+            ) : null}
+            {canEdit ? (
             <Button type="button" onClick={openNew}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("add")}
             </Button>
             ) : null}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".docx,.pages,.pdf"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file !== undefined) openImported(file);
+              }}
+            />
           </div>
         </div>
+        <ErrorText error={techCardImport.error} />
         <div className="relative mt-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
           <Input
@@ -851,6 +1007,10 @@ export function TechCardsPanel() {
           headerAction={null}
           below={null}
         >
+          {importedFrom !== null && current === null ? (
+            <p className="text-sm text-[var(--muted-2)]">{t("menu.importedFrom", { name: importedFrom })}</p>
+          ) : null}
+          <ErrorText error={ingredients.save.error ?? semiProducts.save.error} />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">
               <Input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
@@ -968,6 +1128,8 @@ export function TechCardsPanel() {
             quantityLabel={t("quantity")}
             chooseQuantityUnit={true}
             linePrice={null}
+            onCreateSuggestion={createSuggestion}
+            suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1012,6 +1174,8 @@ export function TechCardsPanel() {
                 quantityLabel={t("quantity")}
                 chooseQuantityUnit={true}
                 linePrice={null}
+                onCreateSuggestion={createSuggestion}
+                suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
