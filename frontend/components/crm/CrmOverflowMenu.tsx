@@ -3,9 +3,9 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ChevronDown, ClipboardList, Globe, History, LogOut, MessageSquare, Receipt, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCan, useLogout } from "@/hooks/useAuth";
+import { useCan, useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
 import { Link, usePathname } from "@/i18n/navigation";
 
@@ -33,6 +33,7 @@ function PendingBadge({ count }: { count: number }) {
 export function CrmOverflowMenu() {
   const t = useTranslations("crm");
   const logout = useLogout();
+  const currentUser = useCurrentUser();
   const canViewOrders = useCan("view_orders");
   const canViewLeads = useCan("view_leads");
   const canViewAnalytics = useCan("view_analytics");
@@ -60,6 +61,8 @@ export function CrmOverflowMenu() {
   const analyticsHref = month ? `/analytics?month=${month}` : "/analytics";
   const pendingQuery = useRsgePendingCount(canViewRsge);
   const pendingCount = pendingQuery.data?.count ?? 0;
+  const internalName = currentUser.data?.internal_name.trim() ?? "";
+  const displayName = internalName !== "" ? internalName : (currentUser.data?.username ?? "");
   const rsgeHref =
     pendingQuery.data !== undefined && pendingQuery.data.count > 0
       ? pendingQuery.data.section === "invoices"
@@ -185,13 +188,13 @@ export function CrmOverflowMenu() {
       <Button
         type="button"
         variant="outline"
-        size="icon"
         onClick={() => setOpen((prev) => !prev)}
         aria-label={t("menu")}
         aria-expanded={open}
-        className={pendingCount > 0 ? "w-auto gap-1.5 px-2.5" : undefined}
+        className="gap-1.5"
       >
-        <MoreHorizontal className="h-4 w-4" />
+        <span className="max-w-[160px] truncate">{displayName}</span>
+        <ChevronDown className={`h-4 w-4 ${open ? "rotate-180" : ""}`} />
         <PendingBadge count={pendingCount} />
       </Button>
       {open ? (

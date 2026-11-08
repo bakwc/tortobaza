@@ -25,13 +25,20 @@ PROFILE_FIELDS = (
 
 class UserSerializer(serializers.ModelSerializer):
     permissions = serializers.SerializerMethodField()
+    internal_name = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "is_staff", "permissions"]
+        fields = ["id", "username", "first_name", "last_name", "is_staff", "permissions", "internal_name"]
 
     def get_permissions(self, user: User) -> list[str]:
         return user_section_codes(user)
+
+    def get_internal_name(self, user: User) -> str:
+        internal_name = UserProfile.objects.filter(user_id=user.pk).values_list("internal_name", flat=True).first()
+        if internal_name is None:
+            return ""
+        return internal_name
 
 
 class LoginSerializer(serializers.Serializer):

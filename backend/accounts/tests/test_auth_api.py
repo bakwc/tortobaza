@@ -26,6 +26,19 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.json()["is_staff"], True)
         self.assertEqual(response.json()["permissions"], [])
 
+    def test_me_returns_internal_name(self):
+        UserProfile.objects.create(user=self.worker, internal_name="Нино")
+        self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/auth/me/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["internal_name"], "Нино")
+
+    def test_me_returns_empty_internal_name_without_profile(self):
+        self.client.force_authenticate(user=self.worker)
+        response = self.client.get("/api/auth/me/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["internal_name"], "")
+
     def test_me_returns_group_permissions(self):
         grant(self.worker, "view_orders", "edit_menu")
         self.client.force_authenticate(user=self.worker)

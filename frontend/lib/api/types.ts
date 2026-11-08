@@ -256,6 +256,7 @@ export const SessionUserSchema = z.object({
   last_name: z.string(),
   is_staff: z.boolean(),
   permissions: z.array(z.string()),
+  internal_name: z.string(),
 });
 
 export const EmployeeSchema = z.object({
