@@ -16,7 +16,7 @@ function NewCrmOrderForm() {
 
 export default function NewCrmOrderPage() {
   return (
-    <div className="mx-auto flex h-[100dvh] min-h-0 w-full max-w-3xl flex-col overflow-hidden px-4 pt-6 md:pt-8">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12">
       <CrmAuthGate>
         <Suspense
           fallback={
