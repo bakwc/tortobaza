@@ -276,7 +276,7 @@ class SiteProductListView(SiteListView):
                     | Q(name_ru__icontains=term)
                     | Q(slug__icontains=term)
                 )
-        return qs.order_by("position", "-created_at")
+        return qs.order_by("category__position", "category__name", "position", "-created_at")
 
 
 class SiteProductDetailView(SiteDetailView):

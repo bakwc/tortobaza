@@ -151,6 +151,20 @@ export function ProductsPanel() {
     return null;
   }, [draft, detail.data, categories.list.data]);
 
+  const orderedOptionGroups = useMemo(() => {
+    const groups = optionGroups.list.data ?? [];
+    if (!activeDraft) return groups;
+    const attached = new Set(activeDraft.option_groups.map((link) => link.option_group));
+    const byId = new Map(groups.map((group) => [group.id, group]));
+    return [
+      ...activeDraft.option_groups.flatMap((link) => {
+        const group = byId.get(link.option_group);
+        return group ? [group] : [];
+      }),
+      ...groups.filter((group) => !attached.has(group.id)),
+    ];
+  }, [optionGroups.list.data, activeDraft]);
+
   const productDetail = detail.data;
 
   return (
@@ -446,7 +460,7 @@ export function ProductsPanel() {
           </div>
           <div className="mt-6 grid gap-3">
             <p className="font-medium text-[var(--ink)]">{t("optionGroups")}</p>
-            {(optionGroups.list.data ?? []).map((group) => {
+            {orderedOptionGroups.map((group) => {
               const link = activeDraft.option_groups.find((row) => row.option_group === group.id);
               const enabled = link !== undefined;
               return (

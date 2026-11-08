@@ -204,7 +204,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         rows = []
-        for option in instance.options.order_by("position", "id"):
+        for option in instance.options.all():
             row = {
                 "id": option.pk,
                 "name_en": option.name_en,
