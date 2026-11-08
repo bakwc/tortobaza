@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, Users, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, UserRound, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCan, useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -186,11 +186,9 @@ export function CrmOverflowMenu() {
   return (
     <div className="flex items-center gap-2">
       {displayName !== "" ? (
-        <div className="flex select-none items-center gap-2" title={displayName}>
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold uppercase text-white">
-            {displayName.charAt(0)}
-          </span>
-          <span className="hidden max-w-[140px] truncate text-sm font-medium text-[var(--ink)] sm:inline">{displayName}</span>
+        <div className="flex select-none flex-col items-center text-[var(--ink)]" title={displayName}>
+          <UserRound className="h-5 w-5" />
+          <span className="max-w-[90px] truncate text-[11px] leading-tight">{displayName}</span>
         </div>
       ) : null}
       <div className="relative">
