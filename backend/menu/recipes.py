@@ -432,14 +432,11 @@ def _selection_cost_bounds(
     if not costs:
         return Decimal("0"), Decimal("0")
     ordered = sorted(costs)
-    available = len(ordered)
-    take_min = min(_min_selections(group, required), available)
-    maximum = _max_selections(group)
-    take_max = available if maximum is None else min(maximum, available)
-    if take_max < take_min:
-        take_max = take_min
-    low = sum(ordered[:take_min], Decimal("0"))
-    high = sum(ordered[-take_max:], Decimal("0")) if take_max else Decimal("0")
+    take = min(_min_selections(group, required), len(ordered))
+    if take == 0:
+        return Decimal("0"), Decimal("0")
+    low = sum(ordered[:take], Decimal("0"))
+    high = sum(ordered[-take:], Decimal("0"))
     return low, high
 
 

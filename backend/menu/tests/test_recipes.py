@@ -218,12 +218,57 @@ class CostTests(TestCase):
     def test_tech_card_cost_range_includes_modifiers(self):
         low, high = tech_card_cost_range(self.menu.cake, Decimal("1"))
         self.assertEqual(low, Decimal("10.00"))
-        self.assertEqual(high, Decimal("16.20"))
+        self.assertEqual(high, Decimal("13.00"))
 
     def test_tech_card_without_modifiers_has_equal_bounds(self):
         low, high = tech_card_cost_range(self.menu.bento, None)
         self.assertEqual(low, high)
         self.assertEqual(low, tech_card_cost(self.menu.bento, [], None))
+
+    def test_cost_range_required_multi_counts_only_minimum(self):
+        group = ModifierGroup.objects.create(
+            name="Toppings",
+            selection_type=ModifierGroup.SELECTION_MULTI,
+            is_required=True,
+            min_selections=2,
+        )
+        cheap = Modifier.objects.create(group=group, name="Cheap")
+        mid = Modifier.objects.create(group=group, name="Mid")
+        dear = Modifier.objects.create(group=group, name="Dear")
+        TechCardModifierGroup.objects.create(tech_card=self.menu.bento, group=group, position=0)
+        for modifier, grams in ((cheap, Decimal("100")), (mid, Decimal("200")), (dear, Decimal("400"))):
+            TechCardModifierLine.objects.create(
+                tech_card=self.menu.bento,
+                modifier=modifier,
+                ingredient=self.menu.flour,
+                quantity=grams,
+                quantity_unit=UNIT_GRAM,
+                scales_by_weight=False,
+            )
+        low, high = tech_card_cost_range(self.menu.bento, None)
+        self.assertEqual(low, Decimal("4.00"))
+        self.assertEqual(high, Decimal("7.00"))
+
+    def test_cost_range_ignores_optional_global_group(self):
+        self.menu.extras.is_global = True
+        self.menu.extras.save(update_fields=["is_global"])
+        self.menu.balloon.ingredient = self.menu.paper
+        self.menu.balloon.save(update_fields=["ingredient"])
+        low, high = tech_card_cost_range(self.menu.bento, None)
+        self.assertEqual(low, Decimal("1.00"))
+        self.assertEqual(high, Decimal("1.00"))
+
+    def test_cost_range_includes_required_global_single(self):
+        self.menu.extras.selection_type = ModifierGroup.SELECTION_SINGLE
+        self.menu.extras.is_global = True
+        self.menu.extras.is_required = True
+        self.menu.extras.save(update_fields=["selection_type", "is_global", "is_required"])
+        self.menu.balloon.ingredient = self.menu.paper
+        self.menu.balloon.save(update_fields=["ingredient"])
+        Modifier.objects.create(group=self.menu.extras, name="Candle", ingredient=self.menu.ink)
+        low, high = tech_card_cost_range(self.menu.bento, None)
+        self.assertEqual(low, Decimal("1.10"))
+        self.assertEqual(high, Decimal("2.50"))
 
     def test_order_cost_sums_items(self):
         order = make_crm_order(CrmOrder.STATUS_NEW)
@@ -413,7 +458,7 @@ class LineCostApiTests(TestCase):
         lines = body["lines"] + [line for section in body["sections"] for line in section["lines"]]
         self.assertEqual(sum(Decimal(line["cost"]) for line in lines), Decimal(body["base_cost"]))
         self.assertEqual(Decimal(body["cost_min"]), Decimal("12.50"))
-        self.assertEqual(Decimal(body["cost_max"]), Decimal("18.70"))
+        self.assertEqual(Decimal(body["cost_max"]), Decimal("15.50"))
         frozen = next(line for line in body["lines"] if line["semi_product"] == self.menu.frozen_sponge.pk)
         self.assertEqual(Decimal(frozen["cost"]), Decimal("2.00"))
         self.assertTrue(all("cost" in line for line in body["modifier_lines"]))
@@ -533,7 +578,7 @@ class NestedTechCardTests(TestCase):
         self.assertEqual(needs[self.menu.sugar], Decimal("25"))
         low, high = tech_card_cost_range(self.menu.bento, None)
         self.assertEqual(low, Decimal("1.00"))
-        self.assertEqual(high, Decimal("1.31"))
+        self.assertEqual(high, Decimal("1.00"))
 
     def test_sale_price_includes_nested_card_and_skips_missing_price(self):
         layer = self._layer(Decimal("40.00"))

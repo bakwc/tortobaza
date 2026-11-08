@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { Category } from "@/lib/api/types";
+
+const FADE_WIDTH = 48;
 
 export function CategoryPills({
   categories,
@@ -17,6 +19,18 @@ export function CategoryPills({
   const [activeSlug, setActiveSlug] = useState<string | null>(
     categories[0]?.slug ?? null,
   );
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const pillRefs = useRef(new Map<string, HTMLAnchorElement>());
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const isPillActive = (c: Category) =>
+    isCatalogPage
+      ? activeSlug === c.slug
+      : activePageSlug
+        ? activePageSlug === c.page_slug
+        : pathname === `/categories/${c.page_slug}`;
+  const activePillSlug = categories.find(isPillActive)?.slug ?? null;
 
   useEffect(() => {
     if (!isCatalogPage) return;
@@ -45,19 +59,66 @@ export function CategoryPills({
     return () => observer.disconnect();
   }, [categories, isCatalogPage]);
 
+  useEffect(() => {
+    const scroller = scrollerRef.current!;
+
+    const updateEdges = () => {
+      setCanScrollLeft(scroller.scrollLeft > 1);
+      setCanScrollRight(
+        scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1,
+      );
+    };
+
+    updateEdges();
+    scroller.addEventListener("scroll", updateEdges, { passive: true });
+    const resizeObserver = new ResizeObserver(updateEdges);
+    resizeObserver.observe(scroller);
+    return () => {
+      scroller.removeEventListener("scroll", updateEdges);
+      resizeObserver.disconnect();
+    };
+  }, [categories]);
+
+  useEffect(() => {
+    if (!activePillSlug) return;
+
+    const scroller = scrollerRef.current!;
+    const pill = pillRefs.current.get(activePillSlug)!;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const pillRect = pill.getBoundingClientRect();
+    const offset =
+      pillRect.left - scrollerRect.left - (scrollerRect.width - pillRect.width) / 2;
+
+    scroller.scrollBy({ left: offset, behavior: "smooth" });
+  }, [activePillSlug]);
+
+  const maskImage = `linear-gradient(to right, ${
+    canScrollLeft ? `transparent 0, #000 ${FADE_WIDTH}px` : "#000 0"
+  }, ${
+    canScrollRight
+      ? `#000 calc(100% - ${FADE_WIDTH}px), transparent 100%`
+      : "#000 100%"
+  })`;
+
   return (
-    <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 px-6 pt-10 pb-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
-      <div className="scrollbar-none mx-auto flex max-w-[1400px] gap-2 overflow-x-auto">
+    <div className="sticky top-16 z-30 -mx-6 bg-[var(--cream-soft)]/95 pt-10 pb-4 backdrop-blur supports-[backdrop-filter]:bg-[var(--cream-soft)]/80">
+      <div
+        ref={scrollerRef}
+        style={{ maskImage, WebkitMaskImage: maskImage }}
+        className="scrollbar-none mx-auto flex max-w-[1400px] scroll-px-6 gap-2 overflow-x-auto px-6"
+      >
         {categories.map((c) => {
           const href = c.page_slug ? `/categories/${c.page_slug}` : "/";
-          const isActive = isCatalogPage
-            ? activeSlug === c.slug
-            : activePageSlug
-              ? activePageSlug === c.page_slug
-              : pathname === `/categories/${c.page_slug}`;
+          const isActive = isPillActive(c);
           return (
             <Link
               key={c.slug}
+              ref={(node) => {
+                pillRefs.current.set(c.slug, node!);
+                return () => {
+                  pillRefs.current.delete(c.slug);
+                };
+              }}
               href={href}
               onClick={(event) => {
                 if (
