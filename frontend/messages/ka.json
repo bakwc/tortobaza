@@ -1289,6 +1289,8 @@
     "teamSchedule": "გუნდის გრაფიკი",
     "hours": "საათები",
     "schedulePlanTitle": "გრაფიკი (გეგმა)",
+    "downloadPdf": "PDF-ის გადმოწერა",
+    "printSchedule": "ბეჭდვა",
     "timesheetFactTitle": "ტაბელი (ფაქტი)",
     "date": "თარიღი",
     "selectedDays": "არჩეულია: {count}",

@@ -280,3 +280,76 @@ export function ScheduleGrid<T extends ScheduleGridEmployee>({
     </div>
   );
 }
+
+export function ScheduleSheet({
+  start,
+  end,
+  employees,
+  monthLabel,
+  title,
+}: {
+  start: string;
+  end: string;
+  employees: (ScheduleGridEmployee & { days: Record<string, ScheduleDayType> })[];
+  monthLabel: string;
+  title: string;
+}) {
+  const t = useTranslations("employees");
+  const locale = useLocale();
+  const dates = monthDates(start, end);
+
+  return (
+    <div className="bg-white text-black [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
+      <h1 className="mb-3 text-base font-semibold">
+        {title} — {monthLabel}
+      </h1>
+      <table className="w-full table-fixed border-collapse text-[8px] leading-tight [-webkit-print-color-adjust:exact] [print-color-adjust:exact]">
+        <colgroup>
+          <col className="w-[36mm]" />
+        </colgroup>
+        <thead className="table-header-group">
+          <tr>
+            <th className="border border-neutral-300 bg-white px-1 py-1 text-left font-semibold">{t("name")}</th>
+            {dates.map((date) => (
+              <th
+                key={date}
+                className={cn(
+                  "border border-neutral-300 px-0 py-1 text-center font-medium",
+                  isWeekend(date) ? "bg-neutral-100 text-neutral-700" : "bg-white text-neutral-500",
+                )}
+              >
+                <div>{Number(date.slice(8, 10))}</div>
+                <div className="font-normal normal-case">{weekdayLabel(date, locale)}</div>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {employees.map((employee) => (
+            <tr key={employee.id} className="break-inside-avoid">
+              <td className="border border-neutral-300 bg-white px-1 py-1 align-middle">
+                <div className="font-semibold">{employee.name}</div>
+                <div className="font-normal text-neutral-500">{employee.position}</div>
+              </td>
+              {dates.map((date) => {
+                const value = date in employee.days ? employee.days[date] : null;
+                return (
+                  <td
+                    key={date}
+                    className={cn(
+                      "border border-neutral-300 p-0 text-center font-semibold",
+                      dayTypeClass(value),
+                      value === null && isWeekend(date) && "bg-neutral-50",
+                    )}
+                  >
+                    {shortDayType(value, t)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -1289,6 +1289,8 @@
     "teamSchedule": "График команды",
     "hours": "Часы",
     "schedulePlanTitle": "График (план)",
+    "downloadPdf": "Скачать PDF",
+    "printSchedule": "Печать",
     "timesheetFactTitle": "Табель (факт)",
     "date": "Дата",
     "selectedDays": "Выбрано: {count}",

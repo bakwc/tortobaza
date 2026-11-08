@@ -1289,6 +1289,8 @@
     "teamSchedule": "Team schedule",
     "hours": "Hours",
     "schedulePlanTitle": "Schedule (plan)",
+    "downloadPdf": "Download PDF",
+    "printSchedule": "Print",
     "timesheetFactTitle": "Timesheet (actual)",
     "date": "Date",
     "selectedDays": "Selected: {count}",

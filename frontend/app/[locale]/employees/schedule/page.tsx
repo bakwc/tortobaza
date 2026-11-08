@@ -21,11 +21,19 @@ export default function EmployeesSchedulePage() {
 function EmployeesScheduleContent() {
   const canEditSchedule = useCan("edit_schedule");
   return (
-    <div className="grid gap-6">
-      <TodayPanel />
-      <EmployeesMonthBar />
+    <div className="grid gap-6 print:gap-0">
+      <div className="print:hidden">
+        <TodayPanel />
+      </div>
+      <div className="print:hidden">
+        <EmployeesMonthBar />
+      </div>
       <SchedulePanel />
-      {canEditSchedule ? <TimesheetPanel /> : null}
+      {canEditSchedule ? (
+        <div className="print:hidden">
+          <TimesheetPanel />
+        </div>
+      ) : null}
     </div>
   );
 }
