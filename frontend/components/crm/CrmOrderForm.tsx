@@ -282,7 +282,8 @@ export function CrmOrderForm(
   ];
 
   return (
-    <form className="grid gap-6" onSubmit={onSubmit}>
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={onSubmit}>
+      <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto py-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={`/crm?date=${fields.date}`}
@@ -700,13 +701,15 @@ export function CrmOrderForm(
           />
         </div>
       </section>
+      </div>
 
-      {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
-
-      <div className="flex flex-wrap justify-end gap-3 pb-8">
-        <Button type="submit" size="lg" disabled={pending}>
-          {pending ? <Spinner className="h-4 w-4" /> : t("saveOrder")}
-        </Button>
+      <div className="-mx-4 shrink-0 border-t border-[var(--line)] bg-[var(--cream-soft)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {errorMessage ? <p className="mb-2 text-sm text-[var(--danger)]">{errorMessage}</p> : null}
+        <div className="flex justify-end">
+          <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={pending}>
+            {pending ? <Spinner className="h-4 w-4" /> : t("saveOrder")}
+          </Button>
+        </div>
       </div>
 
       <Dialog
