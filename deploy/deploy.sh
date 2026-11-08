@@ -96,10 +96,16 @@ while true; do
   write_status running "$target" ""
   git checkout master >&2
   git merge --ff-only "$target" >&2
-  "$ROOT/backend/deploy.sh" >&2
   if [ -z "$current" ]; then
+    "$ROOT/backend/deploy.sh" >&2
     "$ROOT/frontend/deploy.sh" >&2
   else
+    backend_changes=$(git diff --name-only "$current" "$target" -- backend/)
+    if [ -n "$backend_changes" ]; then
+      "$ROOT/backend/deploy.sh" >&2
+    else
+      echo "backend unchanged, skipping backend deploy" >&2
+    fi
     frontend_changes=$(git diff --name-only "$current" "$target" -- frontend/)
     if [ -n "$frontend_changes" ]; then
       "$ROOT/frontend/deploy.sh" >&2
