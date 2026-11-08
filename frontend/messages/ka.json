@@ -378,7 +378,6 @@
     "imagesHint": "შეგიძლიათ რამდენიმე ფაილის ერთად ატვირთვა.",
     "imagesRemove": "სურათის წაშლა",
     "saveOrder": "შეკვეთის შენახვა",
-    "requiredFieldsMissing": "შეავსეთ სავალდებულო ველები: {fields}",
     "saveError": "შეკვეთის შენახვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     "loadOrderError": "შეკვეთის ჩატვირთვა ვერ მოხერხდა.",
     "prevMonth": "წინა თვე",
@@ -930,6 +929,7 @@
     "word": "სიტყვა",
     "addChannel": "არხის დამატება",
     "addKeyword": "სიტყვის დამატება",
+    "chooseVertical": "ჯერ აირჩიეთ ვერტიკალი",
     "newChannel": "ახალი არხი",
     "newKeyword": "ახალი სიტყვა",
     "emptyMessages": "შეტყობინებები არ არის",
@@ -1383,5 +1383,12 @@
     "deleteRelatedMore": "და კიდევ {count}",
     "confirmDelete": "წაშლა",
     "cancelDelete": "გაუქმება"
+  },
+  "forms": {
+    "requiredFieldsMissing": "შეავსეთ სავალდებულო ველები: {fields}",
+    "invalidFormat": "არასწორი ფორმატი: {fields}",
+    "requiredField": "სავალდებულო ველი",
+    "rowNumber": "სტრიქონი {number}",
+    "sectionNumber": "სექცია {number}"
   }
 }

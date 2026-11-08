@@ -30,12 +30,14 @@ import { cn } from "@/lib/utils";
 function ItemEditor({
   item,
   number,
+  errors,
   techCards,
   onChange,
   onRemove,
 }: {
   item: CrmItemDraft;
   number: number;
+  errors: string[];
   techCards: TechCard[];
   onChange: (item: CrmItemDraft) => void;
   onRemove: () => void;
@@ -76,11 +78,25 @@ function ItemEditor({
   return (
     <div
       data-field-group={t("itemNumber", { number })}
+      data-error-list="items"
       className={cn(
         "grid gap-4 rounded-2xl border p-4",
-        item.needs_review ? "border-amber-300 bg-amber-50" : "border-[var(--line)]",
+        errors.length > 0
+          ? "border-[var(--danger)] bg-red-50"
+          : item.needs_review
+            ? "border-amber-300 bg-amber-50"
+            : "border-[var(--line)]",
       )}
     >
+      {errors.length > 0 ? (
+        <div className="grid gap-1">
+          {errors.map((message, index) => (
+            <p key={index} className="text-sm font-medium text-[var(--danger)]">
+              {message}
+            </p>
+          ))}
+        </div>
+      ) : null}
       {item.needs_review ? (
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium text-amber-900">
           <span className="inline-flex items-center gap-1.5">
@@ -110,6 +126,7 @@ function ItemEditor({
             }}
             placeholder={t("chooseTechCard")}
             required={true}
+            name="tech_card"
             className=""
           />
         </Field>
@@ -123,6 +140,7 @@ function ItemEditor({
         {card?.kind === "weighted" ? (
           <Field label={t("weightKg")}>
             <Input
+              name="weight_kg"
               required
               inputMode="decimal"
               value={item.weight_kg}
@@ -132,6 +150,7 @@ function ItemEditor({
         ) : null}
         <Field label={t("quantity")}>
           <Input
+            name="quantity"
             required
             inputMode="numeric"
             value={item.quantity}
@@ -193,9 +212,11 @@ function ItemEditor({
 
 export function CrmOrderItemsEditor({
   items,
+  itemErrors,
   onChange,
 }: {
   items: CrmItemDraft[];
+  itemErrors: string[][];
   onChange: (items: CrmItemDraft[]) => void;
 }) {
   const t = useTranslations("crm.items");
@@ -210,6 +231,7 @@ export function CrmOrderItemsEditor({
           key={item.key}
           item={item}
           number={index + 1}
+          errors={itemErrors[index] ?? []}
           techCards={cards}
           onChange={(next) => onChange(items.map((row) => (row.key === item.key ? next : row)))}
           onRemove={() => onChange(items.filter((row) => row.key !== item.key))}

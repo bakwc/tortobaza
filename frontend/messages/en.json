@@ -378,7 +378,6 @@
     "imagesHint": "You can select several files at once.",
     "imagesRemove": "Remove image",
     "saveOrder": "Save order",
-    "requiredFieldsMissing": "Fill in required fields: {fields}",
     "saveError": "Could not save the order. Please try again.",
     "loadOrderError": "Could not load this order.",
     "prevMonth": "Previous month",
@@ -930,6 +929,7 @@
     "word": "Word",
     "addChannel": "Add channel",
     "addKeyword": "Add keyword",
+    "chooseVertical": "Choose a vertical first",
     "newChannel": "New channel",
     "newKeyword": "New keyword",
     "emptyMessages": "No messages",
@@ -1383,5 +1383,12 @@
     "deleteRelatedMore": "and {count} more",
     "confirmDelete": "Delete",
     "cancelDelete": "Cancel"
+  },
+  "forms": {
+    "requiredFieldsMissing": "Fill in required fields: {fields}",
+    "invalidFormat": "Invalid format: {fields}",
+    "requiredField": "Required field",
+    "rowNumber": "Row {number}",
+    "sectionNumber": "Section {number}"
   }
 }

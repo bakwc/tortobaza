@@ -106,6 +106,7 @@ function cropFromOption(option: OptionDraft): CropValues {
 
 export function OptionGroupsPanel() {
   const t = useTranslations("site");
+  const tForms = useTranslations("forms");
   const canEdit = useCan("edit_catalog");
   const showHidden = useShowHidden();
   const setShowHidden = useSetShowHidden();
@@ -174,7 +175,12 @@ export function OptionGroupsPanel() {
           onCancel={null}
           title={editingId === null ? t("newOptionGroup") : draft.slug}
           pending={groups.save.isPending}
-          error={groups.save.error ?? groups.remove.error}
+          error={
+            groups.save.error ??
+            groups.remove.error ??
+            uploadOptionImage.error ??
+            deleteOptionImage.error
+          }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             groups.save.mutate(
@@ -220,12 +226,33 @@ export function OptionGroupsPanel() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
+                required
+                name={`name_${locale}`}
                 value={draft[`name_${locale}`]}
                 onChange={(event) => setDraft({ ...draft, [`name_${locale}`]: event.target.value })}
               />
+              {(["en", "ka", "ru"] as const)
+                .filter((code) => code !== locale)
+                .map((code) => (
+                  <input
+                    key={code}
+                    required
+                    name={`name_${code}`}
+                    value={draft[`name_${code}`]}
+                    placeholder={`${t("name")} ${code.toUpperCase()}`}
+                    onChange={() => undefined}
+                    tabIndex={-1}
+                    className="sr-only"
+                  />
+                ))}
             </Field>
             <Field label={t("slug")}>
-              <Input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} />
+              <Input
+                name="slug"
+                required
+                value={draft.slug}
+                onChange={(event) => setDraft({ ...draft, slug: event.target.value })}
+              />
             </Field>
             <Field label={t("selectionType")}>
               <NativeSelect
@@ -299,9 +326,11 @@ export function OptionGroupsPanel() {
                 </Button>
               ) : null}
             </div>
-            {draft.options.map((row) => (
+            {draft.options.map((row, index) => (
               <div
                 key={row.key}
+                data-field-group={tForms("rowNumber", { number: index + 1 })}
+                data-error-list="options"
                 className={`grid gap-3 rounded-2xl border px-3 py-3 ${
                   activeOptionKey === row.key ? "border-[var(--brand)]" : "border-[var(--line)]"
                 }`}
@@ -312,6 +341,8 @@ export function OptionGroupsPanel() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field label={t("name")}>
                     <Input
+                      required
+                      name={`name_${locale}`}
                       value={row[`name_${locale}`]}
                       onChange={(event) =>
                         setDraft({
@@ -324,9 +355,26 @@ export function OptionGroupsPanel() {
                         })
                       }
                     />
+                    {(["en", "ka", "ru"] as const)
+                      .filter((code) => code !== locale)
+                      .map((code) => (
+                        <input
+                          key={code}
+                          required
+                          name={`name_${code}`}
+                          value={row[`name_${code}`]}
+                          placeholder={`${t("name")} ${code.toUpperCase()}`}
+                          onChange={() => undefined}
+                          tabIndex={-1}
+                          className="sr-only"
+                        />
+                      ))}
                   </Field>
                   <Field label={t("priceDelta")}>
                     <Input
+                      name="price_delta"
+                      required
+                      inputMode="decimal"
                       value={row.price_delta}
                       onChange={(event) =>
                         setDraft({

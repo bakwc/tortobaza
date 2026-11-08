@@ -20,11 +20,19 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
   return (
     <div className="grid gap-3">
       <Field label={t("addressStreet")} error={errors?.street}>
-        <Input value={value.street} onChange={(e) => update("street", e.target.value)} placeholder="" />
+        <Input
+          name="street"
+          className={errors?.street ? "border-[var(--danger)] bg-red-50" : undefined}
+          value={value.street}
+          onChange={(e) => update("street", e.target.value)}
+          placeholder=""
+        />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label={t("addressBuilding")} error={errors?.building}>
           <Input
+            name="building"
+            className={errors?.building ? "border-[var(--danger)] bg-red-50" : undefined}
             value={value.building}
             onChange={(e) => update("building", e.target.value)}
             placeholder=""
@@ -40,6 +48,8 @@ export function AddressForm({ value, onChange, errors }: AddressFormProps) {
       </div>
       <Field label={t("addressCity")} error={errors?.city}>
         <Input
+          name="city"
+          className={errors?.city ? "border-[var(--danger)] bg-red-50" : undefined}
           value={value.city}
           onChange={(e) => update("city", e.target.value)}
           placeholder={t("cityPlaceholder")}

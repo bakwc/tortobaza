@@ -113,6 +113,7 @@ export function ProductsPanel() {
   const visibleProducts = (products.list.data ?? []).filter((row) => showHidden || row.is_active);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
+  const [imageError, setImageError] = useState<unknown>(null);
   const [deletePrompt, setDeletePrompt] = useState<{
     id: number;
     labels: string[];
@@ -233,6 +234,7 @@ export function ProductsPanel() {
           }
           pending={products.save.isPending || (editingId !== null && detail.isLoading)}
           error={
+            imageError ??
             products.save.error ??
             (deletePreview(products.remove.error) ? null : products.remove.error) ??
             detail.error
@@ -256,6 +258,7 @@ export function ProductsPanel() {
               is_active: activeDraft.is_active,
               option_groups: activeDraft.option_groups,
             };
+            setImageError(null);
             void (async () => {
               const saved = await products.save.mutateAsync({ id: activeDraft.id, body });
               await flushImagesRef.current?.(saved.id);
@@ -265,7 +268,7 @@ export function ProductsPanel() {
               } else {
                 close();
               }
-            })();
+            })().catch((error: unknown) => setImageError(error));
           }}
           onDelete={
             canEdit && activeDraft !== null && activeDraft.id !== null
@@ -307,6 +310,8 @@ export function ProductsPanel() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
+                required
+                name={`name_${locale}`}
                 value={activeDraft[`name_${locale}`]}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -320,9 +325,25 @@ export function ProductsPanel() {
                   });
                 }}
               />
+              {(["en", "ka", "ru"] as const)
+                .filter((code) => code !== locale)
+                .map((code) => (
+                  <input
+                    key={code}
+                    required
+                    name={`name_${code}`}
+                    value={activeDraft[`name_${code}`]}
+                    placeholder={`${t("name")} ${code.toUpperCase()}`}
+                    onChange={() => undefined}
+                    tabIndex={-1}
+                    className="sr-only"
+                  />
+                ))}
             </Field>
             <Field label={t("slug")}>
               <Input
+                name="slug"
+                required
                 value={activeDraft.slug}
                 onChange={(event) =>
                   setDraft((row) => ({ ...(row ?? activeDraft), slug: event.target.value }))
@@ -331,7 +352,9 @@ export function ProductsPanel() {
             </Field>
             <Field label={t("category")} className="sm:col-span-2">
               <NativeSelect
-                value={String(activeDraft.category)}
+                name="category"
+                required
+                value={activeDraft.category === 0 ? "" : String(activeDraft.category)}
                 onChange={(event) =>
                   setDraft((row) => ({
                     ...(row ?? activeDraft),
@@ -339,6 +362,7 @@ export function ProductsPanel() {
                   }))
                 }
               >
+                <option value="">{t("category")}</option>
                 {(categories.list.data ?? []).map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.name_ru || row.name_en}
@@ -360,6 +384,9 @@ export function ProductsPanel() {
             </Field>
             <Field label={t("price")}>
               <Input
+                name="base_price"
+                required
+                inputMode="decimal"
                 value={activeDraft.base_price}
                 onChange={(event) =>
                   setDraft((row) => ({ ...(row ?? activeDraft), base_price: event.target.value }))

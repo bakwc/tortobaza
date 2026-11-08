@@ -9,12 +9,27 @@ export function selectZeroOnFocus(event: React.FocusEvent<HTMLInputElement>) {
 }
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type = "text", inputMode, onFocus, ...props }, ref) => {
+  ({ className, type = "text", inputMode, onFocus, onChange, pattern, ...props }, ref) => {
+    const resolvedPattern =
+      pattern ??
+      (inputMode === "decimal" ? "-?\\d+(\\.\\d+)?" : inputMode === "numeric" ? "\\d+" : undefined);
     return (
       <input
         ref={ref}
         type={type}
         inputMode={inputMode}
+        pattern={resolvedPattern}
+        onChange={(event) => {
+          if (
+            (inputMode === "decimal" || inputMode === "numeric") &&
+            event.currentTarget.value.includes(",")
+          ) {
+            const input = event.currentTarget;
+            const next = input.value.replace(/,/g, ".");
+            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, next);
+          }
+          onChange?.(event);
+        }}
         onFocus={(event) => {
           if (inputMode === "decimal" || inputMode === "numeric") {
             selectZeroOnFocus(event);

@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { formatAed } from "@/lib/format";
 import { useAddCartItem } from "@/hooks/useCart";
+import { apiErrorMessage } from "@/components/menu/ui";
 import type { ProductDetail } from "@/lib/api/types";
 import { useRouter } from "@/i18n/navigation";
 
@@ -66,6 +67,13 @@ export function ItemDetail({
     setError(null);
     if (invalidGroups.length > 0) {
       setError(`${t("pleaseChoosePrefix")} ${invalidGroups.join(", ")}`);
+      const first = product.option_groups.find((group) => invalidGroups.includes(group.name));
+      if (first !== undefined) {
+        document.getElementById(`option-group-${first.id}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
       return;
     }
     const optionIds = Object.values(selection).flat();
@@ -79,8 +87,7 @@ export function ItemDetail({
       if (onAdded) onAdded();
       else router.back();
     } catch (e) {
-      const message = e instanceof Error ? e.message : t("failedAdd");
-      setError(message);
+      setError(apiErrorMessage(e, t("failedAdd")) ?? t("failedAdd"));
     }
   };
 
@@ -157,6 +164,7 @@ export function ItemDetail({
               <OptionGroup
                 key={group.id}
                 group={group}
+                invalid={invalidGroups.includes(group.name) && error !== null}
                 selected={selection[group.id] ?? []}
                 onChange={(next) => setSelection((prev) => ({ ...prev, [group.id]: next }))}
               />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,14 @@ import {
   CRM_ORDER_STATUSES,
   crmOrderSelectableStatuses,
 } from "@/lib/crmStatus";
+import {
+  INVALID_FIELDS_CLASS,
+  applyServerErrors,
+  clearCustomValidity,
+  collectFieldProblems,
+  formatFieldProblems,
+  listRowMessages,
+} from "@/lib/formValidation";
 import { cn } from "@/lib/utils";
 
 function sliceTime(value: string): string {
@@ -54,19 +62,6 @@ function sliceTime(value: string): string {
 function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
-}
-
-function invalidFieldName(element: Element): string {
-  const parts: string[] = [];
-  let group = element.parentElement?.closest<HTMLElement>("[data-field-group]");
-  while (group) {
-    parts.unshift(group.dataset.fieldGroup as string);
-    group = group.parentElement?.closest<HTMLElement>("[data-field-group]");
-  }
-  const target = element.getAttribute("aria-hidden") === "true" ? element.nextElementSibling : element;
-  const labelText = element.closest("label")?.querySelector("span")?.textContent?.trim();
-  parts.push(labelText ? labelText : (target?.getAttribute("placeholder") ?? ""));
-  return parts.join(" → ");
 }
 
 function buildCrmOrderFormData(
@@ -160,6 +155,7 @@ export function CrmOrderForm(
   props: { mode: "create"; initialDate: string } | { mode: "edit"; order: CrmOrder },
 ) {
   const t = useTranslations("crm");
+  const tForms = useTranslations("forms");
   const router = useRouter();
   const createMutation = useCreateCrmOrder();
   const updateMutation = useUpdateCrmOrder();
@@ -203,8 +199,11 @@ export function CrmOrderForm(
   const [timeRangeError, setTimeRangeError] = useState<"timeEndRequired" | "timeRangeMin20" | null>(
     null,
   );
+  const formRef = useRef<HTMLFormElement>(null);
   const [validationShown, setValidationShown] = useState(false);
-  const [missingFields, setMissingFields] = useState<string[]>([]);
+  const [messages, setMessages] = useState<string[]>([]);
+  const [serverMessages, setServerMessages] = useState<string[]>([]);
+  const [priceErrorIndexes, setPriceErrorIndexes] = useState<number[]>([]);
 
   const selectableStatuses =
     props.mode === "edit"
@@ -214,11 +213,34 @@ export function CrmOrderForm(
   const pending = createMutation.isPending || updateMutation.isPending;
   const mutationError = createMutation.error ?? updateMutation.error;
   const errorMessage =
-    mutationError instanceof ApiError
+    mutationError instanceof ApiError && mutationError.status !== 400
       ? apiErrorMessage(mutationError, t("saveError"))
-      : mutationError
+      : mutationError && !(mutationError instanceof ApiError)
         ? t("genericError")
         : null;
+  const itemErrors = items.map((_, index) => [
+    ...(listRowMessages(mutationError instanceof ApiError ? mutationError.parsed() : null, "items")[index] ??
+      []),
+    ...(priceErrorIndexes.includes(index) ? [t("items.noSalePrice")] : []),
+  ]);
+  useEffect(() => {
+    const form = formRef.current;
+    if (form === null || !(mutationError instanceof ApiError) || mutationError.status !== 400) {
+      setServerMessages([]);
+      return;
+    }
+    setValidationShown(true);
+    setServerMessages(
+      applyServerErrors(form, mutationError.parsed(), (index) =>
+        t("items.itemNumber", { number: index + 1 }),
+      ),
+    );
+    const first = listRowMessages(mutationError.parsed(), "items").findIndex((row) => row.length > 0);
+    form.querySelectorAll<HTMLElement>('[data-error-list="items"]')[first]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [mutationError, t]);
 
   const setField = <K extends keyof CrmOrderWriteFields>(
     key: K,
@@ -246,12 +268,27 @@ export function CrmOrderForm(
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const invalid = Array.from(event.currentTarget.querySelectorAll("input:invalid, textarea:invalid"));
+    const form = event.currentTarget;
+    clearCustomValidity(form);
+    const problems = collectFieldProblems(form);
+    const next = formatFieldProblems(
+      problems,
+      (listed) => tForms("requiredFieldsMissing", { fields: listed }),
+      (listed) => tForms("invalidFormat", { fields: listed }),
+    );
+    const missingPrice = items.flatMap((item, index) =>
+      crmItemSalePrice(item, cards) === null ? [index] : [],
+    );
+    const priceMessages = missingPrice.map(
+      (index) => `${t("items.itemNumber", { number: index + 1 })}: ${t("items.noSalePrice")}`,
+    );
     setValidationShown(true);
-    setMissingFields([...new Set(invalid.map(invalidFieldName))]);
-    if (invalid.length > 0) {
-      const first = invalid[0].getAttribute("aria-hidden") === "true" ? invalid[0].nextElementSibling : invalid[0];
-      first?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setMessages([...next, ...priceMessages]);
+    setServerMessages([]);
+    setPriceErrorIndexes(missingPrice);
+    if (next.length > 0 || priceMessages.length > 0) {
+      const item = form.querySelectorAll<HTMLElement>('[data-error-list="items"]')[missingPrice[0] ?? -1];
+      item?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (!fields.when_ready && fields.time_start !== null) {
@@ -263,9 +300,6 @@ export function CrmOrderForm(
         setTimeRangeError("timeRangeMin20");
         return;
       }
-    }
-    if (items.some((item) => crmItemSalePrice(item, cards) === null)) {
-      return;
     }
     const body = buildCrmOrderFormData(
       fields,
@@ -306,10 +340,21 @@ export function CrmOrderForm(
 
   return (
     <form
+      ref={formRef}
       noValidate
       data-validated={validationShown ? "" : undefined}
-      className="grid gap-6 pb-24 [&[data-validated]_:is(input,textarea):invalid]:border-[var(--danger)] [&[data-validated]_:is(input,textarea):invalid]:bg-red-50 [&[data-validated]_input:invalid+input]:border-[var(--danger)] [&[data-validated]_input:invalid+input]:bg-red-50"
+      className={cn("grid gap-6 pb-24", INVALID_FIELDS_CLASS)}
       onSubmit={onSubmit}
+      onInput={(event) => {
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement
+        ) {
+          target.setCustomValidity("");
+        }
+      }}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
@@ -340,6 +385,7 @@ export function CrmOrderForm(
               {t("timeStart")}
             </span>
             <Input
+              name="time_start"
               type="time"
               required={fields.time_start !== null && !fields.when_ready}
               value={fields.time_start ?? ""}
@@ -450,6 +496,7 @@ export function CrmOrderForm(
                 {t("contact")}
               </span>
               <Textarea
+                name="contact"
                 required
                 value={fields.contact}
                 onChange={(event) => setField("contact", event.target.value)}
@@ -534,7 +581,7 @@ export function CrmOrderForm(
           ) : null}
         </div>
         <div className="mt-4">
-          <CrmOrderItemsEditor items={items} onChange={onItemsChange} />
+          <CrmOrderItemsEditor items={items} onChange={onItemsChange} itemErrors={itemErrors} />
           {items.length > 0 ? (
             <p className="mt-3 text-sm font-semibold tabular-nums text-[var(--ink)]">
               {t("items.total")}: {formatAed(itemsPriceSum)}
@@ -553,6 +600,7 @@ export function CrmOrderForm(
               {t("weight")}
             </span>
             <Input
+              name="weight"
               required
               value={fields.weight}
               onChange={(event) => {
@@ -604,6 +652,7 @@ export function CrmOrderForm(
               {t("priceWithoutDelivery")}
             </span>
             <Input
+              name="cake_price"
               required
               inputMode="decimal"
               value={fields.cake_price}
@@ -618,6 +667,7 @@ export function CrmOrderForm(
               {t("delivery")}
             </span>
             <Input
+              name="delivery_price"
               required
               inputMode="decimal"
               value={fields.delivery_price}
@@ -629,6 +679,7 @@ export function CrmOrderForm(
               {t("prepaid")}
             </span>
             <Input
+              name="prepayment"
               required
               inputMode="decimal"
               value={fields.prepayment}
@@ -729,13 +780,15 @@ export function CrmOrderForm(
         </div>
       </section>
 
-      {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
-
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--cream-soft)] pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {missingFields.length > 0 ? (
-          <p className="mx-auto mb-2 w-full max-w-3xl px-4 text-sm font-medium text-[var(--danger)]">
-            {t("requiredFieldsMissing", { fields: missingFields.join(", ") })}
-          </p>
+        {[...messages, ...serverMessages, ...(errorMessage ? [errorMessage] : [])].length > 0 ? (
+          <div className="mx-auto mb-2 grid w-full max-w-3xl gap-1 px-4">
+            {[...messages, ...serverMessages, ...(errorMessage ? [errorMessage] : [])].map((message, index) => (
+              <p key={index} className="text-sm font-medium text-[var(--danger)]">
+                {message}
+              </p>
+            ))}
+          </div>
         ) : null}
         <div className="mx-auto flex w-full max-w-3xl justify-end px-4">
           <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={pending}>

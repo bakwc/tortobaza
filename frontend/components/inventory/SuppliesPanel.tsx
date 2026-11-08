@@ -138,6 +138,7 @@ function decimal(value: string): string {
 
 function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () => void }) {
   const t = useTranslations("stock");
+  const tForms = useTranslations("forms");
   const canEdit = useCan("view_costs");
   const units = useTranslations("stock.units");
   const supplies = useSupplies();
@@ -342,11 +343,16 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
         </p>
       ))}
       <div className="grid gap-2">
-        {draft.lines.map((line) => {
+        {draft.lines.map((line, index) => {
           const ingredient = (ingredients.list.data ?? []).find((row) => String(row.id) === line.ingredient);
           const suggestedUnit = line.suggestedUnit;
           return (
-            <div key={line.key} className="grid gap-1">
+            <div
+              key={line.key}
+              data-field-group={tForms("rowNumber", { number: index + 1 })}
+              data-error-list="lines"
+              className="grid gap-1"
+            >
               <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
                 <SearchSelect
                   options={(ingredients.list.data ?? [])
@@ -356,10 +362,12 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                   onChange={(ingredient) => updateLine(line.key, { ingredient })}
                   placeholder={t("chooseComponent")}
                   required={true}
+                  name="ingredient"
                   className="col-span-2 sm:col-span-1"
                 />
                 <div className="relative">
                   <Input
+                    name="quantity"
                     required
                     inputMode="decimal"
                     placeholder={t("quantity")}
@@ -372,6 +380,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                   </span>
                 </div>
                 <Input
+                  name="total"
                   required
                   inputMode="decimal"
                   placeholder={t("lineTotal")}

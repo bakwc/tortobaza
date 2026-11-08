@@ -9,10 +9,12 @@ export type OptionSelection = Record<number, number[]>;
 
 export function OptionGroup({
   group,
+  invalid,
   selected,
   onChange,
 }: {
   group: OptionGroupType;
+  invalid: boolean;
   selected: number[];
   onChange: (next: number[]) => void;
 }) {
@@ -55,10 +57,13 @@ export function OptionGroup({
   };
 
   return (
-    <div className="space-y-3">
+    <div id={`option-group-${group.id}`} className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h3 className="font-display text-2xl text-[var(--ink)]">{group.name}</h3>
+          <h3 className={cn("font-display text-2xl", invalid ? "text-[var(--danger)]" : "text-[var(--ink)]")}>
+            {group.name}
+          </h3>
+          {invalid ? <p className="mt-1 text-sm font-medium text-[var(--danger)]">{tItem("pleaseChoosePrefix")}</p> : null}
           {selectionHint ? (
             <p className="mt-1 text-sm text-[var(--ink)]/60">{selectionHint}</p>
           ) : null}

@@ -376,6 +376,7 @@ function TechCardRow({
 
 export function TechCardsPanel() {
   const t = useTranslations("stock");
+  const tForms = useTranslations("forms");
   const units = useTranslations("stock.units");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -549,7 +550,13 @@ export function TechCardsPanel() {
       return currentIds.filter((id) => !drop.has(id));
     });
   };
+  const [assignError, setAssignError] = useState(false);
   const assignSelected = () => {
+    if (assignCategory === "") {
+      setAssignError(true);
+      return;
+    }
+    setAssignError(false);
     techCards.assignCategory.mutate(
       { ids: selected, category: assignCategory === "none" ? null : Number(assignCategory) },
       { onSuccess: () => setSelected([]) },
@@ -850,7 +857,14 @@ export function TechCardsPanel() {
           <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
             <p className="text-sm font-semibold text-[var(--ink)]">{t("selectedCount", { count: selected.length })}</p>
             <div className="min-w-[12rem] flex-1">
-              <NativeSelect value={assignCategory} onChange={(event) => setAssignCategory(event.target.value)}>
+              <NativeSelect
+                value={assignCategory}
+                onChange={(event) => {
+                  setAssignCategory(event.target.value);
+                  setAssignError(false);
+                }}
+                className={assignError ? "border-[var(--danger)] bg-red-50" : undefined}
+              >
                 <option value="">{t("chooseCategory")}</option>
                 <option value="none">{t("noCategory")}</option>
                 {(categories.list.data ?? []).map((row) => (
@@ -860,11 +874,10 @@ export function TechCardsPanel() {
                 ))}
               </NativeSelect>
             </div>
-            <Button
-              type="button"
-              disabled={assignCategory === "" || techCards.assignCategory.isPending}
-              onClick={assignSelected}
-            >
+            {assignError ? (
+              <p className="text-sm font-medium text-[var(--danger)]">{t("chooseCategory")}</p>
+            ) : null}
+            <Button type="button" disabled={techCards.assignCategory.isPending} onClick={assignSelected}>
               {t("assignCategory")}
             </Button>
             <ErrorText error={techCards.assignCategory.error} />
@@ -998,7 +1011,12 @@ export function TechCardsPanel() {
           onOpenChange={(value) => (value ? null : cancelEdit())}
           title={current === null ? t("newTechCard") : draft.name}
           pending={techCards.save.isPending}
-          error={techCards.save.error ?? techCards.remove.error}
+          error={
+            techCards.save.error ??
+            techCards.remove.error ??
+            images.upload.error ??
+            images.remove.error
+          }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={submit}
           onCancel={cancelEdit}
@@ -1133,10 +1151,16 @@ export function TechCardsPanel() {
           />
 
           <CardTitle>{t("sections")}</CardTitle>
-          {draft.sections.map((section) => (
-            <div key={section.key} className="grid gap-3 rounded-2xl border border-[var(--line)] p-4">
+          {draft.sections.map((section, index) => (
+            <div
+              key={section.key}
+              data-field-group={tForms("sectionNumber", { number: index + 1 })}
+              data-error-list="sections"
+              className="grid gap-3 rounded-2xl border border-[var(--line)] p-4"
+            >
               <div className="flex items-center gap-2">
                 <Input
+                  name="name"
                   required
                   value={section.name}
                   placeholder={t("sectionName")}
@@ -1277,10 +1301,15 @@ export function TechCardsPanel() {
                               </td>
                               <td className="py-2 pr-3">
                                 {line ? (
-                                  <div className="relative ml-auto w-36">
+                                  <div
+                                    data-field-group={modifier.name}
+                                    className="relative ml-auto w-36"
+                                  >
                                     <Input
+                                      name="quantity"
                                       required
                                       inputMode="decimal"
+                                      placeholder={t("quantity")}
                                       value={line.quantity}
                                       onChange={(event) =>
                                         setComposition(modifier.id, {

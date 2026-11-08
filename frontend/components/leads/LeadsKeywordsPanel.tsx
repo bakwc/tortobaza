@@ -23,9 +23,14 @@ export function LeadsKeywordsPanel() {
   const keywords = useSocialKeywords(selected);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<SocialKeywordBody | null>(null);
+  const [verticalHint, setVerticalHint] = useState(false);
 
   const open = (row: SocialKeyword | null) => {
-    if (selected === null) return;
+    if (selected === null) {
+      setVerticalHint(true);
+      return;
+    }
+    setVerticalHint(false);
     keywords.save.reset();
     keywords.remove.reset();
     setEditingId(row ? row.id : null);
@@ -58,6 +63,9 @@ export function LeadsKeywordsPanel() {
               </Button>
             ) : null}
           </div>
+          {verticalHint ? (
+            <p className="mt-3 text-sm font-medium text-[var(--danger)]">{t("chooseVertical")}</p>
+          ) : null}
           <QueryState isLoading={keywords.list.isLoading} isError={keywords.list.isError}>
             {(keywords.list.data ?? []).length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-2)]">{t("emptyKeywords")}</p>

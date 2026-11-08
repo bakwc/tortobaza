@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, CreditCard, Globe, Wallet } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -23,6 +23,13 @@ import { rememberOrder } from "@/lib/order-history";
 import { submitLibertyPaymentForm } from "@/lib/liberty-pay";
 import type { Order, PlaceOrderBody } from "@/lib/api/types";
 import { Link, useRouter } from "@/i18n/navigation";
+import {
+  INVALID_FIELDS_CLASS,
+  applyServerErrors,
+  clearCustomValidity,
+  collectFieldProblems,
+  formatFieldProblems,
+} from "@/lib/formValidation";
 
 const BANK_ACCOUNT_NUMBER = "GE94BG0000000612361573GEL";
 const BANK_RECIPIENT_NAME = "SWEET CHILL";
@@ -30,10 +37,14 @@ const BANK_RECIPIENT_NAME = "SWEET CHILL";
 export function CheckoutConfirm() {
   const locale = useLocale();
   const t = useTranslations("checkout");
+  const tForms = useTranslations("forms");
   const router = useRouter();
   const [draft, setDraft] = useState<CheckoutDraft>(emptyDraft);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validationShown, setValidationShown] = useState(false);
+  const [slotMissing, setSlotMissing] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   const [bankTransferStep, setBankTransferStep] = useState(false);
   const cardPayment = useQuery({
     queryKey: ["liberty-payment-enabled"],
@@ -115,42 +126,50 @@ export function CheckoutConfirm() {
       router.push(`/orders/${order.number}?token=${order.lookup_token}`);
     },
     onError: (e) => {
-      let message = t("genericPlaceError");
-      if (e instanceof ApiError) {
-        const parsed = e.parsed<Record<string, unknown>>();
-        if (parsed) {
-          const flat = Object.values(parsed).flat();
-          if (flat.length > 0) message = String(flat[0]);
-        } else if (e.detail) {
-          message = e.detail;
-        }
+      const form = formRef.current;
+      if (e instanceof ApiError && form !== null) {
+        const lines = applyServerErrors(form, e.parsed(), (index) =>
+          tForms("rowNumber", { number: index + 1 }),
+        );
+        setValidationShown(true);
+        setError(lines.length > 0 ? lines.join(" ") : t("genericPlaceError"));
+        return;
       }
-      setError(message);
+      setError(t("genericPlaceError"));
     },
   });
 
-  const canPlace = useMemo(() => {
-    if (!draft.schedule) return false;
-    if (!draft.schedule.date || !draft.schedule.start_time || !draft.schedule.end_time) {
-      return false;
-    }
-    if (!draft.customer_name.trim()) return false;
-    if (!draft.customer_phone.trim()) return false;
-    if (!draft.customer_email.trim()) return false;
-    return true;
-  }, [draft]);
-
   const handlePlaceOrder = () => {
-    setError(null);
-    if (!canPlace || !draft.schedule) {
-      setError(t("fillContactsAndSlot"));
-      return;
+    const form = formRef.current;
+    if (form === null) return;
+    clearCustomValidity(form);
+    setValidationShown(true);
+    const problems = collectFieldProblems(form);
+    const messages = formatFieldProblems(
+      problems,
+      (fields) => tForms("requiredFieldsMissing", { fields }),
+      (fields) => tForms("invalidFormat", { fields }),
+    );
+    const slotOk = Boolean(draft.schedule?.date && draft.schedule.start_time && draft.schedule.end_time);
+    setSlotMissing(!slotOk);
+    if (!slotOk) {
+      messages.push(
+        tForms("requiredFieldsMissing", {
+          fields: t(draft.fulfillment_type === "delivery" ? "deliveryTime" : "pickupTime"),
+        }),
+      );
+      if (problems.missing.length === 0 && problems.invalid.length === 0) {
+        form.querySelector("[data-checkout-slot]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
+    setError(messages.length > 0 ? messages.join(" ") : null);
+    if (messages.length > 0) return;
     if (draft.payment_method === "bank_transfer" && !bankTransferStep) {
       setBankTransferStep(true);
       return;
     }
     const sch = draft.schedule;
+    if (sch === null) return;
     const body: PlaceOrderBody = {
       fulfillment_type: draft.fulfillment_type,
       schedule_mode: "slot",
@@ -192,7 +211,13 @@ export function CheckoutConfirm() {
 
   return (
     <div className="mt-8 grid min-w-0 gap-8 lg:grid-cols-[1fr_360px]">
-      <div className="min-w-0 space-y-6">
+      <form
+        ref={formRef}
+        noValidate
+        data-validated={validationShown ? "" : undefined}
+        className={cn("min-w-0 space-y-6", INVALID_FIELDS_CLASS)}
+        onSubmit={(event) => event.preventDefault()}
+      >
         <Section title={t("paymentMethod")}>
           <div className={cn("grid grid-cols-1 gap-3", paymentGridClass)}>
             {paypalEnabled ? (
@@ -264,6 +289,7 @@ export function CheckoutConfirm() {
           </Section>
         ) : null}
 
+        <div data-checkout-slot className={slotMissing ? "rounded-3xl ring-2 ring-[var(--danger)]" : undefined}>
         <Section
           title={draft.fulfillment_type === "delivery" ? t("deliveryTime") : t("pickupTime")}
           subtitle={t("timezoneGeorgia")}
@@ -274,15 +300,18 @@ export function CheckoutConfirm() {
             onChange={(schedule) => update({ schedule })}
           />
         </Section>
+        </div>
 
         <Section title={t("contactTitle")} subtitle={t("contactSubtitle")}>
           <div className="grid gap-3 sm:grid-cols-2">
             <RequiredInput
+              name="customer_name"
               placeholder={t("namePlaceholder")}
               value={draft.customer_name}
               onChange={(e) => update({ customer_name: e.target.value })}
             />
             <RequiredInput
+              name="customer_phone"
               placeholder={t("phonePlaceholder")}
               value={draft.customer_phone}
               onChange={(e) => update({ customer_phone: e.target.value })}
@@ -290,6 +319,7 @@ export function CheckoutConfirm() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
             <RequiredInput
+              name="customer_email"
               type="email"
               placeholder={t("emailPlaceholder")}
               value={draft.customer_email}
@@ -364,15 +394,14 @@ export function CheckoutConfirm() {
           .
         </p>
 
-        {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-      </div>
+      </form>
 
       <OrderSummary
         fulfillmentType={draft.fulfillment_type}
         promoCode={draft.promo_code}
         onPlaceOrder={handlePlaceOrder}
         isPlacing={placeOrder.isPending}
-        canPlace={canPlace}
+        error={error}
         placeOrderLabel={placeOrderLabel}
       />
     </div>

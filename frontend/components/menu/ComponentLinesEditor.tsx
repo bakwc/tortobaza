@@ -191,16 +191,22 @@ export function ComponentLinesEditor({
   suggestionPending: boolean;
 }) {
   const t = useTranslations("stock");
+  const tForms = useTranslations("forms");
   const update = (key: string, patch: Partial<ComponentLineDraft>) =>
     onChange(lines.map((line) => (line.key === key ? { ...line, ...patch } : line)));
 
   return (
     <div className="grid gap-2">
-      {lines.map((line) => {
+      {lines.map((line, index) => {
         const option = options.find((row) => row.value === line.component);
         const price = linePrice === null ? null : linePrice(line);
         return (
-          <div key={line.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]">
+          <div
+            key={line.key}
+            data-field-group={tForms("rowNumber", { number: index + 1 })}
+            data-error-list="lines"
+            className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]"
+          >
             <SearchSelect
               options={options}
               value={line.component}
@@ -215,10 +221,12 @@ export function ComponentLinesEditor({
               }}
               placeholder={t("chooseComponent")}
               required={true}
+              name="component"
               className="col-span-2 sm:col-span-1"
             />
             <div className="relative">
               <Input
+                name="quantity"
                 required
                 inputMode="decimal"
                 placeholder={quantityLabel}
@@ -236,6 +244,7 @@ export function ComponentLinesEditor({
             {extraColumn === "loss" ? (
               <div className="relative">
                 <Input
+                  name="loss_percent"
                   inputMode="decimal"
                   placeholder={t("lossPercent")}
                   value={line.loss_percent}

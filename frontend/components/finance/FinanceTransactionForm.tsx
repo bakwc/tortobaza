@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +24,13 @@ import type {
   FinanceTransactionWriteBody,
 } from "@/lib/api/types";
 import { formatCrmDate, formatMoney, getTbilisiTodayIsoDate } from "@/lib/format";
+import {
+  INVALID_FIELDS_CLASS,
+  applyServerErrors,
+  clearCustomValidity,
+  collectFieldProblems,
+  formatFieldProblems,
+} from "@/lib/formValidation";
 import { cn } from "@/lib/utils";
 
 const KINDS: FinanceTransaction["kind"][] = [
@@ -165,6 +172,7 @@ export function FinanceTransactionForm({
   onClose: () => void;
 }) {
   const t = useTranslations("finance");
+  const tForms = useTranslations("forms");
   const canEdit = useCan("edit_finance");
   const locale = useLocale();
   const { scope } = useFinanceScope();
@@ -177,6 +185,9 @@ export function FinanceTransactionForm({
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [counterpartTouched, setCounterpartTouched] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const [validationShown, setValidationShown] = useState(false);
+  const [messages, setMessages] = useState<string[]>([]);
   const searchQuery = useFinanceTransactionSearch(submittedQuery, scope);
   const createMutation = useCreateFinanceTransaction(scope);
   const updateMutation = useUpdateFinanceTransaction(scope);
@@ -240,6 +251,15 @@ export function FinanceTransactionForm({
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    clearCustomValidity(event.currentTarget);
+    const next = formatFieldProblems(
+      collectFieldProblems(event.currentTarget),
+      (fields) => tForms("requiredFieldsMissing", { fields }),
+      (fields) => tForms("invalidFormat", { fields }),
+    );
+    setValidationShown(true);
+    setMessages(next);
+    if (next.length > 0) return;
     setErrorMessage("");
     if (
       fields.kind === "transfer" &&
@@ -258,8 +278,13 @@ export function FinanceTransactionForm({
   }
 
   function onError(error: unknown) {
-    if (error instanceof ApiError) {
-      setErrorMessage(error.detail);
+    const form = formRef.current;
+    if (error instanceof ApiError && form !== null) {
+      setValidationShown(true);
+      const lines = applyServerErrors(form, error.parsed(), (index) =>
+        tForms("rowNumber", { number: index + 1 }),
+      );
+      setErrorMessage(lines.join(" "));
       return;
     }
     throw error;
@@ -277,7 +302,23 @@ export function FinanceTransactionForm({
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent className="w-[min(560px,calc(100vw-1.5rem))] overflow-y-auto">
-        <form className="grid gap-4 px-5 pb-6 pt-5" onSubmit={onSubmit}>
+        <form
+          ref={formRef}
+          noValidate
+          data-validated={validationShown ? "" : undefined}
+          className={cn("grid gap-4 px-5 pb-6 pt-5", INVALID_FIELDS_CLASS)}
+          onSubmit={onSubmit}
+          onInput={(event) => {
+            const target = event.target;
+            if (
+              target instanceof HTMLInputElement ||
+              target instanceof HTMLTextAreaElement ||
+              target instanceof HTMLSelectElement
+            ) {
+              target.setCustomValidity("");
+            }
+          }}
+        >
           <div className="pr-12">
             <DialogTitle className="text-lg font-semibold text-[var(--ink)]">
               {transaction === null ? t("form.createTitle") : t("form.editTitle")}
@@ -299,13 +340,20 @@ export function FinanceTransactionForm({
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
                   {t("form.date")}
                 </span>
-                <Input required type="date" value={fields.date} onChange={(event) => setDate(event.target.value)} />
+                <Input
+                  name="date"
+                  required
+                  type="date"
+                  value={fields.date}
+                  onChange={(event) => setDate(event.target.value)}
+                />
               </label>
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
                   {t("form.account")}
                 </span>
                 <select
+                  name="account_id"
                   required
                   value={fields.accountId}
                   onChange={(event) => {
@@ -332,6 +380,7 @@ export function FinanceTransactionForm({
                   {t("form.amount")}
                 </span>
                 <Input
+                  name="amount"
                   required
                   inputMode="decimal"
                   value={fields.amount}
@@ -343,6 +392,7 @@ export function FinanceTransactionForm({
                   {t("form.kind")}
                 </span>
                 <select
+                  name="kind"
                   required
                   value={fields.kind}
                   onChange={(event) => setKind(event.target.value as FinanceTransaction["kind"])}
@@ -520,6 +570,7 @@ export function FinanceTransactionForm({
                           {t("form.counterpartAccount")}
                         </span>
                         <select
+                          name="counterpart_account_id"
                           required
                           value={fields.counterpartAccountId}
                           onChange={(event) =>
@@ -545,6 +596,7 @@ export function FinanceTransactionForm({
                           {t("form.counterpartDate")}
                         </span>
                         <Input
+                          name="counterpart_date"
                           required
                           type="date"
                           value={fields.counterpartDate}
@@ -562,6 +614,7 @@ export function FinanceTransactionForm({
                           {t("form.counterpartAmount")}
                         </span>
                         <Input
+                          name="counterpart_amount"
                           required
                           inputMode="decimal"
                           value={fields.counterpartAmount}
@@ -581,6 +634,11 @@ export function FinanceTransactionForm({
             </div>
           )}
 
+          {messages.map((message, index) => (
+            <p key={index} className="text-sm font-medium text-[var(--danger)]">
+              {message}
+            </p>
+          ))}
           {errorMessage ? <p className="text-sm text-[var(--danger)]">{errorMessage}</p> : null}
 
           {canEdit ? (

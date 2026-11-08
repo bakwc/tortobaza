@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field } from "@/components/menu/ui";
+import { ErrorText, Field } from "@/components/menu/ui";
 import { ImageCropEditor, loadImageSize } from "@/components/site/ImageCropEditor";
 import { ImageSitePreview } from "@/components/site/ImageSitePreview";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
@@ -230,6 +230,7 @@ export function ProductImagesEditor({
 
   return (
     <div className="grid gap-4">
+      <ErrorText error={mutations.upload.error ?? mutations.patch.error} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium text-[var(--ink)]">{t("productImages")}</p>
         {canEdit ? (

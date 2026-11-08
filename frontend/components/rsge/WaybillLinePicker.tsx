@@ -263,6 +263,7 @@ export function WaybillLinePicker({
         <input
           tabIndex={-1}
           aria-hidden="true"
+          name="ingredient"
           required
           value={ingredientId}
           onChange={() => undefined}

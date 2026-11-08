@@ -27,18 +27,30 @@ export function CheckoutStepOne({
   onDraftChange: (updater: (prev: CheckoutDraft) => CheckoutDraft) => void;
 }) {
   const t = useTranslations("checkout");
+  const tForms = useTranslations("forms");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [addressErrors, setAddressErrors] = useState<Partial<Record<keyof OrderAddress, string>>>({});
 
   const address = draft.address ?? emptyAddress;
 
   const handleNext = () => {
     setError(null);
+    setAddressErrors({});
     if (draft.fulfillment_type === "delivery") {
-      const required: (keyof OrderAddress)[] = ["street", "building", "city"];
-      const missing = required.filter((k) => !address[k].trim());
+      const labels: Record<"street" | "building" | "city", string> = {
+        street: t("addressStreet"),
+        building: t("addressBuilding"),
+        city: t("addressCity"),
+      };
+      const required = ["street", "building", "city"] as const;
+      const missing = required.filter((key) => !address[key].trim());
       if (missing.length > 0) {
-        setError(t("fillStreetBuildingCity"));
+        const next: Partial<Record<keyof OrderAddress, string>> = {};
+        for (const key of missing) next[key] = tForms("requiredField");
+        setAddressErrors(next);
+        setError(tForms("requiredFieldsMissing", { fields: missing.map((key) => labels[key]).join(", ") }));
+        document.querySelector(`[name="${missing[0]}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
       const next: CheckoutDraft = {
@@ -85,6 +97,7 @@ export function CheckoutStepOne({
           <div className="mt-4">
             <AddressForm
               value={address}
+              errors={addressErrors}
               onChange={(next) => onDraftChange((prev) => ({ ...prev, address: next }))}
             />
           </div>

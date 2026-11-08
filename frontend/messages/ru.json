@@ -378,7 +378,6 @@
     "imagesHint": "Можно выбрать несколько файлов сразу.",
     "imagesRemove": "Удалить изображение",
     "saveOrder": "Сохранить заказ",
-    "requiredFieldsMissing": "Заполните обязательные поля: {fields}",
     "saveError": "Не удалось сохранить заказ. Попробуйте ещё раз.",
     "loadOrderError": "Не удалось загрузить этот заказ.",
     "prevMonth": "Предыдущий месяц",
@@ -930,6 +929,7 @@
     "word": "Слово",
     "addChannel": "Добавить канал",
     "addKeyword": "Добавить слово",
+    "chooseVertical": "Сначала выберите вертикаль",
     "newChannel": "Новый канал",
     "newKeyword": "Новое слово",
     "emptyMessages": "Сообщений нет",
@@ -1383,5 +1383,12 @@
     "deleteRelatedMore": "и ещё {count}",
     "confirmDelete": "Удалить",
     "cancelDelete": "Отмена"
+  },
+  "forms": {
+    "requiredFieldsMissing": "Заполните обязательные поля: {fields}",
+    "invalidFormat": "Неверный формат: {fields}",
+    "requiredField": "Обязательное поле",
+    "rowNumber": "Строка {number}",
+    "sectionNumber": "Раздел {number}"
   }
 }

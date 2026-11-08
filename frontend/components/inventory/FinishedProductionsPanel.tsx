@@ -67,6 +67,7 @@ function lineBody(line: LineDraft, card: TechCard | undefined): FinishedProducti
 
 export function FinishedProductionsPanel() {
   const t = useTranslations("stock");
+  const tForms = useTranslations("forms");
   const canEditAll = useCan("edit_finished");
   const canEditOwn = useCan("edit_own_finished");
   const canCreate = canEditAll || canEditOwn;
@@ -282,6 +283,7 @@ export function FinishedProductionsPanel() {
                     onChange={(created_by) => setDraft({ ...draft, created_by })}
                     placeholder={t("createdBy")}
                     required={true}
+                    name="created_by"
                     className=""
                   />
                 </Field>
@@ -293,10 +295,15 @@ export function FinishedProductionsPanel() {
                 />
               </Field>
             </div>
-            {draft.lines.map((line) => {
+            {draft.lines.map((line, index) => {
               const card = cards.find((row) => String(row.id) === line.tech_card);
               return (
-                <div key={line.key} className="grid gap-3 rounded-2xl border border-[var(--line)] p-3">
+                <div
+                  key={line.key}
+                  data-field-group={tForms("rowNumber", { number: index + 1 })}
+                  data-error-list="lines"
+                  className="grid gap-3 rounded-2xl border border-[var(--line)] p-3"
+                >
                   <div className="grid gap-3 sm:grid-cols-[1fr_8rem_6rem_auto]">
                     <Field label={t("techCard")}>
                       <SearchSelect
@@ -307,12 +314,14 @@ export function FinishedProductionsPanel() {
                         onChange={(tech_card) => updateLine(line.key, { tech_card, modifiers: [], weight_kg: "" })}
                         placeholder={t("chooseComponent")}
                         required={true}
+                        name="tech_card"
                         className=""
                       />
                     </Field>
                     {card?.kind === "weighted" ? (
                       <Field label={t("weightKg")}>
                         <Input
+                          name="weight_kg"
                           required
                           inputMode="decimal"
                           value={line.weight_kg}
@@ -324,6 +333,7 @@ export function FinishedProductionsPanel() {
                     )}
                     <Field label={t("pieces")}>
                       <Input
+                        name="quantity"
                         required
                         inputMode="numeric"
                         value={line.quantity}

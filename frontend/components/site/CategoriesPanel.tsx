@@ -132,7 +132,12 @@ export function CategoriesPanel() {
           onCancel={null}
           title={draft.id === null ? t("newCategory") : draft.slug}
           pending={categories.save.isPending}
-          error={categories.save.error ?? categories.remove.error}
+          error={
+            categories.save.error ??
+            categories.remove.error ??
+            uploadImage.error ??
+            deleteImage.error
+          }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={() => {
             const { id, ...body } = draft;
@@ -151,14 +156,35 @@ export function CategoriesPanel() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
+                required
+                name={`name_${locale}`}
                 value={draft[`name_${locale}`]}
                 onChange={(event) =>
                   setDraft({ ...draft, [`name_${locale}`]: event.target.value })
                 }
               />
+              {(["en", "ka", "ru"] as const)
+                .filter((code) => code !== locale)
+                .map((code) => (
+                  <input
+                    key={code}
+                    required
+                    name={`name_${code}`}
+                    value={draft[`name_${code}`]}
+                    placeholder={`${t("name")} ${code.toUpperCase()}`}
+                    onChange={() => undefined}
+                    tabIndex={-1}
+                    className="sr-only"
+                  />
+                ))}
             </Field>
             <Field label={t("slug")}>
-              <Input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} />
+              <Input
+                name="slug"
+                required
+                value={draft.slug}
+                onChange={(event) => setDraft({ ...draft, slug: event.target.value })}
+              />
             </Field>
             <Field label={t("pageSlug")}>
               <Input

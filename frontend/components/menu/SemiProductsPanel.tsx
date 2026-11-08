@@ -264,7 +264,13 @@ export function SemiProductsPanel() {
       return currentIds.filter((id) => !drop.has(id));
     });
   };
+  const [assignError, setAssignError] = useState(false);
   const assignSelected = () => {
+    if (assignCategory === "") {
+      setAssignError(true);
+      return;
+    }
+    setAssignError(false);
     semiProducts.assignCategory.mutate(
       { ids: selected, category: assignCategory === "none" ? null : Number(assignCategory) },
       { onSuccess: () => setSelected([]) },
@@ -465,7 +471,14 @@ export function SemiProductsPanel() {
           <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
             <p className="text-sm font-semibold text-[var(--ink)]">{t("selectedCount", { count: selected.length })}</p>
             <div className="min-w-[12rem] flex-1">
-              <NativeSelect value={assignCategory} onChange={(event) => setAssignCategory(event.target.value)}>
+              <NativeSelect
+                value={assignCategory}
+                onChange={(event) => {
+                  setAssignCategory(event.target.value);
+                  setAssignError(false);
+                }}
+                className={assignError ? "border-[var(--danger)] bg-red-50" : undefined}
+              >
                 <option value="">{t("chooseCategory")}</option>
                 <option value="none">{t("noCategory")}</option>
                 {(categories.list.data ?? []).map((row) => (
@@ -475,11 +488,10 @@ export function SemiProductsPanel() {
                 ))}
               </NativeSelect>
             </div>
-            <Button
-              type="button"
-              disabled={assignCategory === "" || semiProducts.assignCategory.isPending}
-              onClick={assignSelected}
-            >
+            {assignError ? (
+              <p className="text-sm font-medium text-[var(--danger)]">{t("chooseCategory")}</p>
+            ) : null}
+            <Button type="button" disabled={semiProducts.assignCategory.isPending} onClick={assignSelected}>
               {t("assignCategory")}
             </Button>
             <ErrorText error={semiProducts.assignCategory.error} />
@@ -531,7 +543,12 @@ export function SemiProductsPanel() {
           onOpenChange={(value) => (value ? null : cancelEdit())}
           title={current === null ? t("newSemiProduct") : draft.name}
           pending={semiProducts.save.isPending}
-          error={semiProducts.save.error ?? semiProducts.remove.error}
+          error={
+            semiProducts.save.error ??
+            semiProducts.remove.error ??
+            images.upload.error ??
+            images.remove.error
+          }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={() =>
             semiProducts.save.mutate(

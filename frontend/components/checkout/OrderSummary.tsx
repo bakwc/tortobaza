@@ -13,14 +13,14 @@ export function OrderSummary({
   promoCode,
   onPlaceOrder,
   isPlacing,
-  canPlace,
+  error,
   placeOrderLabel,
 }: {
   fulfillmentType: FulfillmentType;
   promoCode: string;
   onPlaceOrder: () => void;
   isPlacing: boolean;
-  canPlace: boolean;
+  error: string | null;
   placeOrderLabel: string;
 }) {
   const t = useTranslations("checkout");
@@ -73,12 +73,13 @@ export function OrderSummary({
         </div>
       </dl>
 
+      {error ? <p className="mt-4 text-sm font-medium text-[var(--danger)]">{error}</p> : null}
       <Button
         type="button"
         size="lg"
         className="mt-6 w-full"
         onClick={onPlaceOrder}
-        disabled={!canPlace || isPlacing}
+        disabled={isPlacing}
       >
         {isPlacing ? <Spinner className="mr-2" /> : null}
         {placeOrderLabel}

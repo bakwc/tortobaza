@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
-import { QueryState, formatQuantity } from "@/components/menu/ui";
+import { QueryState, apiErrorMessage, formatQuantity } from "@/components/menu/ui";
 import {
   RsgeChip,
   RsgeDayHeader,
@@ -64,18 +64,19 @@ function InvoiceDecisionDialog({
   onOpenChange,
   onConfirm,
   isPending,
-  isError,
+  error,
 }: {
   action: "confirm" | "reject";
   onOpenChange: (open: boolean) => void;
   onConfirm: (reason: string) => void;
   isPending: boolean;
-  isError: boolean;
+  error: unknown;
 }) {
   const t = useTranslations("rsge");
+  const tForms = useTranslations("forms");
   const [reason, setReason] = useState("");
+  const [reasonMissing, setReasonMissing] = useState(false);
   const rejecting = action === "reject";
-  const reasonMissing = rejecting && reason.trim() === "";
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
@@ -86,18 +87,39 @@ function InvoiceDecisionDialog({
         {rejecting ? (
           <label className="mt-4 grid gap-2 text-sm text-[var(--ink)]">
             {t("rejectReason")}
-            <Textarea value={reason} onChange={(event) => setReason(event.target.value)} />
+            <Textarea
+              required
+              value={reason}
+              onChange={(event) => {
+                setReason(event.target.value);
+                setReasonMissing(false);
+              }}
+              className={reasonMissing ? "border-[var(--danger)] bg-red-50" : undefined}
+            />
           </label>
         ) : null}
-        {isError ? <p className="mt-3 text-sm text-[var(--danger)]">{t("decideError")}</p> : null}
+        {reasonMissing ? (
+          <p className="mt-3 text-sm font-medium text-[var(--danger)]">
+            {tForms("requiredFieldsMissing", { fields: t("rejectReason") })}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="mt-3 text-sm text-[var(--danger)]">{apiErrorMessage(error, t("decideError"))}</p>
+        ) : null}
         <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             {t("cancel")}
           </Button>
           <Button
             type="button"
-            onClick={() => onConfirm(reason.trim())}
-            disabled={isPending || reasonMissing}
+            onClick={() => {
+              if (rejecting && reason.trim() === "") {
+                setReasonMissing(true);
+                return;
+              }
+              onConfirm(reason.trim());
+            }}
+            disabled={isPending}
             className={rejecting ? "bg-[var(--danger)] text-white hover:bg-[var(--danger)]/90" : undefined}
           >
             {isPending ? <Spinner className="h-4 w-4" /> : rejecting ? t("reject") : t("confirm")}
@@ -256,7 +278,7 @@ export function InvoicesPanel() {
         <InvoiceDecisionDialog
           action={decision.action}
           isPending={decide.isPending}
-          isError={decide.isError}
+          error={decide.error}
           onOpenChange={(open) => {
             if (!open) {
               decide.reset();

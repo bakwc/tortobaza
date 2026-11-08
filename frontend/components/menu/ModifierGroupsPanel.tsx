@@ -80,6 +80,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
 
 export function ModifierGroupsPanel() {
   const t = useTranslations("stock");
+  const tForms = useTranslations("forms");
   const canEdit = useCan("edit_menu");
   const groups = useModifierGroups();
   const catalogOptions = useCatalogOptions();
@@ -218,6 +219,8 @@ export function ModifierGroupsPanel() {
               <>
                 <Field label={t("minSelections")}>
                   <Input
+                    name="min_selections"
+                    required
                     inputMode="numeric"
                     value={draft.min_selections}
                     onChange={(event) => setDraft({ ...draft, min_selections: event.target.value })}
@@ -249,9 +252,15 @@ export function ModifierGroupsPanel() {
           </div>
           <CardTitle>{t("modifiers")}</CardTitle>
           <div className="grid gap-2">
-            {draft.modifiers.map((row) => (
-              <div key={row.key} className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]">
+            {draft.modifiers.map((row, index) => (
+              <div
+                key={row.key}
+                data-field-group={tForms("rowNumber", { number: index + 1 })}
+                data-error-list="modifiers"
+                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
+              >
                 <Input
+                  name="name"
                   required
                   placeholder={t("name")}
                   value={row.name}
@@ -284,6 +293,7 @@ export function ModifierGroupsPanel() {
                   onChange={(component) => updateModifier(row.key, { component })}
                   placeholder={t("noDefaultComponent")}
                   required={false}
+                  name={null}
                   className=""
                 />
                 <div className="flex items-center">

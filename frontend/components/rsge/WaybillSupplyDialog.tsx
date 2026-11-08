@@ -144,7 +144,12 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
                 const ingredient = (ingredients.list.data ?? []).find((item) => String(item.id) === row.ingredient);
                 const name = localized(locale, line.name, line.name_ru);
                 return (
-                  <div key={line.good_id} className="grid gap-2 border-t border-[var(--line)] pt-3">
+                  <div
+                    key={line.good_id}
+                    data-field-group={name}
+                    data-error-list="lines"
+                    className="grid gap-2 border-t border-[var(--line)] pt-3"
+                  >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="font-medium text-[var(--ink)]">{name}</p>
                       <p className="text-sm text-[var(--muted-2)]">
@@ -177,6 +182,7 @@ export function WaybillSupplyDialog({ waybill, onClose }: { waybill: RsWaybill; 
                       {row.skipped ? null : (
                         <div className="relative">
                           <Input
+                            name="quantity"
                             required
                             inputMode="decimal"
                             placeholder={t("quantity")}

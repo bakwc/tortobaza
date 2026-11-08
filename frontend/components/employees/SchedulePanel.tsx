@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { EditorDialog } from "@/components/menu/EditorDialog";
-import { Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { Field, NativeSelect, QueryState, apiErrorMessage } from "@/components/menu/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScheduleGrid, ScheduleSheet, dayTypeClass, shortDayType } from "@/components/employees/ScheduleGrid";
@@ -135,7 +135,6 @@ export function SchedulePanel() {
 
   return (
     <div className="grid gap-6">
-      {save.isError ? <p className="text-sm text-[var(--danger)] print:hidden">{t("scheduleSaveError")}</p> : null}
       <QueryState isLoading={schedule.isLoading} isError={schedule.isError}>
         {grid ? (
           <>
@@ -161,6 +160,11 @@ export function SchedulePanel() {
             </div>
             {canEdit && selected.length > 0 ? (
               <div className="sticky top-0 z-30 mb-3 flex flex-wrap items-center gap-2 bg-white py-2">
+                {save.isError ? (
+                  <p className="w-full text-sm font-medium text-[var(--danger)]">
+                    {apiErrorMessage(save.error, t("scheduleSaveError"))}
+                  </p>
+                ) : null}
                 <span className="text-sm font-medium text-[var(--ink)]">{t("selectedDays", { count: selected.length })}</span>
                 {APPLY_TYPES.map((dayType) => (
                   <Button

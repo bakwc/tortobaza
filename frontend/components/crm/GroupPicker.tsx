@@ -35,6 +35,7 @@ export function GroupPicker({
       <Field label={label}>
         <div className="flex gap-2">
           <NativeSelect
+            required={group.effective_is_required}
             value={current ? String(current.modifier) : ""}
             onChange={(event) =>
               onChange(
@@ -53,7 +54,10 @@ export function GroupPicker({
           </NativeSelect>
           {current ? (
             <Input
+              name="quantity"
+              required
               inputMode="numeric"
+              placeholder={current ? group.modifiers.find((modifier) => modifier.id === current.modifier)?.name : undefined}
               aria-label={t("modifierQuantity")}
               value={current.quantity}
               onChange={(event) => setQuantity(current.modifier, event.target.value)}
@@ -102,7 +106,11 @@ export function GroupPicker({
               </label>
               {row ? (
                 <input
+                  name="quantity"
+                  required
                   inputMode="numeric"
+                  pattern="\d+"
+                  placeholder={modifier.name}
                   aria-label={t("modifierQuantity")}
                   value={row.quantity}
                   onFocus={selectZeroOnFocus}

@@ -36,6 +36,7 @@ export function SearchSelect({
   onChange,
   placeholder,
   required,
+  name,
   className,
 }: {
   options: SearchSelectOption[];
@@ -43,6 +44,7 @@ export function SearchSelect({
   onChange: (value: string) => void;
   placeholder: string;
   required: boolean;
+  name: string | null;
   className: string;
 }) {
   const t = useTranslations("stock");
@@ -147,11 +149,12 @@ export function SearchSelect({
         close();
       }}
     >
-      {required ? (
+      {required || name !== null ? (
         <input
           tabIndex={-1}
           aria-hidden="true"
-          required
+          name={name ?? undefined}
+          required={required}
           value={value}
           onChange={() => undefined}
           className="pointer-events-none absolute bottom-0 left-5 h-px w-px opacity-0"

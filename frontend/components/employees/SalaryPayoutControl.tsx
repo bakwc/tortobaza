@@ -10,7 +10,14 @@ import { useCan } from "@/hooks/useAuth";
 import { useCreateSalaryPayout } from "@/hooks/useCrmOrders";
 import { useFinanceAccounts } from "@/hooks/useFinanceTransactions";
 import { Link } from "@/i18n/navigation";
-import { ApiError } from "@/lib/api/client";
+import { apiErrorMessage } from "@/components/menu/ui";
+import {
+  INVALID_FIELDS_CLASS,
+  clearCustomValidity,
+  collectFieldProblems,
+  formatFieldProblems,
+} from "@/lib/formValidation";
+import { cn } from "@/lib/utils";
 import type { CrmSalaryPeriod } from "@/lib/api/types";
 import { formatAed, formatCrmCompactDate, getTbilisiTodayIsoDate } from "@/lib/format";
 
@@ -27,6 +34,7 @@ export function SalaryPayoutControl({
   end: string;
 }) {
   const t = useTranslations("crm");
+  const tForms = useTranslations("forms");
   const locale = useLocale();
   const canPay = useCan("edit_finance");
   const payout = employee.payout;
@@ -34,6 +42,8 @@ export function SalaryPayoutControl({
   const [date, setDate] = useState(getTbilisiTodayIsoDate);
   const [accountId, setAccountId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [validationShown, setValidationShown] = useState(false);
+  const [messages, setMessages] = useState<string[]>([]);
   const accountsQuery = useFinanceAccounts(open, "business");
   const createPayout = useCreateSalaryPayout();
 
@@ -59,11 +69,7 @@ export function SalaryPayoutControl({
   }
 
   function onError(error: unknown) {
-    if (error instanceof ApiError) {
-      setErrorMessage(error.detail);
-      return;
-    }
-    throw error;
+    setErrorMessage(apiErrorMessage(error, t("salaryPayError")) ?? t("salaryPayError"));
   }
 
   function submit() {
@@ -97,7 +103,24 @@ export function SalaryPayoutControl({
           <DialogTitle className="pr-10 text-base font-semibold text-[var(--ink)]">
             {t("salaryPayTitle")}: {employee.name}
           </DialogTitle>
-          <div className="mt-4 grid gap-4">
+          <form
+            noValidate
+            data-validated={validationShown ? "" : undefined}
+            className={cn("mt-4 grid gap-4", INVALID_FIELDS_CLASS)}
+            onSubmit={(event) => {
+              event.preventDefault();
+              clearCustomValidity(event.currentTarget);
+              const next = formatFieldProblems(
+                collectFieldProblems(event.currentTarget),
+                (fields) => tForms("requiredFieldsMissing", { fields }),
+                (fields) => tForms("invalidFormat", { fields }),
+              );
+              setValidationShown(true);
+              setMessages(next);
+              if (next.length > 0) return;
+              submit();
+            }}
+          >
             <p className="text-sm font-semibold tabular-nums text-[var(--ink)]">{formatAed(employee.money)}</p>
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
@@ -127,19 +150,20 @@ export function SalaryPayoutControl({
                 </select>
               )}
             </label>
+            {messages.map((message, index) => (
+              <p key={index} className="text-sm font-medium text-[var(--danger)]">
+                {message}
+              </p>
+            ))}
             {accountsQuery.isError || errorMessage !== "" ? (
               <p className="text-sm text-[var(--danger)]">
                 {errorMessage !== "" ? errorMessage : t("salaryPayError")}
               </p>
             ) : null}
-            <Button
-              type="button"
-              disabled={createPayout.isPending || accountId === "" || date === ""}
-              onClick={submit}
-            >
+            <Button type="submit" disabled={createPayout.isPending}>
               {createPayout.isPending ? <Spinner className="h-4 w-4" /> : t("salaryPaySubmit")}
             </Button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>

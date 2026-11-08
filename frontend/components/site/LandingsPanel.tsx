@@ -120,7 +120,12 @@ export function LandingsPanel() {
           onCancel={null}
           title={draft.id === null ? t("newLanding") : draft.slug}
           pending={landings.save.isPending}
-          error={landings.save.error ?? landings.remove.error}
+          error={
+            landings.save.error ??
+            landings.remove.error ??
+            uploadImage.error ??
+            deleteImage.error
+          }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={() => {
             const { id, ...body } = draft;
@@ -138,13 +143,21 @@ export function LandingsPanel() {
           <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("slug")}>
-              <Input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} />
+              <Input
+                name="slug"
+                required
+                value={draft.slug}
+                onChange={(event) => setDraft({ ...draft, slug: event.target.value })}
+              />
             </Field>
             <Field label={t("sourceCategory")}>
               <NativeSelect
-                value={String(draft.source)}
+                name="source"
+                required
+                value={draft.source === 0 ? "" : String(draft.source)}
                 onChange={(event) => setDraft({ ...draft, source: Number(event.target.value) })}
               >
+                <option value="">{t("sourceCategory")}</option>
                 {(categories.list.data ?? []).map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.name_ru || row.name_en}
@@ -154,11 +167,27 @@ export function LandingsPanel() {
             </Field>
             <Field label={t("pageSlug")}>
               <Input
+                required
+                name={`page_slug_${locale}`}
                 value={draft[`page_slug_${locale}`]}
                 onChange={(event) =>
                   setDraft({ ...draft, [`page_slug_${locale}`]: event.target.value })
                 }
               />
+              {(["en", "ka", "ru"] as const)
+                .filter((code) => code !== locale)
+                .map((code) => (
+                  <input
+                    key={code}
+                    required
+                    name={`page_slug_${code}`}
+                    value={draft[`page_slug_${code}`]}
+                    placeholder={`${t("pageSlug")} ${code.toUpperCase()}`}
+                    onChange={() => undefined}
+                    tabIndex={-1}
+                    className="sr-only"
+                  />
+                ))}
             </Field>
             <Field label={t("pageHeading")} className="sm:col-span-2">
               <Input

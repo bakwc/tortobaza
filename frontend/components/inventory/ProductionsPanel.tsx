@@ -124,11 +124,13 @@ export function ProductionsPanel() {
                 onChange={(semi_product) => setDraft({ ...draft, semi_product })}
                 placeholder={t("chooseComponent")}
                 required={true}
+                name="semi_product"
                 className=""
               />
             </Field>
             <Field label={selected ? `${t("quantity")}, ${units(selected.unit)}` : t("quantity")}>
               <Input
+                name="quantity"
                 required
                 inputMode="decimal"
                 value={draft.quantity}

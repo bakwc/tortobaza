@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -348,15 +348,7 @@ export function InventoryCountsPanel() {
 
   const isClosed = editing?.status === "closed";
 
-  const submitClose = () => {
-    if (editing === null || draft === null) return;
-    counts.save.mutate(
-      { id: editing.id, body: body(draft) },
-      {
-        onSuccess: (saved) => closeCount.mutate(saved.id, { onSuccess: (closed) => setEditing(closed) }),
-      },
-    );
-  };
+  const closeAfterSave = useRef(false);
 
   return (
     <div className="grid gap-6">
@@ -411,12 +403,21 @@ export function InventoryCountsPanel() {
           pending={counts.save.isPending}
           error={counts.save.error ?? counts.remove.error ?? closeCount.error ?? recountCount.error}
           submitLabel={canEdit && !isClosed ? t("saveDraft") : null}
-          onSubmit={() =>
+          onSubmit={() => {
+            const closeAfter = closeAfterSave.current;
+            closeAfterSave.current = false;
             counts.save.mutate(
               { id: editing ? editing.id : null, body: body(draft) },
-              { onSuccess: (saved) => setEditing(saved) },
-            )
-          }
+              {
+                onSuccess: (saved) => {
+                  setEditing(saved);
+                  if (closeAfter) {
+                    closeCount.mutate(saved.id, { onSuccess: (closed) => setEditing(closed) });
+                  }
+                },
+              },
+            );
+          }}
           onDelete={canEdit && editing !== null ? () => counts.remove.mutate(editing.id, { onSuccess: close }) : null}
           deletePending={counts.remove.isPending}
           headerAction={null}
@@ -452,11 +453,23 @@ export function InventoryCountsPanel() {
                       {counts.remove.isPending ? <Spinner className="h-4 w-4" /> : t("delete")}
                     </Button>
                   ) : null}
-                  <Button type="submit" disabled={counts.save.isPending}>
+                  <Button
+                    type="submit"
+                    disabled={counts.save.isPending}
+                    onClick={() => {
+                      closeAfterSave.current = false;
+                    }}
+                  >
                     {counts.save.isPending ? <Spinner className="h-4 w-4" /> : t("saveDraft")}
                   </Button>
                   {editing !== null ? (
-                    <Button type="button" disabled={closeCount.isPending || counts.save.isPending} onClick={submitClose}>
+                    <Button
+                      type="submit"
+                      disabled={closeCount.isPending || counts.save.isPending}
+                      onClick={() => {
+                        closeAfterSave.current = true;
+                      }}
+                    >
                       {closeCount.isPending ? <Spinner className="h-4 w-4" /> : t("closeCount")}
                     </Button>
                   ) : null}
@@ -492,7 +505,13 @@ export function InventoryCountsPanel() {
               {canEdit && editing ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--cream)] p-4">
                   <p className="flex-1 text-sm text-[var(--ink)]">{t("closeCountHint")}</p>
-                  <Button type="button" disabled={closeCount.isPending || counts.save.isPending} onClick={submitClose}>
+                  <Button
+                    type="submit"
+                    disabled={closeCount.isPending || counts.save.isPending}
+                    onClick={() => {
+                      closeAfterSave.current = true;
+                    }}
+                  >
                     {closeCount.isPending ? <Spinner className="h-4 w-4" /> : t("closeCount")}
                   </Button>
                 </div>
