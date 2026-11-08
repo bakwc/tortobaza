@@ -11,13 +11,14 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
-  useSetShowHidden,
-  useShowHidden,
+  matchesVisibility,
   useSiteCategories,
   useSiteCategoryImageDelete,
   useSiteCategoryImageUpload,
+  useVisibility,
 } from "@/hooks/useSite";
 import type { SiteCategory, SiteCategoryBody } from "@/lib/api/site-schemas";
 
@@ -58,10 +59,11 @@ function draftFrom(row: SiteCategory | null, position: number): CategoryDraft {
 export function CategoriesPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
-  const showHidden = useShowHidden();
-  const setShowHidden = useSetShowHidden();
+  const visibility = useVisibility();
   const categories = useSiteCategories();
-  const visibleCategories = (categories.list.data ?? []).filter((row) => showHidden || row.is_active);
+  const visibleCategories = (categories.list.data ?? []).filter((row) =>
+    matchesVisibility(row.is_active, visibility),
+  );
   const uploadImage = useSiteCategoryImageUpload();
   const deleteImage = useSiteCategoryImageDelete();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -82,8 +84,8 @@ export function CategoriesPanel() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("categories")}</CardTitle>
-          <div className="flex flex-wrap items-center gap-3">
-            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+          <div className="flex flex-wrap items-end gap-3">
+            <VisibilitySelect />
             {canEdit ? (
               <Button type="button" size="sm" onClick={() => open(null)}>
                 <Plus className="mr-1 h-4 w-4" />

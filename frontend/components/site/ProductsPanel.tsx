@@ -13,15 +13,16 @@ import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from 
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
 import { ProductImagesEditor } from "@/components/site/ProductImagesEditor";
+import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
+  matchesVisibility,
   useSiteCategories,
   useSiteOptionGroups,
   useSiteProductDetail,
   useSiteProducts,
   useSiteTechCards,
-  useSetShowHidden,
-  useShowHidden,
+  useVisibility,
 } from "@/hooks/useSite";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/lib/api/client";
@@ -103,14 +104,17 @@ export function ProductsPanel() {
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>(undefined);
-  const showHidden = useShowHidden();
-  const setShowHidden = useSetShowHidden();
+  const visibility = useVisibility();
   const categories = useSiteCategories();
   const optionGroups = useSiteOptionGroups();
   const techCards = useSiteTechCards();
   const products = useSiteProducts({ category: categoryFilter, search });
-  const visibleCategories = (categories.list.data ?? []).filter((row) => showHidden || row.is_active);
-  const visibleProducts = (products.list.data ?? []).filter((row) => showHidden || row.is_active);
+  const visibleCategories = (categories.list.data ?? []).filter((row) =>
+    matchesVisibility(row.is_active, visibility),
+  );
+  const visibleProducts = (products.list.data ?? []).filter((row) =>
+    matchesVisibility(row.is_active, visibility),
+  );
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
   const [imageError, setImageError] = useState<unknown>(null);
@@ -181,7 +185,7 @@ export function ProductsPanel() {
               ))}
             </NativeSelect>
           </Field>
-          <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+          <VisibilitySelect />
         </div>
         <QueryState isLoading={products.list.isLoading} isError={products.list.isError}>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

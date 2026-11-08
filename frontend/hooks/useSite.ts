@@ -12,22 +12,32 @@ import type {
   SiteProductBody,
 } from "@/lib/api/site-schemas";
 
-export function useShowHidden(): boolean {
+export type SiteVisibility = "active" | "hidden" | "all";
+
+export function useVisibility(): SiteVisibility {
   const searchParams = useSearchParams();
-  return searchParams.get("show_hidden") === "1";
+  const value = searchParams.get("visibility");
+  if (value === "hidden" || value === "all") return value;
+  return "active";
 }
 
-export function useSetShowHidden(): (value: boolean) => void {
+export function useSetVisibility(): (value: SiteVisibility) => void {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  return (value: boolean) => {
+  return (value: SiteVisibility) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value) params.set("show_hidden", "1");
-    else params.delete("show_hidden");
+    if (value === "active") params.delete("visibility");
+    else params.set("visibility", value);
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
+}
+
+export function matchesVisibility(isActive: boolean, visibility: SiteVisibility): boolean {
+  if (visibility === "all") return true;
+  if (visibility === "hidden") return !isActive;
+  return isActive;
 }
 
 function useInvalidateSite() {

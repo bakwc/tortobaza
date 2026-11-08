@@ -11,13 +11,14 @@ import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from 
 import { ImageCropEditor } from "@/components/site/ImageCropEditor";
 import { OptionImagePreview } from "@/components/site/ImageSitePreview";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
-  useSetShowHidden,
-  useShowHidden,
+  matchesVisibility,
   useSiteOptionGroups,
   useSiteOptionImageDelete,
   useSiteOptionImageUpload,
+  useVisibility,
 } from "@/hooks/useSite";
 import { defaultCenterCrop, type CropValues } from "@/lib/site/crop";
 import type { SiteOptionGroup } from "@/lib/api/site-schemas";
@@ -108,9 +109,13 @@ export function OptionGroupsPanel() {
   const t = useTranslations("site");
   const tForms = useTranslations("forms");
   const canEdit = useCan("edit_catalog");
-  const showHidden = useShowHidden();
-  const setShowHidden = useSetShowHidden();
+  const visibility = useVisibility();
   const groups = useSiteOptionGroups();
+  const visibleGroups = (groups.list.data ?? []).flatMap((row) => {
+    const options = row.options.filter((option) => matchesVisibility(option.is_active, visibility));
+    if (visibility !== "all" && options.length === 0) return [];
+    return [{ row, options }];
+  });
   const uploadOptionImage = useSiteOptionImageUpload();
   const deleteOptionImage = useSiteOptionImageDelete();
   const [locale, setLocale] = useState<SiteLocale>("ru");
@@ -139,8 +144,8 @@ export function OptionGroupsPanel() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("optionGroups")}</CardTitle>
-          <div className="flex flex-wrap items-center gap-3">
-            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+          <div className="flex flex-wrap items-end gap-3">
+            <VisibilitySelect />
             {canEdit ? (
               <Button type="button" size="sm" onClick={() => open(null)}>
                 <Plus className="mr-1 h-4 w-4" />
@@ -151,7 +156,7 @@ export function OptionGroupsPanel() {
         </div>
         <QueryState isLoading={groups.list.isLoading} isError={groups.list.isError}>
           <div className="mt-4 grid gap-3">
-            {(groups.list.data ?? []).map((row) => (
+            {visibleGroups.map(({ row, options }) => (
               <button
                 key={row.id}
                 type="button"
@@ -159,9 +164,22 @@ export function OptionGroupsPanel() {
                 className="rounded-2xl border border-[var(--line)] px-4 py-3 text-left hover:bg-[var(--cream)]"
               >
                 <p className="font-medium text-[var(--ink)]">{row.name_ru || row.name_en}</p>
-                <p className="text-sm text-[var(--muted-2)]">
-                  {row.options.map((option) => option.name_ru || option.name_en).join(", ") || "—"}
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--muted-2)]">
+                  {options.length === 0 ? (
+                    "—"
+                  ) : (
+                    options.map((option) => (
+                      <span key={option.id} className="inline-flex items-center gap-1">
+                        {option.name_ru || option.name_en}
+                        {!option.is_active ? (
+                          <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted-2)]">
+                            {t("inactive")}
+                          </span>
+                        ) : null}
+                      </span>
+                    ))
+                  )}
+                </div>
               </button>
             ))}
           </div>

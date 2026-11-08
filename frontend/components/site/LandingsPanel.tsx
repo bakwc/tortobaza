@@ -10,14 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
-  useSetShowHidden,
-  useShowHidden,
+  matchesVisibility,
   useSiteCategories,
   useSiteCategoryLandings,
   useSiteCategoryLandingImageDelete,
   useSiteCategoryLandingImageUpload,
+  useVisibility,
 } from "@/hooks/useSite";
 import type { SiteCategoryLanding, SiteCategoryLandingBody } from "@/lib/api/site-schemas";
 
@@ -55,10 +56,11 @@ export function LandingsPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
   const categories = useSiteCategories();
-  const showHidden = useShowHidden();
-  const setShowHidden = useSetShowHidden();
+  const visibility = useVisibility();
   const landings = useSiteCategoryLandings();
-  const visibleLandings = (landings.list.data ?? []).filter((row) => showHidden || row.is_active);
+  const visibleLandings = (landings.list.data ?? []).filter((row) =>
+    matchesVisibility(row.is_active, visibility),
+  );
   const uploadImage = useSiteCategoryLandingImageUpload();
   const deleteImage = useSiteCategoryLandingImageDelete();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -77,8 +79,8 @@ export function LandingsPanel() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle>{t("landings")}</CardTitle>
-          <div className="flex flex-wrap items-center gap-3">
-            <CheckboxField label={t("showHidden")} checked={showHidden} onChange={setShowHidden} />
+          <div className="flex flex-wrap items-end gap-3">
+            <VisibilitySelect />
             {canEdit ? (
               <Button type="button" size="sm" onClick={() => open(null)}>
                 <Plus className="mr-1 h-4 w-4" />

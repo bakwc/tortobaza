@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { SectionShell } from "@/components/menu/SectionShell";
 import { Spinner } from "@/components/ui/spinner";
-import { useShowHidden } from "@/hooks/useSite";
+import { useVisibility, type SiteVisibility } from "@/hooks/useSite";
 
 export type SiteSection = "products" | "categories" | "landings" | "option-groups";
 
@@ -31,13 +31,14 @@ export function SiteShell({ section, children }: { section: SiteSection; childre
   );
 }
 
-function tabHref(href: string, showHidden: boolean): string {
-  return showHidden ? `${href}?show_hidden=1` : href;
+function tabHref(href: string, visibility: SiteVisibility): string {
+  if (visibility === "active") return href;
+  return `${href}?visibility=${visibility}`;
 }
 
 function SiteShellContent({ section, children }: { section: SiteSection; children: ReactNode }) {
   const t = useTranslations("site");
-  const showHidden = useShowHidden();
+  const visibility = useVisibility();
 
   return (
     <SectionShell
@@ -45,7 +46,7 @@ function SiteShellContent({ section, children }: { section: SiteSection; childre
       permission="view_catalog"
       tabs={TABS.map((tab) => ({
         key: tab.key,
-        href: tabHref(tab.href, showHidden),
+        href: tabHref(tab.href, visibility),
         label: t(tab.labelKey),
       }))}
     >
