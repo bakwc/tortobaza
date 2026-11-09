@@ -221,6 +221,7 @@ export function WriteOffsPanel() {
             chooseQuantityUnit={false}
             linePrice={null}
             onCreateSuggestion={null}
+            onCreateIngredient={null}
             suggestionPending={false}
           />
         </EditorDialog>

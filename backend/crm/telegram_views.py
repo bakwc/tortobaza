@@ -42,6 +42,17 @@ from crm.telegram_leads import classify_leads, notify_recent_leads, verify_leads
 PAGE_SIZE = 15
 
 
+def _message_search_terms(q: str) -> tuple[str, list[str]]:
+    positives: list[str] = []
+    negatives: list[str] = []
+    for token in q.split():
+        if token.startswith("-") and len(token) > 1:
+            negatives.append(token[1:].casefold())
+        else:
+            positives.append(token)
+    return " ".join(positives).casefold(), negatives
+
+
 def _ingest_authorized(request) -> bool:
     expected = settings.SOCIAL_INGEST_TOKEN
     if not expected:
@@ -93,8 +104,15 @@ class SocialMessageListView(APIView):
             qs = qs.filter(id__in=SocialLead.objects.filter(**lead_filters).values("message_id"))
         stripped = q.strip()
         if stripped:
-            needle = stripped.casefold()
-            rows = [row for row in qs if needle in row.text.casefold()]
+            needle, excluded = _message_search_terms(stripped)
+            rows = []
+            for row in qs:
+                text = row.text.casefold()
+                if needle and needle not in text:
+                    continue
+                if any(term in text for term in excluded):
+                    continue
+                rows.append(row)
             page = Paginator(rows, PAGE_SIZE).page(page_number)
         else:
             page = Paginator(qs, PAGE_SIZE).page(page_number)

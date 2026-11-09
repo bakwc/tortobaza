@@ -30,6 +30,13 @@ export function listPlacement(anchor: HTMLElement): { upward: boolean; maxHeight
   return { upward, maxHeight: Math.max(80, Math.min(preferred, available)) };
 }
 
+function optionIngredientName(option: SearchSelectOption): string | null {
+  if (!option.value.startsWith("ingredient:")) return null;
+  const separator = option.label.indexOf(": ");
+  if (separator === -1) return null;
+  return option.label.slice(separator + 2);
+}
+
 export function SearchSelect({
   options,
   value,
@@ -38,6 +45,8 @@ export function SearchSelect({
   required,
   name,
   className,
+  onCreate,
+  createPending,
 }: {
   options: SearchSelectOption[];
   value: string;
@@ -46,6 +55,8 @@ export function SearchSelect({
   required: boolean;
   name: string | null;
   className: string;
+  onCreate: ((name: string) => void) | null;
+  createPending: boolean;
 }) {
   const t = useTranslations("stock");
   const listId = useId();
@@ -59,9 +70,14 @@ export function SearchSelect({
   const [highlight, setHighlight] = useState(0);
   const [placement, setPlacement] = useState({ upward: false, maxHeight: 240 });
   const selectedLabel = options.find((option) => option.value === value)?.label ?? "";
-  const needle = open && edited ? query.trim().toLowerCase() : "";
+  const typed = open && edited ? query.trim() : "";
+  const needle = typed.toLowerCase();
   const filtered =
     needle === "" ? options : options.filter((option) => option.label.toLowerCase().includes(needle));
+  const showCreate =
+    onCreate !== null &&
+    typed !== "" &&
+    !options.some((option) => optionIngredientName(option)?.toLowerCase() === needle);
   const highlightIndex = filtered.length === 0 ? 0 : Math.min(highlight, filtered.length - 1);
   const active = filtered[highlightIndex] ?? null;
 
@@ -210,6 +226,10 @@ export function SearchSelect({
           if (event.key === "Enter" && open) {
             event.preventDefault();
             if (active) choose(active.value);
+            else if (showCreate && onCreate !== null && !createPending) {
+              onCreate(typed);
+              close();
+            }
             return;
           }
           if (event.key === "Escape" && open) {
@@ -255,6 +275,21 @@ export function SearchSelect({
               </button>
             ))
           )}
+          {showCreate && onCreate !== null ? (
+            <button
+              type="button"
+              tabIndex={-1}
+              disabled={createPending}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onCreate(typed);
+                close();
+              }}
+              className="block w-full border-t border-[var(--line)] px-4 py-2 text-left text-sm font-medium text-[var(--brand)] hover:bg-[var(--cream)] disabled:opacity-50"
+            >
+              {t("createIngredientNamed", { name: typed })}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

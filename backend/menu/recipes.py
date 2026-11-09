@@ -5,7 +5,7 @@ from contextvars import ContextVar
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.utils.translation import gettext as _
 
 from menu.models import (
@@ -148,15 +148,18 @@ def _max_selections(group: ModifierGroup) -> int | None:
     return group.max_selections
 
 
-def _global_groups() -> list[ModifierGroup]:
+def _auto_groups() -> list[ModifierGroup]:
     return _cached(
-        ("global_groups",),
+        ("auto_groups",),
         lambda: list(
-            ModifierGroup.objects.filter(is_global=True).prefetch_related(
+            ModifierGroup.objects.filter(Q(is_global=True) | Q(categories__isnull=False))
+            .distinct()
+            .prefetch_related(
+                "categories",
                 Prefetch(
                     "modifiers",
                     queryset=Modifier.objects.select_related("ingredient", "semi_product", "nested_tech_card"),
-                )
+                ),
             )
         ),
     )
@@ -165,8 +168,13 @@ def _global_groups() -> list[ModifierGroup]:
 def tech_card_group_links(tech_card: TechCard) -> list[TechCardModifierGroup]:
     links = list(tech_card.modifier_groups.select_related("group"))
     linked_ids = {link.group_id for link in links}
-    for group in _global_groups():
+    category_id = tech_card.category_id
+    for group in _auto_groups():
         if group.pk in linked_ids:
+            continue
+        if not group.is_global and (
+            category_id is None or category_id not in {row.pk for row in group.categories.all()}
+        ):
             continue
         if any(modifier.nested_tech_card_id == tech_card.pk for modifier in group.modifiers.all()):
             continue

@@ -276,6 +276,8 @@ function ItemComposer({
         required={listed}
         name="tech_card"
         className="min-w-0 basis-full sm:basis-64 sm:flex-1"
+        onCreate={null}
+        createPending={false}
       />
       {card?.kind === "weighted" ? (
         <Input

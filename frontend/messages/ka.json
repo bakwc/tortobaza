@@ -805,6 +805,7 @@
     "recognizingReceipt": "ჩეკი იკითხება…",
     "removeReceipt": "ჩეკის წაშლა",
     "createIngredient": "ინგრედიენტის შექმნა",
+    "createIngredientNamed": "ინგრედიენტის შექმნა «{name}»",
     "receiptTotalDiffers": "ჩეკში {total}, ხაზებში {lines}",
     "newProduction": "ახალი წარმოება",
     "finishedGood": "მზა პროდუქცია",

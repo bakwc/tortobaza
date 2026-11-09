@@ -16,7 +16,14 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
-import { useCatalogOptions, useIngredients, useModifierGroups, useSemiProducts, useTechCards } from "@/hooks/useStock";
+import {
+  useCatalogOptions,
+  useIngredients,
+  useModifierGroups,
+  useSemiProducts,
+  useTechCardCategories,
+  useTechCards,
+} from "@/hooks/useStock";
 import type { Modifier, ModifierGroup } from "@/lib/api/types";
 
 type ModifierDraft = {
@@ -40,6 +47,7 @@ type GroupDraft = {
   selection_type: "single" | "multi";
   is_required: boolean;
   is_global: boolean;
+  categories: number[];
   min_selections: string;
   max_selections: string;
   position: number;
@@ -53,6 +61,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       selection_type: "single",
       is_required: false,
       is_global: false,
+      categories: [],
       min_selections: "0",
       max_selections: "",
       position,
@@ -64,6 +73,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
     selection_type: row.selection_type,
     is_required: row.is_required,
     is_global: row.is_global,
+    categories: row.categories,
     min_selections: String(row.min_selections),
     max_selections: row.max_selections === null ? "" : String(row.max_selections),
     position: row.position,
@@ -83,6 +93,7 @@ export function ModifierGroupsPanel() {
   const tForms = useTranslations("forms");
   const canEdit = useCan("edit_menu");
   const groups = useModifierGroups();
+  const categories = useTechCardCategories();
   const catalogOptions = useCatalogOptions();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
@@ -149,6 +160,12 @@ export function ModifierGroupsPanel() {
                     {row.selection_type === "single" ? t("selectionSingle") : t("selectionMulti")}
                     {row.is_required ? ` · ${t("required")}` : ""}
                     {row.is_global ? ` · ${t("global")}` : ""}
+                    {!row.is_global && row.categories.length > 0
+                      ? ` · ${(categories.list.data ?? [])
+                          .filter((category) => row.categories.includes(category.id))
+                          .map((category) => category.name)
+                          .join(", ")}`
+                      : ""}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-[var(--muted-2)]">
@@ -178,6 +195,7 @@ export function ModifierGroupsPanel() {
                   selection_type: draft.selection_type,
                   is_required: draft.is_required,
                   is_global: draft.is_global,
+                  categories: draft.is_global ? [] : draft.categories,
                   min_selections: Number(draft.min_selections || "0"),
                   max_selections: draft.max_selections === "" ? null : Number(draft.max_selections),
                   position: draft.position,
@@ -246,9 +264,32 @@ export function ModifierGroupsPanel() {
               <CheckboxField
                 label={t("global")}
                 checked={draft.is_global}
-                onChange={(value) => setDraft({ ...draft, is_global: value })}
+                onChange={(value) =>
+                  setDraft({ ...draft, is_global: value, categories: value ? [] : draft.categories })
+                }
               />
             </div>
+            {!draft.is_global ? (
+              <Field label={t("techCardCategories")} className="sm:col-span-4">
+                <div className="flex flex-wrap gap-4">
+                  {(categories.list.data ?? []).map((category) => (
+                    <CheckboxField
+                      key={category.id}
+                      label={category.name}
+                      checked={draft.categories.includes(category.id)}
+                      onChange={(value) =>
+                        setDraft({
+                          ...draft,
+                          categories: value
+                            ? [...draft.categories, category.id]
+                            : draft.categories.filter((id) => id !== category.id),
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              </Field>
+            ) : null}
           </div>
           <CardTitle>{t("modifiers")}</CardTitle>
           <div className="grid gap-2">
@@ -295,6 +336,8 @@ export function ModifierGroupsPanel() {
                   required={false}
                   name={null}
                   className=""
+                  onCreate={null}
+                  createPending={false}
                 />
                 <div className="flex items-center">
                   <CheckboxField

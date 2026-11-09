@@ -178,6 +178,7 @@ export function ComponentLinesEditor({
   chooseQuantityUnit,
   linePrice,
   onCreateSuggestion,
+  onCreateIngredient,
   suggestionPending,
 }: {
   lines: ComponentLineDraft[];
@@ -188,6 +189,7 @@ export function ComponentLinesEditor({
   chooseQuantityUnit: boolean;
   linePrice: ((line: ComponentLineDraft) => string | null) | null;
   onCreateSuggestion: ((line: ComponentLineDraft, kind: "ingredient" | "semi_product") => void) | null;
+  onCreateIngredient: ((line: ComponentLineDraft, name: string) => void) | null;
   suggestionPending: boolean;
 }) {
   const t = useTranslations("stock");
@@ -223,6 +225,8 @@ export function ComponentLinesEditor({
               required={true}
               name="component"
               className="col-span-2 sm:col-span-1"
+              onCreate={onCreateIngredient === null ? null : (name) => onCreateIngredient(line, name)}
+              createPending={suggestionPending}
             />
             <div className="relative">
               <Input

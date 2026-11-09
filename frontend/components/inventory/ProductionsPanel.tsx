@@ -126,6 +126,8 @@ export function ProductionsPanel() {
                 required={true}
                 name="semi_product"
                 className=""
+                onCreate={null}
+                createPending={false}
               />
             </Field>
             <Field label={selected ? `${t("quantity")}, ${units(selected.unit)}` : t("quantity")}>

@@ -364,6 +364,8 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                   required={true}
                   name="ingredient"
                   className="col-span-2 sm:col-span-1"
+                  onCreate={null}
+                  createPending={false}
                 />
                 <div className="relative">
                   <Input

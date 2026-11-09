@@ -805,6 +805,7 @@
     "recognizingReceipt": "Распознаём чек…",
     "removeReceipt": "Убрать чек",
     "createIngredient": "Создать ингредиент",
+    "createIngredientNamed": "Создать ингредиент «{name}»",
     "receiptTotalDiffers": "в чеке {total}, по строкам {lines}",
     "newProduction": "Новое производство",
     "finishedGood": "Готовая продукция",

@@ -328,6 +328,7 @@ class ModifierInputSerializer(serializers.Serializer):
 
 class ModifierGroupSerializer(serializers.ModelSerializer):
     modifiers = ModifierInputSerializer(many=True, write_only=True)
+    categories = serializers.PrimaryKeyRelatedField(queryset=TechCardCategory.objects.all(), many=True)
 
     class Meta:
         model = ModifierGroup
@@ -337,6 +338,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             "selection_type",
             "is_required",
             "is_global",
+            "categories",
             "min_selections",
             "max_selections",
             "position",
@@ -388,21 +390,27 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             taken = taken.exclude(group=self.instance)
         if taken.exists():
             raise serializers.ValidationError("A website option can be linked to one modifier only.")
+        if attrs["is_global"] and attrs["categories"]:
+            raise serializers.ValidationError("A global group cannot be limited to categories.")
         return attrs
 
     @transaction.atomic
     def create(self, validated_data):
         modifiers = validated_data.pop("modifiers")
+        categories = validated_data.pop("categories")
         instance = ModifierGroup.objects.create(**validated_data)
+        instance.categories.set(categories)
         self._save_modifiers(instance, modifiers)
         return instance
 
     @transaction.atomic
     def update(self, instance, validated_data):
         modifiers = validated_data.pop("modifiers")
+        categories = validated_data.pop("categories")
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        instance.categories.set(categories)
         self._save_modifiers(instance, modifiers)
         return instance
 

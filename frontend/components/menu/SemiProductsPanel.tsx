@@ -657,6 +657,7 @@ export function SemiProductsPanel() {
             chooseQuantityUnit={true}
             linePrice={null}
             onCreateSuggestion={null}
+            onCreateIngredient={null}
             suggestionPending={false}
           />
         </EditorDialog>

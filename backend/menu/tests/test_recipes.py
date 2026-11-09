@@ -19,6 +19,7 @@ from menu.models import (
     SemiProduct,
     SemiProductLine,
     TechCard,
+    TechCardCategory,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -683,6 +684,7 @@ class NestedTechCardTests(TestCase):
                 "selection_type": "multi",
                 "is_required": False,
                 "is_global": False,
+                "categories": [],
                 "min_selections": 0,
                 "max_selections": None,
                 "position": 0,
@@ -745,3 +747,71 @@ class GlobalModifierGroupTests(TestCase):
         needs = expand_order_item(self.menu.bento, None, 2, [(self.menu.balloon, 1)], [])
         self.assertEqual(needs[self.menu.ink], Decimal("10"))
         self.assertNotIn(self.menu.paper, needs)
+
+
+class CategoryModifierGroupTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.cakes = TechCardCategory.objects.create(name="Cakes")
+        self.bentos = TechCardCategory.objects.create(name="Bentos")
+        self.menu.frozen_cake.category = self.cakes
+        self.menu.frozen_cake.save(update_fields=["category"])
+        self.menu.bento.category = self.bentos
+        self.menu.bento.save(update_fields=["category"])
+        self.menu.extras.is_required = True
+        self.menu.extras.save(update_fields=["is_required"])
+        self.menu.extras.categories.add(self.cakes)
+        self.menu.balloon.ingredient = self.menu.paper
+        self.menu.balloon.save(update_fields=["ingredient"])
+
+    def test_required_category_group_must_be_selected(self):
+        with self.assertRaises(ValidationError):
+            validate_order_item(self.menu.frozen_cake, None, [])
+
+    def test_other_category_is_not_affected(self):
+        validate_order_item(self.menu.bento, None, [])
+
+    def test_card_without_category_is_not_affected(self):
+        plain = TechCard.objects.create(name="Plain", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        validate_order_item(plain, None, [])
+
+    def test_explicit_link_overrides_category_default(self):
+        TechCardModifierGroup.objects.create(tech_card=self.menu.frozen_cake, group=self.menu.extras, position=0)
+        TechCardModifierLine.objects.create(
+            tech_card=self.menu.frozen_cake,
+            modifier=self.menu.balloon,
+            ingredient=self.menu.ink,
+            quantity=Decimal("5"),
+            quantity_unit=UNIT_MILLILITER,
+            scales_by_weight=False,
+        )
+        needs = expand_order_item(self.menu.frozen_cake, None, 2, [(self.menu.balloon, 1)], [])
+        self.assertEqual(needs[self.menu.ink], Decimal("10"))
+        self.assertNotIn(self.menu.paper, needs)
+
+    def test_global_group_rejects_categories(self):
+        serializer = ModifierGroupSerializer(
+            self.menu.extras,
+            data={
+                "name": self.menu.extras.name,
+                "selection_type": "multi",
+                "is_required": True,
+                "is_global": True,
+                "categories": [self.cakes.pk],
+                "min_selections": 0,
+                "max_selections": None,
+                "position": 0,
+                "modifiers": [
+                    {
+                        "id": self.menu.balloon.pk,
+                        "name": "Balloon",
+                        "catalog_option": None,
+                        "ingredient": self.menu.paper.pk,
+                        "semi_product": None,
+                        "nested_tech_card": None,
+                        "is_active": True,
+                    }
+                ],
+            },
+        )
+        self.assertFalse(serializer.is_valid())

@@ -14,7 +14,7 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatCrmDateTime } from "@/lib/format";
 import type { SocialMessage, SocialMessageKind } from "@/lib/api/types";
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 50;
 const SEARCH_TIMEOUT_MS = 8000;
 
 function parseKind(value: string | null): SocialMessageKind {
@@ -191,6 +191,7 @@ export function LeadsMessagesPanel() {
     return () => clearTimeout(id);
   }, [messages.isFetching, kind, network, channel, vertical, effectiveQ, queryPage]);
   const rows = messages.data?.results ?? [];
+  const searchPending = draft.trim() !== effectiveQ || messages.isPlaceholderData;
   const channelRows = (channels.list.data ?? []).filter(
     (row) => network === "" || row.network_slug === network,
   );
@@ -299,7 +300,10 @@ export function LeadsMessagesPanel() {
         </Card>
         <Card>
           <CardTitle>{t("messages")}</CardTitle>
-          <QueryState isLoading={messages.isLoading} isError={messages.isError}>
+          <QueryState
+            isLoading={messages.isLoading || searchPending}
+            isError={messages.isError && !searchPending}
+          >
             {rows.length === 0 ? (
               <p className="mt-4 text-sm text-[var(--muted-2)]">{t("emptyMessages")}</p>
             ) : (

@@ -97,6 +97,18 @@ class TelegramLeadsApiTests(TestCase):
         self.assertEqual(len(body["results"]), 1)
         self.assertIn("торт", body["results"][0]["text"].casefold())
 
+    def test_messages_q_excludes_minus_words(self):
+        kept = self._message(1, "нужен кондитер", True, True)
+        self._message(2, "кондитер в Москва сегодня", True, True)
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.get(
+            "/api/crm/social/messages/",
+            {"kind": "all", "q": "кондитер -москва"},
+        )
+        self.assertEqual(response.status_code, 200)
+        ids = [row["id"] for row in response.json()["results"]]
+        self.assertEqual(ids, [kept.id])
+
     def test_message_url(self):
         msg = self._message(15, "lead", True, True)
         self.client.force_authenticate(user=self.viewer)

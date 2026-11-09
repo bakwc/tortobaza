@@ -72,7 +72,7 @@ import {
   useTechCardImport,
   useTechCardList,
 } from "@/hooks/useStock";
-import type { IngredientBody, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
+import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
@@ -476,33 +476,42 @@ export function TechCardsPanel() {
       },
     });
   };
+  const selectIngredient = (lineKey: string, id: number) => {
+    setDraft((currentDraft) =>
+      currentDraft === null
+        ? currentDraft
+        : patchDraftLine(currentDraft, lineKey, { component: `ingredient:${id}`, suggestion: null }),
+    );
+  };
+  const createIngredient = (line: ComponentLineDraft, name: string, unit: MenuUnit) => {
+    const trimmed = name.trim();
+    if (trimmed === "") return;
+    const existing = (ingredients.list.data ?? []).find((row) => row.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing !== undefined) {
+      selectIngredient(line.key, existing.id);
+      return;
+    }
+    const body: IngredientBody = {
+      name: trimmed,
+      category: null,
+      unit,
+      is_active: true,
+      avg_cost: null,
+      cost_quantity: null,
+      grams_per_unit: unit === "ml" ? "1" : null,
+      sale_price: null,
+    };
+    Reflect.deleteProperty(body, "avg_cost");
+    Reflect.deleteProperty(body, "cost_quantity");
+    Reflect.deleteProperty(body, "sale_price");
+    if (unit !== "ml") Reflect.deleteProperty(body, "grams_per_unit");
+    ingredients.save.mutate({ id: null, body }, { onSuccess: (created) => selectIngredient(line.key, created.id) });
+  };
   const createSuggestion = (line: ComponentLineDraft, kind: "ingredient" | "semi_product") => {
     if (line.suggestion === null) return;
     const suggestion = line.suggestion;
     if (kind === "ingredient") {
-      const body: IngredientBody = {
-        name: suggestion.name,
-        category: null,
-        unit: suggestion.unit,
-        is_active: true,
-        avg_cost: null,
-        cost_quantity: null,
-        grams_per_unit: null,
-        sale_price: null,
-      };
-      Reflect.deleteProperty(body, "avg_cost");
-      Reflect.deleteProperty(body, "cost_quantity");
-      ingredients.save.mutate(
-        { id: null, body },
-        {
-          onSuccess: (created) =>
-            setDraft((currentDraft) =>
-              currentDraft === null
-                ? currentDraft
-                : patchDraftLine(currentDraft, line.key, { component: `ingredient:${created.id}`, suggestion: null }),
-            ),
-        },
-      );
+      createIngredient(line, suggestion.name, suggestion.unit);
       return;
     }
     semiProducts.save.mutate(
@@ -1147,6 +1156,7 @@ export function TechCardsPanel() {
             chooseQuantityUnit={true}
             linePrice={null}
             onCreateSuggestion={createSuggestion}
+            onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
             suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
           />
 
@@ -1199,6 +1209,7 @@ export function TechCardsPanel() {
                 chooseQuantityUnit={true}
                 linePrice={null}
                 onCreateSuggestion={createSuggestion}
+                onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
                 suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
               />
               <div className="flex flex-col gap-1.5">

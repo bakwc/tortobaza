@@ -1477,6 +1477,7 @@ export const ModifierGroupSchema = z.object({
   selection_type: z.enum(["single", "multi"]),
   is_required: z.boolean(),
   is_global: z.boolean(),
+  categories: z.array(z.number()),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
   position: z.number(),
@@ -1663,6 +1664,7 @@ export type ModifierGroupBody = {
   selection_type: "single" | "multi";
   is_required: boolean;
   is_global: boolean;
+  categories: number[];
   min_selections: number;
   max_selections: number | null;
   position: number;

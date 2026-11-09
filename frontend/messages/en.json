@@ -805,6 +805,7 @@
     "recognizingReceipt": "Reading the receipt…",
     "removeReceipt": "Remove receipt",
     "createIngredient": "Create ingredient",
+    "createIngredientNamed": "Create ingredient “{name}”",
     "receiptTotalDiffers": "receipt total is {total}, lines add up to {lines}",
     "newProduction": "New production",
     "finishedGood": "Finished good",

@@ -285,6 +285,8 @@ export function FinishedProductionsPanel() {
                     required={true}
                     name="created_by"
                     className=""
+                    onCreate={null}
+                    createPending={false}
                   />
                 </Field>
               ) : null}
@@ -316,6 +318,8 @@ export function FinishedProductionsPanel() {
                         required={true}
                         name="tech_card"
                         className=""
+                        onCreate={null}
+                        createPending={false}
                       />
                     </Field>
                     {card?.kind === "weighted" ? (

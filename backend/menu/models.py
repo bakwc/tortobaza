@@ -226,6 +226,12 @@ class ModifierGroup(models.Model):
     )
     is_required = models.BooleanField(default=False, verbose_name=_("Is required"))
     is_global = models.BooleanField(default=False, verbose_name=_("Is global"))
+    categories = models.ManyToManyField(
+        "TechCardCategory",
+        blank=True,
+        related_name="modifier_groups",
+        verbose_name=_("Categories"),
+    )
     min_selections = models.PositiveIntegerField(default=0, verbose_name=_("Minimum selections"))
     max_selections = models.PositiveIntegerField(
         null=True,
