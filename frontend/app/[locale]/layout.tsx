@@ -14,7 +14,31 @@ import { localBusinessJsonLd } from "@/lib/seo";
 import { isDevSweetChillHost, publicHostFromRequest } from "@/lib/site-host";
 import { buildRootMetadata } from "@/lib/site-metadata";
 import { getPublicSiteOrigin } from "@/lib/site-origin";
+import { TRACKED_PREFIXES } from "@/lib/tracked-paths";
 import { Providers } from "./providers";
+
+const umamiBeforeSend = `window.umamiBeforeSend = function(type, payload) {
+  var pathname = new URL(payload.url, window.location.origin).pathname;
+  var locales = ${JSON.stringify(routing.locales)};
+  var prefixes = ${JSON.stringify(TRACKED_PREFIXES)};
+  var rest = pathname;
+  for (var i = 0; i < locales.length; i++) {
+    var localePrefix = "/" + locales[i];
+    if (rest === localePrefix || rest.indexOf(localePrefix + "/") === 0) {
+      rest = rest.slice(localePrefix.length) || "/";
+      break;
+    }
+  }
+  if (rest.length > 1 && rest.charAt(rest.length - 1) === "/") {
+    rest = rest.slice(0, -1);
+  }
+  if (rest === "/") return payload;
+  for (var j = 0; j < prefixes.length; j++) {
+    var prefix = prefixes[j];
+    if (rest === prefix || rest.indexOf(prefix + "/") === 0) return payload;
+  }
+  return false;
+};`;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -55,14 +79,7 @@ export default async function LocaleLayout({
       <body className="min-h-full flex flex-col bg-[var(--cream-soft)] text-[var(--ink)]">
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.umamiBeforeSend = function(type, payload) {
-  var pathname = new URL(payload.url, window.location.origin).pathname;
-  var isInternal = /^\\/(en|ka|ru)\\/(analytics|attendance|crm|finance|history|inventory|login|menu|rsge)(\\/|$)/i;
-  if (isInternal.test(pathname)) {
-    return false;
-  }
-  return payload;
-};`,
+            __html: umamiBeforeSend,
           }}
         />
         <Script

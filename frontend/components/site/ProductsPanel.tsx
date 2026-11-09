@@ -98,6 +98,49 @@ function displayName(row: SiteProductListItem, locale: SiteLocale): string {
   return row.name_ru;
 }
 
+function ProductListCard({
+  row,
+  locale,
+  inactiveLabel,
+  onOpen,
+}: {
+  row: SiteProductListItem;
+  locale: SiteLocale;
+  inactiveLabel: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="rounded-2xl border border-[var(--line)] bg-white p-4 text-left hover:bg-[var(--cream)]"
+    >
+      <div className="aspect-square w-full overflow-hidden bg-[var(--cream)]">
+        {row.primary_image ? (
+          <img
+            src={row.primary_image.src}
+            srcSet={row.primary_image.srcset}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : null}
+      </div>
+      <div className="mt-3 flex items-start justify-between gap-2">
+        <div>
+          <p className="font-medium text-[var(--ink)]">{displayName(row, locale)}</p>
+          <p className="text-sm text-[var(--muted-2)]">{row.category_name}</p>
+        </div>
+        {!row.is_active ? (
+          <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted-2)]">
+            {inactiveLabel}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-2 text-sm text-[var(--ink)]">{row.base_price} GEL</p>
+    </button>
+  );
+}
+
 export function ProductsPanel() {
   const t = useTranslations("site");
   const canEdit = useCan("edit_catalog");
@@ -115,6 +158,11 @@ export function ProductsPanel() {
   const visibleProducts = (products.list.data ?? []).filter((row) =>
     matchesVisibility(row.is_active, visibility),
   );
+  const productGroups = visibleCategories.flatMap((category) => {
+    const rows = visibleProducts.filter((row) => row.category === category.id);
+    if (rows.length === 0) return [];
+    return [{ id: category.id, label: category.name_ru || category.name_en, rows }];
+  });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<ProductDraft | null>(null);
   const [imageError, setImageError] = useState<unknown>(null);
@@ -202,39 +250,38 @@ export function ProductsPanel() {
           <VisibilitySelect />
         </div>
         <QueryState isLoading={products.list.isLoading} isError={products.list.isError}>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleProducts.map((row) => (
-              <button
-                key={row.id}
-                type="button"
-                onClick={() => open(row)}
-                className="rounded-2xl border border-[var(--line)] bg-white p-4 text-left hover:bg-[var(--cream)]"
-              >
-                <div className="aspect-square w-full overflow-hidden bg-[var(--cream)]">
-                  {row.primary_image ? (
-                    <img
-                      src={row.primary_image.src}
-                      srcSet={row.primary_image.srcset}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
-                </div>
-                <div className="mt-3 flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-[var(--ink)]">{displayName(row, locale)}</p>
-                    <p className="text-sm text-[var(--muted-2)]">{row.category_name}</p>
+          {categoryFilter === undefined ? (
+            <div className="mt-4 grid gap-6">
+              {productGroups.map((group) => (
+                <section key={group.id}>
+                  <h3 className="text-lg font-semibold text-[var(--ink)]">{group.label}</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.rows.map((row) => (
+                      <ProductListCard
+                        key={row.id}
+                        row={row}
+                        locale={locale}
+                        inactiveLabel={t("inactive")}
+                        onOpen={() => open(row)}
+                      />
+                    ))}
                   </div>
-                  {!row.is_active ? (
-                    <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted-2)]">
-                      {t("inactive")}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-2 text-sm text-[var(--ink)]">{row.base_price} GEL</p>
-              </button>
-            ))}
-          </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleProducts.map((row) => (
+                <ProductListCard
+                  key={row.id}
+                  row={row}
+                  locale={locale}
+                  inactiveLabel={t("inactive")}
+                  onOpen={() => open(row)}
+                />
+              ))}
+            </div>
+          )}
         </QueryState>
       </Card>
 

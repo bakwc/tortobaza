@@ -509,7 +509,6 @@
       "notSelected": "Не выбрано",
       "modifierQuantity": "Количество",
       "needsReview": "Проверьте позицию: она перенесена с сайта автоматически",
-      "markReviewed": "Проверено",
       "techCard": "Тех. карта",
       "chooseTechCard": "Выберите тех. карту",
       "freeItem": "Свободная позиция",
@@ -519,10 +518,9 @@
       "weightKg": "Вес, кг",
       "quantity": "Количество",
       "price": "Цена",
-      "extraIngredients": "Дополнительные ингредиенты",
-      "ingredients": "Ингредиенты",
       "comment": "Комментарий",
-      "addItem": "Добавить позицию",
+      "editComment": "Комментарий",
+      "commitItem": "Добавить",
       "itemNumber": "Позиция {number}"
     }
   },

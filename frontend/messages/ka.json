@@ -509,7 +509,6 @@
       "notSelected": "არ არის არჩეული",
       "modifierQuantity": "რაოდენობა",
       "needsReview": "შეამოწმეთ პოზიცია: ის საიტიდან ავტომატურად გადმოვიდა",
-      "markReviewed": "შემოწმებულია",
       "techCard": "ტექ. ბარათი",
       "chooseTechCard": "აირჩიეთ ტექ. ბარათი",
       "freeItem": "თავისუფალი პოზიცია",
@@ -519,10 +518,9 @@
       "weightKg": "წონა, კგ",
       "quantity": "რაოდენობა",
       "price": "ფასი",
-      "extraIngredients": "დამატებითი ინგრედიენტები",
-      "ingredients": "ინგრედიენტები",
       "comment": "კომენტარი",
-      "addItem": "პოზიციის დამატება",
+      "editComment": "კომენტარი",
+      "commitItem": "დამატება",
       "itemNumber": "პოზიცია {number}"
     }
   },

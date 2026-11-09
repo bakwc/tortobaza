@@ -259,10 +259,6 @@ export function crmModifierSale(item: CrmItemDraft, techCards: TechCard[], modif
   return surcharge(modifierSale(item, card, techCards, modifierId, quantity));
 }
 
-export function crmExtraLineSale(line: ComponentLineDraft, techCards: TechCard[]): string | null {
-  return surcharge(extraLineSale(line, techCards));
-}
-
 export function crmItemSalePrice(item: CrmItemDraft, techCards: TechCard[]): string | null {
   const card = findCard(techCards, item.tech_card);
   if (card === undefined) return null;

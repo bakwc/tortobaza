@@ -1,7 +1,7 @@
 "use client";
 
 import { Cake } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Link } from "@/i18n/navigation";
@@ -11,9 +11,20 @@ import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStat
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-function formatOrderDate(iso: string): string {
+function localeTag(locale: string): string {
+  if (locale === "ka") return "ka-GE";
+  if (locale === "ru") return "ru-RU";
+  return "en-GB";
+}
+
+function formatOrderDate(iso: string, locale: string): string {
   const [year, month, day] = iso.split("-");
-  return `${day}.${month}.${year}`;
+  return new Intl.DateTimeFormat(localeTag(locale), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))));
 }
 
 function orderSummary(order: CrmClientOrderHistory): string {
@@ -33,6 +44,7 @@ function ClientOrderRow({
   onOpen: () => void;
 }) {
   const t = useTranslations("crm");
+  const locale = useLocale();
   const tone = crmOrderStatusTone(order.status);
   const className = cn(
     "flex h-14 items-center gap-3 overflow-hidden px-4",
@@ -55,7 +67,7 @@ function ClientOrderRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium leading-5 text-[var(--ink)]">
-          {formatOrderDate(order.date)} · #{order.id}
+          {formatOrderDate(order.date, locale)} · #{order.id}
         </span>
         <span className="block truncate text-xs leading-4 text-[var(--ink)]/60">{orderSummary(order)}</span>
       </span>
