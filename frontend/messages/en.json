@@ -917,6 +917,7 @@
     "kindKeyword": "Keyword matches",
     "kindAll": "All",
     "open": "Open",
+    "openMessage": "Open message",
     "sentAt": "Date",
     "channel": "Channel",
     "sender": "Sender",

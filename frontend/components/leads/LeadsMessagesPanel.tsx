@@ -306,12 +306,12 @@ export function LeadsMessagesPanel() {
               <ul className="mt-4 divide-y divide-[var(--line)]">
                 {rows.map((row) => (
                   <li key={row.id} className="py-4 first:pt-0 last:pb-0">
-                    <button
-                      type="button"
-                      className="w-full text-left"
-                      onClick={() => setSelected(row)}
-                    >
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <div className="flex items-start justify-between gap-x-4 gap-y-2">
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left"
+                        onClick={() => setSelected(row)}
+                      >
                         <p className="min-w-0 text-sm">
                           <span className="font-medium text-[var(--ink)]">
                             {row.channel_title || row.channel_username}
@@ -321,22 +321,29 @@ export function LeadsMessagesPanel() {
                             {senderLabel(row.sender_username, row.sender_id)}
                           </span>
                         </p>
-                        <time className="shrink-0 text-xs text-[var(--muted-2)]">
+                        <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
+                          {row.text || "—"}
+                        </p>
+                        {row.leads.some((lead) => lead.lead) ? (
+                          <p className="mt-2 text-xs text-[var(--muted-2)]">
+                            {row.leads
+                              .filter((lead) => lead.lead)
+                              .map((lead) => lead.vertical_name)
+                              .join(", ")}
+                          </p>
+                        ) : null}
+                      </button>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <time className="text-xs text-[var(--muted-2)]">
                           {formatCrmDateTime(row.sent_at, locale)}
                         </time>
+                        <Button asChild variant="outline" size="sm">
+                          <a href={row.url} target="_blank" rel="noopener noreferrer">
+                            {t("openMessage")}
+                          </a>
+                        </Button>
                       </div>
-                      <p className="mt-2 max-w-3xl text-[15px] leading-relaxed whitespace-pre-wrap break-words text-[var(--ink)]">
-                        {row.text || "—"}
-                      </p>
-                      {row.leads.some((lead) => lead.lead) ? (
-                        <p className="mt-2 text-xs text-[var(--muted-2)]">
-                          {row.leads
-                            .filter((lead) => lead.lead)
-                            .map((lead) => lead.vertical_name)
-                            .join(", ")}
-                        </p>
-                      ) : null}
-                    </button>
+                    </div>
                   </li>
                 ))}
               </ul>

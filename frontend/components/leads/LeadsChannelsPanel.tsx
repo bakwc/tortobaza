@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
@@ -53,18 +53,34 @@ export function LeadsChannelsPanel() {
                     <th className="py-2">{t("username")}</th>
                     <th className="py-2">{t("title")}</th>
                     <th className="py-2">{t("enabled")}</th>
+                    {canEdit ? <th className="py-2" /> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr
                       key={row.id}
-                      onClick={() => open(row)}
+                      onClick={() => {
+                        window.open(`https://t.me/${row.username}`, "_blank", "noopener,noreferrer");
+                      }}
                       className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
                     >
                       <td className="py-2">{row.username}</td>
                       <td className="py-2">{row.title || "—"}</td>
                       <td className="py-2">{row.enabled ? stock("yes") : stock("no")}</td>
+                      {canEdit ? (
+                        <td className="py-2 text-right" onClick={(event) => event.stopPropagation()}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label={stock("edit")}
+                            onClick={() => open(row)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
