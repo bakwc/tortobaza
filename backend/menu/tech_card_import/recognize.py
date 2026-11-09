@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 TECH_CARD_MODEL = "gpt-6.1-sol"
 TECH_CARD_TIMEOUT_SECONDS = 180
+TECH_CARD_ATTEMPTS = 2
 
 TECH_CARD_PROMPT = """You read a pastry tech card and return one structured recipe.
 
@@ -173,6 +174,10 @@ def recognize_tech_card(filename: str, data: bytes) -> dict:
         ensure_ascii=False,
     )
     content = [{"type": "input_text", "text": catalog}, *document_input(filename, data)]
+    ingredient_ids = {row.pk for row in ingredients}
+    semi_product_ids = {row.pk for row in semi_products}
+    source_name = Path(filename).name
+    conversation: list[dict] = [{"role": "user", "content": content}]
     logger.info(
         "tech card openai request model=%s file=%s bytes=%s ingredients=%s semi_products=%s key_set=%s",
         TECH_CARD_MODEL,
@@ -184,20 +189,30 @@ def recognize_tech_card(filename: str, data: bytes) -> dict:
     )
     started = time.monotonic()
     client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=TECH_CARD_TIMEOUT_SECONDS)
-    response = client.responses.parse(
-        model=TECH_CARD_MODEL,
-        instructions=TECH_CARD_PROMPT,
-        input=[{"role": "user", "content": content}],
-        text_format=ImportedTechCard,
-        store=False,
-    )
-    logger.info("tech card openai response elapsed=%.1fs", time.monotonic() - started)
-    parsed = response.output_parsed
-    if parsed is None:
-        raise ValueError("Tech card recognition returned no data.")
-    return card_payload(
-        parsed,
-        {row.pk for row in ingredients},
-        {row.pk for row in semi_products},
-        Path(filename).name,
-    )
+    for attempt in range(TECH_CARD_ATTEMPTS):
+        response = client.responses.parse(
+            model=TECH_CARD_MODEL,
+            instructions=TECH_CARD_PROMPT,
+            input=conversation,
+            text_format=ImportedTechCard,
+            store=False,
+        )
+        logger.info(
+            "tech card openai response attempt=%s elapsed=%.1fs",
+            attempt + 1,
+            time.monotonic() - started,
+        )
+        parsed = response.output_parsed
+        if parsed is None:
+            error = ValueError("Tech card recognition returned no data.")
+        else:
+            try:
+                return card_payload(parsed, ingredient_ids, semi_product_ids, source_name)
+            except ValueError as caught:
+                error = caught
+        if attempt + 1 == TECH_CARD_ATTEMPTS:
+            break
+        logger.info("tech card openai correction error=%s", error)
+        conversation.append({"role": "assistant", "content": response.output_text})
+        conversation.append({"role": "user", "content": str(error)})
+    raise error
