@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Bar, BarChart, CartesianGrid, LabelList, Legend, Tooltip, XAxis, YAxis } from "recharts";
+import { CrmClientOrdersDialog } from "@/components/crm/CrmClientOrdersDialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticsClients } from "@/hooks/useAnalytics";
-import { Link } from "@/i18n/navigation";
 import { formatAmount, formatMoney } from "@/lib/format";
 import type { AnalyticsCustomer } from "@/lib/api/types";
 import {
@@ -219,6 +220,7 @@ export function ClientsPanel() {
 function CustomerTable({ rows }: { rows: AnalyticsCustomer[] }) {
   const t = useTranslations("analytics");
   const locale = useLocale();
+  const [selected, setSelected] = useState<AnalyticsCustomer | null>(null);
   if (rows.length === 0) return <Note>{t("emptyValue")}</Note>;
   return (
     <div className="overflow-x-auto">
@@ -237,7 +239,13 @@ function CustomerTable({ rows }: { rows: AnalyticsCustomer[] }) {
           {rows.map((row) => (
             <tr key={row.order_id} className="border-t border-[var(--line)]">
               <td className="py-2 pr-3">
-                <ClientLink row={row} />
+                <button
+                  type="button"
+                  onClick={() => setSelected(row)}
+                  className="cursor-pointer font-medium text-[var(--brand)]"
+                >
+                  {row.name === "" ? t("emptyValue") : row.name}
+                </button>
               </td>
               <td className="py-2 pr-3 tabular-nums">{row.phones.join(", ")}</td>
               <td className="py-2 pr-3 text-right tabular-nums">{row.orders}</td>
@@ -248,15 +256,16 @@ function CustomerTable({ rows }: { rows: AnalyticsCustomer[] }) {
           ))}
         </tbody>
       </table>
+      {selected !== null ? (
+        <CrmClientOrdersDialog
+          orderId={selected.order_id}
+          count={selected.orders}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSelected(null);
+          }}
+        />
+      ) : null}
     </div>
-  );
-}
-
-function ClientLink({ row }: { row: { name: string; order_id: number } }) {
-  const t = useTranslations("analytics");
-  return (
-    <Link href={`/crm/${row.order_id}/edit`} className="font-medium text-[var(--brand)]">
-      {row.name === "" ? t("emptyValue") : row.name}
-    </Link>
   );
 }

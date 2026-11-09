@@ -337,7 +337,7 @@ class NotifyTelegramLeadsTests(TestCase):
         self.assertEqual(call["method"], "sendMessage")
         self.assertEqual(call["payload"]["chat_id"], "leads-chat")
         text = call["payload"]["text"]
-        self.assertIn("Cakes Chat", text)
+        self.assertIn("В telegram чате <b>Cakes Chat</b> спрашивают:", text)
         self.assertIn("где заказать торт?", text)
         self.assertIn("02.11.2026, 15:00", text)
         self.assertIn("https://t.me/cakes/15", text)
@@ -395,6 +395,36 @@ class NotifyTelegramLeadsTests(TestCase):
         )
         notify_recent_leads("telegram")
         telegram_json.assert_not_called()
+
+    @patch("crm.telegram_leads._telegram_json")
+    @patch("crm.telegram_leads.timezone.now")
+    def test_threads_notification_omits_channel_name(self, now_mock, telegram_json):
+        now_mock.return_value = self.now
+        telegram_json.side_effect = self._capture_telegram
+        threads = SocialSource.objects.create(
+            network=SocialNetwork.objects.create(slug="threads", name="Threads"),
+            username="cakes",
+            title="Cakes Thread",
+        )
+        message = SocialMessage.objects.create(
+            channel=threads,
+            external_id="1",
+            url="https://www.threads.net/@cakes/post/1",
+            sent_at=self.now - timedelta(hours=1),
+            text="где заказать торт?",
+        )
+        SocialLead.objects.create(
+            message=message,
+            vertical=LeadVertical.objects.get(slug="sweet_chill"),
+            keyword_match=True,
+            potential_lead=True,
+            lead=True,
+        )
+        notify_recent_leads("threads")
+        text = self.telegram_calls[0]["payload"]["text"]
+        self.assertTrue(text.startswith("В threads спрашивают:"))
+        self.assertNotIn("cakes", text.splitlines()[0])
+        self.assertNotIn("Cakes Thread", text)
 
     @patch("crm.telegram_leads._telegram_json")
     @patch("crm.telegram_leads.timezone.now")

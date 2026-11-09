@@ -167,13 +167,21 @@ def _lead_message_url(message: SocialMessage) -> str:
     return message.url
 
 
+def _notification_intro(channel) -> str:
+    slug = channel.network.slug
+    if slug == "threads":
+        return "В threads спрашивают:"
+    if slug == "telegram":
+        return f"В telegram чате <b>{_esc(_channel_label(channel))}</b> спрашивают:"
+    raise RuntimeError(f"Unknown network {slug}")
+
+
 def build_lead_notification_html(message: SocialMessage) -> str:
     channel = message.channel
-    label = _channel_label(channel)
     url = _lead_message_url(message)
     posted = timezone.localtime(message.sent_at).strftime("%d.%m.%Y, %H:%M")
     return (
-        f"В канале <b>{_esc(label)}</b> спрашивают:\n"
+        f"{_notification_intro(channel)}\n"
         f"{_esc(message.text)}\n"
         f"\n"
         f"{posted}\n"
@@ -195,7 +203,7 @@ def notify_recent_leads(network_slug: str) -> None:
             vertical__enabled=True,
         )
         .exclude(vertical__telegram_chat_id="")
-        .select_related("message", "message__channel", "vertical")
+        .select_related("message", "message__channel", "message__channel__network", "vertical")
         .order_by("id")
     )
     for lead in pending:
