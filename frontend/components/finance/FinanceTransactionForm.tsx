@@ -97,6 +97,16 @@ function expenseSignedAmount(amount: string): string {
   return `-${trimmed}`;
 }
 
+function incomePositiveAmount(amount: string): string {
+  return amount.replaceAll("-", "");
+}
+
+function amountForKind(kind: FinanceTransaction["kind"], amount: string): string {
+  if (kind === "expense") return expenseSignedAmount(amount);
+  if (kind === "income") return incomePositiveAmount(amount);
+  return amount;
+}
+
 function initialFields(transaction: FinanceTransaction | null): Fields {
   const today = getTbilisiTodayIsoDate();
   if (transaction === null) {
@@ -195,21 +205,17 @@ export function FinanceTransactionForm({
   const pending = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
 
   function setKind(kind: FinanceTransaction["kind"]) {
-    setFields((current) => ({
-      ...current,
-      kind,
-      amount:
-        transaction !== null
-          ? current.amount
-          : kind === "expense"
-            ? expenseSignedAmount(current.amount)
-            : current.kind === "expense" && current.amount === "-"
-              ? ""
-              : current.amount,
-      incomeType: kind === "income" ? current.incomeType : "",
-      expenseType: kind === "expense" ? current.expenseType : "",
-      transferPair: kind === "transfer" ? current.transferPair : "none",
-    }));
+    setFields((current) => {
+      const amount = amountForKind(kind, current.amount);
+      return {
+        ...current,
+        kind,
+        amount: kind !== "income" && kind !== "expense" && amount === "-" ? "" : amount,
+        incomeType: kind === "income" ? current.incomeType : "",
+        expenseType: kind === "expense" ? current.expenseType : "",
+        transferPair: kind === "transfer" ? current.transferPair : "none",
+      };
+    });
   }
 
   function setTransferPair(pair: PairMode) {
@@ -236,8 +242,7 @@ export function FinanceTransactionForm({
 
   function setAmount(amount: string) {
     setFields((current) => {
-      const nextAmount =
-        transaction === null && current.kind === "expense" ? expenseSignedAmount(amount) : amount;
+      const nextAmount = amountForKind(current.kind, amount);
       return {
         ...current,
         amount: nextAmount,
