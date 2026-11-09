@@ -45,6 +45,10 @@ function modifierText(item: CrmItemDraft, card: TechCard | undefined): string {
   return names.join(", ");
 }
 
+function selectOnReveal(input: HTMLInputElement) {
+  requestAnimationFrame(() => input.select());
+}
+
 function SingleModifier({
   group,
   selected,
@@ -206,6 +210,8 @@ function ItemComposer({
   const t = useTranslations("crm.items");
   const rowRef = useRef<HTMLDivElement>(null);
   const [commentOpen, setCommentOpen] = useState(item.comment !== "");
+  const [weightShown, setWeightShown] = useState(listed);
+  const [quantityShown, setQuantityShown] = useState(listed);
   const card = item.tech_card === null ? undefined : techCards.find((row) => row.id === item.tech_card);
   const cardOptions = techCards
     .filter((row) => row.is_active || row.id === item.tech_card)
@@ -274,24 +280,32 @@ function ItemComposer({
       {card?.kind === "weighted" ? (
         <Input
           name="weight_kg"
-          required={listed}
+          required={listed && weightShown}
           inputMode="decimal"
           aria-label={t("weightKg")}
-          placeholder={t("kg")}
-          value={item.weight_kg}
+          placeholder={t("weightKg")}
+          value={weightShown ? item.weight_kg : ""}
+          onFocus={(event) => {
+            setWeightShown(true);
+            selectOnReveal(event.currentTarget);
+          }}
           onChange={(event) => update({ weight_kg: event.target.value })}
-          className="h-9 w-20 px-3"
+          className="h-9 w-24 px-3 text-center"
         />
       ) : null}
       <Input
         name="quantity"
-        required={listed}
+        required={listed && quantityShown}
         inputMode="numeric"
         aria-label={t("quantity")}
-        placeholder={t("pcs")}
-        value={item.quantity}
+        placeholder={t("quantity")}
+        value={quantityShown ? item.quantity : ""}
+        onFocus={(event) => {
+          setQuantityShown(true);
+          selectOnReveal(event.currentTarget);
+        }}
         onChange={(event) => update({ quantity: event.target.value })}
-        className="h-9 w-14 px-2 text-center"
+        className="h-9 w-28 px-3 text-center"
       />
       {card?.modifier_groups.map((group) =>
         group.selection_type === "single" ? (
@@ -494,44 +508,35 @@ export function CrmOrderItemsEditor({
   return (
     <div ref={rootRef} className="grid gap-2">
       <p className="text-xs text-[var(--muted-2)]">{t("hint")}</p>
-      {items.map((item, index) =>
-        item.key === activeKey ? (
+      {(activeKey === null ? [...items, draft] : items).map((item, index) => {
+        const listed = index < items.length;
+        if (listed && item.key !== activeKey) {
+          return (
+            <ItemRow
+              key={item.key}
+              item={item}
+              number={index + 1}
+              errors={itemErrors[index] ?? []}
+              techCards={cards}
+              onEdit={() => setActiveKey(item.key)}
+              onRemove={() => remove(item.key)}
+            />
+          );
+        }
+        return (
           <ItemComposer
             key={item.key}
             item={item}
             number={index + 1}
-            errors={itemErrors[index] ?? []}
+            errors={listed ? (itemErrors[index] ?? []) : []}
             techCards={cards}
-            listed={true}
+            listed={listed}
             onChange={write}
             onCommit={() => commit(item)}
-            onRemove={() => remove(item.key)}
+            onRemove={() => (listed ? remove(item.key) : setDraft(emptyCrmItem()))}
           />
-        ) : (
-          <ItemRow
-            key={item.key}
-            item={item}
-            number={index + 1}
-            errors={itemErrors[index] ?? []}
-            techCards={cards}
-            onEdit={() => setActiveKey(item.key)}
-            onRemove={() => remove(item.key)}
-          />
-        ),
-      )}
-      {activeKey === null ? (
-        <ItemComposer
-          key={draft.key}
-          item={draft}
-          number={items.length + 1}
-          errors={[]}
-          techCards={cards}
-          listed={false}
-          onChange={write}
-          onCommit={() => commit(draft)}
-          onRemove={() => setDraft(emptyCrmItem())}
-        />
-      ) : null}
+        );
+      })}
     </div>
   );
 }
