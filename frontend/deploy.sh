@@ -4,7 +4,12 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 export NODE_OPTIONS="--max-old-space-size=4096"
-npm ci
+stamp="node_modules/.package-lock.sha"
+lock_hash=$(sha256sum package-lock.json | awk '{print $1}')
+if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$lock_hash" ]; then
+  nice -n 19 ionice -c 3 npm ci
+  printf '%s\n' "$lock_hash" > "$stamp"
+fi
 sha=$(git rev-parse HEAD)
 archive="/data/tortobaza_builds/$sha.zip"
 if [ -f "$archive" ]; then
