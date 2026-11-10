@@ -1334,6 +1334,7 @@
     "visibilityHidden": "Hidden",
     "visibilityAll": "All",
     "name": "Name",
+    "translateName": "Translate to other languages",
     "slug": "Slug",
     "pageSlug": "Page URL slug",
     "pageHeading": "Page heading",

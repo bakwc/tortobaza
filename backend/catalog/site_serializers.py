@@ -17,6 +17,7 @@ from catalog.models import (
     ProductImage,
     ProductOptionGroup,
 )
+from catalog.name_translation import NAME_LANGUAGES, schedule_name_translation
 from catalog.responsive_urls import detail_image, list_primary_image
 from menu.models import TechCard
 
@@ -62,11 +63,16 @@ def category_image_payload(context: dict, obj: Category | CategoryLanding) -> di
     return {"preview": list_primary_image(name, base, None)}
 
 
-def run_model_clean(instance) -> None:
+def run_model_clean(instance, exclude: list[str]) -> None:
     try:
-        instance.full_clean()
+        instance.full_clean(exclude=exclude)
     except DjangoValidationError as exc:
         raise serializers.ValidationError(exc.message_dict) from exc
+
+
+def require_name(attrs: dict) -> None:
+    if not any((attrs.get(f"name_{code}") or "").strip() for code in NAME_LANGUAGES):
+        raise serializers.ValidationError("Name is required in at least one language.")
 
 
 class SiteCategorySerializer(serializers.ModelSerializer):
@@ -105,17 +111,23 @@ class SiteCategorySerializer(serializers.ModelSerializer):
     def get_image(self, obj: Category):
         return category_image_payload(self.context, obj)
 
+    def validate(self, attrs):
+        require_name(attrs)
+        return attrs
+
     def create(self, validated_data):
         instance = Category(**validated_data)
-        run_model_clean(instance)
+        run_model_clean(instance, ["name"])
         instance.save()
+        schedule_name_translation(instance)
         return instance
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        run_model_clean(instance)
+        run_model_clean(instance, ["name"])
         instance.save()
+        schedule_name_translation(instance)
         return instance
 
 
@@ -155,14 +167,14 @@ class SiteCategoryLandingSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         instance = CategoryLanding(**validated_data)
-        run_model_clean(instance)
+        run_model_clean(instance, [])
         instance.save()
         return instance
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        run_model_clean(instance)
+        run_model_clean(instance, [])
         instance.save()
         return instance
 
@@ -394,11 +406,16 @@ class SiteProductSerializer(serializers.ModelSerializer):
         ]
         return data
 
+    def validate(self, attrs):
+        require_name(attrs)
+        return attrs
+
     @transaction.atomic
     def create(self, validated_data):
         option_groups = validated_data.pop("option_groups", [])
         instance = Product.objects.create(**validated_data)
         self._save_option_groups(instance, option_groups)
+        schedule_name_translation(instance)
         return instance
 
     @transaction.atomic
@@ -408,6 +425,7 @@ class SiteProductSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         self._save_option_groups(instance, option_groups)
+        schedule_name_translation(instance)
         return instance
 
     def _save_option_groups(self, product: Product, rows: list[dict]) -> None:
@@ -451,6 +469,12 @@ class SiteImageUploadSerializer(serializers.Serializer):
 
 class SiteProductImageReorderSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
+
+
+class SiteNameTranslationSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["category", "product"])
+    language = serializers.ChoiceField(choices=NAME_LANGUAGES)
+    name = serializers.CharField(max_length=200)
 
 
 class SiteTechCardChoiceSerializer(serializers.ModelSerializer):

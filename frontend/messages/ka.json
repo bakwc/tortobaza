@@ -1335,6 +1335,7 @@
     "visibilityHidden": "დამალული",
     "visibilityAll": "ყველა",
     "name": "სახელი",
+    "translateName": "სხვა ენებზე თარგმნა",
     "slug": "Slug",
     "pageSlug": "გვერდის slug",
     "pageHeading": "სათაური",

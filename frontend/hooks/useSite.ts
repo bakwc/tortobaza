@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import type {
   SiteCategoryBody,
   SiteCategoryLandingBody,
+  SiteNameTranslationBody,
   SiteOptionGroupBody,
   SiteProductBody,
 } from "@/lib/api/site-schemas";
@@ -112,6 +113,12 @@ export function useSiteTechCards() {
   return useQuery({
     queryKey: ["site", "tech-cards"],
     queryFn: () => api.listSiteTechCards(),
+  });
+}
+
+export function useSiteNameTranslation() {
+  return useMutation({
+    mutationFn: (body: SiteNameTranslationBody) => api.translateSiteName(body),
   });
 }
 

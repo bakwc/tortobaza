@@ -18,10 +18,12 @@ from catalog.models import (
     Product,
     ProductImage,
 )
+from catalog.name_translation import request_name_translation
 from catalog.site_serializers import (
     SiteCategoryLandingSerializer,
     SiteCategorySerializer,
     SiteImageUploadSerializer,
+    SiteNameTranslationSerializer,
     SiteOptionGroupSerializer,
     SiteProductImagePatchSerializer,
     SiteProductImageReorderSerializer,
@@ -381,6 +383,20 @@ class SiteProductImageReorderView(APIView):
         return Response(
             SiteProductImageSerializer(rows, many=True, context=serializer_context(request)).data
         )
+
+
+class SiteNameTranslationView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
+
+    def post(self, request):
+        serializer = SiteNameTranslationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        translated = request_name_translation(data["kind"], {data["language"]: data["name"]})
+        payload = translated.model_dump()
+        payload[data["language"]] = data["name"]
+        return Response(payload)
 
 
 class SiteTechCardChoicesView(APIView):

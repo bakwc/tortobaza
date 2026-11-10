@@ -2,6 +2,7 @@ import { ApiError } from "./client";
 import {
   SiteCategoryLandingSchema,
   SiteCategorySchema,
+  SiteNameTranslationSchema,
   SiteOptionGroupSchema,
   SiteProductImageSchema,
   SiteProductListItemSchema,
@@ -9,6 +10,8 @@ import {
   SiteTechCardChoiceSchema,
   type SiteCategoryBody,
   type SiteCategoryLandingBody,
+  type SiteNameTranslation,
+  type SiteNameTranslationBody,
   type SiteOptionGroupBody,
   type SiteProductBody,
 } from "./site-schemas";
@@ -1262,6 +1265,13 @@ export function endpoints(fetcher: Fetcher) {
     async listSiteTechCards(): Promise<import("./site-schemas").SiteTechCardChoice[]> {
       const raw = await fetcher<unknown>("/api/site/tech-cards/");
       return parse(z.array(SiteTechCardChoiceSchema), raw);
+    },
+    async translateSiteName(body: SiteNameTranslationBody): Promise<SiteNameTranslation> {
+      const raw = await fetcher<unknown>("/api/site/translate-name/", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      return parse(SiteNameTranslationSchema, raw);
     },
   };
 }

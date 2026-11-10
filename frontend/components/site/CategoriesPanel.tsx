@@ -2,15 +2,21 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus } from "lucide-react";
+import { Languages, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
-import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import {
+  LocaleTabs,
+  hasAnyName,
+  otherLocaleNames,
+  type SiteLocale,
+} from "@/components/site/LocaleTabs";
 import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
@@ -18,6 +24,7 @@ import {
   useSiteCategories,
   useSiteCategoryImageDelete,
   useSiteCategoryImageUpload,
+  useSiteNameTranslation,
   useVisibility,
 } from "@/hooks/useSite";
 import type { SiteCategory, SiteCategoryBody } from "@/lib/api/site-schemas";
@@ -66,6 +73,7 @@ export function CategoriesPanel() {
   );
   const uploadImage = useSiteCategoryImageUpload();
   const deleteImage = useSiteCategoryImageDelete();
+  const translateName = useSiteNameTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -74,6 +82,7 @@ export function CategoriesPanel() {
   const open = (row: SiteCategory | null) => {
     categories.save.reset();
     categories.remove.reset();
+    translateName.reset();
     setEditingId(row ? row.id : null);
     setDraft(draftFrom(row, (categories.list.data ?? []).length));
   };
@@ -137,6 +146,7 @@ export function CategoriesPanel() {
           error={
             categories.save.error ??
             categories.remove.error ??
+            translateName.error ??
             uploadImage.error ??
             deleteImage.error
           }
@@ -158,27 +168,41 @@ export function CategoriesPanel() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
-                required
+                required={!hasAnyName(draft)}
                 name={`name_${locale}`}
                 value={draft[`name_${locale}`]}
                 onChange={(event) =>
                   setDraft({ ...draft, [`name_${locale}`]: event.target.value })
                 }
               />
-              {(["en", "ka", "ru"] as const)
-                .filter((code) => code !== locale)
-                .map((code) => (
-                  <input
-                    key={code}
-                    required
-                    name={`name_${code}`}
-                    value={draft[`name_${code}`]}
-                    placeholder={`${t("name")} ${code.toUpperCase()}`}
-                    onChange={() => undefined}
-                    tabIndex={-1}
-                    className="sr-only"
-                  />
-                ))}
+              {canEdit ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="self-start"
+                  disabled={draft[`name_${locale}`].trim() === "" || translateName.isPending}
+                  onClick={() => {
+                    const source = locale;
+                    translateName.mutate(
+                      { kind: "category", language: source, name: draft[`name_${source}`] },
+                      {
+                        onSuccess: (names) =>
+                          setDraft((row) =>
+                            row === null ? null : { ...row, ...otherLocaleNames(names, source) },
+                          ),
+                      },
+                    );
+                  }}
+                >
+                  {translateName.isPending ? (
+                    <Spinner className="mr-1 h-4 w-4" />
+                  ) : (
+                    <Languages className="mr-1 h-4 w-4" />
+                  )}
+                  {t("translateName")}
+                </Button>
+              ) : null}
             </Field>
             <Field label={t("slug")}>
               <Input
