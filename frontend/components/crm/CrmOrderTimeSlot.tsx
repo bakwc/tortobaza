@@ -10,12 +10,16 @@ export function CrmOrderTimeSlot({
   whenReady,
   deliveryDurationSeconds,
   layout,
+  showDeliveryTime,
+  showCookingTime,
 }: {
   timeStart: string | null;
   timeEnd: string | null;
   whenReady: boolean;
   deliveryDurationSeconds: number | null;
   layout: "day" | "month";
+  showDeliveryTime: boolean;
+  showCookingTime: boolean;
 }) {
   const t = useTranslations("crm");
   const compact = layout === "month";
@@ -29,19 +33,25 @@ export function CrmOrderTimeSlot({
   const timeClass = compact
     ? "min-w-0 truncate text-sm font-semibold text-[var(--ink)]"
     : "text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl";
-  const showPrep = layout === "day" && !whenReady && timeStart !== null;
+  const showPrep = showCookingTime && layout === "day" && !whenReady && timeStart !== null;
+
+  if (!showDeliveryTime && !showPrep) return null;
 
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
-      <Clock
-        className={
-          compact
-            ? "h-3.5 w-3.5 shrink-0 text-[var(--brand)]"
-            : "h-4 w-4 shrink-0 text-[var(--brand)] lg:h-5 lg:w-5"
-        }
-      />
-      <span className={timeClass}>{slot}</span>
-      {layout === "month" ? <Truck className="h-3.5 w-3.5 shrink-0" /> : null}
+      {showDeliveryTime ? (
+        <>
+          <Clock
+            className={
+              compact
+                ? "h-3.5 w-3.5 shrink-0 text-[var(--brand)]"
+                : "h-4 w-4 shrink-0 text-[var(--brand)] lg:h-5 lg:w-5"
+            }
+          />
+          <span className={timeClass}>{slot}</span>
+          {layout === "month" ? <Truck className="h-3.5 w-3.5 shrink-0" /> : null}
+        </>
+      ) : null}
       {showPrep ? (
         <span className="inline-flex shrink-0 items-baseline gap-1.5 text-sm font-medium text-[var(--muted-2)] lg:text-base">
           {t.rich("prepareBy", {

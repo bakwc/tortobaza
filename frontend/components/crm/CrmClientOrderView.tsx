@@ -221,6 +221,8 @@ export function CrmClientOrderView({
                     whenReady={order.when_ready}
                     deliveryDurationSeconds={order.delivery_duration_seconds}
                     layout="day"
+                    showDeliveryTime
+                    showCookingTime
                   />
                 </div>
               </div>

@@ -293,6 +293,8 @@ function CrmMonthBoard() {
 function CrmMonthOrderRow({ order }: { order: CrmDayOrder }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
+  const canViewDeliveryTime = useCan("view_order_delivery_time");
+  const canViewCookingTime = useCan("view_order_cooking_time");
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -340,6 +342,8 @@ function CrmMonthOrderRow({ order }: { order: CrmDayOrder }) {
                 whenReady={order.when_ready}
                 deliveryDurationSeconds={order.delivery_duration_seconds}
                 layout="month"
+                showDeliveryTime={canViewDeliveryTime}
+                showCookingTime={canViewCookingTime}
               />
             </div>
             <span className="shrink-0 text-[10px] font-medium text-[var(--muted-2)]">

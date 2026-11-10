@@ -443,6 +443,8 @@ function CrmOrderCard({
 }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
+  const canViewDeliveryTime = useCan("view_order_delivery_time");
+  const canViewCookingTime = useCan("view_order_cooking_time");
   const tone = crmOrderStatusTone(order.status);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -555,6 +557,8 @@ function CrmOrderCard({
               whenReady={order.when_ready}
               deliveryDurationSeconds={order.delivery_duration_seconds}
               layout="day"
+              showDeliveryTime={canViewDeliveryTime}
+              showCookingTime={canViewCookingTime}
             />
             <span
               className={cn(
@@ -732,6 +736,8 @@ function CrmOrderCard({
                   whenReady={order.when_ready}
                   deliveryDurationSeconds={order.delivery_duration_seconds}
                   layout="day"
+                  showDeliveryTime={canViewDeliveryTime}
+                  showCookingTime={canViewCookingTime}
                 />
               </div>
               <div className="flex items-center gap-2">
