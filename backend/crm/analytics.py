@@ -161,10 +161,12 @@ def _pace_month(
     revenue = Decimal("0")
     count = 0
     repeat = 0
+    created_count = 0
     channels = {"flowwow": Decimal("0"), "website": Decimal("0"), "direct": Decimal("0")}
     days = []
     cursor = start
     while cursor <= end:
+        created_count += created_by_date[cursor]
         for order in by_date[cursor]:
             amount = _order_revenue(order)
             revenue += amount
@@ -181,7 +183,7 @@ def _pace_month(
                 "flowwow": _money(channels["flowwow"]),
                 "website": _money(channels["website"]),
                 "direct": _money(channels["direct"]),
-                "created_orders": created_by_date[cursor],
+                "created_orders": created_count,
             }
         )
         cursor += timedelta(days=1)

@@ -417,10 +417,10 @@ class AnalyticsPaceTests(TestCase):
         )
         report = pace("2026-01", date(2026, 1, 3))
         january, december, _november = report["months"]
-        self.assertEqual(january["days"][2]["created_orders"], 2)
-        self.assertEqual(january["days"][1]["created_orders"], 1)
-        self.assertEqual(january["days"][0]["created_orders"], 0)
+        self.assertEqual([day["created_orders"] for day in january["days"]], [0, 1, 3])
+        self.assertEqual(december["days"][26]["created_orders"], 0)
         self.assertEqual(december["days"][27]["created_orders"], 1)
+        self.assertEqual(december["days"][30]["created_orders"], 1)
 
 
 class AnalyticsEmployeesTests(TestCase):
