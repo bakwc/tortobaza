@@ -31,6 +31,7 @@ import {
   sumGel,
   type RsgeColumn,
 } from "@/components/rsge/RsgeDocumentRow";
+import { WaybillPriceChange } from "@/components/rsge/WaybillPriceChange";
 import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
 import { useCan } from "@/hooks/useAuth";
 import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
@@ -351,7 +352,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
               key={line.key}
               data-field-group={tForms("rowNumber", { number: index + 1 })}
               data-error-list="lines"
-              className="grid gap-1"
+              className="grid gap-2 border-t border-[var(--line)] pt-3"
             >
               <div className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_9rem_auto]">
                 <SearchSelect
@@ -431,6 +432,15 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                     {t("createIngredient")}
                   </Button>
                 </div>
+              ) : null}
+              {supply === null && ingredient !== undefined ? (
+                <WaybillPriceChange
+                  avgCost={ingredient.avg_cost}
+                  costQuantity={ingredient.cost_quantity}
+                  unitLabel={units(ingredient.unit)}
+                  amount={line.total}
+                  quantity={line.quantity}
+                />
               ) : null}
             </div>
           );

@@ -32,7 +32,7 @@ export function WaybillPriceChange({
   quantity: string;
 }) {
   const t = useTranslations("rsge");
-  if (avgCost === undefined || quantity.trim() === "") return null;
+  if (avgCost === undefined || quantity.trim() === "" || amount.trim() === "") return null;
   const quantityNumber = decimalNumber(quantity);
   const amountNumber = decimalNumber(amount);
   const costQuantityNumber = decimalNumber(costQuantity);
