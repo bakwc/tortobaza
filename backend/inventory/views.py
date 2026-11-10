@@ -174,7 +174,7 @@ def supplies_queryset():
     )
 
 
-RECEIPT_EXTENSIONS = {"jpg", "jpeg", "png", "heic"}
+RECEIPT_EXTENSIONS = {"jpg", "jpeg", "png", "heic", "heif", "webp"}
 
 
 class SupplyReceiptUploadView(APIView):
@@ -194,7 +194,7 @@ class SupplyReceiptUploadView(APIView):
         )
         if extension not in RECEIPT_EXTENSIONS:
             logger.info("receipt upload rejected extension=%s", extension)
-            raise ValidationError({"image": "Upload a jpg, png, or heic image."})
+            raise ValidationError({"image": "Upload a jpg, png, heic, or webp image."})
         started = time.monotonic()
         try:
             jpeg = to_jpeg(upload)

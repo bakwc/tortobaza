@@ -288,7 +288,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
             ref={fileInput}
             type="file"
             multiple
-            accept=".jpg,.jpeg,.png,.heic,image/jpeg,image/png,image/heic"
+            accept="image/*"
             className="hidden"
             onChange={(event) => {
               const files = event.target.files;
