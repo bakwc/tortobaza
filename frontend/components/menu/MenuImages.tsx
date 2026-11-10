@@ -46,9 +46,9 @@ export function MenuImages({ images, pending, onUpload, onDelete }: MenuImagesPr
           className="mt-1 block w-full text-sm"
           disabled={pending}
           onChange={(event) => {
-            const files = event.target.files;
+            const file = event.target.files?.[0];
             event.target.value = "";
-            if (files !== null && files.length > 0) onUpload(files[0]);
+            if (file !== undefined) onUpload(file);
           }}
         />
       </label>

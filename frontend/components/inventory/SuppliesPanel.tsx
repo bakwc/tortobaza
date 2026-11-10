@@ -291,10 +291,10 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
             accept="image/*"
             className="hidden"
             onChange={(event) => {
-              const files = event.target.files;
+              const files = event.target.files === null ? [] : Array.from(event.target.files);
               event.target.value = "";
-              if (files !== null && files.length > 0) {
-                uploadFiles(Array.from(files));
+              if (files.length > 0) {
+                uploadFiles(files);
               }
             }}
           />
