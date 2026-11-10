@@ -248,6 +248,12 @@ class CrmOrder(models.Model):
         default="",
         verbose_name=_("Telegram posted delivery address"),
     )
+    late_prep_message_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Late prep message id"),
+    )
+    late_prep_closed = models.BooleanField(default=False, verbose_name=_("Late prep closed"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 

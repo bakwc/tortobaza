@@ -278,6 +278,7 @@ export const EmployeeSchema = z.object({
   pushover_user: z.string(),
   position: z.string(),
   in_schedule: z.boolean(),
+  skip_late_alerts: z.boolean(),
 });
 
 export const AttendanceEventSchema = z.object({
@@ -1191,6 +1192,7 @@ export type EmployeeBody = {
   pushover_user: string;
   position: string;
   in_schedule: boolean;
+  skip_late_alerts: boolean;
 };
 export type AttendanceEvent = z.infer<typeof AttendanceEventSchema>;
 export type AttendanceSummary = z.infer<typeof AttendanceSummarySchema>;

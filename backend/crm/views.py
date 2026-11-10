@@ -92,7 +92,7 @@ from crm.serializers import (
     ResolveGoogleAddressSerializer,
     ResolveYandexAddressSerializer,
 )
-from crm.telegram import schedule_crm_order_telegram_sync
+from crm.late_prep_alerts import schedule_crm_order_telegram_sync
 from crm.website import sync_website_order_status_from_crm
 from crm.yandex_maps import resolve_yandex_maps_url
 from inventory.services import sync_order_write_off

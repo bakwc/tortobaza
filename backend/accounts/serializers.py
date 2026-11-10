@@ -20,6 +20,7 @@ PROFILE_FIELDS = (
     "pushover_user",
     "position",
     "in_schedule",
+    "skip_late_alerts",
 )
 
 
@@ -82,6 +83,7 @@ class EmployeeSerializer(serializers.Serializer):
     pushover_user = serializers.CharField(max_length=30, allow_blank=True)
     position = serializers.CharField(max_length=64, allow_blank=True)
     in_schedule = serializers.BooleanField()
+    skip_late_alerts = serializers.BooleanField()
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
@@ -148,6 +150,7 @@ class EmployeeSerializer(serializers.Serializer):
             pushover_user = ""
             position = ""
             in_schedule = False
+            skip_late_alerts = False
         else:
             hourly_rate = profile.hourly_rate
             monthly_rate = profile.monthly_rate
@@ -159,6 +162,7 @@ class EmployeeSerializer(serializers.Serializer):
             pushover_user = profile.pushover_user
             position = profile.position
             in_schedule = profile.in_schedule
+            skip_late_alerts = profile.skip_late_alerts
         return {
             "id": instance.id,
             "username": instance.username,
@@ -178,6 +182,7 @@ class EmployeeSerializer(serializers.Serializer):
             "pushover_user": pushover_user,
             "position": position,
             "in_schedule": in_schedule,
+            "skip_late_alerts": skip_late_alerts,
         }
 
     def _apply_profile(self, profile, validated_data):

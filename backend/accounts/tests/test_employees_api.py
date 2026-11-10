@@ -37,6 +37,7 @@ class EmployeesApiTests(TestCase):
             "pushover_user": "pushover1",
             "position": "Кондитер",
             "in_schedule": True,
+            "skip_late_alerts": False,
             "groups": [],
         }
 
@@ -82,6 +83,7 @@ class EmployeesApiTests(TestCase):
                 "pushover_user": "pushover1",
                 "position": "Кондитер",
                 "in_schedule": True,
+                "skip_late_alerts": False,
                 "groups": [],
             },
         )
@@ -123,6 +125,7 @@ class EmployeesApiTests(TestCase):
         self.assertEqual(row["gender"], "female")
         self.assertEqual(row["position"], "")
         self.assertEqual(row["in_schedule"], False)
+        self.assertEqual(row["skip_late_alerts"], False)
         self.assertNotIn("password", row)
 
         payload = self.payload("")

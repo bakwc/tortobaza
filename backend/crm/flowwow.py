@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from crm.history import record_crm_order_event, snapshot_crm_order
 from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
-from crm.telegram import schedule_crm_order_telegram_sync
+from crm.late_prep_alerts import schedule_crm_order_telegram_sync
 from inventory.services import sync_order_write_off
 
 logger = logging.getLogger(__name__)

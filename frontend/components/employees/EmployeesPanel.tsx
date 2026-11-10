@@ -32,6 +32,7 @@ function emptyDraft(): EmployeeBody {
     pushover_user: "",
     position: "",
     in_schedule: false,
+    skip_late_alerts: false,
   };
 }
 
@@ -55,6 +56,7 @@ function draftFrom(row: Employee): EmployeeBody {
     pushover_user: row.pushover_user,
     position: row.position,
     in_schedule: row.in_schedule,
+    skip_late_alerts: row.skip_late_alerts,
   };
 }
 
@@ -178,6 +180,7 @@ export function EmployeesPanel() {
                   pushover_user: draft.pushover_user.trim(),
                   position: draft.position.trim(),
                   in_schedule: draft.in_schedule,
+                  skip_late_alerts: draft.skip_late_alerts,
                 },
               },
               { onSuccess: close },
@@ -271,6 +274,11 @@ export function EmployeesPanel() {
                 label={t("inSchedule")}
                 checked={draft.in_schedule}
                 onChange={(value) => setDraft({ ...draft, in_schedule: value })}
+              />
+              <CheckboxField
+                label={t("skipLateAlerts")}
+                checked={draft.skip_late_alerts}
+                onChange={(value) => setDraft({ ...draft, skip_late_alerts: value })}
               />
             </div>
           </div>

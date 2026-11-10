@@ -1279,6 +1279,7 @@
     "no": "No",
     "position": "Position",
     "inSchedule": "On schedule",
+    "skipLateAlerts": "Don't write about lateness",
     "dayType": "Day type",
     "dayWorkShort": "W",
     "dayOffShort": "Off",

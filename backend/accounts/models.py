@@ -44,6 +44,7 @@ class UserProfile(models.Model):
     pushover_user = models.CharField(max_length=30, blank=True, verbose_name=_("Pushover user"))
     position = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Position"))
     in_schedule = models.BooleanField(default=False, verbose_name=_("In schedule"))
+    skip_late_alerts = models.BooleanField(default=False, verbose_name=_("Skip late alerts"))
 
     class Meta:
         verbose_name = _("Profile")

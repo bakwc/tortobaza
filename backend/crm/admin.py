@@ -37,7 +37,7 @@ from crm.models import (
     WhatsAppNumberCheck,
 )
 from crm.transaction_rules import categorize_uncategorized_expenses
-from crm.telegram import schedule_crm_order_telegram_sync
+from crm.late_prep_alerts import schedule_crm_order_telegram_sync
 from crm.telegram_channels import refresh_keyword_matches
 from crm.telegram_user import resolve_phone
 from crm.website import sync_website_order_status_from_crm

@@ -2,7 +2,6 @@ import hashlib
 import html
 import json
 import math
-import threading
 import time as time_module
 import urllib.error
 import urllib.request
@@ -229,14 +228,17 @@ def _prep_lead_minutes(duration_seconds: int | None) -> int:
     return math.ceil(lead / 5) * 5
 
 
+def crm_order_prep_datetime(order: CrmOrder) -> datetime | None:
+    if order.when_ready or order.time_start is None:
+        return None
+    lead = _prep_lead_minutes(order.delivery_duration_seconds)
+    return crm_order_slot_datetime(order) - timedelta(minutes=lead)
+
+
 def crm_order_departure_datetime(order: CrmOrder) -> datetime | None:
     if order.fulfillment_type != CrmOrder.FULFILLMENT_DELIVERY:
         return None
-    if order.when_ready or order.time_start is None:
-        return None
-    slot = crm_order_slot_datetime(order)
-    lead = _prep_lead_minutes(order.delivery_duration_seconds)
-    return slot - timedelta(minutes=lead)
+    return crm_order_prep_datetime(order)
 
 
 def _format_prep_slot(order: CrmOrder) -> str | None:
@@ -630,13 +632,3 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
             },
         )
     _persist_telegram_state_with_retry(order, order.telegram_message_id, media, new_hash)
-
-
-def schedule_crm_order_telegram_sync(order_id: int) -> None:
-    transaction.on_commit(
-        lambda: threading.Thread(
-            target=sync_crm_order_to_telegram,
-            args=(order_id,),
-            daemon=True,
-        ).start()
-    )

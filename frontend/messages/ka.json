@@ -1279,6 +1279,7 @@
     "no": "არა",
     "position": "თანამდებობა",
     "inSchedule": "გრაფიკში",
+    "skipLateAlerts": "დაგვიანებაზე არ მისწერო",
     "dayType": "დღის ტიპი",
     "dayWorkShort": "სმ",
     "dayOffShort": "დას",

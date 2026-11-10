@@ -1279,6 +1279,7 @@
     "no": "Нет",
     "position": "Должность",
     "inSchedule": "В графике",
+    "skipLateAlerts": "Не писать про опоздания",
     "dayType": "Тип дня",
     "dayWorkShort": "РБ",
     "dayOffShort": "ВХ",
