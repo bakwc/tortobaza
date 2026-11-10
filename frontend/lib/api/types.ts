@@ -741,6 +741,7 @@ export const AnalyticsPaceDaySchema = z.object({
   flowwow: z.string(),
   website: z.string(),
   direct: z.string(),
+  created_orders: z.number(),
 });
 
 export const AnalyticsPaceMonthSchema = z.object({

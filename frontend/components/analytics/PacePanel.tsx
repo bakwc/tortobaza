@@ -21,7 +21,7 @@ import {
 } from "@/components/analytics/widgets";
 
 type PaceMonth = AnalyticsPace["months"][number];
-type PaceKey = "revenue" | "orders" | "repeat_orders" | "flowwow" | "website" | "direct";
+type PaceKey = "revenue" | "orders" | "repeat_orders" | "created_orders" | "flowwow" | "website" | "direct";
 type Channel = "flowwow" | "website" | "direct";
 
 type PacePoint = {
@@ -162,6 +162,9 @@ export function PacePanel() {
       </Section>
       <Section title={t("cumulativeOrders")}>
         <PaceChart rows={paceRows(months, "orders")} names={names} money={false} />
+      </Section>
+      <Section title={t("createdOrders")}>
+        <PaceChart rows={paceRows(months, "created_orders")} names={names} money={false} />
       </Section>
       <Section title={t("cumulativeRepeat")}>
         <PaceChart rows={paceRows(months, "repeat_orders")} names={names} money={false} />

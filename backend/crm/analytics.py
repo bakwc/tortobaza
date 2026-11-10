@@ -151,9 +151,13 @@ def _pace_month(
     start, last = _month_bounds(month)
     end = today if partial else last
     by_date: dict[date, list[CrmOrder]] = defaultdict(list)
+    created_by_date: dict[date, int] = defaultdict(int)
     for order in orders:
         if start <= order.date <= end:
             by_date[order.date].append(order)
+        created = order.created_at.astimezone(_TB).date()
+        if start <= created <= end:
+            created_by_date[created] += 1
     revenue = Decimal("0")
     count = 0
     repeat = 0
@@ -177,6 +181,7 @@ def _pace_month(
                 "flowwow": _money(channels["flowwow"]),
                 "website": _money(channels["website"]),
                 "direct": _money(channels["direct"]),
+                "created_orders": created_by_date[cursor],
             }
         )
         cursor += timedelta(days=1)

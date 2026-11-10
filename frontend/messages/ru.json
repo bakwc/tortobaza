@@ -1036,6 +1036,7 @@
     "asOfDay": "на {day} день",
     "cumulativeRevenue": "Выручка нарастающим итогом",
     "cumulativeOrders": "Заказы нарастающим итогом",
+    "createdOrders": "Заказы по дате создания",
     "cumulativeRepeat": "Повторные заказы нарастающим итогом",
     "repeatOrders": "Повторные заказы",
     "loadError": "Не удалось загрузить аналитику.",
