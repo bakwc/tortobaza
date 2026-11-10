@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from accounts.permissions import SectionPermission
 from cart.models import CartItem
+from catalog.auto_translate import schedule_translation, translate_now
 from catalog.models import (
     Category,
     CategoryLanding,
@@ -18,12 +19,10 @@ from catalog.models import (
     Product,
     ProductImage,
 )
-from catalog.name_translation import request_name_translation
 from catalog.site_serializers import (
     SiteCategoryLandingSerializer,
     SiteCategorySerializer,
     SiteImageUploadSerializer,
-    SiteNameTranslationSerializer,
     SiteOptionGroupSerializer,
     SiteProductImagePatchSerializer,
     SiteProductImageReorderSerializer,
@@ -32,6 +31,7 @@ from catalog.site_serializers import (
     SiteProductListSerializer,
     SiteProductSerializer,
     SiteTechCardChoiceSerializer,
+    SiteTranslationRequestSerializer,
 )
 from menu.models import TechCard
 
@@ -335,6 +335,7 @@ class SiteProductImageCreateView(APIView):
             crop_top=data.get("crop_top"),
             crop_size=data.get("crop_size"),
         )
+        schedule_translation([row])
         return Response(
             SiteProductImageSerializer(row, context=serializer_context(request)).data,
             status=status.HTTP_201_CREATED,
@@ -385,18 +386,15 @@ class SiteProductImageReorderView(APIView):
         )
 
 
-class SiteNameTranslationView(APIView):
+class SiteTranslationView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, SectionPermission("catalog")]
 
     def post(self, request):
-        serializer = SiteNameTranslationSerializer(data=request.data)
+        serializer = SiteTranslationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        translated = request_name_translation(data["kind"], {data["language"]: data["name"]})
-        payload = translated.model_dump()
-        payload[data["language"]] = data["name"]
-        return Response(payload)
+        return Response({"items": translate_now(data["language"], data["items"])})
 
 
 class SiteTechCardChoicesView(APIView):

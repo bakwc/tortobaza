@@ -8,9 +8,9 @@ import { api } from "@/lib/api";
 import type {
   SiteCategoryBody,
   SiteCategoryLandingBody,
-  SiteNameTranslationBody,
   SiteOptionGroupBody,
   SiteProductBody,
+  SiteTranslationBody,
 } from "@/lib/api/site-schemas";
 
 export type SiteVisibility = "active" | "hidden" | "all";
@@ -116,9 +116,9 @@ export function useSiteTechCards() {
   });
 }
 
-export function useSiteNameTranslation() {
+export function useSiteTranslation() {
   return useMutation({
-    mutationFn: (body: SiteNameTranslationBody) => api.translateSiteName(body),
+    mutationFn: (body: SiteTranslationBody) => api.translateSite(body),
   });
 }
 

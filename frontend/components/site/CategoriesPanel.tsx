@@ -2,19 +2,20 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Languages, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import {
   LocaleTabs,
-  hasAnyName,
-  otherLocaleNames,
+  TranslateFieldsButton,
+  applyTranslatedFields,
+  filledFields,
+  hasAnyValue,
   type SiteLocale,
 } from "@/components/site/LocaleTabs";
 import { VisibilitySelect } from "@/components/site/VisibilitySelect";
@@ -24,10 +25,19 @@ import {
   useSiteCategories,
   useSiteCategoryImageDelete,
   useSiteCategoryImageUpload,
-  useSiteNameTranslation,
+  useSiteTranslation,
   useVisibility,
 } from "@/hooks/useSite";
 import type { SiteCategory, SiteCategoryBody } from "@/lib/api/site-schemas";
+
+const CATEGORY_FIELDS = [
+  "name",
+  "page_heading",
+  "page_description",
+  "seo_title",
+  "seo_description",
+  "page_slug",
+] as const;
 
 type CategoryDraft = SiteCategoryBody & { id: number | null };
 
@@ -73,7 +83,7 @@ export function CategoriesPanel() {
   );
   const uploadImage = useSiteCategoryImageUpload();
   const deleteImage = useSiteCategoryImageDelete();
-  const translateName = useSiteNameTranslation();
+  const translate = useSiteTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -82,7 +92,7 @@ export function CategoriesPanel() {
   const open = (row: SiteCategory | null) => {
     categories.save.reset();
     categories.remove.reset();
-    translateName.reset();
+    translate.reset();
     setEditingId(row ? row.id : null);
     setDraft(draftFrom(row, (categories.list.data ?? []).length));
   };
@@ -146,7 +156,7 @@ export function CategoriesPanel() {
           error={
             categories.save.error ??
             categories.remove.error ??
-            translateName.error ??
+            translate.error ??
             uploadImage.error ??
             deleteImage.error
           }
@@ -164,45 +174,51 @@ export function CategoriesPanel() {
           headerAction={null}
           below={null}
         >
-          <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+            {canEdit ? (
+              <TranslateFieldsButton
+                label={t("translateFields")}
+                pending={translate.isPending}
+                disabled={Object.keys(filledFields(draft, locale, CATEGORY_FIELDS)).length === 0}
+                onClick={() => {
+                  const source = locale;
+                  translate.mutate(
+                    {
+                      language: source,
+                      items: [
+                        {
+                          key: "category",
+                          kind: "category",
+                          id: draft.id,
+                          fields: filledFields(draft, source, CATEGORY_FIELDS),
+                        },
+                      ],
+                    },
+                    {
+                      onSuccess: (result) => {
+                        const item = result.items.find((row) => row.key === "category");
+                        if (!item) return;
+                        setDraft((row) =>
+                          row === null ? null : { ...row, ...applyTranslatedFields(item.fields, source) },
+                        );
+                      },
+                    },
+                  );
+                }}
+              />
+            ) : null}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
-                required={!hasAnyName(draft)}
+                required={!hasAnyValue(draft, "name")}
                 name={`name_${locale}`}
                 value={draft[`name_${locale}`]}
                 onChange={(event) =>
                   setDraft({ ...draft, [`name_${locale}`]: event.target.value })
                 }
               />
-              {canEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="self-start"
-                  disabled={draft[`name_${locale}`].trim() === "" || translateName.isPending}
-                  onClick={() => {
-                    const source = locale;
-                    translateName.mutate(
-                      { kind: "category", language: source, name: draft[`name_${source}`] },
-                      {
-                        onSuccess: (names) =>
-                          setDraft((row) =>
-                            row === null ? null : { ...row, ...otherLocaleNames(names, source) },
-                          ),
-                      },
-                    );
-                  }}
-                >
-                  {translateName.isPending ? (
-                    <Spinner className="mr-1 h-4 w-4" />
-                  ) : (
-                    <Languages className="mr-1 h-4 w-4" />
-                  )}
-                  {t("translateName")}
-                </Button>
-              ) : null}
             </Field>
             <Field label={t("slug")}>
               <Input

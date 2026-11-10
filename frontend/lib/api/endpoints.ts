@@ -2,18 +2,18 @@ import { ApiError } from "./client";
 import {
   SiteCategoryLandingSchema,
   SiteCategorySchema,
-  SiteNameTranslationSchema,
   SiteOptionGroupSchema,
   SiteProductImageSchema,
   SiteProductListItemSchema,
   SiteProductSchema,
   SiteTechCardChoiceSchema,
+  SiteTranslationSchema,
   type SiteCategoryBody,
   type SiteCategoryLandingBody,
-  type SiteNameTranslation,
-  type SiteNameTranslationBody,
   type SiteOptionGroupBody,
   type SiteProductBody,
+  type SiteTranslation,
+  type SiteTranslationBody,
 } from "./site-schemas";
 import {
   AttendanceEventSchema,
@@ -1266,12 +1266,12 @@ export function endpoints(fetcher: Fetcher) {
       const raw = await fetcher<unknown>("/api/site/tech-cards/");
       return parse(z.array(SiteTechCardChoiceSchema), raw);
     },
-    async translateSiteName(body: SiteNameTranslationBody): Promise<SiteNameTranslation> {
-      const raw = await fetcher<unknown>("/api/site/translate-name/", {
+    async translateSite(body: SiteTranslationBody): Promise<SiteTranslation> {
+      const raw = await fetcher<unknown>("/api/site/translate/", {
         method: "POST",
         body: JSON.stringify(body),
       });
-      return parse(SiteNameTranslationSchema, raw);
+      return parse(SiteTranslationSchema, raw);
     },
   };
 }

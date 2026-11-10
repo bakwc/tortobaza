@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
-import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import {
+  LocaleTabs,
+  TranslateFieldsButton,
+  applyTranslatedFields,
+  filledFields,
+  hasAnyValue,
+  type SiteLocale,
+} from "@/components/site/LocaleTabs";
 import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
@@ -18,9 +25,18 @@ import {
   useSiteCategoryLandings,
   useSiteCategoryLandingImageDelete,
   useSiteCategoryLandingImageUpload,
+  useSiteTranslation,
   useVisibility,
 } from "@/hooks/useSite";
 import type { SiteCategoryLanding, SiteCategoryLandingBody } from "@/lib/api/site-schemas";
+
+const LANDING_FIELDS = [
+  "page_heading",
+  "page_description",
+  "seo_title",
+  "seo_description",
+  "page_slug",
+] as const;
 
 type LandingDraft = SiteCategoryLandingBody & { id: number | null };
 
@@ -63,6 +79,7 @@ export function LandingsPanel() {
   );
   const uploadImage = useSiteCategoryLandingImageUpload();
   const deleteImage = useSiteCategoryLandingImageDelete();
+  const translate = useSiteTranslation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [draft, setDraft] = useState<LandingDraft | null>(null);
@@ -70,6 +87,7 @@ export function LandingsPanel() {
   const open = (row: SiteCategoryLanding | null) => {
     landings.save.reset();
     landings.remove.reset();
+    translate.reset();
     setDraft(draftFrom(row, categories.list.data ?? []));
   };
   const close = () => setDraft(null);
@@ -125,6 +143,7 @@ export function LandingsPanel() {
           error={
             landings.save.error ??
             landings.remove.error ??
+            translate.error ??
             uploadImage.error ??
             deleteImage.error
           }
@@ -142,7 +161,41 @@ export function LandingsPanel() {
           headerAction={null}
           below={null}
         >
-          <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+            {canEdit ? (
+              <TranslateFieldsButton
+                label={t("translateFields")}
+                pending={translate.isPending}
+                disabled={Object.keys(filledFields(draft, locale, LANDING_FIELDS)).length === 0}
+                onClick={() => {
+                  const source = locale;
+                  translate.mutate(
+                    {
+                      language: source,
+                      items: [
+                        {
+                          key: "landing",
+                          kind: "categorylanding",
+                          id: draft.id,
+                          fields: filledFields(draft, source, LANDING_FIELDS),
+                        },
+                      ],
+                    },
+                    {
+                      onSuccess: (result) => {
+                        const item = result.items.find((row) => row.key === "landing");
+                        if (!item) return;
+                        setDraft((row) =>
+                          row === null ? null : { ...row, ...applyTranslatedFields(item.fields, source) },
+                        );
+                      },
+                    },
+                  );
+                }}
+              />
+            ) : null}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("slug")}>
               <Input
@@ -169,27 +222,13 @@ export function LandingsPanel() {
             </Field>
             <Field label={t("pageSlug")}>
               <Input
-                required
+                required={!hasAnyValue(draft, "page_slug")}
                 name={`page_slug_${locale}`}
                 value={draft[`page_slug_${locale}`]}
                 onChange={(event) =>
                   setDraft({ ...draft, [`page_slug_${locale}`]: event.target.value })
                 }
               />
-              {(["en", "ka", "ru"] as const)
-                .filter((code) => code !== locale)
-                .map((code) => (
-                  <input
-                    key={code}
-                    required
-                    name={`page_slug_${code}`}
-                    value={draft[`page_slug_${code}`]}
-                    placeholder={`${t("pageSlug")} ${code.toUpperCase()}`}
-                    onChange={() => undefined}
-                    tabIndex={-1}
-                    className="sr-only"
-                  />
-                ))}
             </Field>
             <Field label={t("pageHeading")} className="sm:col-span-2">
               <Input

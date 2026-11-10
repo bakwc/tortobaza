@@ -170,17 +170,37 @@ export const SiteTechCardChoiceSchema = z.object({
   name: z.string(),
 });
 
-export const SiteNameTranslationSchema = z.object({
+const SiteTranslatedTextSchema = z.object({
   en: z.string(),
   ka: z.string(),
   ru: z.string(),
 });
 
-export type SiteNameTranslation = z.infer<typeof SiteNameTranslationSchema>;
-export type SiteNameTranslationBody = {
-  kind: "category" | "product";
+export const SiteTranslationSchema = z.object({
+  items: z.array(
+    z.object({
+      key: z.string(),
+      fields: z.record(z.string(), SiteTranslatedTextSchema),
+    }),
+  ),
+});
+
+export type SiteTranslation = z.infer<typeof SiteTranslationSchema>;
+export type SiteTranslationKind =
+  | "category"
+  | "categorylanding"
+  | "product"
+  | "optiongroup"
+  | "option"
+  | "productimage";
+export type SiteTranslationBody = {
   language: "en" | "ka" | "ru";
-  name: string;
+  items: Array<{
+    key: string;
+    kind: SiteTranslationKind;
+    id: number | null;
+    fields: Record<string, string>;
+  }>;
 };
 export type SiteCategory = z.infer<typeof SiteCategorySchema>;
 export type SiteCategoryLanding = z.infer<typeof SiteCategoryLandingSchema>;

@@ -7,7 +7,7 @@ from catalog.site_views import (
     SiteCategoryLandingImageView,
     SiteCategoryLandingListView,
     SiteCategoryListView,
-    SiteNameTranslationView,
+    SiteTranslationView,
     SiteOptionGroupDetailView,
     SiteOptionGroupListView,
     SiteOptionImageView,
@@ -35,5 +35,5 @@ urlpatterns = [
     path("site/products/<int:pk>/images/reorder/", SiteProductImageReorderView.as_view()),
     path("site/products/<int:pk>/images/<int:image_pk>/", SiteProductImageDetailView.as_view()),
     path("site/tech-cards/", SiteTechCardChoicesView.as_view()),
-    path("site/translate-name/", SiteNameTranslationView.as_view()),
+    path("site/translate/", SiteTranslationView.as_view()),
 ]

@@ -17,7 +17,7 @@ from catalog.models import (
     ProductImage,
     ProductOptionGroup,
 )
-from catalog.name_translation import NAME_LANGUAGES, schedule_name_translation
+from catalog.auto_translate import KIND_FIELDS, LANGUAGES, schedule_translation
 from catalog.responsive_urls import detail_image, list_primary_image
 from menu.models import TechCard
 
@@ -70,9 +70,9 @@ def run_model_clean(instance, exclude: list[str]) -> None:
         raise serializers.ValidationError(exc.message_dict) from exc
 
 
-def require_name(attrs: dict) -> None:
-    if not any((attrs.get(f"name_{code}") or "").strip() for code in NAME_LANGUAGES):
-        raise serializers.ValidationError("Name is required in at least one language.")
+def require_filled(attrs: dict, field: str, message: str) -> None:
+    if not any((attrs.get(f"{field}_{code}") or "").strip() for code in LANGUAGES):
+        raise serializers.ValidationError(message)
 
 
 class SiteCategorySerializer(serializers.ModelSerializer):
@@ -112,14 +112,14 @@ class SiteCategorySerializer(serializers.ModelSerializer):
         return category_image_payload(self.context, obj)
 
     def validate(self, attrs):
-        require_name(attrs)
+        require_filled(attrs, "name", "Name is required in at least one language.")
         return attrs
 
     def create(self, validated_data):
         instance = Category(**validated_data)
         run_model_clean(instance, ["name"])
         instance.save()
-        schedule_name_translation(instance)
+        schedule_translation([instance])
         return instance
 
     def update(self, instance, validated_data):
@@ -127,7 +127,7 @@ class SiteCategorySerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         run_model_clean(instance, ["name"])
         instance.save()
-        schedule_name_translation(instance)
+        schedule_translation([instance])
         return instance
 
 
@@ -165,10 +165,15 @@ class SiteCategoryLandingSerializer(serializers.ModelSerializer):
     def get_image(self, obj: CategoryLanding):
         return category_image_payload(self.context, obj)
 
+    def validate(self, attrs):
+        require_filled(attrs, "page_slug", "Page slug is required in at least one language.")
+        return attrs
+
     def create(self, validated_data):
         instance = CategoryLanding(**validated_data)
         run_model_clean(instance, [])
         instance.save()
+        schedule_translation([instance])
         return instance
 
     def update(self, instance, validated_data):
@@ -176,14 +181,15 @@ class SiteCategoryLandingSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         run_model_clean(instance, [])
         instance.save()
+        schedule_translation([instance])
         return instance
 
 
 class SiteOptionInputSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=False, allow_null=True)
-    name_en = serializers.CharField(max_length=120)
-    name_ka = serializers.CharField(max_length=120)
-    name_ru = serializers.CharField(max_length=120)
+    name_en = serializers.CharField(max_length=120, allow_blank=True)
+    name_ka = serializers.CharField(max_length=120, allow_blank=True)
+    name_ru = serializers.CharField(max_length=120, allow_blank=True)
     price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
     weight_kg = serializers.DecimalField(
         max_digits=6, decimal_places=3, required=False, allow_null=True
@@ -255,6 +261,8 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
         for row in options:
             if row.get("id") is not None and row["id"] not in existing_ids:
                 raise serializers.ValidationError("Unknown option id.")
+            require_filled(row, "name", "Name is required in at least one language.")
+        require_filled(attrs, "name", "Name is required in at least one language.")
         return attrs
 
     @transaction.atomic
@@ -262,6 +270,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
         options = validated_data.pop("options")
         instance = OptionGroup.objects.create(**validated_data)
         self._save_options(instance, options)
+        schedule_translation([instance, *instance.options.all()])
         return instance
 
     @transaction.atomic
@@ -271,6 +280,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         self._save_options(instance, options)
+        schedule_translation([instance, *instance.options.all()])
         return instance
 
     def _save_options(self, instance: OptionGroup, options: list[dict]) -> None:
@@ -407,7 +417,7 @@ class SiteProductSerializer(serializers.ModelSerializer):
         return data
 
     def validate(self, attrs):
-        require_name(attrs)
+        require_filled(attrs, "name", "Name is required in at least one language.")
         return attrs
 
     @transaction.atomic
@@ -415,7 +425,7 @@ class SiteProductSerializer(serializers.ModelSerializer):
         option_groups = validated_data.pop("option_groups", [])
         instance = Product.objects.create(**validated_data)
         self._save_option_groups(instance, option_groups)
-        schedule_name_translation(instance)
+        schedule_translation([instance, *instance.images.all()])
         return instance
 
     @transaction.atomic
@@ -425,7 +435,7 @@ class SiteProductSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         self._save_option_groups(instance, option_groups)
-        schedule_name_translation(instance)
+        schedule_translation([instance, *instance.images.all()])
         return instance
 
     def _save_option_groups(self, product: Product, rows: list[dict]) -> None:
@@ -471,10 +481,32 @@ class SiteProductImageReorderSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
 
 
-class SiteNameTranslationSerializer(serializers.Serializer):
-    kind = serializers.ChoiceField(choices=["category", "product"])
-    language = serializers.ChoiceField(choices=NAME_LANGUAGES)
-    name = serializers.CharField(max_length=200)
+class SiteTranslationItemSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    kind = serializers.ChoiceField(choices=list(KIND_FIELDS))
+    id = serializers.IntegerField(allow_null=True)
+    fields = serializers.DictField(
+        child=serializers.CharField(allow_blank=True, trim_whitespace=False)
+    )
+
+    def validate(self, attrs):
+        unknown = set(attrs["fields"]) - set(KIND_FIELDS[attrs["kind"]])
+        if unknown:
+            raise serializers.ValidationError(f"Unknown fields: {', '.join(sorted(unknown))}.")
+        if not any(value.strip() for value in attrs["fields"].values()):
+            raise serializers.ValidationError("Nothing to translate.")
+        return attrs
+
+
+class SiteTranslationRequestSerializer(serializers.Serializer):
+    language = serializers.ChoiceField(choices=LANGUAGES)
+    items = SiteTranslationItemSerializer(many=True, allow_empty=False)
+
+    def validate(self, attrs):
+        keys = [item["key"] for item in attrs["items"]]
+        if len(keys) != len(set(keys)):
+            raise serializers.ValidationError("Translation item keys must be unique.")
+        return attrs
 
 
 class SiteTechCardChoiceSerializer(serializers.ModelSerializer):

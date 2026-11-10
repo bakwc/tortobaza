@@ -1334,7 +1334,7 @@
     "visibilityHidden": "Скрытые",
     "visibilityAll": "Все",
     "name": "Название",
-    "translateName": "Перевести на другие языки",
+    "translateFields": "Перевести все поля на другие языки",
     "slug": "Slug",
     "pageSlug": "URL страницы",
     "pageHeading": "Заголовок страницы",

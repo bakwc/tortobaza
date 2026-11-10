@@ -10,7 +10,14 @@ import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { ImageCropEditor } from "@/components/site/ImageCropEditor";
 import { OptionImagePreview } from "@/components/site/ImageSitePreview";
-import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
+import {
+  LocaleTabs,
+  TranslateFieldsButton,
+  applyTranslatedFields,
+  filledFields,
+  hasAnyValue,
+  type SiteLocale,
+} from "@/components/site/LocaleTabs";
 import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
@@ -18,10 +25,11 @@ import {
   useSiteOptionGroups,
   useSiteOptionImageDelete,
   useSiteOptionImageUpload,
+  useSiteTranslation,
   useVisibility,
 } from "@/hooks/useSite";
 import { defaultCenterCrop, type CropValues } from "@/lib/site/crop";
-import type { SiteOptionGroup } from "@/lib/api/site-schemas";
+import type { SiteOptionGroup, SiteTranslationBody } from "@/lib/api/site-schemas";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
 
 type OptionDraft = {
@@ -118,6 +126,7 @@ export function OptionGroupsPanel() {
   });
   const uploadOptionImage = useSiteOptionImageUpload();
   const deleteOptionImage = useSiteOptionImageDelete();
+  const translate = useSiteTranslation();
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
@@ -127,6 +136,7 @@ export function OptionGroupsPanel() {
   const open = (row: SiteOptionGroup | null) => {
     groups.save.reset();
     groups.remove.reset();
+    translate.reset();
     setEditingId(row ? row.id : null);
     const next = draftFrom(row);
     setDraft(next);
@@ -196,6 +206,7 @@ export function OptionGroupsPanel() {
           error={
             groups.save.error ??
             groups.remove.error ??
+            translate.error ??
             uploadOptionImage.error ??
             deleteOptionImage.error
           }
@@ -240,29 +251,72 @@ export function OptionGroupsPanel() {
           headerAction={null}
           below={null}
         >
-          <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+            {canEdit ? (
+              <TranslateFieldsButton
+                label={t("translateFields")}
+                pending={translate.isPending}
+                disabled={
+                  Object.keys(filledFields(draft, locale, ["name"])).length === 0 &&
+                  !draft.options.some((option) => option[`name_${locale}`].trim() !== "")
+                }
+                onClick={() => {
+                  const source = locale;
+                  const items: SiteTranslationBody["items"] = [];
+                  const groupFields = filledFields(draft, source, ["name"]);
+                  if (Object.keys(groupFields).length > 0) {
+                    items.push({
+                      key: "group",
+                      kind: "optiongroup" as const,
+                      id: editingId,
+                      fields: groupFields,
+                    });
+                  }
+                  for (const option of draft.options) {
+                    const fields = filledFields(option, source, ["name"]);
+                    if (Object.keys(fields).length > 0) {
+                      items.push({
+                        key: `option-${option.key}`,
+                        kind: "option" as const,
+                        id: option.id,
+                        fields,
+                      });
+                    }
+                  }
+                  translate.mutate(
+                    { language: source, items },
+                    {
+                      onSuccess: (result) => {
+                        const byKey = new Map(result.items.map((item) => [item.key, item]));
+                        setDraft((row) => {
+                          if (row === null) return null;
+                          const group = byKey.get("group");
+                          return {
+                            ...(group ? { ...row, ...applyTranslatedFields(group.fields, source) } : row),
+                            options: row.options.map((option) => {
+                              const translated = byKey.get(`option-${option.key}`);
+                              return translated
+                                ? { ...option, ...applyTranslatedFields(translated.fields, source) }
+                                : option;
+                            }),
+                          };
+                        });
+                      },
+                    },
+                  );
+                }}
+              />
+            ) : null}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
-                required
+                required={!hasAnyValue(draft, "name")}
                 name={`name_${locale}`}
                 value={draft[`name_${locale}`]}
                 onChange={(event) => setDraft({ ...draft, [`name_${locale}`]: event.target.value })}
               />
-              {(["en", "ka", "ru"] as const)
-                .filter((code) => code !== locale)
-                .map((code) => (
-                  <input
-                    key={code}
-                    required
-                    name={`name_${code}`}
-                    value={draft[`name_${code}`]}
-                    placeholder={`${t("name")} ${code.toUpperCase()}`}
-                    onChange={() => undefined}
-                    tabIndex={-1}
-                    className="sr-only"
-                  />
-                ))}
             </Field>
             <Field label={t("slug")}>
               <Input
@@ -359,7 +413,7 @@ export function OptionGroupsPanel() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Field label={t("name")}>
                     <Input
-                      required
+                      required={!hasAnyValue(row, "name")}
                       name={`name_${locale}`}
                       value={row[`name_${locale}`]}
                       onChange={(event) =>
@@ -373,20 +427,6 @@ export function OptionGroupsPanel() {
                         })
                       }
                     />
-                    {(["en", "ka", "ru"] as const)
-                      .filter((code) => code !== locale)
-                      .map((code) => (
-                        <input
-                          key={code}
-                          required
-                          name={`name_${code}`}
-                          value={row[`name_${code}`]}
-                          placeholder={`${t("name")} ${code.toUpperCase()}`}
-                          onChange={() => undefined}
-                          tabIndex={-1}
-                          className="sr-only"
-                        />
-                      ))}
                   </Field>
                   <Field label={t("priceDelta")}>
                     <Input

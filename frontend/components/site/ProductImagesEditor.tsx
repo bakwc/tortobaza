@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { ErrorText, Field } from "@/components/menu/ui";
 import { ImageCropEditor, loadImageSize } from "@/components/site/ImageCropEditor";
 import { ImageSitePreview } from "@/components/site/ImageSitePreview";
-import { LocaleTabs, type SiteLocale } from "@/components/site/LocaleTabs";
-import { useSiteProductImages } from "@/hooks/useSite";
+import { LocaleTabs, TranslateFieldsButton, type SiteLocale } from "@/components/site/LocaleTabs";
+import { useSiteProductImages, useSiteTranslation } from "@/hooks/useSite";
 import { defaultCenterCrop, type CropValues } from "@/lib/site/crop";
 import type { SiteProductImage } from "@/lib/api/site-schemas";
 
@@ -54,6 +54,7 @@ export function ProductImagesEditor({
   const t = useTranslations("site");
   const fileRef = useRef<HTMLInputElement>(null);
   const mutations = useSiteProductImages(productId);
+  const translate = useSiteTranslation();
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [activeId, setActiveId] = useState<number | "pending" | null>(
     images[0]?.id ?? null,
@@ -230,7 +231,7 @@ export function ProductImagesEditor({
 
   return (
     <div className="grid gap-4">
-      <ErrorText error={mutations.upload.error ?? mutations.patch.error} />
+      <ErrorText error={mutations.upload.error ?? mutations.patch.error ?? translate.error} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium text-[var(--ink)]">{t("productImages")}</p>
         {canEdit ? (
@@ -353,6 +354,64 @@ export function ProductImagesEditor({
                     }}
                   />
                 </Field>
+                {canEdit ? (
+                  <TranslateFieldsButton
+                    label={t("translateFields")}
+                    pending={translate.isPending}
+                    disabled={
+                      (activePending
+                        ? activePending[`alt_${locale}`]
+                        : (activeImage?.[`alt_${locale}`] ?? "")
+                      ).trim() === ""
+                    }
+                    onClick={() => {
+                      const source = locale;
+                      const pendingRow = activePending;
+                      const saved = activeImage;
+                      const text = pendingRow
+                        ? pendingRow[`alt_${source}`]
+                        : (saved?.[`alt_${source}`] ?? "");
+                      translate.mutate(
+                        {
+                          language: source,
+                          items: [
+                            {
+                              key: "image",
+                              kind: "productimage",
+                              id: saved?.id ?? null,
+                              fields: { alt: text },
+                            },
+                          ],
+                        },
+                        {
+                          onSuccess: (result) => {
+                            const values = result.items.find((item) => item.key === "image")?.fields.alt;
+                            if (!values) return;
+                            const patch = {
+                              ...(source === "en" ? {} : { alt_en: values.en }),
+                              ...(source === "ka" ? {} : { alt_ka: values.ka }),
+                              ...(source === "ru" ? {} : { alt_ru: values.ru }),
+                            };
+                            if (pendingRow) {
+                              setPending((rows) =>
+                                rows.map((row) =>
+                                  row.key === pendingRow.key ? { ...row, ...patch } : row,
+                                ),
+                              );
+                              return;
+                            }
+                            if (saved) {
+                              mutations.patch.mutate(
+                                { imageId: saved.id, body: patch },
+                                { onSuccess: onRefresh },
+                              );
+                            }
+                          },
+                        },
+                      );
+                    }}
+                  />
+                ) : null}
               </>
             ) : null}
           </div>

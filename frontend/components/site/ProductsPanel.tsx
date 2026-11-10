@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ExternalLink, Languages, Plus } from "lucide-react";
+import { ExternalLink, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,10 @@ import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from 
 import { DeliveryTierSelect } from "@/components/site/DeliveryTierSelect";
 import {
   LocaleTabs,
-  hasAnyName,
-  otherLocaleNames,
+  TranslateFieldsButton,
+  applyTranslatedFields,
+  filledFields,
+  hasAnyValue,
   type SiteLocale,
 } from "@/components/site/LocaleTabs";
 import { ProductImagesEditor } from "@/components/site/ProductImagesEditor";
@@ -23,16 +25,18 @@ import { useCan } from "@/hooks/useAuth";
 import {
   matchesVisibility,
   useSiteCategories,
-  useSiteNameTranslation,
   useSiteOptionGroups,
   useSiteProductDetail,
   useSiteProducts,
   useSiteTechCards,
+  useSiteTranslation,
   useVisibility,
 } from "@/hooks/useSite";
 import { Link } from "@/i18n/navigation";
 import { ApiError } from "@/lib/api/client";
 import type { SiteProduct, SiteProductBody, SiteProductListItem } from "@/lib/api/site-schemas";
+
+const PRODUCT_FIELDS = ["name", "description"] as const;
 
 type ProductDraft = SiteProductBody & { id: number | null };
 
@@ -157,15 +161,13 @@ export function ProductsPanel() {
   const categories = useSiteCategories();
   const optionGroups = useSiteOptionGroups();
   const techCards = useSiteTechCards();
-  const translateName = useSiteNameTranslation();
+  const translate = useSiteTranslation();
   const products = useSiteProducts({ category: categoryFilter, search });
-  const visibleCategories = (categories.list.data ?? []).filter((row) =>
-    matchesVisibility(row.is_active, visibility),
-  );
+  const allCategories = categories.list.data ?? [];
   const visibleProducts = (products.list.data ?? []).filter((row) =>
     matchesVisibility(row.is_active, visibility),
   );
-  const productGroups = visibleCategories.flatMap((category) => {
+  const productGroups = allCategories.flatMap((category) => {
     const rows = visibleProducts.filter((row) => row.category === category.id);
     if (rows.length === 0) return [];
     return [{ id: category.id, label: category.name_ru || category.name_en, rows }];
@@ -184,7 +186,7 @@ export function ProductsPanel() {
   const open = (row: SiteProductListItem | null) => {
     products.save.reset();
     products.remove.reset();
-    translateName.reset();
+    translate.reset();
     setDeletePrompt(null);
     if (row === null) {
       setEditingId(null);
@@ -248,7 +250,7 @@ export function ProductsPanel() {
               }}
             >
               <option value="">{t("allCategories")}</option>
-              {visibleCategories.map((row) => (
+              {allCategories.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.name_ru || row.name_en}
                 </option>
@@ -309,7 +311,7 @@ export function ProductsPanel() {
           error={
             imageError ??
             products.save.error ??
-            translateName.error ??
+            translate.error ??
             (deletePreview(products.remove.error) ? null : products.remove.error) ??
             detail.error
           }
@@ -380,11 +382,44 @@ export function ProductsPanel() {
             <p className="text-sm text-[var(--muted-2)]">{t("loading")}</p>
           ) : (
           <>
-          <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <LocaleTabs locale={locale} onChange={setLocale} labels={{ en: "EN", ka: "KA", ru: "RU" }} />
+            {canEdit ? (
+              <TranslateFieldsButton
+                label={t("translateFields")}
+                pending={translate.isPending}
+                disabled={Object.keys(filledFields(activeDraft, locale, PRODUCT_FIELDS)).length === 0}
+                onClick={() => {
+                  const source = locale;
+                  translate.mutate(
+                    {
+                      language: source,
+                      items: [
+                        {
+                          key: "product",
+                          kind: "product",
+                          id: activeDraft.id,
+                          fields: filledFields(activeDraft, source, PRODUCT_FIELDS),
+                        },
+                      ],
+                    },
+                    {
+                      onSuccess: (result) => {
+                        const item = result.items.find((row) => row.key === "product");
+                        if (!item) return;
+                        const patch = applyTranslatedFields(item.fields, source);
+                        setDraft((row) => ({ ...(row ?? activeDraft), ...patch }));
+                      },
+                    },
+                  );
+                }}
+              />
+            ) : null}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={t("name")}>
               <Input
-                required={!hasAnyName(activeDraft)}
+                required={!hasAnyValue(activeDraft, "name")}
                 name={`name_${locale}`}
                 value={activeDraft[`name_${locale}`]}
                 onChange={(event) => {
@@ -399,35 +434,6 @@ export function ProductsPanel() {
                   });
                 }}
               />
-              {canEdit ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="self-start"
-                  disabled={activeDraft[`name_${locale}`].trim() === "" || translateName.isPending}
-                  onClick={() => {
-                    const source = locale;
-                    translateName.mutate(
-                      { kind: "product", language: source, name: activeDraft[`name_${source}`] },
-                      {
-                        onSuccess: (names) =>
-                          setDraft((row) => ({
-                            ...(row ?? activeDraft),
-                            ...otherLocaleNames(names, source),
-                          })),
-                      },
-                    );
-                  }}
-                >
-                  {translateName.isPending ? (
-                    <Spinner className="mr-1 h-4 w-4" />
-                  ) : (
-                    <Languages className="mr-1 h-4 w-4" />
-                  )}
-                  {t("translateName")}
-                </Button>
-              ) : null}
             </Field>
             <Field label={t("slug")}>
               <Input
