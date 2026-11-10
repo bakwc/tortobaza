@@ -155,9 +155,10 @@ def _pace_month(
     for order in orders:
         if start <= order.date <= end:
             by_date[order.date].append(order)
-        created = order.created_at.astimezone(_TB).date()
-        if start <= created <= end:
-            created_by_date[created] += 1
+        if start <= order.date <= last:
+            created = max(order.created_at.astimezone(_TB).date(), start)
+            if created <= end:
+                created_by_date[created] += 1
     revenue = Decimal("0")
     count = 0
     repeat = 0

@@ -394,12 +394,20 @@ class AnalyticsPaceTests(TestCase):
         self.assertEqual(november["days"][29]["revenue"], "5.00")
         self.assertEqual(november["days"][29]["orders"], 1)
 
-    def test_created_orders_follow_creation_date_in_tbilisi(self):
+    def test_created_orders_count_month_orders_booked_by_day(self):
         fifth = _order(date=date(2026, 1, 5), cake_price=Decimal("10.00"))
         eighth = _order(date=date(2026, 1, 8), cake_price=Decimal("10.00"))
         carried = _order(date=date(2026, 1, 4), cake_price=Decimal("10.00"))
         boundary = _order(date=date(2026, 1, 9), cake_price=Decimal("10.00"))
         removed = _order(date=date(2026, 1, 6), cake_price=Decimal("10.00"), deleted=True)
+        february = _order(date=date(2026, 2, 2), cake_price=Decimal("10.00"))
+        december_order = _order(date=date(2025, 12, 20), cake_price=Decimal("10.00"))
+        CrmOrder.objects.filter(pk=february.pk).update(
+            created_at=timezone.make_aware(datetime(2026, 1, 3, 12, 0), _TB)
+        )
+        CrmOrder.objects.filter(pk=december_order.pk).update(
+            created_at=timezone.make_aware(datetime(2025, 12, 10, 12, 0), _TB)
+        )
         CrmOrder.objects.filter(pk=fifth.pk).update(
             created_at=timezone.make_aware(datetime(2026, 1, 3, 15, 0), _TB)
         )
@@ -417,9 +425,9 @@ class AnalyticsPaceTests(TestCase):
         )
         report = pace("2026-01", date(2026, 1, 3))
         january, december, _november = report["months"]
-        self.assertEqual([day["created_orders"] for day in january["days"]], [0, 1, 3])
-        self.assertEqual(december["days"][26]["created_orders"], 0)
-        self.assertEqual(december["days"][27]["created_orders"], 1)
+        self.assertEqual([day["created_orders"] for day in january["days"]], [1, 2, 4])
+        self.assertEqual(december["days"][8]["created_orders"], 0)
+        self.assertEqual(december["days"][9]["created_orders"], 1)
         self.assertEqual(december["days"][30]["created_orders"], 1)
 
 

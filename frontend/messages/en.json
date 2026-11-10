@@ -1036,7 +1036,7 @@
     "asOfDay": "as of day {day}",
     "cumulativeRevenue": "Cumulative revenue",
     "cumulativeOrders": "Cumulative orders",
-    "createdOrders": "Cumulative orders by creation date",
+    "createdOrders": "Orders for the month created by this day",
     "cumulativeRepeat": "Cumulative repeat orders",
     "repeatOrders": "Repeat orders",
     "loadError": "Could not load analytics.",
