@@ -33,31 +33,41 @@ export function CrmOrderTimeSlot({
   const timeClass = compact
     ? "min-w-0 truncate text-sm font-semibold text-[var(--ink)]"
     : "text-lg font-bold tracking-tight text-[var(--ink)] lg:text-2xl";
-  const showPrep = showCookingTime && layout === "day" && !whenReady && timeStart !== null;
+  const clockClass = compact
+    ? "h-3.5 w-3.5 shrink-0 text-[var(--brand)]"
+    : "h-4 w-4 shrink-0 text-[var(--brand)] lg:h-5 lg:w-5";
+  const isUnset = whenReady || timeStart === null;
+  const showSlot = showDeliveryTime || (showCookingTime && isUnset);
+  const showPrep =
+    showCookingTime && timeStart !== null && !whenReady && (layout === "day" || !showDeliveryTime);
+  const prepTime =
+    showPrep && timeStart !== null ? formatPrepTime(timeStart, deliveryDurationSeconds) : null;
 
-  if (!showDeliveryTime && !showPrep) return null;
+  if (!showSlot && prepTime === null) return null;
 
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5">
-      {showDeliveryTime ? (
+      {showSlot ? (
         <>
-          <Clock
-            className={
-              compact
-                ? "h-3.5 w-3.5 shrink-0 text-[var(--brand)]"
-                : "h-4 w-4 shrink-0 text-[var(--brand)] lg:h-5 lg:w-5"
-            }
-          />
+          <Clock className={clockClass} />
           <span className={timeClass}>{slot}</span>
-          {layout === "month" ? <Truck className="h-3.5 w-3.5 shrink-0" /> : null}
+          {compact && showDeliveryTime ? <Truck className="h-3.5 w-3.5 shrink-0" /> : null}
         </>
       ) : null}
-      {showPrep ? (
+      {prepTime !== null && compact ? (
+        <>
+          <Clock className={clockClass} />
+          <span className={timeClass}>
+            {t.rich("prepareBy", {
+              time: () => <span>{prepTime}</span>,
+            })}
+          </span>
+        </>
+      ) : null}
+      {prepTime !== null && !compact ? (
         <span className="inline-flex shrink-0 items-baseline gap-1.5 text-sm font-medium text-[var(--muted-2)] lg:text-base">
           {t.rich("prepareBy", {
-            time: () => (
-              <span className={timeClass}>{formatPrepTime(timeStart, deliveryDurationSeconds)}</span>
-            ),
+            time: () => <span className={timeClass}>{prepTime}</span>,
           })}
         </span>
       ) : null}
