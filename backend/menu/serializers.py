@@ -190,6 +190,12 @@ def component_payload(line) -> dict:
     }
 
 
+def tech_card_line_payload(line, cost: Decimal | None) -> dict:
+    payload = recipe_line_payload(line, cost)
+    payload["nested_tech_card"] = line.nested_tech_card_id
+    return payload
+
+
 def recipe_line_payload(line, cost: Decimal | None) -> dict:
     payload = component_payload(line)
     payload["loss_percent"] = str(line.loss_percent)
@@ -461,26 +467,7 @@ class CatalogOptionSerializer(serializers.ModelSerializer):
         return self.context["modifier_by_option"].get(obj.pk)
 
 
-class TechCardSectionInputSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=200)
-    method = serializers.CharField(allow_blank=True, trim_whitespace=False)
-    lines = RecipeLineSerializer(many=True)
-
-    def validate_name(self, value: str) -> str:
-        name = value.strip()
-        if not name:
-            raise serializers.ValidationError("Section name is required.")
-        return name
-
-
-class TechCardGroupInputSerializer(serializers.Serializer):
-    group = serializers.PrimaryKeyRelatedField(queryset=ModifierGroup.objects.all())
-    is_required = serializers.BooleanField(allow_null=True)
-
-
-class TechCardModifierLineInputSerializer(RecipeLineSerializer):
-    modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all())
-    scales_by_weight = serializers.BooleanField()
+class TechCardLineInputSerializer(RecipeLineSerializer):
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
 
     def validate(self, attrs):
@@ -496,6 +483,28 @@ class TechCardModifierLineInputSerializer(RecipeLineSerializer):
                 )
             return attrs
         return super().validate(attrs)
+
+
+class TechCardSectionInputSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    method = serializers.CharField(allow_blank=True, trim_whitespace=False)
+    lines = TechCardLineInputSerializer(many=True)
+
+    def validate_name(self, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise serializers.ValidationError("Section name is required.")
+        return name
+
+
+class TechCardGroupInputSerializer(serializers.Serializer):
+    group = serializers.PrimaryKeyRelatedField(queryset=ModifierGroup.objects.all())
+    is_required = serializers.BooleanField(allow_null=True)
+
+
+class TechCardModifierLineInputSerializer(TechCardLineInputSerializer):
+    modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all())
+    scales_by_weight = serializers.BooleanField()
 
 
 class TechCardCategorySerializer(serializers.ModelSerializer):
@@ -535,7 +544,7 @@ class TechCardListItemSerializer(serializers.ModelSerializer):
 
 class TechCardSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
-    lines = RecipeLineSerializer(many=True, write_only=True)
+    lines = TechCardLineInputSerializer(many=True, write_only=True)
     sections = TechCardSectionInputSerializer(many=True, write_only=True)
     modifier_groups = TechCardGroupInputSerializer(many=True, write_only=True)
     modifier_lines = TechCardModifierLineInputSerializer(many=True, write_only=True)
@@ -569,8 +578,10 @@ class TechCardSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         costs = show_costs(self.context)
         data["lines"] = [
-            recipe_line_payload(line, stock_line_cost(line) if costs else None)
-            for line in instance.lines.filter(section__isnull=True).select_related("ingredient", "semi_product")
+            tech_card_line_payload(line, stock_line_cost(line) if costs else None)
+            for line in instance.lines.filter(section__isnull=True).select_related(
+                "ingredient", "semi_product", "nested_tech_card"
+            )
         ]
         data["sections"] = [
             {
@@ -579,8 +590,8 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "method": section.method,
                 "position": section.position,
                 "lines": [
-                    recipe_line_payload(line, stock_line_cost(line) if costs else None)
-                    for line in section.lines.select_related("ingredient", "semi_product")
+                    tech_card_line_payload(line, stock_line_cost(line) if costs else None)
+                    for line in section.lines.select_related("ingredient", "semi_product", "nested_tech_card")
                 ],
             }
             for section in instance.sections.all()
@@ -713,7 +724,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             TechCardModifierLine.objects.create(tech_card=instance, position=position, **line)
         errors = tech_card_cycle_errors(instance)
         if errors:
-            raise serializers.ValidationError({"modifier_lines": errors})
+            raise serializers.ValidationError(errors)
 
 
 class TechCardCostQuerySerializer(serializers.Serializer):

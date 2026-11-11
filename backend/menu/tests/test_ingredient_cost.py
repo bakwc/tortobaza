@@ -214,6 +214,7 @@ class IngredientCostApiTests(TestCase):
                 {
                     "ingredient": self.menu.flour.pk,
                     "semi_product": None,
+                    "nested_tech_card": None,
                     "quantity": "100",
                     "quantity_unit": "g",
                     "loss_percent": "0",

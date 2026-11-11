@@ -241,6 +241,32 @@ def crm_order_departure_datetime(order: CrmOrder) -> datetime | None:
     return crm_order_prep_datetime(order)
 
 
+def notify_prep_time_earlier(order: CrmOrder, minutes: int) -> None:
+    token = settings.TELEGRAM_BOT_TOKEN
+    chat_id = settings.TELEGRAM_CRM_CHAT_ID
+    if not token or not chat_id:
+        return
+    clock = (
+        crm_order_slot_datetime(order)
+        - timedelta(minutes=_prep_lead_minutes(order.delivery_duration_seconds))
+    ).strftime("%H:%M")
+    text = (
+        f"Время готовности заказа #{order.pk} изменилось, "
+        f"стало на {minutes} минут раньше ({clock})"
+    )
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "disable_web_page_preview": True,
+    }
+    if order.telegram_message_id is not None:
+        link = _channel_message_link(chat_id, order.telegram_message_id)
+        payload["text"] = f'{text}\n<a href="{link}">исходное сообщение</a>'
+        payload["parse_mode"] = "HTML"
+        payload["reply_to_message_id"] = order.telegram_message_id
+    _telegram_json("sendMessage", payload)
+
+
 def _format_prep_slot(order: CrmOrder) -> str | None:
     if order.when_ready or order.time_start is None:
         return None

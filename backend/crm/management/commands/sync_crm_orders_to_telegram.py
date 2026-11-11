@@ -34,7 +34,12 @@ from crm.models import (
     ResolvedYandexAddress,
     YandexAddressResolveFailure,
 )
-from crm.telegram import crm_order_slot_datetime, sync_crm_order_to_telegram
+from crm.telegram import (
+    _prep_lead_minutes,
+    crm_order_slot_datetime,
+    notify_prep_time_earlier,
+    sync_crm_order_to_telegram,
+)
 from crm.telegram_channels import sync_telegram_channels
 from crm.telegram_leads import classify_leads, notify_recent_leads
 from crm.telegram_user import pending_telegram_phones, resolve_phone
@@ -48,6 +53,7 @@ _TB = ZoneInfo("Asia/Tbilisi")
 YANDEX_ADDRESS_RESOLVE_MAX_FAILURES = 3
 GOOGLE_ADDRESS_RESOLVE_MAX_FAILURES = 3
 ROUTE_RESOLVE_MAX_FAILURES = 3
+PREP_LEAD_SHIFT_MINUTES = 10
 TELEGRAM_PHONE_CHECKS_PER_SYNC = 5
 
 
@@ -174,18 +180,23 @@ class Command(BaseCommand):
                     failure.failure_count += 1
                     failure.save(update_fields=["failure_count"])
                 continue
-            order.delivery_distance_meters = distance_meters
-            order.delivery_duration_seconds = duration_seconds
+            old_lead = _prep_lead_minutes(order.delivery_duration_seconds)
+            new_lead = _prep_lead_minutes(duration_seconds)
+            apply_duration = first_compute or new_lead - old_lead >= PREP_LEAD_SHIFT_MINUTES
             order.delivery_route_computed_at = timezone.now()
-            order.save(
-                update_fields=[
+            update_fields = ["delivery_route_computed_at", "updated_at"]
+            if apply_duration:
+                order.delivery_distance_meters = distance_meters
+                order.delivery_duration_seconds = duration_seconds
+                update_fields = [
                     "delivery_distance_meters",
                     "delivery_duration_seconds",
-                    "delivery_route_computed_at",
-                    "updated_at",
+                    *update_fields,
                 ]
-            )
+            order.save(update_fields=update_fields)
             DeliveryRouteResolveFailure.objects.filter(order=order).delete()
+            if apply_duration and not first_compute:
+                notify_prep_time_earlier(order, new_lead - old_lead)
         order_ids = list(
             CrmOrder.objects.filter(
                 Q(deleted=False, date__gte=start, date__lte=end)

@@ -9,6 +9,8 @@ import { DialogTitle } from "@/components/ui/dialog";
 import { formatMoney, formatQuantity } from "@/components/menu/ui";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
+
+type CompositionLine = RecipeLine & { nested_tech_card: number | null };
 import { cn } from "@/lib/utils";
 
 export type RecipeTableRow = {
@@ -90,7 +92,7 @@ export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
   );
 }
 
-export function CompositionTable({ lines }: { lines: RecipeLine[] }) {
+export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
   return (
@@ -100,8 +102,16 @@ export function CompositionTable({ lines }: { lines: RecipeLine[] }) {
         return {
           key: String(line.id),
           name: line.name,
-          href: componentHref(line.ingredient, line.semi_product),
-          tag: line.semi_product !== null ? t("semiProduct").toLowerCase() : null,
+          href:
+            line.nested_tech_card !== null
+              ? `/menu?card=${line.nested_tech_card}`
+              : componentHref(line.ingredient, line.semi_product),
+          tag:
+            line.nested_tech_card !== null
+              ? t("techCard")
+              : line.semi_product !== null
+                ? t("semiProduct").toLowerCase()
+                : null,
           amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
           loss: loss === "0" ? "—" : `${loss}%`,
           cost: line.cost === undefined ? null : formatMoney(line.cost),
@@ -131,8 +141,8 @@ export function RecipeView({
   stats: { label: string; value: string }[];
   images: MenuImage[];
   compositionTitle: string;
-  lines: RecipeLine[];
-  sections: { name: string; method: string; lines: RecipeLine[] }[];
+  lines: CompositionLine[];
+  sections: { name: string; method: string; lines: CompositionLine[] }[];
   method: string;
   onEdit: () => void;
   printHref: string | null;

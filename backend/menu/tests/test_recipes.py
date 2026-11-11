@@ -704,6 +704,115 @@ class NestedTechCardTests(TestCase):
         self.assertFalse(serializer.is_valid())
 
 
+class NestedTechCardLineTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.client = APIClient()
+        self.staff = User.objects.create_user("chef", password="x")
+        grant(self.staff, "edit_menu")
+        self.client.force_authenticate(self.staff)
+        self.filling = TechCard.objects.create(name="Filling card", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        TechCardLine.objects.create(
+            tech_card=self.filling,
+            ingredient=self.menu.flour,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        self.syrup = TechCard.objects.create(
+            name="Syrup card",
+            kind=TechCard.KIND_WEIGHTED,
+            basis_weight_kg=Decimal("1"),
+        )
+        TechCardLine.objects.create(
+            tech_card=self.syrup,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("200"),
+            quantity_unit=UNIT_GRAM,
+        )
+
+    def _payload(self, name: str, lines: list[dict], sections: list[dict]) -> dict:
+        return {
+            "name": name,
+            "category": None,
+            "kind": TechCard.KIND_PIECE,
+            "basis_weight_kg": None,
+            "basis_quantity": 1,
+            "method": "",
+            "is_active": True,
+            "lines": lines,
+            "sections": sections,
+            "modifier_groups": [],
+            "modifier_lines": [],
+        }
+
+    def _nested_line(self, card: TechCard, quantity: str) -> dict:
+        return {
+            "ingredient": None,
+            "semi_product": None,
+            "nested_tech_card": card.pk,
+            "quantity": quantity,
+            "quantity_unit": card.unit,
+            "loss_percent": "0",
+        }
+
+    def test_base_and_section_lines_save_a_nested_tech_card(self):
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload(
+                "Assembled",
+                [self._nested_line(self.filling, "2")],
+                [
+                    {
+                        "name": "Syrup",
+                        "method": "",
+                        "lines": [self._nested_line(self.syrup, "500")],
+                    }
+                ],
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        self.assertEqual(body["lines"][0]["nested_tech_card"], self.filling.pk)
+        self.assertIsNone(body["lines"][0]["ingredient"])
+        self.assertIsNone(body["lines"][0]["semi_product"])
+        self.assertEqual(body["sections"][0]["lines"][0]["nested_tech_card"], self.syrup.pk)
+        parent = TechCard.objects.get(pk=body["id"])
+        needs = expand_order_item(parent, None, 1, [], [])
+        self.assertEqual(needs[self.menu.flour], Decimal("200"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("100"))
+        self.assertEqual(tech_card_cost(parent, [], None), Decimal("2.50"))
+
+    def test_line_self_reference_is_rejected(self):
+        card = TechCard.objects.create(name="Loop line", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        response = self.client.put(
+            f"/api/menu/tech-cards/{card.pk}/",
+            self._payload(
+                card.name,
+                [],
+                [{"name": "Loop", "method": "", "lines": [self._nested_line(card, "1")]}],
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+
+    def test_transitive_line_cycle_is_rejected(self):
+        first = TechCard.objects.create(name="First line", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        second = TechCard.objects.create(name="Second line", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        saved = self.client.put(
+            f"/api/menu/tech-cards/{second.pk}/",
+            self._payload(second.name, [self._nested_line(first, "1")], []),
+            format="json",
+        )
+        self.assertEqual(saved.status_code, 200, saved.content)
+        cycle = self.client.put(
+            f"/api/menu/tech-cards/{first.pk}/",
+            self._payload(first.name, [self._nested_line(second, "1")], []),
+            format="json",
+        )
+        self.assertEqual(cycle.status_code, 400, cycle.content)
+
+
 class GlobalModifierGroupTests(TestCase):
     def setUp(self):
         self.menu = MenuFixture()

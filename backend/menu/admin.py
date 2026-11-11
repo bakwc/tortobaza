@@ -99,9 +99,10 @@ class TechCardSectionInline(admin.TabularInline):
 
 class TechCardLineInline(admin.TabularInline):
     model = TechCardLine
+    fk_name = "tech_card"
     extra = 1
-    fields = ["section", "ingredient", "semi_product", "quantity", "quantity_unit", "loss_percent", "position"]
-    autocomplete_fields = ["ingredient", "semi_product"]
+    fields = ["section", "ingredient", "semi_product", "nested_tech_card", "quantity", "quantity_unit", "loss_percent", "position"]
+    autocomplete_fields = ["ingredient", "semi_product", "nested_tech_card"]
 
 
 class TechCardModifierGroupInline(admin.TabularInline):

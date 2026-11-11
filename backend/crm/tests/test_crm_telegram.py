@@ -1133,6 +1133,84 @@ class CrmTelegramTests(TestCase):
             call_command("sync_crm_orders_to_telegram")
             self.assertEqual(self.routes_post.call_count, 1)
 
+    def _prep_shift_notices(self) -> list[dict]:
+        return [
+            call
+            for call in self.calls
+            if call["payload"] is not None
+            and call["method"] == "sendMessage"
+            and "изменилось" in call["payload"]["text"]
+        ]
+
+    def _set_route(self, seconds: int, meters: int) -> None:
+        self.routes_post.return_value.json.return_value = [
+            {
+                "condition": "ROUTE_EXISTS",
+                "distanceMeters": meters,
+                "duration": f"{seconds}s",
+            }
+        ]
+
+    def test_refresh_keeps_duration_when_prep_moves_under_ten_minutes(self):
+        self._cache_resolved_address("Rustaveli 1")
+        self._set_route(20 * 60, 4200)
+        order = self._create_order(delta=timedelta(hours=3))
+        call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_duration_seconds, 20 * 60)
+        self.assertFalse(self._prep_shift_notices())
+        slot = crm_order_slot_datetime(order)
+        refresh_now = slot - timedelta(minutes=30)
+        self.calls.clear()
+        self._set_route(24 * 60, 5000)
+        with patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.timezone.now",
+            return_value=refresh_now,
+        ):
+            call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 4200)
+        self.assertEqual(order.delivery_duration_seconds, 20 * 60)
+        self.assertEqual(order.delivery_route_computed_at, refresh_now)
+        self.assertFalse(self._prep_shift_notices())
+
+    def test_refresh_shifts_prep_and_notifies_when_lead_grows_by_ten_minutes(self):
+        self._cache_resolved_address("Rustaveli 1")
+        self._set_route(20 * 60, 4200)
+        order = self._create_order(delta=timedelta(hours=3))
+        call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_duration_seconds, 20 * 60)
+        self.assertFalse(self._prep_shift_notices())
+        slot = crm_order_slot_datetime(order)
+        refresh_now = slot - timedelta(minutes=30)
+        self.calls.clear()
+        self._set_route(28 * 60, 5000)
+        with patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.timezone.now",
+            return_value=refresh_now,
+        ):
+            call_command("sync_crm_orders_to_telegram")
+        order.refresh_from_db()
+        self.assertEqual(order.delivery_distance_meters, 5000)
+        self.assertEqual(order.delivery_duration_seconds, 28 * 60)
+        clock = (slot - timedelta(minutes=50)).strftime("%H:%M")
+        notices = self._prep_shift_notices()
+        self.assertEqual(len(notices), 1)
+        payload = notices[0]["payload"]
+        self.assertEqual(notices[0]["chat_id"], "crm-chat")
+        self.assertEqual(
+            payload["text"],
+            (
+                f"Время готовности заказа #{order.pk} изменилось, "
+                f"стало на 10 минут раньше ({clock})\n"
+                f'<a href="https://t.me/c/crm-chat/{order.telegram_message_id}">'
+                "исходное сообщение</a>"
+            ),
+        )
+        self.assertEqual(payload["reply_to_message_id"], order.telegram_message_id)
+        self.assertEqual(payload["parse_mode"], "HTML")
+
     def test_address_change_clears_route_and_sync_recomputes(self):
         self._cache_resolved_address("Rustaveli 1")
         self._cache_resolved_address("Gorgiladze 15")

@@ -469,12 +469,50 @@ class TechCardLine(ComponentRef):
         validators=LOSS_PERCENT_VALIDATORS,
         verbose_name=_("Loss percent"),
     )
+    nested_tech_card = models.ForeignKey(
+        TechCard,
+        related_name="nested_in_lines",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
+    )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
 
     class Meta(ComponentRef.Meta):
         ordering = ["position", "id"]
         verbose_name = _("Tech card line")
         verbose_name_plural = _("Tech card lines")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        ingredient__isnull=False,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=False,
+                        nested_tech_card__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=False,
+                    )
+                ),
+                name="%(app_label)s_%(class)s_one_component",
+            ),
+        ]
+
+    @property
+    def component(self) -> Ingredient | SemiProduct | TechCard:
+        if self.ingredient_id is not None:
+            return self.ingredient
+        if self.semi_product_id is not None:
+            return self.semi_product
+        return self.nested_tech_card
 
 
 class TechCardModifierGroup(models.Model):
