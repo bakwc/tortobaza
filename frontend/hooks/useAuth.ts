@@ -48,6 +48,24 @@ export function useCan(code: string): boolean {
   return false;
 }
 
+export function useCanSeeOrderAddress(fulfillmentType: "delivery" | "pickup"): boolean {
+  const canEditOrders = useCan("edit_orders");
+  const canDelivery = useCan("view_order_delivery_address");
+  const canPickup = useCan("view_order_pickup_address");
+  if (canEditOrders) return true;
+  if (fulfillmentType === "pickup") return canPickup;
+  return canDelivery;
+}
+
+export function useCanSeeOrderContacts(fulfillmentType: "delivery" | "pickup"): boolean {
+  const canEditOrders = useCan("edit_orders");
+  const canDelivery = useCan("view_order_delivery_contacts");
+  const canPickup = useCan("view_order_pickup_contacts");
+  if (canEditOrders) return true;
+  if (fulfillmentType === "pickup") return canPickup;
+  return canDelivery;
+}
+
 export function useLogout() {
   const qc = useQueryClient();
   return useMutation({

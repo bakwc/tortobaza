@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { useCanSeeOrderAddress, useCanSeeOrderContacts } from "@/hooks/useAuth";
 import type { CrmOrder } from "@/lib/api/types";
 import { crmOrderTotal, formatAed, formatCrmDate } from "@/lib/format";
 import { SITE_INFO } from "@/lib/site-info";
@@ -9,6 +10,8 @@ import { SITE_INFO } from "@/lib/site-info";
 export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
   const locale = useLocale();
+  const canSeeOrderAddress = useCanSeeOrderAddress(order.fulfillment_type);
+  const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
   const priceNum = crmOrderTotal(order);
   const prepayNum = Number.parseFloat(order.prepayment);
   const remainingNum = Math.max(0, priceNum - prepayNum);
@@ -75,9 +78,9 @@ export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
               {t("invoiceBillTo")}
             </h2>
             <div className="mt-3 space-y-1 text-sm">
-              <p className="font-semibold">{order.contact}</p>
-              {order.nickname ? <p>{order.nickname}</p> : null}
-              {order.fulfillment_type === "delivery" && order.delivery_address ? (
+              {canSeeOrderContacts ? <p className="font-semibold">{order.contact}</p> : null}
+              {canSeeOrderContacts && order.nickname ? <p>{order.nickname}</p> : null}
+              {canSeeOrderAddress && order.fulfillment_type === "delivery" && order.delivery_address ? (
                 <p>{order.delivery_address}</p>
               ) : null}
             </div>

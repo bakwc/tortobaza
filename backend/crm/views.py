@@ -24,7 +24,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import chef_identity
-from accounts.permissions import CanView, SectionPermission, can_edit, can_see_costs, can_view
+from accounts.permissions import (
+    CanView,
+    SectionPermission,
+    can_edit,
+    can_see_costs,
+    can_see_order_address,
+    can_view,
+)
 from attendance.models import SalaryPayout
 from attendance.salary import (
     _payslip_name,
@@ -160,11 +167,13 @@ def _map_orders_queryset(range_key: str | None, now: datetime, target_date: date
     return orders.filter(date=day)
 
 
-def _map_order_payloads(orders, range_key: str | None, now: datetime, public_base_url: str) -> list[dict]:
+def _map_order_payloads(orders, range_key: str | None, now: datetime, public_base_url: str, user) -> list[dict]:
     until = now + timedelta(hours=3)
     candidates = []
     for order in orders:
         if range_key == "next_3_hours" and not _slot_overlaps_window(order, now, until):
+            continue
+        if not can_see_order_address(user, order.fulfillment_type):
             continue
         candidates.append(order)
     addresses = [order.delivery_address for order in candidates if order.delivery_address]
@@ -324,7 +333,7 @@ class CrmOrderMapView(APIView):
         now = _tbilisi_now()
         orders = _map_orders_queryset(range_key, now, target_date)
         public_base_url = request.build_absolute_uri("/").rstrip("/")
-        payloads = _map_order_payloads(orders, range_key, now, public_base_url)
+        payloads = _map_order_payloads(orders, range_key, now, public_base_url, request.user)
         serializer = CrmMapOrderSerializer(payloads, many=True)
         response_range = range_key if range_key is not None else "today"
         return Response({"range": response_range, "orders": serializer.data})
@@ -460,7 +469,12 @@ class CrmOrderEventsView(APIView):
         serializer = CrmOrderEventSerializer(
             events,
             many=True,
-            context={"request": request, "users_by_id": users_by_id, "identities": {}},
+            context={
+                "request": request,
+                "users_by_id": users_by_id,
+                "identities": {},
+                "fulfillment_type": order.fulfillment_type,
+            },
         )
         return Response(serializer.data)
 
@@ -762,7 +776,9 @@ class FinanceTransactionsView(APIView):
             target_date = query_serializer.validated_data.get("date") or _tbilisi_now().date()
             transactions = transactions.filter(date=target_date)
             payload = {"date": target_date, "month": None, "transactions": transactions}
-        return Response(FinanceTransactionsResponseSerializer(payload).data)
+        return Response(
+            FinanceTransactionsResponseSerializer(payload, context={"request": request}).data
+        )
 
     def post(self, request):
         serializer = FinanceTransactionWriteSerializer(data=request.data)
@@ -770,7 +786,10 @@ class FinanceTransactionsView(APIView):
         with transaction.atomic(using=current_finance_db()):
             tx = create_manual_transaction(serializer.validated_data)
         return Response(
-            FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data,
+            FinanceTransactionSerializer(
+                _finance_transaction_for_response(tx.pk),
+                context={"request": request},
+            ).data,
             status=status.HTTP_201_CREATED,
         )
 
@@ -788,7 +807,12 @@ class FinanceTransactionDetailView(APIView):
         serializer.is_valid(raise_exception=True)
         with transaction.atomic(using=current_finance_db()):
             tx = update_manual_transaction(tx, serializer.validated_data)
-        return Response(FinanceTransactionSerializer(_finance_transaction_for_response(tx.pk)).data)
+        return Response(
+            FinanceTransactionSerializer(
+                _finance_transaction_for_response(tx.pk),
+                context={"request": request},
+            ).data
+        )
 
     def delete(self, request, pk: int):
         tx = get_object_or_404(FinancialTransaction, pk=pk)

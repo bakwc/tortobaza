@@ -45,7 +45,7 @@ import { CrmPaymentLinkField } from "@/components/crm/CrmPaymentLinkField";
 import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCan } from "@/hooks/useAuth";
+import { useCan, useCanSeeOrderAddress, useCanSeeOrderContacts } from "@/hooks/useAuth";
 import {
   useCrmExpenses,
   useCrmOrders,
@@ -445,6 +445,8 @@ function CrmOrderCard({
   const canEditOrders = useCan("edit_orders");
   const canViewDeliveryTime = useCan("view_order_delivery_time");
   const canViewCookingTime = useCan("view_order_cooking_time");
+  const canSeeOrderAddress = useCanSeeOrderAddress(order.fulfillment_type);
+  const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
   const tone = crmOrderStatusTone(order.status);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -591,14 +593,16 @@ function CrmOrderCard({
             </Link>
             <p className="flex min-w-0 max-w-full flex-1 items-center gap-1.5 text-sm font-medium text-[var(--ink)]">
               {order.is_gift ? <Gift className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : null}
-              <span
-                className={cn(
-                  "min-w-0 flex-1 truncate",
-                  order.is_gift && "rounded-md bg-red-100 px-1.5",
-                )}
-              >
-                {order.contact}
-              </span>
+              {canSeeOrderContacts ? (
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate",
+                    order.is_gift && "rounded-md bg-red-100 px-1.5",
+                  )}
+                >
+                  {order.contact}
+                </span>
+              ) : null}
             </p>
             <span
               className={cn(
@@ -811,6 +815,7 @@ function CrmOrderCard({
               </>
             ) : null}
 
+            {canSeeOrderContacts ? (
             <div className="flex flex-col gap-2.5 lg:gap-4">
               <div
                 className={cn(
@@ -858,8 +863,10 @@ function CrmOrderCard({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
-            {order.fulfillment_type === "pickup" && order.delivery_address.length < 5 ? (
+            {canSeeOrderAddress ? (
+            order.fulfillment_type === "pickup" && order.delivery_address.length < 5 ? (
               <div
                 className={cn(
                   "rounded-xl p-2.5 text-sm text-[var(--ink)] lg:rounded-2xl lg:p-4",
@@ -1000,6 +1007,7 @@ function CrmOrderCard({
                   </span>
                 </div>
               </div>
+            ) : null
             ) : null}
 
             <div className="grid grid-cols-2 gap-2 lg:gap-3">

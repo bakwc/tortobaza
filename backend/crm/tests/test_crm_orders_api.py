@@ -12,7 +12,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from accounts.permissions import grant
+from accounts.permissions import ORDER_PARTY_CODES, grant
 from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress, ResolvedTelegramPhone
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -23,7 +23,7 @@ class CrmOrdersApiTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
-        grant(self.user, "view_orders")
+        grant(self.user, "view_orders", *ORDER_PARTY_CODES)
         grant(self.admin, "edit_orders")
 
     def test_unauthenticated_access_denied(self):
@@ -1790,7 +1790,7 @@ class CrmOrderMapApiTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
-        grant(self.user, "view_orders")
+        grant(self.user, "view_orders", *ORDER_PARTY_CODES)
         self.now = datetime(2026, 9, 17, 14, 0, tzinfo=_TB)
         self.address = "Rustaveli 12, Batumi"
         self.google_url = "https://www.google.com/maps/search/?api=1&query=41.623987,41.645449"

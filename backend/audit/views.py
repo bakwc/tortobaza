@@ -10,10 +10,40 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import UserProfile
+from accounts.permissions import (
+    SectionPermission,
+    can_see_order_contacts,
+    redact_order_field_changes,
+)
 from audit.models import AuditEvent
-from accounts.permissions import SectionPermission
+from crm.models import CrmOrder
 
 PAGE_SIZE = 50
+
+
+def _hides_order_contacts(user, fulfillment_type: str | None) -> bool:
+    if fulfillment_type is None:
+        return not (
+            can_see_order_contacts(user, "delivery") and can_see_order_contacts(user, "pickup")
+        )
+    return not can_see_order_contacts(user, fulfillment_type)
+
+
+def _audit_order_row(event: AuditEvent, user, orders_by_id: dict[int, CrmOrder]) -> tuple[dict, str]:
+    if event.app_label != "crm" or event.model != "crmorder":
+        return event.changes, event.object_label
+    order = None
+    if event.object_id.isdigit():
+        order = orders_by_id.get(int(event.object_id))
+    fulfillment_type = None if order is None else order.fulfillment_type
+    changes = redact_order_field_changes(user, fulfillment_type, event.changes)
+    label = event.object_label
+    if _hides_order_contacts(user, fulfillment_type):
+        if order is None:
+            label = f"#{event.object_id}"
+        else:
+            label = f"{order.date} #{order.id}"
+    return changes, label
 
 
 def _actor_names(actor_ids: list[int]) -> dict[int, str]:
@@ -78,27 +108,38 @@ class AuditEventsView(APIView):
         page = Paginator(queryset, page_size).page(page_number)
         actor_ids = [event.actor_id for event in page.object_list if event.actor_id is not None]
         names = _actor_names(actor_ids)
+        order_ids = [
+            int(event.object_id)
+            for event in page.object_list
+            if event.app_label == "crm" and event.model == "crmorder" and event.object_id.isdigit()
+        ]
+        orders_by_id = {
+            order.id: order for order in CrmOrder.objects.filter(id__in=order_ids)
+        }
+        results = []
+        for event in page.object_list:
+            changes, label = _audit_order_row(event, request.user, orders_by_id)
+            results.append(
+                {
+                    "id": event.pk,
+                    "created_at": event.created_at.isoformat(),
+                    "actor_id": event.actor_id,
+                    "actor_name": names.get(event.actor_id) if event.actor_id is not None else None,
+                    "action": event.action,
+                    "app_label": event.app_label,
+                    "model": event.model,
+                    "object_id": event.object_id,
+                    "object_label": label,
+                    "database": event.database,
+                    "source": event.source,
+                    "changes": changes,
+                }
+            )
         return Response(
             {
                 "page": page.number,
                 "pages": page.paginator.num_pages,
-                "results": [
-                    {
-                        "id": event.pk,
-                        "created_at": event.created_at.isoformat(),
-                        "actor_id": event.actor_id,
-                        "actor_name": names.get(event.actor_id) if event.actor_id is not None else None,
-                        "action": event.action,
-                        "app_label": event.app_label,
-                        "model": event.model,
-                        "object_id": event.object_id,
-                        "object_label": event.object_label,
-                        "database": event.database,
-                        "source": event.source,
-                        "changes": event.changes,
-                    }
-                    for event in page.object_list
-                ],
+                "results": results,
             }
         )
 

@@ -27,7 +27,7 @@ import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCan } from "@/hooks/useAuth";
+import { useCan, useCanSeeOrderContacts } from "@/hooks/useAuth";
 import { useCrmExpensesByMonth, useCrmOrdersByMonth, useDeleteCrmOrder } from "@/hooks/useCrmOrders";
 import type { CrmDayOrder } from "@/lib/api/types";
 import { CRM_ORDER_STATUS_MESSAGE_KEYS, crmOrderStatusTone } from "@/lib/crmStatus";
@@ -295,6 +295,7 @@ function CrmMonthOrderRow({ order }: { order: CrmDayOrder }) {
   const canEditOrders = useCan("edit_orders");
   const canViewDeliveryTime = useCan("view_order_delivery_time");
   const canViewCookingTime = useCan("view_order_cooking_time");
+  const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
@@ -361,14 +362,16 @@ function CrmMonthOrderRow({ order }: { order: CrmDayOrder }) {
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="flex min-w-0 flex-1 items-center gap-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">
               {order.is_gift ? <Gift className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : null}
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  order.is_gift && "rounded-md bg-red-100 px-1.5",
-                )}
-              >
-                {order.contact}
-              </span>
+              {canSeeOrderContacts ? (
+                <span
+                  className={cn(
+                    "min-w-0 truncate",
+                    order.is_gift && "rounded-md bg-red-100 px-1.5",
+                  )}
+                >
+                  {order.contact}
+                </span>
+              ) : null}
             </p>
             {order.client_order_count !== null && order.client_order_count >= 2 ? (
               <span

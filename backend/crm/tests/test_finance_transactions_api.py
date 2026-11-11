@@ -9,7 +9,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
-from accounts.permissions import grant
+from accounts.permissions import ORDER_PARTY_CODES, grant
 from crm.models import CrmOrder, FinancialAccount, FinancialTransaction
 from tortobaza.finance_db import use_finance_db
 
@@ -69,7 +69,7 @@ class FinanceTransactionsApiTests(TestCase):
         self.worker = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
         self.staff = User.objects.create_user(username="staff", password="password", is_staff=True)
-        grant(self.admin, "edit_finance")
+        grant(self.admin, "edit_finance", *ORDER_PARTY_CODES)
         self.account = FinancialAccount.objects.create(name="Liberty", kind=FinancialAccount.KIND_BANK)
         self.day = date(2026, 6, 15)
 
@@ -289,6 +289,30 @@ class FinanceTransactionsApiTests(TestCase):
         )
         self.assertIsNone(rows[other_account.pk]["flowwow_order_number"])
         self.assertEqual(rows[other_account.pk]["crm_orders"], [])
+
+    def test_linked_crm_order_hides_contact_without_permission(self):
+        limited = User.objects.create_user(username="limited", password="password")
+        grant(limited, "edit_finance")
+        order = CrmOrder.objects.create(
+            date=date(2026, 10, 7),
+            contact="Customer",
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("85.00"),
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+        )
+        linked = FinancialTransaction.objects.create(
+            account=self.account,
+            date=self.day,
+            amount=Decimal("75.00"),
+            kind=FinancialTransaction.KIND_INCOME,
+        )
+        linked.crm_orders.add(order)
+        self.client.force_authenticate(user=limited)
+        response = self.client.get("/api/crm/finance/transactions/", {"date": "2026-06-15"})
+        self.assertEqual(response.status_code, 200)
+        rows = {row["id"]: row for row in response.json()["transactions"]}
+        self.assertEqual(rows[linked.pk]["crm_orders"][0]["contact"], "")
 
     def test_matched_transfer_returns_other_side_account(self):
         bog = FinancialAccount.objects.create(name="BOG", kind=FinancialAccount.KIND_BANK)

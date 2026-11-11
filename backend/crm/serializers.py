@@ -5,7 +5,12 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from accounts.models import chef_identity
-from accounts.permissions import can_edit
+from accounts.permissions import (
+    can_edit,
+    can_see_order_address,
+    can_see_order_contacts,
+    redact_order_field_changes,
+)
 from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
 from crm.flowwow_statement import ACCOUNT_NAME as FLOWWOW_ACCOUNT_NAME
@@ -43,6 +48,27 @@ def _telegram_resolved(context: dict) -> dict[str, bool]:
         flags = dict(ResolvedTelegramPhone.objects.values_list("number", "resolved"))
         context["telegram_resolved"] = flags
     return flags
+
+
+def _request_user(context: dict):
+    request = context.get("request")
+    if request is None:
+        return None
+    return request.user
+
+
+def _sees_order_contacts(context: dict, fulfillment_type: str) -> bool:
+    user = _request_user(context)
+    if user is None:
+        return False
+    return can_see_order_contacts(user, fulfillment_type)
+
+
+def _sees_order_address(context: dict, fulfillment_type: str) -> bool:
+    user = _request_user(context)
+    if user is None:
+        return False
+    return can_see_order_address(user, fulfillment_type)
 
 
 def order_phones(instance: CrmOrder, context: dict) -> list[dict[str, str | None]]:
@@ -365,6 +391,11 @@ class CrmOrderSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        if not _sees_order_contacts(self.context, instance.fulfillment_type):
+            data["contact"] = ""
+            data["nickname"] = ""
+        if not _sees_order_address(self.context, instance.fulfillment_type):
+            data["delivery_address"] = ""
         if self.context.get("show_food_cost"):
             data["food_cost"] = str(order_cost(instance))
         if instance.taken_by_id:
@@ -397,6 +428,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         return data
 
     def get_phones(self, instance: CrmOrder) -> list[dict[str, str | None]]:
+        if not _sees_order_contacts(self.context, instance.fulfillment_type):
+            return []
         return order_phones(instance, self.context)
 
 
@@ -475,6 +508,11 @@ class CrmOrderEventSerializer(serializers.ModelSerializer):
         changes = {key: value for key, value in instance.changes.items()}
         if not can_edit(request.user, "orders"):
             changes.pop("internal_description", None)
+        changes = redact_order_field_changes(
+            request.user,
+            self.context["fulfillment_type"],
+            changes,
+        )
         for field in USER_ID_FIELDS:
             change = changes.get(field)
             if change is None:
@@ -984,6 +1022,13 @@ class FinanceTransactionCrmOrderSerializer(serializers.Serializer):
     filling = serializers.CharField()
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        user = _request_user(self.context)
+        if user is None or not can_see_order_contacts(user, instance.fulfillment_type):
+            data["contact"] = ""
+        return data
 
 
 class FinanceTransactionWaybillSerializer(serializers.Serializer):

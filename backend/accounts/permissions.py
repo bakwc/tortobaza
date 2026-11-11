@@ -80,6 +80,59 @@ def can_see_costs(user) -> bool:
     return bool(user.is_authenticated and user.has_perm("accounts.view_costs"))
 
 
+def _order_party(fulfillment_type: str) -> str:
+    if fulfillment_type == "pickup":
+        return "pickup"
+    return "delivery"
+
+
+def can_see_order_address(user, fulfillment_type: str) -> bool:
+    if can_edit(user, "orders"):
+        return True
+    party = _order_party(fulfillment_type)
+    return user.has_perm(f"accounts.view_order_{party}_address")
+
+
+def can_see_order_contacts(user, fulfillment_type: str) -> bool:
+    if can_edit(user, "orders"):
+        return True
+    party = _order_party(fulfillment_type)
+    return user.has_perm(f"accounts.view_order_{party}_contacts")
+
+
+ORDER_CONTACT_CHANGE_KEYS = ("contact", "nickname", "phones")
+ORDER_ADDRESS_CHANGE_KEYS = ("delivery_address",)
+
+
+def redact_order_field_changes(user, fulfillment_type: str | None, changes: dict) -> dict:
+    redacted = {key: value for key, value in changes.items()}
+    if fulfillment_type is None:
+        hide_contacts = not (
+            can_see_order_contacts(user, "delivery") and can_see_order_contacts(user, "pickup")
+        )
+        hide_address = not (
+            can_see_order_address(user, "delivery") and can_see_order_address(user, "pickup")
+        )
+    else:
+        hide_contacts = not can_see_order_contacts(user, fulfillment_type)
+        hide_address = not can_see_order_address(user, fulfillment_type)
+    if hide_contacts:
+        for key in ORDER_CONTACT_CHANGE_KEYS:
+            redacted.pop(key, None)
+    if hide_address:
+        for key in ORDER_ADDRESS_CHANGE_KEYS:
+            redacted.pop(key, None)
+    return redacted
+
+
+ORDER_PARTY_CODES = (
+    "view_order_delivery_address",
+    "view_order_pickup_address",
+    "view_order_delivery_contacts",
+    "view_order_pickup_contacts",
+)
+
+
 def grant(user, *codenames: str) -> None:
     group, _created = Group.objects.get_or_create(name=f"test-{user.pk}")
     perms = list(
