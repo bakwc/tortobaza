@@ -33,7 +33,7 @@ import {
 } from "@/components/menu/ui";
 import { useIngredients, useSemiProductCategories, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import { useRouter } from "@/i18n/navigation";
-import type { MenuUnit, SemiProduct } from "@/lib/api/types";
+import type { IngredientBody, MenuUnit, SemiProduct } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
@@ -245,6 +245,42 @@ export function SemiProductsPanel() {
     setDraft(null);
     if (current === null) close();
     else setMode("view");
+  };
+  const selectIngredient = (lineKey: string, id: number) => {
+    setDraft((currentDraft) =>
+      currentDraft === null
+        ? currentDraft
+        : {
+            ...currentDraft,
+            lines: currentDraft.lines.map((line) =>
+              line.key === lineKey ? { ...line, component: `ingredient:${id}`, suggestion: null } : line,
+            ),
+          },
+    );
+  };
+  const createIngredient = (line: ComponentLineDraft, name: string, unit: MenuUnit) => {
+    const trimmed = name.trim();
+    if (trimmed === "") return;
+    const existing = (ingredients.list.data ?? []).find((row) => row.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing !== undefined) {
+      selectIngredient(line.key, existing.id);
+      return;
+    }
+    const body: IngredientBody = {
+      name: trimmed,
+      category: null,
+      unit,
+      is_active: true,
+      avg_cost: null,
+      cost_quantity: null,
+      grams_per_unit: unit === "ml" ? "1" : null,
+      sale_price: null,
+    };
+    Reflect.deleteProperty(body, "avg_cost");
+    Reflect.deleteProperty(body, "cost_quantity");
+    Reflect.deleteProperty(body, "sale_price");
+    if (unit !== "ml") Reflect.deleteProperty(body, "grams_per_unit");
+    ingredients.save.mutate({ id: null, body }, { onSuccess: (created) => selectIngredient(line.key, created.id) });
   };
   const toggleSelecting = () => {
     setSelecting((value) => !value);
@@ -582,6 +618,7 @@ export function SemiProductsPanel() {
           headerAction={null}
           below={null}
         >
+          <ErrorText error={ingredients.save.error} />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("name")} className="sm:col-span-3">
               <Input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
@@ -657,8 +694,8 @@ export function SemiProductsPanel() {
             chooseQuantityUnit={true}
             linePrice={null}
             onCreateSuggestion={null}
-            onCreateIngredient={null}
-            suggestionPending={false}
+            onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
+            suggestionPending={ingredients.save.isPending}
           />
         </EditorDialog>
       ) : null}
