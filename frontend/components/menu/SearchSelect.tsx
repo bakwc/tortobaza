@@ -105,7 +105,9 @@ export function SearchSelect({
   useLayoutEffect(() => {
     if (!pendingSelect.current) return;
     pendingSelect.current = false;
-    inputRef.current?.select();
+    const input = inputRef.current;
+    if (input === null || document.activeElement !== input) return;
+    input.select();
   }, [open, query]);
 
   useLayoutEffect(() => {
