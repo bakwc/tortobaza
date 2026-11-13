@@ -45,6 +45,7 @@ TBC_EXPENSE_STAMP_HTML = (
 )
 TBC_ATM_HTML = "2000.00GEL<br/>(*1911)<br/>ATM TBC-1075 (RECAN)<br/>Balance: 2227.72GEL"
 TBC_DEPOSIT_HTML = "Deposit Money: 105.00 GEL<br/>MC GOLD<br/>06/11/2026<br/>LEVANI MUNJISHVILI"
+TBC_NAMELESS_DEPOSIT_HTML = "Deposit Money: 90.00 GEL<br/>MC GOLD<br/>13/11/2026"
 
 
 class FakeIMAP:
@@ -395,6 +396,15 @@ class CardSmsTests(TestCase):
         self.assertEqual(deposit.merchant, "LEVANI MUNJISHVILI")
         self.assertEqual(deposit.sms_date, date(2026, 11, 6))
         self.assertEqual(deposit.kind, CardSmsMessage.KIND_INCOME)
+        nameless = parse_card_sms(html_to_text(TBC_NAMELESS_DEPOSIT_HTML))
+        self.assertIsNotNone(nameless)
+        self.assertEqual(nameless.currency, "GEL")
+        self.assertEqual(nameless.amount, Decimal("90.00"))
+        self.assertEqual(nameless.card_last4, "")
+        self.assertEqual(nameless.card_type, "MC GOLD")
+        self.assertEqual(nameless.merchant, "")
+        self.assertEqual(nameless.sms_date, date(2026, 11, 13))
+        self.assertEqual(nameless.kind, CardSmsMessage.KIND_INCOME)
 
     def test_parse_tbc_sms_with_stamp(self):
         expense = parse_card_sms(html_to_text(TBC_EXPENSE_STAMP_HTML))
@@ -451,6 +461,29 @@ class CardSmsTests(TestCase):
         stored = CardSmsMessage.objects.get(message_id="<tbc-in@gmail.com>")
         self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
         self.assertEqual(stored.card_last4, "")
+        self.assertEqual(stored.finance_db, "personal")
+        self.assertEqual(stored.transaction_id, rows[0].pk)
+
+    def test_tbc_nameless_deposit_matches_card_type(self):
+        account = _account("TBC", "GEL", "1911", "personal")
+        with use_finance_db("personal"):
+            account.card_type = "MC GOLD"
+            account.save(update_fields=["card_type"])
+        _account("BOG business GEL", "GEL", "", "default")
+        _import([_message("<tbc-nameless@gmail.com>", TBC_NAMELESS_DEPOSIT_HTML)])
+        rows = _transactions("personal")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertEqual(rows[0].amount, Decimal("90.00"))
+        self.assertEqual(rows[0].kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(rows[0].income_type, FinancialTransaction.INCOME_TRANSFER)
+        self.assertEqual(rows[0].counterparty_name, "")
+        self.assertEqual(rows[0].description, "")
+        self.assertEqual(rows[0].date, date(2026, 11, 13))
+        self.assertEqual(_transactions("default"), [])
+        stored = CardSmsMessage.objects.get(message_id="<tbc-nameless@gmail.com>")
+        self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored.merchant, "")
         self.assertEqual(stored.finance_db, "personal")
         self.assertEqual(stored.transaction_id, rows[0].pk)
 

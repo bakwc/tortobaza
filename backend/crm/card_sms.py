@@ -499,11 +499,11 @@ def _parse_tbc_deposit(lines: list[str]) -> ParsedCardSms | None:
     if deposit is None:
         return None
     date_index = _single_index(lines, _sms_date)
-    if date_index is None or date_index < 2 or date_index == len(lines) - 1:
+    if date_index is None or date_index < 2:
         return None
     card_type_lines = lines[1:date_index]
     merchant_lines = lines[date_index + 1 :]
-    if len(card_type_lines) != 1 or len(merchant_lines) == 0:
+    if len(card_type_lines) != 1:
         return None
     sms_date = _sms_date(lines[date_index])
     if sms_date is None:
