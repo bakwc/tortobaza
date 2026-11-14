@@ -161,7 +161,7 @@ class CrmOrder(models.Model):
         blank=True,
         verbose_name=_("Delivered by"),
     )
-    weight = models.CharField(max_length=50, verbose_name=_("Weight"))
+    weight = models.CharField(max_length=50, blank=True, verbose_name=_("Weight"))
     filling = models.CharField(max_length=255, blank=True, verbose_name=_("Filling"))
     description = models.TextField(blank=True, verbose_name=_("Description"))
     internal_description = models.TextField(blank=True, verbose_name=_("Internal description"))

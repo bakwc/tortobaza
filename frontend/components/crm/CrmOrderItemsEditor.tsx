@@ -462,7 +462,6 @@ export function CrmOrderItemsEditor({
   itemErrors: string[][];
   onChange: (items: CrmItemDraft[]) => void;
 }) {
-  const t = useTranslations("crm.items");
   const techCards = useTechCards();
   const cards = techCards.list.data ?? [];
   const rootRef = useRef<HTMLDivElement>(null);
@@ -509,7 +508,6 @@ export function CrmOrderItemsEditor({
 
   return (
     <div ref={rootRef} className="grid gap-2">
-      <p className="text-xs text-[var(--muted-2)]">{t("hint")}</p>
       {(activeKey === null ? [...items, draft] : items).map((item, index) => {
         const listed = index < items.length;
         if (listed && item.key !== activeKey) {

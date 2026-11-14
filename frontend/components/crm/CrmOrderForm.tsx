@@ -34,9 +34,7 @@ import {
   crmItemBody,
   crmItemDraftFromItem,
   crmItemSalePrice,
-  crmItemsFillingText,
   crmItemsPriceSum,
-  crmItemsWeightText,
   type CrmItemDraft,
 } from "@/lib/crmItems";
 import { formatAed } from "@/lib/format";
@@ -176,8 +174,6 @@ export function CrmOrderForm(
   const [items, setItems] = useState<CrmItemDraft[]>(() =>
     props.mode === "edit" ? props.order.items.map(crmItemDraftFromItem) : [],
   );
-  const [weightTouched, setWeightTouched] = useState(props.mode === "edit" && props.order.weight !== "");
-  const [fillingTouched, setFillingTouched] = useState(props.mode === "edit" && props.order.filling !== "");
   const [cakePriceTouched, setCakePriceTouched] = useState(props.mode === "edit");
   const techCards = useTechCards();
   const cards = techCards.list.data ?? [];
@@ -186,13 +182,9 @@ export function CrmOrderForm(
 
   const onItemsChange = (next: CrmItemDraft[]) => {
     setItems(next);
-    const weightText = crmItemsWeightText(next, cards, { kg: t("items.kg"), pcs: t("items.pcs") });
-    const fillingText = next.length === 0 ? "" : crmItemsFillingText(next, cards);
     const priceSum = crmItemsPriceSum(next, cards);
     setFields((prev) => ({
       ...prev,
-      weight: !weightTouched ? weightText : prev.weight,
-      filling: !fillingTouched && fillingText !== "" ? fillingText : prev.filling,
       cake_price: !cakePriceTouched && priceSum !== 0 ? priceSum.toFixed(2) : prev.cake_price,
     }));
   };
@@ -595,32 +587,6 @@ export function CrmOrderForm(
           {t("cakeSection")}
         </h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-              {t("weight")}
-            </span>
-            <Input
-              name="weight"
-              required
-              value={fields.weight}
-              onChange={(event) => {
-                setWeightTouched(true);
-                setField("weight", event.target.value);
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
-              {t("filling")}
-            </span>
-            <Input
-              value={fields.filling}
-              onChange={(event) => {
-                setFillingTouched(true);
-                setField("filling", event.target.value);
-              }}
-            />
-          </label>
           <label className="flex flex-col gap-1.5 sm:col-span-2">
             <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">
               {t("notes")}

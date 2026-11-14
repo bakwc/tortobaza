@@ -20,8 +20,6 @@ export type CrmItemDraft = {
   lines: ComponentLineDraft[];
 };
 
-export type CrmItemsTextLabels = { kg: string; pcs: string };
-
 export function emptyCrmItem(): CrmItemDraft {
   return {
     key: newDraftKey(),
@@ -118,50 +116,9 @@ export function crmItemCostBody(item: CrmItemDraft, card: TechCard): CrmOrderIte
   };
 }
 
-function formatNumber(value: string): string {
-  return String(Number(value.replace(",", "."))).replace(".", ",");
-}
-
 export function crmItemTitle(item: CrmItemDraft, techCards: TechCard[]): string {
   if (item.name.trim() !== "") return item.name.trim();
   return findCard(techCards, item.tech_card)?.name ?? "";
-}
-
-export function crmItemsWeightText(
-  items: CrmItemDraft[],
-  techCards: TechCard[],
-  labels: CrmItemsTextLabels,
-): string {
-  const parts: string[] = [];
-  for (const item of items) {
-    const card = findCard(techCards, item.tech_card);
-    if (card === undefined) continue;
-    const quantity = Number(item.quantity || "1");
-    const prefix = quantity > 1 ? `${quantity} × ` : "";
-    if (card.kind === "weighted" && item.weight_kg.trim() !== "") {
-      parts.push(`${prefix}${formatNumber(item.weight_kg)} ${labels.kg}`);
-    } else if (card.kind === "piece") {
-      parts.push(`${quantity} ${labels.pcs}`);
-    }
-  }
-  return parts.join(" + ");
-}
-
-export function crmItemsFillingText(items: CrmItemDraft[], techCards: TechCard[]): string {
-  const names: string[] = [];
-  for (const item of items) {
-    const card = findCard(techCards, item.tech_card);
-    if (!card) continue;
-    for (const row of item.modifiers) {
-      for (const group of card.modifier_groups) {
-        const modifier = group.modifiers.find((option) => option.id === row.modifier);
-        if (!modifier) continue;
-        const quantity = Number(row.quantity || "1");
-        names.push(quantity > 1 ? `${modifier.name} × ${quantity}` : modifier.name);
-      }
-    }
-  }
-  return names.join(", ");
 }
 
 function extraLineSale(line: ComponentLineDraft, techCards: TechCard[]): number {

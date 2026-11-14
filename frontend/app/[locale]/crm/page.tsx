@@ -1010,30 +1010,36 @@ function CrmOrderCard({
             ) : null
             ) : null}
 
-            <div className="grid grid-cols-2 gap-2 lg:gap-3">
-              <div
-                className={cn(
-                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
-                  tone.panel,
-                )}
-              >
-                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
-                  {t("weight")}
-                </span>
-                <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.weight}</p>
+            {order.weight.trim() !== "" || order.filling.trim() !== "" ? (
+              <div className="grid grid-cols-2 gap-2 lg:gap-3">
+                {order.weight.trim() !== "" ? (
+                  <div
+                    className={cn(
+                      "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
+                      tone.panel,
+                    )}
+                  >
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
+                      {t("weight")}
+                    </span>
+                    <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.weight}</p>
+                  </div>
+                ) : null}
+                {order.filling.trim() !== "" ? (
+                  <div
+                    className={cn(
+                      "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
+                      tone.panel,
+                    )}
+                  >
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
+                      {t("filling")}
+                    </span>
+                    <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.filling}</p>
+                  </div>
+                ) : null}
               </div>
-              <div
-                className={cn(
-                  "rounded-xl border p-2.5 lg:rounded-2xl lg:p-3.5",
-                  tone.panel,
-                )}
-              >
-                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--muted-2)] lg:text-xs">
-                  {t("filling")}
-                </span>
-                <p className="mt-0.5 font-semibold text-[var(--ink)] lg:mt-1">{order.filling}</p>
-              </div>
-            </div>
+            ) : null}
 
             {order.items.length > 0 ? (
               <div

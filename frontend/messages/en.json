@@ -362,7 +362,7 @@
     "formBack": "Back to board",
     "scheduleSection": "Schedule",
     "customerSection": "Customer & delivery",
-    "cakeSection": "Cake details",
+    "cakeSection": "Additional",
     "paymentSection": "Payment",
     "imagesSection": "Photos",
     "dateLabel": "Date",
@@ -501,7 +501,6 @@
     "historySection": "Operation history",
     "items": {
       "section": "Items",
-      "hint": "Optional. Items are used for ingredient write-off and food cost. Weight and filling are prefilled from the items until you edit them.",
       "foodCost": "Food cost: {value} ₾",
       "total": "Total",
       "noSalePrice": "Tech card has no sale price",
