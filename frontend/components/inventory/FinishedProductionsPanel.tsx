@@ -58,13 +58,10 @@ function lineBody(line: LineDraft, card: TechCard | undefined): FinishedProducti
     tech_card: Number(line.tech_card),
     weight_kg: card?.kind === "weighted" ? line.weight_kg.replace(",", ".") : null,
     modifiers: line.modifiers.map((row) => {
-      const chosen =
-        card === undefined
-          ? undefined
-          : card.modifier_groups.flatMap((group) => group.modifiers).find((modifier) => modifier.id === row.modifier);
+      const group = card?.modifier_groups.find((item) => item.modifiers.some((modifier) => modifier.id === row.modifier));
       return {
         modifier: row.modifier,
-        quantity: chosen !== undefined && !chosen.has_quantity ? 1 : Number(row.quantity),
+        quantity: group !== undefined && !group.has_quantity ? 1 : Number(row.quantity),
       };
     }),
     quantity: Number(line.quantity),

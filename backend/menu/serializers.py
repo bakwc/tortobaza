@@ -322,7 +322,6 @@ class ModifierInputSerializer(serializers.Serializer):
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     is_active = serializers.BooleanField()
-    has_quantity = serializers.BooleanField()
 
     def validate(self, attrs):
         chosen = [attrs["ingredient"], attrs["semi_product"], attrs["nested_tech_card"]]
@@ -345,6 +344,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             "selection_type",
             "is_required",
             "is_global",
+            "has_quantity",
             "categories",
             "min_selections",
             "max_selections",
@@ -354,6 +354,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "is_required": {"required": True},
             "is_global": {"required": True},
+            "has_quantity": {"required": True},
             "min_selections": {"required": True},
             "max_selections": {"required": True},
             "position": {"required": True},
@@ -371,7 +372,6 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "semi_product": modifier.semi_product_id,
                 "nested_tech_card": modifier.nested_tech_card_id,
                 "is_active": modifier.is_active,
-                "has_quantity": modifier.has_quantity,
             }
             for modifier in instance.modifiers.select_related("catalog_option__group")
         ]
@@ -440,7 +440,6 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "semi_product": row["semi_product"],
                 "nested_tech_card": row["nested_tech_card"],
                 "is_active": row["is_active"],
-                "has_quantity": row["has_quantity"],
                 "position": position,
             }
             if row["id"] is None:
@@ -610,8 +609,9 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "min_selections": link.group.min_selections,
                 "max_selections": link.group.max_selections,
                 "is_global": link.pk is None,
+                "has_quantity": link.group.has_quantity,
                 "modifiers": [
-                    {"id": modifier.pk, "name": modifier.name, "has_quantity": modifier.has_quantity}
+                    {"id": modifier.pk, "name": modifier.name}
                     for modifier in link.group.modifiers.filter(is_active=True)
                 ],
             }

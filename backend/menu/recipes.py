@@ -242,7 +242,7 @@ def order_item_errors(
     for modifier, quantity in modifiers:
         if quantity < 1:
             errors.append(_("Modifier quantity must be at least 1."))
-        if not modifier.has_quantity and quantity != 1:
+        if not modifier.group.has_quantity and quantity != 1:
             errors.append(_("Modifier %(name)s does not take a quantity.") % {"name": modifier.name})
         if modifier.pk in seen:
             errors.append(_("Modifier %(name)s is selected twice.") % {"name": modifier.name})

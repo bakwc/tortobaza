@@ -38,7 +38,7 @@ function modifierText(item: CrmItemDraft, card: TechCard | undefined): string {
     for (const group of card.modifier_groups) {
       const modifier = group.modifiers.find((option) => option.id === row.modifier);
       if (modifier === undefined) continue;
-      const quantity = modifier.has_quantity ? Number(row.quantity || "1") : 1;
+      const quantity = group.has_quantity ? Number(row.quantity || "1") : 1;
       names.push(quantity > 1 ? `${modifier.name} × ${quantity}` : modifier.name);
     }
   }
@@ -67,7 +67,6 @@ function SingleModifier({
   const inGroup = selected.filter((row) => ids.has(row.modifier));
   const others = selected.filter((row) => !ids.has(row.modifier));
   const current = inGroup[0];
-  const currentModifier = current === undefined ? undefined : group.modifiers.find((modifier) => modifier.id === current.modifier);
   const price = current === undefined ? null : modifierPrice(current.modifier);
   const label = `${group.group_name}${group.effective_is_required ? " *" : ""}`;
   return (
@@ -76,21 +75,19 @@ function SingleModifier({
         required={required}
         aria-label={label}
         value={current ? String(current.modifier) : ""}
-        onChange={(event) => {
-          if (event.target.value === "") {
-            onChange(others);
-            return;
-          }
-          const modifierId = Number(event.target.value);
-          const modifier = group.modifiers.find((row) => row.id === modifierId);
-          onChange([
-            ...others,
-            {
-              modifier: modifierId,
-              quantity: modifier?.has_quantity ? (current === undefined ? "1" : current.quantity) : "1",
-            },
-          ]);
-        }}
+        onChange={(event) =>
+          onChange(
+            event.target.value === ""
+              ? others
+              : [
+                  ...others,
+                  {
+                    modifier: Number(event.target.value),
+                    quantity: current === undefined ? "1" : current.quantity,
+                  },
+                ],
+          )
+        }
         className="h-9 w-auto max-w-40 px-3"
       >
         <option value="">{label}</option>
@@ -100,7 +97,7 @@ function SingleModifier({
           </option>
         ))}
       </NativeSelect>
-      {current && currentModifier?.has_quantity ? (
+      {current && group.has_quantity ? (
         <Input
           name="quantity"
           required
@@ -172,7 +169,7 @@ function MultiModifiers({
               />
               {modifier.name}
             </label>
-            {row && modifier.has_quantity ? (
+            {row && group.has_quantity ? (
               <Input
                 name="quantity"
                 required

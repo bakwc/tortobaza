@@ -226,6 +226,7 @@ class ModifierGroup(models.Model):
     )
     is_required = models.BooleanField(default=False, verbose_name=_("Is required"))
     is_global = models.BooleanField(default=False, verbose_name=_("Is global"))
+    has_quantity = models.BooleanField(default=True, verbose_name=_("Has quantity"))
     categories = models.ManyToManyField(
         "TechCardCategory",
         blank=True,
@@ -291,7 +292,6 @@ class Modifier(models.Model):
     )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
-    has_quantity = models.BooleanField(default=True, verbose_name=_("Has quantity"))
 
     class Meta:
         ordering = ["position", "name"]

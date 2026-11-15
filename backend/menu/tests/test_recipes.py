@@ -684,6 +684,7 @@ class NestedTechCardTests(TestCase):
                 "selection_type": "multi",
                 "is_required": False,
                 "is_global": False,
+                "has_quantity": True,
                 "categories": [],
                 "min_selections": 0,
                 "max_selections": None,
@@ -697,7 +698,6 @@ class NestedTechCardTests(TestCase):
                         "semi_product": self.menu.sponge.pk,
                         "nested_tech_card": None,
                         "is_active": True,
-                        "has_quantity": True,
                     }
                 ],
             },
@@ -834,9 +834,9 @@ class GlobalModifierGroupTests(TestCase):
         with self.assertRaises(ValidationError):
             validate_order_item(self.menu.bento, None, [(self.menu.balloon, 1), (candle, 1)])
 
-    def test_modifier_without_quantity_rejects_more_than_one(self):
-        self.menu.balloon.has_quantity = False
-        self.menu.balloon.save()
+    def test_group_without_quantity_rejects_more_than_one(self):
+        self.menu.extras.has_quantity = False
+        self.menu.extras.save()
         with self.assertRaises(ValidationError):
             validate_order_item(self.menu.bento, None, [(self.menu.balloon, 2)])
 
@@ -913,6 +913,7 @@ class CategoryModifierGroupTests(TestCase):
                 "selection_type": "multi",
                 "is_required": True,
                 "is_global": True,
+                "has_quantity": True,
                 "categories": [self.cakes.pk],
                 "min_selections": 0,
                 "max_selections": None,
@@ -926,7 +927,6 @@ class CategoryModifierGroupTests(TestCase):
                         "semi_product": None,
                         "nested_tech_card": None,
                         "is_active": True,
-                        "has_quantity": True,
                     }
                 ],
             },

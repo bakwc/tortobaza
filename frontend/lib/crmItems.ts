@@ -78,8 +78,9 @@ function findCard(techCards: TechCard[], id: number | null): TechCard | undefine
 function modifierQuantity(card: TechCard | undefined, row: CrmItemModifierDraft): number {
   if (card !== undefined) {
     for (const group of card.modifier_groups) {
-      const modifier = group.modifiers.find((item) => item.id === row.modifier);
-      if (modifier !== undefined) return modifier.has_quantity ? Number(row.quantity || "1") : 1;
+      if (group.modifiers.some((item) => item.id === row.modifier)) {
+        return group.has_quantity ? Number(row.quantity || "1") : 1;
+      }
     }
   }
   return Number(row.quantity || "1");
