@@ -820,22 +820,11 @@ export const AnalyticsProductsSchema = z.object({
   end: z.string(),
   coverage: z.object({
     orders: z.number(),
-    parsed: z.number(),
+    with_items: z.number(),
   }),
-  kinds: z.array(
+  tech_cards: z.array(
     AnalyticsProductMetricsSchema.extend({
-      kind: AnalyticsProductKindSchema,
-    }),
-  ),
-  positions: z.array(
-    AnalyticsProductMetricsSchema.extend({
-      kind: AnalyticsProductKindSchema,
       name: z.string(),
-    }),
-  ),
-  fillings: z.array(
-    AnalyticsProductMetricsSchema.extend({
-      filling: z.string(),
     }),
   ),
   weights: z.array(
@@ -844,6 +833,16 @@ export const AnalyticsProductsSchema = z.object({
     }),
   ),
   weight_unknown: z.number(),
+  modifier_groups: z.array(
+    z.object({
+      name: z.string(),
+      modifiers: z.array(
+        AnalyticsProductMetricsSchema.extend({
+          name: z.string(),
+        }),
+      ),
+    }),
+  ),
 });
 
 export const AnalyticsStaffPeriodSchema = z.object({

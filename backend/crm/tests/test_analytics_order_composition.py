@@ -12,7 +12,14 @@ from accounts.permissions import grant
 from catalog.models import Option, OptionGroup
 from crm.analytics import products
 from crm.analytics_composition import sync_analytics_composition
-from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder
+from crm.models import (
+    AnalyticsOrderComposition,
+    AnalyticsOrderCompositionItem,
+    CrmOrder,
+    CrmOrderItem,
+    CrmOrderItemModifier,
+)
+from menu.tests.fixtures import MenuFixture
 from orders.models import Order, OrderItem, OrderItemOption
 
 
@@ -243,40 +250,69 @@ class AnalyticsOrderCompositionTests(TestCase):
         self.assertEqual(rows[1].price, Decimal("20.00"))
         self.assertEqual(rows[0].composition.parser, AnalyticsOrderComposition.PARSER_LLM)
 
-    def test_products_skip_orders_without_snapshot(self):
+    def test_products_count_order_items(self):
+        menu = MenuFixture()
+        menu.filling.position = 0
+        menu.filling.save(update_fields=["position"])
+        menu.decor.position = 1
+        menu.decor.save(update_fields=["position"])
         _crm(date=date(2026, 10, 2), weight="1 кг", filling="Сникерс")
-        first = _crm(date=date(2026, 10, 3), weight="1 кг", filling="snickers", cake_price=Decimal("40.00"))
-        second = _crm(date=date(2026, 10, 4), weight="700", filling="Snickers", cake_price=Decimal("30.00"))
-        addon = _crm(
-            date=date(2026, 10, 5),
-            weight="—",
-            filling="—",
-            description="Открытка × 2 — 0.00",
-        )
+        first = _crm(date=date(2026, 10, 3), weight="1 кг", filling="snickers")
+        second = _crm(date=date(2026, 10, 4), weight="700", filling="Snickers")
+        pieces = _crm(date=date(2026, 10, 5), weight="—", filling="—")
+        missing_weight = _crm(date=date(2026, 10, 6), weight="1 кг", filling="Сникерс")
         september = _crm(date=date(2026, 9, 1), weight="2 кг", filling="Сникерс")
-        deleted = _crm(date=date(2026, 10, 6), weight="1 кг", filling="Сникерс", deleted=True)
-        sync_analytics_composition(first)
-        sync_analytics_composition(second)
-        sync_analytics_composition(addon)
-        sync_analytics_composition(september)
-        sync_analytics_composition(deleted)
+        deleted = _crm(date=date(2026, 10, 7), weight="1 кг", filling="Сникерс", deleted=True)
+        first_item = CrmOrderItem.objects.create(
+            order=first,
+            tech_card=menu.cake,
+            quantity=1,
+            weight_kg=Decimal("1"),
+        )
+        CrmOrderItemModifier.objects.create(item=first_item, modifier=menu.raspberry_filling, quantity=1)
+        CrmOrderItemModifier.objects.create(item=first_item, modifier=menu.photo, quantity=2)
+        second_item = CrmOrderItem.objects.create(
+            order=second,
+            tech_card=menu.cake,
+            quantity=1,
+            weight_kg=Decimal("0.7"),
+        )
+        CrmOrderItemModifier.objects.create(item=second_item, modifier=menu.raspberry_filling, quantity=1)
+        CrmOrderItem.objects.create(order=pieces, tech_card=menu.bento, quantity=2)
+        CrmOrderItem.objects.create(order=pieces, name="Открытка", quantity=2)
+        CrmOrderItem.objects.create(order=missing_weight, tech_card=menu.cake, quantity=3)
+        CrmOrderItem.objects.create(
+            order=september,
+            tech_card=menu.cake,
+            quantity=1,
+            weight_kg=Decimal("2"),
+        )
+        CrmOrderItem.objects.create(
+            order=deleted,
+            tech_card=menu.cake,
+            quantity=1,
+            weight_kg=Decimal("1"),
+        )
         report = products("2026-10", date(2026, 10, 25))
-        self.assertEqual(report["coverage"], {"orders": 4, "parsed": 3})
-        self.assertEqual(report["fillings"][0]["filling"], "Сникерс")
-        self.assertEqual(report["fillings"][0]["quantity"], 2)
-        self.assertEqual(report["fillings"][0]["orders"], 2)
-        self.assertEqual(report["fillings"][0]["kilograms"], "1.7")
+        self.assertEqual(report["coverage"], {"orders": 5, "with_items": 4})
+        cards = {row["name"]: row for row in report["tech_cards"]}
+        self.assertEqual(cards["Cake"]["quantity"], 5)
+        self.assertEqual(cards["Cake"]["orders"], 3)
+        self.assertEqual(cards["Cake"]["kilograms"], "1.7")
+        self.assertEqual(cards["Bento"]["quantity"], 2)
+        self.assertEqual(cards["Bento"]["kilograms"], "0")
+        self.assertEqual(cards["Открытка"]["quantity"], 2)
         self.assertEqual({row["kg"]: row["quantity"] for row in report["weights"]}, {"0.7": 1, "1": 1})
-        self.assertEqual(report["weight_unknown"], 2)
-        kinds = {row["kind"]: row["quantity"] for row in report["kinds"]}
-        self.assertEqual(kinds["cake"], 2)
-        self.assertEqual(kinds["addon"], 2)
-        positions = {row["name"]: row for row in report["positions"]}
-        self.assertEqual(positions["Торт"]["quantity"], 2)
-        self.assertEqual(positions["Торт"]["orders"], 2)
-        self.assertEqual(positions["Торт"]["kilograms"], "1.7")
-        self.assertEqual(positions["Открытка"]["kind"], "addon")
-        self.assertEqual(positions["Открытка"]["quantity"], 2)
+        self.assertEqual(report["weight_unknown"], 3)
+        groups = {group["name"]: group["modifiers"] for group in report["modifier_groups"]}
+        self.assertEqual(list(groups), ["Filling", "Decor"])
+        self.assertEqual(groups["Filling"][0]["name"], "Raspberry")
+        self.assertEqual(groups["Filling"][0]["quantity"], 2)
+        self.assertEqual(groups["Filling"][0]["orders"], 2)
+        self.assertEqual(groups["Filling"][0]["kilograms"], "1.7")
+        self.assertEqual(groups["Decor"][0]["name"], "Photo print")
+        self.assertEqual(groups["Decor"][0]["quantity"], 2)
+        self.assertEqual(groups["Decor"][0]["kilograms"], "2")
 
 
 class AnalyticsProductsApiTests(TestCase):

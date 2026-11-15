@@ -15,16 +15,7 @@ import {
   Section,
   TOOLTIP_STYLE,
 } from "@/components/analytics/widgets";
-import type { AnalyticsProductKind, AnalyticsProducts } from "@/lib/api/types";
-
-const KIND_LABELS: Record<AnalyticsProductKind, string> = {
-  cake: "kindCake",
-  bento: "kindBento",
-  cupcake: "kindCupcake",
-  macaron: "kindMacaron",
-  addon: "kindAddon",
-  other: "kindOther",
-};
+import type { AnalyticsProducts } from "@/lib/api/types";
 
 export function ProductsPanel() {
   const t = useTranslations("analytics");
@@ -47,10 +38,10 @@ export function ProductsPanel() {
     <div className="grid gap-6">
       <Metric
         label={t("coverage")}
-        value={`${report.coverage.parsed} / ${report.coverage.orders}`}
+        value={`${report.coverage.with_items} / ${report.coverage.orders}`}
         hint={null}
       />
-      {report.coverage.parsed === 0 ? (
+      {report.coverage.with_items === 0 ? (
         <Note>{t("productsEmpty")}</Note>
       ) : (
         <ProductsReport report={report} />
@@ -61,14 +52,9 @@ export function ProductsPanel() {
 
 function ProductsReport({ report }: { report: AnalyticsProducts }) {
   const t = useTranslations("analytics");
-  const kinds = report.kinds.map((row) => ({
-    key: row.kind,
-    label: t(KIND_LABELS[row.kind]),
-    value: row.quantity,
-  }));
-  const fillings = report.fillings.map((row) => ({
-    key: row.filling,
-    label: row.filling,
+  const techCards = report.tech_cards.map((row) => ({
+    key: row.name,
+    label: row.name,
     value: row.quantity,
   }));
   const weights = report.weights.map((row) => ({
@@ -79,8 +65,8 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
   return (
     <>
       <Note>{t("weightUnknown", { count: report.weight_unknown })}</Note>
-      <Section title={t("productKinds")}>
-        <SharePie rows={kinds} collapse={false} restLabel="" />
+      <Section title={t("productTechCards")}>
+        <SharePie rows={techCards} collapse restLabel={t("otherShare")} />
       </Section>
       <Section title={t("productWeights")}>
         <ChartFrame>
@@ -93,13 +79,19 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
           </BarChart>
         </ChartFrame>
       </Section>
-      <Section title={t("productFillings")}>
-        {fillings.length === 0 ? (
-          <Note>{t("emptyValue")}</Note>
-        ) : (
-          <SharePie rows={fillings} collapse restLabel={t("otherFillings")} />
-        )}
-      </Section>
+      {report.modifier_groups.map((group) => (
+        <Section key={group.name} title={group.name}>
+          <SharePie
+            rows={group.modifiers.map((row) => ({
+              key: row.name,
+              label: row.name,
+              value: row.quantity,
+            }))}
+            collapse
+            restLabel={t("otherShare")}
+          />
+        </Section>
+      ))}
     </>
   );
 }

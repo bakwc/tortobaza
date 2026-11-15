@@ -14,6 +14,7 @@ from attendance.models import AttendanceEvent
 from attendance.salary import compute_day_worked_seconds, daily_monthly_share
 from crm.models import AnalyticsOrderComposition, CrmOrder, CrmOrderEvent
 from crm.phone import extract_phones
+from menu.models import TechCard
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
@@ -862,57 +863,67 @@ def _frequency(customers: dict[str, Customer]) -> dict:
 def products(month: str, today: date) -> dict:
     start, end = windows(month, today)[:2]
     orders = list(
-        CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end).order_by("date", "id")
+        CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end)
+        .order_by("date", "id")
+        .prefetch_related(
+            "items__tech_card__category",
+            "items__modifiers__modifier__group",
+        )
     )
-    compositions = {
-        composition.order_id: composition
-        for composition in AnalyticsOrderComposition.objects.filter(order__in=orders).prefetch_related("items")
-    }
-    kinds: dict[str, _Count] = {}
-    positions: dict[tuple[str, str], _Count] = {}
-    fillings: dict[str, _Count] = {}
+    tech_cards: dict[str, _Count] = {}
     weights: dict[Decimal, _Count] = {}
+    groups: dict[int, dict] = {}
     weight_unknown = 0
-    parsed = 0
+    with_items = 0
     for order in orders:
-        composition = compositions.get(order.id)
-        if composition is None:
+        items = list(order.items.all())
+        if not items:
             continue
-        parsed += 1
-        for item in composition.items.all():
+        with_items += 1
+        for item in items:
+            name = item.name if item.tech_card_id is None else item.tech_card.name
             kilograms = None if item.weight_kg is None else item.weight_kg * item.quantity
-            _bump(kinds, item.kind, order.id, item.quantity, kilograms)
-            _bump(positions, (item.kind, item.name), order.id, item.quantity, kilograms)
-            if item.filling:
-                _bump(fillings, item.filling, order.id, item.quantity, kilograms)
+            _bump(tech_cards, name, order.id, item.quantity, kilograms)
             if item.weight_kg is None:
-                weight_unknown += item.quantity
+                if item.tech_card_id is not None and item.tech_card.kind == TechCard.KIND_WEIGHTED:
+                    weight_unknown += item.quantity
             else:
                 _bump(weights, item.weight_kg, order.id, item.quantity, kilograms)
+            for row in item.modifiers.all():
+                group = row.modifier.group
+                bucket = groups.get(group.id)
+                if bucket is None:
+                    bucket = {"name": group.name, "position": group.position, "modifiers": {}}
+                    groups[group.id] = bucket
+                counted = item.quantity * row.quantity
+                modifier_kg = None if kilograms is None else kilograms * row.quantity
+                _bump(bucket["modifiers"], row.modifier.name, order.id, counted, modifier_kg)
     return {
         "month": month,
         "start": start.isoformat(),
         "end": end.isoformat(),
-        "coverage": {"orders": len(orders), "parsed": parsed},
-        "kinds": [
-            {"kind": kind, **_metrics(bucket)}
-            for kind, bucket in sorted(kinds.items(), key=lambda item: (-item[1].quantity, item[0]))
-        ],
-        "positions": [
-            {"kind": kind, "name": name, **_metrics(bucket)}
-            for (kind, name), bucket in sorted(
-                positions.items(), key=lambda item: (-item[1].quantity, item[0][1], item[0][0])
-            )
-        ],
-        "fillings": [
-            {"filling": filling, **_metrics(bucket)}
-            for filling, bucket in sorted(fillings.items(), key=lambda item: (-item[1].quantity, item[0]))
+        "coverage": {"orders": len(orders), "with_items": with_items},
+        "tech_cards": [
+            {"name": name, **_metrics(bucket)}
+            for name, bucket in sorted(tech_cards.items(), key=lambda item: (-item[1].quantity, item[0]))
         ],
         "weights": [
             {"kg": _num(kg), **_metrics(bucket)}
             for kg, bucket in sorted(weights.items(), key=lambda item: item[0])
         ],
         "weight_unknown": weight_unknown,
+        "modifier_groups": [
+            {
+                "name": group["name"],
+                "modifiers": [
+                    {"name": name, **_metrics(bucket)}
+                    for name, bucket in sorted(
+                        group["modifiers"].items(), key=lambda item: (-item[1].quantity, item[0])
+                    )
+                ],
+            }
+            for group in sorted(groups.values(), key=lambda item: (item["position"], item["name"]))
+        ],
     }
 
 
