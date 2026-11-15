@@ -810,6 +810,7 @@ export const AnalyticsProductMetricsSchema = z.object({
   quantity: z.number(),
   orders: z.number(),
   kilograms: z.string(),
+  revenue: z.string(),
 });
 
 export const AnalyticsProductKindSchema = z.enum(["cake", "bento", "cupcake", "macaron", "addon", "other"]);

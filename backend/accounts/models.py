@@ -89,6 +89,8 @@ class SectionAccess(models.Model):
             ("view_order_pickup_address", _("Orders: view pickup address")),
             ("view_order_delivery_contacts", _("Orders: view delivery contacts")),
             ("view_order_pickup_contacts", _("Orders: view pickup contacts")),
+            ("view_order_payment_link", _("Orders: view payment link")),
+            ("edit_order_payment_link", _("Orders: create payment link")),
         ]
 
     def __str__(self) -> str:

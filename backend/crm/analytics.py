@@ -891,13 +891,13 @@ def products(month: str, today: date) -> dict:
             category = _category_key(item)
             order_categories.add(category)
             kilograms = None if item.weight_kg is None else item.weight_kg * item.quantity
-            _bump(tech_cards, (name, category), order.id, item.quantity, kilograms)
-            _bump(categories, category, order.id, item.quantity, kilograms)
+            _bump(tech_cards, (name, category), order.id, item.quantity, kilograms, item.price)
+            _bump(categories, category, order.id, item.quantity, kilograms, item.price)
             if item.weight_kg is None:
                 if item.tech_card_id is not None and item.tech_card.kind == TechCard.KIND_WEIGHTED:
                     weight_unknown += item.quantity
             else:
-                _bump(weights, item.weight_kg, order.id, item.quantity, kilograms)
+                _bump(weights, item.weight_kg, order.id, item.quantity, kilograms, None)
             linked = [] if item.tech_card_id is None else tech_card_group_links(item.tech_card)
             for link in linked:
                 _group_bucket(groups, link.group)["available"] += 1
@@ -911,7 +911,7 @@ def products(month: str, today: date) -> dict:
                 bucket["picked"] += row.quantity
                 counted = item.quantity * row.quantity
                 modifier_kg = None if kilograms is None else kilograms * row.quantity
-                _bump(bucket["modifiers"], row.modifier.name, order.id, counted, modifier_kg)
+                _bump(bucket["modifiers"], row.modifier.name, order.id, counted, modifier_kg, None)
         if len(order_categories) > 1:
             multi_category += 1
             names = sorted(order_categories)
@@ -919,7 +919,7 @@ def products(month: str, today: date) -> dict:
                 for second in names[index + 1 :]:
                     key = (first, second)
                     pairs[key] = pairs.get(key, 0) + 1
-    total_quantity = sum(bucket.quantity for bucket in tech_cards.values())
+    total_revenue = sum((bucket.revenue for bucket in tech_cards.values()), Decimal("0"))
     return {
         "month": month,
         "start": start.isoformat(),
@@ -929,16 +929,19 @@ def products(month: str, today: date) -> dict:
             {
                 "name": name,
                 "category": category,
-                "share": _quantity_share(bucket.quantity, total_quantity),
+                "share": _revenue_share(bucket.revenue, total_revenue),
                 **_metrics(bucket),
             }
             for (name, category), bucket in sorted(
-                tech_cards.items(), key=lambda item: (-item[1].quantity, item[0][0], item[0][1])
+                tech_cards.items(),
+                key=lambda item: (-item[1].revenue, -item[1].quantity, item[0][0], item[0][1]),
             )
         ],
         "categories": [
             {"name": name, **_metrics(bucket)}
-            for name, bucket in sorted(categories.items(), key=lambda item: (-item[1].quantity, item[0]))
+            for name, bucket in sorted(
+                categories.items(), key=lambda item: (-item[1].revenue, -item[1].quantity, item[0])
+            )
         ],
         "weights": [
             {"kg": _num(kg), **_metrics(bucket)}
@@ -1004,10 +1007,10 @@ def _group_average(group: dict) -> str | None:
     return _num(Decimal(group["picked"]) / Decimal(group["selected"]))
 
 
-def _quantity_share(quantity: int, total: int) -> str:
+def _revenue_share(part: Decimal, total: Decimal) -> str:
     if total == 0:
         return "0"
-    return _num(Decimal(quantity) / Decimal(total))
+    return _num(part / total)
 
 
 class _Count:
@@ -1015,9 +1018,17 @@ class _Count:
         self.quantity = 0
         self.order_ids: set[int] = set()
         self.kilograms = Decimal("0")
+        self.revenue = Decimal("0")
 
 
-def _bump(buckets: dict, key, order_id: int, quantity: int, kilograms: Decimal | None) -> None:
+def _bump(
+    buckets: dict,
+    key,
+    order_id: int,
+    quantity: int,
+    kilograms: Decimal | None,
+    revenue: Decimal | None,
+) -> None:
     bucket = buckets.get(key)
     if bucket is None:
         bucket = _Count()
@@ -1026,6 +1037,8 @@ def _bump(buckets: dict, key, order_id: int, quantity: int, kilograms: Decimal |
     bucket.order_ids.add(order_id)
     if kilograms is not None:
         bucket.kilograms += kilograms
+    if revenue is not None:
+        bucket.revenue += revenue
 
 
 def _metrics(bucket: _Count) -> dict:
@@ -1033,6 +1046,7 @@ def _metrics(bucket: _Count) -> dict:
         "quantity": bucket.quantity,
         "orders": len(bucket.order_ids),
         "kilograms": _num(bucket.kilograms),
+        "revenue": _money(bucket.revenue),
     }
 
 

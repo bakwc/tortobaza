@@ -9,6 +9,7 @@ from accounts.permissions import (
     can_edit,
     can_see_order_address,
     can_see_order_contacts,
+    can_view,
     redact_order_field_changes,
 )
 from catalog.responsive_urls import detail_image
@@ -385,6 +386,9 @@ class CrmOrderSerializer(serializers.ModelSerializer):
         ]
 
     def get_payment_url(self, instance: CrmOrder) -> str | None:
+        user = _request_user(self.context)
+        if user is None or not can_view(user, "order_payment_link"):
+            return None
         if instance.paypal_payment_url == "":
             return None
         return instance.paypal_payment_url

@@ -26,6 +26,7 @@ from rest_framework.views import APIView
 from accounts.models import chef_identity
 from accounts.permissions import (
     CanView,
+    HasPerm,
     SectionPermission,
     can_edit,
     can_see_costs,
@@ -397,7 +398,7 @@ class CrmOrderDetailView(APIView):
 
 class CrmOrderPaymentLinkView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, SectionPermission("orders")]
+    permission_classes = [IsAuthenticated, HasPerm("edit_order_payment_link")]
 
     def post(self, request, pk: int):
         order = get_object_or_404(live_orders(), pk=pk)

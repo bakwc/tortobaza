@@ -273,6 +273,7 @@ class AnalyticsOrderCompositionTests(TestCase):
             tech_card=menu.cake,
             quantity=1,
             weight_kg=Decimal("1"),
+            price=Decimal("10.00"),
         )
         CrmOrderItemModifier.objects.create(item=first_item, modifier=menu.raspberry_filling, quantity=1)
         CrmOrderItemModifier.objects.create(item=first_item, modifier=menu.photo, quantity=2)
@@ -281,11 +282,16 @@ class AnalyticsOrderCompositionTests(TestCase):
             tech_card=menu.cake,
             quantity=1,
             weight_kg=Decimal("0.7"),
+            price=Decimal("10.00"),
         )
         CrmOrderItemModifier.objects.create(item=second_item, modifier=menu.raspberry_filling, quantity=1)
-        CrmOrderItem.objects.create(order=pieces, tech_card=menu.bento, quantity=2)
-        CrmOrderItem.objects.create(order=pieces, name="Открытка", quantity=2)
-        CrmOrderItem.objects.create(order=missing_weight, tech_card=menu.cake, quantity=3)
+        CrmOrderItem.objects.create(
+            order=pieces, tech_card=menu.bento, quantity=2, price=Decimal("60.00")
+        )
+        CrmOrderItem.objects.create(order=pieces, name="Открытка", quantity=2, price=Decimal("5.00"))
+        CrmOrderItem.objects.create(
+            order=missing_weight, tech_card=menu.cake, quantity=3, price=Decimal("10.00")
+        )
         CrmOrderItem.objects.create(
             order=september,
             tech_card=menu.cake,
@@ -300,25 +306,33 @@ class AnalyticsOrderCompositionTests(TestCase):
         )
         report = products("2026-10", date(2026, 10, 25))
         self.assertEqual(report["coverage"], {"orders": 5, "with_items": 4})
+        self.assertEqual(report["tech_cards"][0]["name"], "Bento")
         cards = {row["name"]: row for row in report["tech_cards"]}
         self.assertEqual(cards["Cake"]["category"], "Торты")
         self.assertEqual(cards["Cake"]["quantity"], 5)
-        self.assertEqual(cards["Cake"]["share"], "0.556")
+        self.assertEqual(cards["Cake"]["revenue"], "30.00")
+        self.assertEqual(cards["Cake"]["share"], "0.316")
         self.assertEqual(cards["Cake"]["orders"], 3)
         self.assertEqual(cards["Cake"]["kilograms"], "1.7")
         self.assertEqual(cards["Bento"]["category"], "Картошка")
         self.assertEqual(cards["Bento"]["quantity"], 2)
-        self.assertEqual(cards["Bento"]["share"], "0.222")
+        self.assertEqual(cards["Bento"]["revenue"], "60.00")
+        self.assertEqual(cards["Bento"]["share"], "0.632")
         self.assertEqual(cards["Bento"]["kilograms"], "0")
         self.assertEqual(cards["Открытка"]["category"], "no_tech_card")
         self.assertEqual(cards["Открытка"]["quantity"], 2)
-        self.assertEqual(cards["Открытка"]["share"], "0.222")
+        self.assertEqual(cards["Открытка"]["revenue"], "5.00")
+        self.assertEqual(cards["Открытка"]["share"], "0.053")
+        self.assertEqual(report["categories"][0]["name"], "Картошка")
         categories = {row["name"]: row for row in report["categories"]}
         self.assertEqual(categories["Торты"]["quantity"], 5)
         self.assertEqual(categories["Торты"]["orders"], 3)
         self.assertEqual(categories["Торты"]["kilograms"], "1.7")
+        self.assertEqual(categories["Торты"]["revenue"], "30.00")
         self.assertEqual(categories["Картошка"]["quantity"], 2)
+        self.assertEqual(categories["Картошка"]["revenue"], "60.00")
         self.assertEqual(categories["no_tech_card"]["quantity"], 2)
+        self.assertEqual(categories["no_tech_card"]["revenue"], "5.00")
         self.assertEqual({row["kg"]: row["quantity"] for row in report["weights"]}, {"0.7": 1, "1": 1})
         self.assertEqual(report["weight_unknown"], 3)
         groups = {group["name"]: group for group in report["modifier_groups"]}

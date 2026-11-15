@@ -7,6 +7,7 @@ import { apiErrorMessage } from "@/components/menu/ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useCan } from "@/hooks/useAuth";
 import { useCreateCrmPaymentLink } from "@/hooks/useCrmOrders";
 
 export function CrmPaymentLinkField({
@@ -19,6 +20,8 @@ export function CrmPaymentLinkField({
   remaining: number;
 }) {
   const t = useTranslations("crm");
+  const canView = useCan("view_order_payment_link");
+  const canCreate = useCan("edit_order_payment_link");
   const createLink = useCreateCrmPaymentLink();
   const [copied, setCopied] = useState(false);
   const createdUrl = createLink.data ? createLink.data.payment_url : null;
@@ -30,7 +33,7 @@ export function CrmPaymentLinkField({
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  if (url === null && remaining <= 0) {
+  if (!canView || (url === null && (remaining <= 0 || !canCreate))) {
     return null;
   }
 

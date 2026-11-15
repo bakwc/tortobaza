@@ -1670,6 +1670,20 @@ class CrmOrdersApiTests(TestCase):
         denied = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(denied.status_code, 403)
 
+        editor = User.objects.create_user(username="order-editor", password="password")
+        grant(editor, "edit_orders")
+        self.client.force_authenticate(user=editor)
+        denied_editor = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(denied_editor.status_code, 403)
+        order.paypal_payment_url = "https://www.paypal.com/ncp/payment/PLB-HIDDEN"
+        order.save(update_fields=["paypal_payment_url"])
+        hidden = self.client.get("/api/crm/orders/", {"date": today.isoformat()})
+        hidden_by_id = {row["id"]: row for row in hidden.json()["orders"]}
+        self.assertIsNone(hidden_by_id[order.id]["payment_url"])
+        order.paypal_payment_url = ""
+        order.save(update_fields=["paypal_payment_url"])
+
+        grant(self.admin, "edit_order_payment_link")
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 200)
@@ -1714,6 +1728,15 @@ class CrmOrdersApiTests(TestCase):
         client_order = self.client.get(f"/api/crm/orders/client/{order.client_token}/")
         self.assertNotIn("payment_url", client_order.json())
 
+        viewer = User.objects.create_user(username="link-viewer", password="password")
+        grant(viewer, "view_orders", "view_order_payment_link")
+        self.client.force_authenticate(user=viewer)
+        seen = self.client.get("/api/crm/orders/", {"date": today.isoformat()})
+        seen_by_id = {row["id"]: row for row in seen.json()["orders"]}
+        self.assertEqual(seen_by_id[order.id]["payment_url"], "https://www.paypal.com/ncp/payment/PLB-TEST")
+        forbidden = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
+        self.assertEqual(forbidden.status_code, 403)
+
     @override_settings(PAYPAL_ENABLED="")
     def test_payment_link_rejects_when_paypal_disabled(self):
         order = CrmOrder.objects.create(
@@ -1727,6 +1750,7 @@ class CrmOrdersApiTests(TestCase):
             prepayment=Decimal("0.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
         )
+        grant(self.admin, "edit_order_payment_link")
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 400)
@@ -1745,6 +1769,7 @@ class CrmOrdersApiTests(TestCase):
             prepayment=Decimal("100.00"),
             payment_type=CrmOrder.PAYMENT_CASH,
         )
+        grant(self.admin, "edit_order_payment_link")
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(f"/api/crm/orders/{order.id}/payment-link/")
         self.assertEqual(response.status_code, 400)
@@ -1768,6 +1793,7 @@ class CrmOrdersApiTests(TestCase):
             paypal_payment_url="https://www.paypal.com/ncp/payment/PLB-TEST",
             paypal_amount_usd=Decimal("29.63"),
         )
+        grant(self.admin, "view_order_payment_link")
         self.client.force_authenticate(user=self.admin)
         response = self.client.put(
             f"/api/crm/orders/{order.id}/",

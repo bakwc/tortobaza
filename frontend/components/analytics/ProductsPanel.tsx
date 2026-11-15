@@ -15,7 +15,7 @@ import {
   Section,
   TOOLTIP_STYLE,
 } from "@/components/analytics/widgets";
-import { formatAmount } from "@/lib/format";
+import { formatAmount, formatMoney } from "@/lib/format";
 import type { AnalyticsProducts } from "@/lib/api/types";
 
 const NO_TECH_CARD = "no_tech_card";
@@ -63,12 +63,12 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
   };
   const top = report.tech_cards.slice(0, TOP_LIMIT).map((row) => ({
     label: row.name,
-    quantity: row.quantity,
+    revenue: Number(row.revenue),
   }));
   const categories = report.categories.map((row) => ({
     key: row.name === "" ? "category" : row.name,
     label: categoryLabel(row.name),
-    value: row.quantity,
+    value: Number(row.revenue),
   }));
   const weights = report.weights.map((row) => ({
     label: row.kg,
@@ -83,7 +83,12 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
     <>
       <Note>{t("weightUnknown", { count: report.weight_unknown })}</Note>
       <Section title={t("productTechCards")}>
-        <RankBars rows={top} dataKey="quantity" name={t("pieces")} />
+        <RankBars
+          rows={top}
+          dataKey="revenue"
+          name={t("revenue")}
+          formatValue={(value) => formatMoney(value, "GEL")}
+        />
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
@@ -92,6 +97,7 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
                 <th className="py-2 pr-3 font-medium">{t("category")}</th>
                 <th className="py-2 pr-3 text-right font-medium">{t("pieces")}</th>
                 <th className="py-2 pr-3 text-right font-medium">{t("share")}</th>
+                <th className="py-2 pr-3 text-right font-medium">{t("revenue")}</th>
                 <th className="py-2 pr-3 text-right font-medium">{t("orders")}</th>
                 <th className="py-2 text-right font-medium">{t("kilograms")}</th>
               </tr>
@@ -103,6 +109,7 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
                   <td className="py-2 pr-3">{categoryLabel(row.category)}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{formatAmount(row.quantity)}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{Math.round(Number(row.share) * 100)}%</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{formatMoney(row.revenue, "GEL")}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{formatAmount(row.orders)}</td>
                   <td className="py-2 text-right tabular-nums">{row.kilograms}</td>
                 </tr>
@@ -154,7 +161,7 @@ function ProductsReport({ report }: { report: AnalyticsProducts }) {
         {pairs.length === 0 ? (
           <Note>{t("emptyValue")}</Note>
         ) : (
-          <RankBars rows={pairs} dataKey="orders" name={t("orders")} />
+          <RankBars rows={pairs} dataKey="orders" name={t("orders")} formatValue={(value) => formatAmount(value)} />
         )}
       </Section>
     </>
@@ -165,19 +172,21 @@ function RankBars({
   rows,
   dataKey,
   name,
+  formatValue,
 }: {
-  rows: { label: string; quantity?: number; orders?: number }[];
-  dataKey: "quantity" | "orders";
+  rows: { label: string; revenue?: number; orders?: number }[];
+  dataKey: "revenue" | "orders";
   name: string;
+  formatValue: (value: number) => string;
 }) {
   return (
     <div className="w-full min-w-0" style={{ height: Math.max(288, rows.length * 32) }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} layout="vertical" margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
           <CartesianGrid stroke="#e8ddcd" horizontal={false} />
-          <XAxis type="number" tick={AXIS_TICK} allowDecimals={false} />
+          <XAxis type="number" tick={AXIS_TICK} allowDecimals={dataKey === "revenue"} />
           <YAxis type="category" dataKey="label" tick={AXIS_TICK} width={220} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => formatValue(Number(value))} />
           <Bar dataKey={dataKey} name={name} fill={COLOR_REVENUE} radius={[0, 4, 4, 0]} />
         </BarChart>
       </ResponsiveContainer>
