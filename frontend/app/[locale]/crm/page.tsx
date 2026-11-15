@@ -515,6 +515,9 @@ function CrmOrderCard({
   const handlePaidClick = () => {
     if (!canEditOrders) return;
     if (order.is_paid) {
+      if (order.payment_type === null) {
+        throw new Error("Order payment type is missing.");
+      }
       onSetPaid(false, order.payment_type);
       return;
     }
@@ -1147,14 +1150,13 @@ function CrmOrderCard({
               </div>
             ) : null}
 
+            {priceNum !== null && cakeNum !== null && deliveryNum !== null && prepayNum !== null && remainingNum !== null && order.payment_type !== null ? (
             <div
               className={cn(
                 "grid grid-cols-2 gap-2 rounded-xl p-2.5 sm:grid-cols-4 lg:gap-3 lg:rounded-2xl lg:p-4",
                 tone.panelSoft,
               )}
             >
-              {priceNum !== null && cakeNum !== null && deliveryNum !== null && prepayNum !== null && remainingNum !== null ? (
-                <>
                   <div>
                     <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
                     <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
@@ -1184,15 +1186,14 @@ function CrmOrderCard({
                       {formatAed(remainingNum)}
                     </p>
                   </div>
-                </>
-              ) : null}
-              <div>
-                <span className="text-xs text-[var(--muted-2)]">{t("paymentMethod")}</span>
-                <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
-                  {paymentTypeLabel(order.payment_type, t)}
-                </p>
-              </div>
+                  <div>
+                    <span className="text-xs text-[var(--muted-2)]">{t("paymentMethod")}</span>
+                    <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">
+                      {paymentTypeLabel(order.payment_type, t)}
+                    </p>
+                  </div>
             </div>
+            ) : null}
             <CrmPaymentLinkField
               orderId={order.id}
               paymentUrl={order.payment_url}
@@ -1334,7 +1335,7 @@ function CrmOrderCard({
         </div>
       </div>
       )}
-      {isPaymentOpen ? (
+      {isPaymentOpen && order.payment_type !== null ? (
         <CrmPaymentTypeDialog
           open={isPaymentOpen}
           onOpenChange={setIsPaymentOpen}

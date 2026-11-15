@@ -84,6 +84,7 @@ def _blank_order_prices(data: dict) -> None:
     data["cake_price"] = None
     data["delivery_price"] = None
     data["prepayment"] = None
+    data["payment_type"] = None
     for item in data["items"]:
         item["price"] = None
         item["base_price"] = None

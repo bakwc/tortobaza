@@ -100,7 +100,12 @@ function buildCrmOrderFormData(
 }
 
 function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
-  if (order.cake_price === null || order.delivery_price === null || order.prepayment === null) {
+  if (
+    order.cake_price === null
+    || order.delivery_price === null
+    || order.prepayment === null
+    || order.payment_type === null
+  ) {
     throw new Error("Order prices are missing.");
   }
   return {

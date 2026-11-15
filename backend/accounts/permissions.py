@@ -109,7 +109,7 @@ def can_see_order_price(user, fulfillment_type: str) -> bool:
 
 ORDER_CONTACT_CHANGE_KEYS = ("contact", "nickname", "phones")
 ORDER_ADDRESS_CHANGE_KEYS = ("delivery_address",)
-ORDER_PRICE_CHANGE_KEYS = ("cake_price", "delivery_price", "prepayment")
+ORDER_PRICE_CHANGE_KEYS = ("cake_price", "delivery_price", "prepayment", "payment_type")
 
 
 def redact_order_field_changes(user, fulfillment_type: str | None, changes: dict) -> dict:

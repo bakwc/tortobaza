@@ -449,7 +449,7 @@ export const CrmOrderSchema = z.object({
   delivery_price: z.string().nullable(),
   prepayment: z.string().nullable(),
   is_paid: z.boolean(),
-  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
+  payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]).nullable(),
   payment_date: z.string().nullable(),
   payment_url: z.string().nullable(),
   created_at: z.string(),
@@ -1300,15 +1300,15 @@ export type ExchangeRates = z.infer<typeof ExchangeRatesSchema>;
 export type ResolveYandexAddressResponse = z.infer<typeof ResolveYandexAddressResponseSchema>;
 export type ResolveGoogleAddressResponse = z.infer<typeof ResolveGoogleAddressResponseSchema>;
 
+export type CrmOrderPaymentType = Exclude<CrmOrder["payment_type"], null>;
+export type CrmOrderStatus = CrmOrder["status"];
+
 export type UpdateCrmOrderBody = {
-  status?: CrmOrder["status"];
+  status?: CrmOrderStatus;
   is_paid?: boolean;
   take_in_work?: boolean;
-  payment_type?: CrmOrder["payment_type"];
+  payment_type?: CrmOrderPaymentType;
 };
-
-export type CrmOrderPaymentType = CrmOrder["payment_type"];
-export type CrmOrderStatus = CrmOrder["status"];
 
 export type CrmOrderWriteFields = {
   date: string;
