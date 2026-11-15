@@ -322,6 +322,7 @@ class ModifierInputSerializer(serializers.Serializer):
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     is_active = serializers.BooleanField()
+    has_quantity = serializers.BooleanField()
 
     def validate(self, attrs):
         chosen = [attrs["ingredient"], attrs["semi_product"], attrs["nested_tech_card"]]
@@ -370,6 +371,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "semi_product": modifier.semi_product_id,
                 "nested_tech_card": modifier.nested_tech_card_id,
                 "is_active": modifier.is_active,
+                "has_quantity": modifier.has_quantity,
             }
             for modifier in instance.modifiers.select_related("catalog_option__group")
         ]
@@ -438,6 +440,7 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "semi_product": row["semi_product"],
                 "nested_tech_card": row["nested_tech_card"],
                 "is_active": row["is_active"],
+                "has_quantity": row["has_quantity"],
                 "position": position,
             }
             if row["id"] is None:
@@ -608,7 +611,7 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "max_selections": link.group.max_selections,
                 "is_global": link.pk is None,
                 "modifiers": [
-                    {"id": modifier.pk, "name": modifier.name}
+                    {"id": modifier.pk, "name": modifier.name, "has_quantity": modifier.has_quantity}
                     for modifier in link.group.modifiers.filter(is_active=True)
                 ],
             }

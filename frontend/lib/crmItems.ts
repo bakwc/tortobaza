@@ -75,6 +75,16 @@ function findCard(techCards: TechCard[], id: number | null): TechCard | undefine
   return id === null ? undefined : techCards.find((card) => card.id === id);
 }
 
+function modifierQuantity(card: TechCard | undefined, row: CrmItemModifierDraft): number {
+  if (card !== undefined) {
+    for (const group of card.modifier_groups) {
+      const modifier = group.modifiers.find((item) => item.id === row.modifier);
+      if (modifier !== undefined) return modifier.has_quantity ? Number(row.quantity || "1") : 1;
+    }
+  }
+  return Number(row.quantity || "1");
+}
+
 export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrderItemBody {
   const card = findCard(techCards, item.tech_card);
   return {
@@ -85,7 +95,7 @@ export function crmItemBody(item: CrmItemDraft, techCards: TechCard[]): CrmOrder
     price: crmItemSalePrice(item, techCards),
     comment: item.comment,
     needs_review: item.needs_review,
-    modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: Number(row.quantity || "1") })),
+    modifiers: item.modifiers.map((row) => ({ modifier: row.modifier, quantity: modifierQuantity(card, row) })),
     lines: item.lines.map((line) => orderLineBody(line, line.quantity.replace(",", "."))),
   };
 }
@@ -97,9 +107,9 @@ export function crmItemCostBody(item: CrmItemDraft, card: TechCard): CrmOrderIte
   if (card.kind === "weighted" && weight === null) return null;
   const modifiers: { modifier: number; quantity: number }[] = [];
   for (const row of item.modifiers) {
-    const modifierQuantity = Number(row.quantity);
-    if (!Number.isInteger(modifierQuantity) || modifierQuantity < 1) return null;
-    modifiers.push({ modifier: row.modifier, quantity: modifierQuantity });
+    const count = modifierQuantity(card, row);
+    if (!Number.isInteger(count) || count < 1) return null;
+    modifiers.push({ modifier: row.modifier, quantity: count });
   }
   const lines: CrmOrderItemCostBody["lines"] = [];
   for (const line of item.lines) {
@@ -162,13 +172,13 @@ function modifierSale(item: CrmItemDraft, card: TechCard, techCards: TechCard[],
   if (factor === null) return 0;
   const row = item.modifiers.find((modifier) => modifier.modifier === modifierId);
   if (row === undefined) return 0;
-  const modifierQuantity = Number(row.quantity || "1");
+  const count = modifierQuantity(card, row);
   let extra = 0;
   for (const line of card.modifier_lines) {
     if (line.modifier !== modifierId || line.nested_tech_card === null) continue;
     const nested = findCard(techCards, line.nested_tech_card);
     if (nested === undefined || nested.sale_price === null) continue;
-    let scale = modifierQuantity * quantity;
+    let scale = count * quantity;
     if (line.scales_by_weight) scale *= factor;
     const net = Number(line.quantity) * scale;
     const sale = Number(nested.sale_price);

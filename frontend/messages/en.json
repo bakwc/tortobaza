@@ -693,6 +693,7 @@
     "chooseCategory": "Choose a category",
     "newIngredient": "New ingredient",
     "isActive": "Active",
+    "hasQuantity": "Quantity",
     "history": "History",
     "salePrice": "Sale price",
     "gramsPerUnit": "Grams per unit",

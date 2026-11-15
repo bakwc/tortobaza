@@ -697,6 +697,7 @@ class NestedTechCardTests(TestCase):
                         "semi_product": self.menu.sponge.pk,
                         "nested_tech_card": None,
                         "is_active": True,
+                        "has_quantity": True,
                     }
                 ],
             },
@@ -833,6 +834,12 @@ class GlobalModifierGroupTests(TestCase):
         with self.assertRaises(ValidationError):
             validate_order_item(self.menu.bento, None, [(self.menu.balloon, 1), (candle, 1)])
 
+    def test_modifier_without_quantity_rejects_more_than_one(self):
+        self.menu.balloon.has_quantity = False
+        self.menu.balloon.save()
+        with self.assertRaises(ValidationError):
+            validate_order_item(self.menu.bento, None, [(self.menu.balloon, 2)])
+
     def test_consumption_uses_modifier_quantity_not_weight(self):
         needs = expand_order_item(
             self.menu.cake,
@@ -919,6 +926,7 @@ class CategoryModifierGroupTests(TestCase):
                         "semi_product": None,
                         "nested_tech_card": None,
                         "is_active": True,
+                        "has_quantity": True,
                     }
                 ],
             },

@@ -1475,6 +1475,7 @@ export const ModifierSchema = z.object({
   semi_product: z.number().nullable(),
   nested_tech_card: z.number().nullable(),
   is_active: z.boolean(),
+  has_quantity: z.boolean(),
 });
 
 export const ModifierGroupSchema = z.object({
@@ -1500,7 +1501,7 @@ export const TechCardGroupSchema = z.object({
   is_global: z.boolean(),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
-  modifiers: z.array(z.object({ id: z.number(), name: z.string() })),
+  modifiers: z.array(z.object({ id: z.number(), name: z.string(), has_quantity: z.boolean() })),
 });
 
 export const TechCardModifierLineSchema = TechCardRecipeLineSchema.extend({
@@ -1681,6 +1682,7 @@ export type ModifierGroupBody = {
     semi_product: number | null;
     nested_tech_card: number | null;
     is_active: boolean;
+    has_quantity: boolean;
   }[];
 };
 

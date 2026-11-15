@@ -33,6 +33,7 @@ type ModifierDraft = {
   catalog_option: number | null;
   component: string;
   is_active: boolean;
+  has_quantity: boolean;
 };
 
 function modifierComponent(modifier: Modifier): string {
@@ -84,6 +85,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       catalog_option: modifier.catalog_option,
       component: modifierComponent(modifier),
       is_active: modifier.is_active,
+      has_quantity: modifier.has_quantity,
     })),
   };
 }
@@ -207,6 +209,7 @@ export function ModifierGroupsPanel() {
                       ? { ingredient: null, semi_product: null, nested_tech_card: null }
                       : componentRef(row.component)),
                     is_active: row.is_active,
+                    has_quantity: row.has_quantity,
                   })),
                 },
               },
@@ -298,7 +301,7 @@ export function ModifierGroupsPanel() {
                 key={row.key}
                 data-field-group={tForms("rowNumber", { number: index + 1 })}
                 data-error-list="modifiers"
-                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
+                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto_auto]"
               >
                 <Input
                   name="name"
@@ -346,6 +349,13 @@ export function ModifierGroupsPanel() {
                     onChange={(value) => updateModifier(row.key, { is_active: value })}
                   />
                 </div>
+                <div className="flex items-center">
+                  <CheckboxField
+                    label={t("hasQuantity")}
+                    checked={row.has_quantity}
+                    onChange={(value) => updateModifier(row.key, { has_quantity: value })}
+                  />
+                </div>
                 <Button
                   type="button"
                   variant="ghost"
@@ -376,6 +386,7 @@ export function ModifierGroupsPanel() {
                         catalog_option: null,
                         component: "",
                         is_active: true,
+                        has_quantity: true,
                       },
                     ],
                   })

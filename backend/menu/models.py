@@ -291,6 +291,7 @@ class Modifier(models.Model):
     )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
+    has_quantity = models.BooleanField(default=True, verbose_name=_("Has quantity"))
 
     class Meta:
         ordering = ["position", "name"]
