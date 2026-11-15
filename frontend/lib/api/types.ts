@@ -445,9 +445,9 @@ export const CrmOrderSchema = z.object({
   filling: z.string(),
   description: z.string(),
   internal_description: z.string(),
-  cake_price: z.string(),
-  delivery_price: z.string(),
-  prepayment: z.string(),
+  cake_price: z.string().nullable(),
+  delivery_price: z.string().nullable(),
+  prepayment: z.string().nullable(),
   is_paid: z.boolean(),
   payment_type: z.enum(["unknown", "cash", "terminal", "tbc", "bog", "tbank", "flowwow", "crypto", "paypal", "online"]),
   payment_date: z.string().nullable(),
@@ -519,7 +519,7 @@ export const CrmClientOrderHistorySchema = z.object({
     "in_delivery",
     "delivered",
   ]),
-  total: z.string(),
+  total: z.string().nullable(),
   image: ResponsiveImageSchema.nullable(),
 });
 

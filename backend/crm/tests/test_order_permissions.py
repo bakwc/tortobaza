@@ -125,6 +125,9 @@ class OrderPartyPermissionTests(TestCase):
             "nickname": {"old": "", "new": "Sender"},
             "phones": {"old": [], "new": ["995555111222"]},
             "delivery_address": {"old": "", "new": _ADDRESS},
+            "cake_price": {"old": "0.00", "new": "120.00"},
+            "delivery_price": {"old": "0.00", "new": "0.00"},
+            "prepayment": {"old": "0.00", "new": "30.00"},
             "status": {"old": CrmOrder.STATUS_NEW, "new": CrmOrder.STATUS_IN_WORK},
         }
         CrmOrderEvent.objects.create(
@@ -149,6 +152,9 @@ class OrderPartyPermissionTests(TestCase):
             self.assertEqual(row["nickname"], "")
             self.assertEqual(row["phones"], [])
             self.assertEqual(row["delivery_address"], "")
+            self.assertIsNone(row["cake_price"])
+            self.assertIsNone(row["delivery_price"])
+            self.assertIsNone(row["prepayment"])
             self.assertEqual(row["fulfillment_type"], order.fulfillment_type)
         mapped = self.client.get("/api/crm/orders/map/", {"date": "2026-08-26"})
         self.assertEqual(mapped.status_code, 200)
@@ -163,10 +169,14 @@ class OrderPartyPermissionTests(TestCase):
         self.assertEqual(delivery["nickname"], "Sender")
         self.assertEqual(delivery["delivery_address"], _ADDRESS)
         self.assertNotEqual(delivery["phones"], [])
+        self.assertIsNone(delivery["cake_price"])
+        self.assertIsNone(delivery["delivery_price"])
+        self.assertIsNone(delivery["prepayment"])
         self.assertEqual(pickup["contact"], "")
         self.assertEqual(pickup["nickname"], "")
         self.assertEqual(pickup["phones"], [])
         self.assertEqual(pickup["delivery_address"], "")
+        self.assertIsNone(pickup["cake_price"])
         mapped = self.client.get("/api/crm/orders/map/", {"date": "2026-08-26"})
         self.assertEqual(mapped.status_code, 200)
         self.assertEqual(
@@ -185,6 +195,9 @@ class OrderPartyPermissionTests(TestCase):
         self.assertEqual(pickup["nickname"], "Sender")
         self.assertEqual(pickup["delivery_address"], _ADDRESS)
         self.assertNotEqual(pickup["phones"], [])
+        self.assertIsNone(delivery["cake_price"])
+        self.assertIsNone(pickup["cake_price"])
+        self.assertIsNone(pickup["prepayment"])
         mapped = self.client.get("/api/crm/orders/map/", {"date": "2026-08-26"})
         self.assertEqual(mapped.status_code, 200)
         self.assertEqual(
@@ -201,12 +214,43 @@ class OrderPartyPermissionTests(TestCase):
             self.assertEqual(row["nickname"], "Sender")
             self.assertEqual(row["delivery_address"], _ADDRESS)
             self.assertNotEqual(row["phones"], [])
+            self.assertEqual(row["cake_price"], "120.00")
+            self.assertEqual(row["delivery_price"], "0.00")
+            self.assertEqual(row["prepayment"], "30.00")
         mapped = self.client.get("/api/crm/orders/map/", {"date": "2026-08-26"})
         self.assertEqual(mapped.status_code, 200)
         self.assertEqual(
             {order["id"] for order in mapped.json()["orders"]},
             {self.delivery_order.id, self.pickup_order.id},
         )
+
+    def test_price_permission_follows_party(self):
+        grant(self.delivery, "view_order_delivery_price")
+        grant(self.pickup, "view_order_pickup_price")
+        self.delivery = User.objects.get(pk=self.delivery.pk)
+        self.pickup = User.objects.get(pk=self.pickup.pk)
+        self.client.force_authenticate(user=self.delivery)
+        rows = _party_rows(self.client)
+        self.assertEqual(rows[self.delivery_order.id]["cake_price"], "120.00")
+        self.assertEqual(rows[self.delivery_order.id]["delivery_price"], "0.00")
+        self.assertEqual(rows[self.delivery_order.id]["prepayment"], "30.00")
+        self.assertIsNone(rows[self.pickup_order.id]["cake_price"])
+        self.assertIsNone(rows[self.pickup_order.id]["prepayment"])
+        shown = self.client.get(f"/api/crm/orders/{self.delivery_order.id}/events/")
+        self.assertEqual(shown.json()[0]["changes"]["cake_price"]["new"], "120.00")
+        hidden = self.client.get(f"/api/crm/orders/{self.pickup_order.id}/events/")
+        self.assertNotIn("cake_price", hidden.json()[0]["changes"])
+        self.assertNotIn("prepayment", hidden.json()[0]["changes"])
+
+        self.client.force_authenticate(user=self.pickup)
+        pickup_rows = _party_rows(self.client)
+        self.assertIsNone(pickup_rows[self.delivery_order.id]["cake_price"])
+        self.assertEqual(pickup_rows[self.pickup_order.id]["cake_price"], "120.00")
+        history = self.client.get(f"/api/crm/orders/{self.pickup_order.id}/client-orders/")
+        self.assertEqual(history.status_code, 200)
+        history_rows = {row["id"]: row for row in history.json()["orders"]}
+        self.assertEqual(history_rows[self.pickup_order.id]["total"], "120.00")
+        self.assertIsNone(history_rows[self.delivery_order.id]["total"])
 
     def test_order_events_redact_by_party(self):
         self.client.force_authenticate(user=self.viewer)
@@ -217,15 +261,20 @@ class OrderPartyPermissionTests(TestCase):
         self.assertNotIn("nickname", hidden_changes)
         self.assertNotIn("phones", hidden_changes)
         self.assertNotIn("delivery_address", hidden_changes)
+        self.assertNotIn("cake_price", hidden_changes)
+        self.assertNotIn("delivery_price", hidden_changes)
+        self.assertNotIn("prepayment", hidden_changes)
         self.assertEqual(hidden_changes["status"]["new"], CrmOrder.STATUS_IN_WORK)
 
         self.client.force_authenticate(user=self.delivery)
         shown = self.client.get(f"/api/crm/orders/{self.delivery_order.id}/events/")
         self.assertEqual(shown.json()[0]["changes"]["contact"]["new"], "Recipient +995555111222")
         self.assertEqual(shown.json()[0]["changes"]["delivery_address"]["new"], _ADDRESS)
+        self.assertNotIn("cake_price", shown.json()[0]["changes"])
         pickup = self.client.get(f"/api/crm/orders/{self.pickup_order.id}/events/")
         self.assertNotIn("contact", pickup.json()[0]["changes"])
         self.assertNotIn("delivery_address", pickup.json()[0]["changes"])
+        self.assertNotIn("cake_price", pickup.json()[0]["changes"])
 
     def test_audit_redacts_crm_order_contact_and_address(self):
         AuditEvent.objects.create(
@@ -258,6 +307,8 @@ class OrderPartyPermissionTests(TestCase):
         self.assertNotIn("nickname", delivery["changes"])
         self.assertNotIn("phones", delivery["changes"])
         self.assertNotIn("delivery_address", delivery["changes"])
+        self.assertNotIn("cake_price", delivery["changes"])
+        self.assertNotIn("prepayment", delivery["changes"])
         self.assertEqual(delivery["changes"]["status"]["new"], CrmOrder.STATUS_IN_WORK)
         self.assertEqual(rows[missing.object_id]["object_label"], "#999999")
         self.assertNotIn("contact", rows[missing.object_id]["changes"])
@@ -271,3 +322,4 @@ class OrderPartyPermissionTests(TestCase):
         self.assertEqual(row["object_label"], f"{self.delivery_order.date} Recipient +995555111222")
         self.assertEqual(row["changes"]["contact"]["new"], "Recipient +995555111222")
         self.assertEqual(row["changes"]["delivery_address"]["new"], _ADDRESS)
+        self.assertEqual(row["changes"]["cake_price"]["new"], "120.00")

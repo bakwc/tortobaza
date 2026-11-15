@@ -17,7 +17,7 @@ export function CrmPaymentLinkField({
 }: {
   orderId: number;
   paymentUrl: string | null;
-  remaining: number;
+  remaining: number | null;
 }) {
   const t = useTranslations("crm");
   const canView = useCan("view_order_payment_link");
@@ -33,7 +33,7 @@ export function CrmPaymentLinkField({
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  if (!canView || (url === null && (remaining <= 0 || !canCreate))) {
+  if (!canView || (url === null && (remaining === null || remaining <= 0 || !canCreate))) {
     return null;
   }
 

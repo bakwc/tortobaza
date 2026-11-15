@@ -12,7 +12,7 @@ export function CrmIncomeStats({
   compact,
   detailed,
 }: {
-  orders: { cake_price: string; delivery_price: string; is_paid: boolean }[];
+  orders: { cake_price: string | null; delivery_price: string | null; is_paid: boolean }[];
   compact: boolean;
   detailed: boolean;
 }) {
@@ -29,15 +29,16 @@ function CrmIncomeBadge({
   compact,
   detailed,
 }: {
-  orders: { cake_price: string; delivery_price: string; is_paid: boolean }[];
+  orders: { cake_price: string | null; delivery_price: string | null; is_paid: boolean }[];
   compact: boolean;
   detailed: boolean;
 }) {
   const t = useTranslations("crm");
   const [hintOpen, setHintOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement>(null);
-  const income = sumCrmCakePrices(orders);
-  const paid = sumCrmCakePrices(orders.filter((order) => order.is_paid));
+  const priced = orders.filter((order) => order.cake_price !== null && order.delivery_price !== null);
+  const income = sumCrmCakePrices(priced);
+  const paid = sumCrmCakePrices(priced.filter((order) => order.is_paid));
 
   useEffect(() => {
     if (!hintOpen) {
@@ -51,6 +52,10 @@ function CrmIncomeBadge({
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [hintOpen]);
+
+  if (orders.length > 0 && priced.length === 0) {
+    return null;
+  }
 
   const badge = (
     <span ref={rootRef} className="relative inline-flex">

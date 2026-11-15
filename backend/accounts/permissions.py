@@ -100,8 +100,16 @@ def can_see_order_contacts(user, fulfillment_type: str) -> bool:
     return user.has_perm(f"accounts.view_order_{party}_contacts")
 
 
+def can_see_order_price(user, fulfillment_type: str) -> bool:
+    if can_edit(user, "orders"):
+        return True
+    party = _order_party(fulfillment_type)
+    return user.has_perm(f"accounts.view_order_{party}_price")
+
+
 ORDER_CONTACT_CHANGE_KEYS = ("contact", "nickname", "phones")
 ORDER_ADDRESS_CHANGE_KEYS = ("delivery_address",)
+ORDER_PRICE_CHANGE_KEYS = ("cake_price", "delivery_price", "prepayment")
 
 
 def redact_order_field_changes(user, fulfillment_type: str | None, changes: dict) -> dict:
@@ -113,14 +121,21 @@ def redact_order_field_changes(user, fulfillment_type: str | None, changes: dict
         hide_address = not (
             can_see_order_address(user, "delivery") and can_see_order_address(user, "pickup")
         )
+        hide_price = not (
+            can_see_order_price(user, "delivery") and can_see_order_price(user, "pickup")
+        )
     else:
         hide_contacts = not can_see_order_contacts(user, fulfillment_type)
         hide_address = not can_see_order_address(user, fulfillment_type)
+        hide_price = not can_see_order_price(user, fulfillment_type)
     if hide_contacts:
         for key in ORDER_CONTACT_CHANGE_KEYS:
             redacted.pop(key, None)
     if hide_address:
         for key in ORDER_ADDRESS_CHANGE_KEYS:
+            redacted.pop(key, None)
+    if hide_price:
+        for key in ORDER_PRICE_CHANGE_KEYS:
             redacted.pop(key, None)
     return redacted
 
@@ -130,6 +145,8 @@ ORDER_PARTY_CODES = (
     "view_order_pickup_address",
     "view_order_delivery_contacts",
     "view_order_pickup_contacts",
+    "view_order_delivery_price",
+    "view_order_pickup_price",
 )
 
 

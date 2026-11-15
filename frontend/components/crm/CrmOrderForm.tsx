@@ -100,6 +100,9 @@ function buildCrmOrderFormData(
 }
 
 function fieldsFromOrder(order: CrmOrder): CrmOrderWriteFields {
+  if (order.cake_price === null || order.delivery_price === null || order.prepayment === null) {
+    throw new Error("Order prices are missing.");
+  }
   return {
     date: order.date,
     time_start: order.time_start ? sliceTime(order.time_start) : null,

@@ -72,9 +72,11 @@ function ClientOrderRow({
         <span className="block truncate text-xs leading-4 text-[var(--ink)]/60">{orderSummary(order)}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end gap-1">
-        <span className="text-sm font-semibold leading-none text-[var(--ink)]">
-          {formatAmount(order.total)} ₾
-        </span>
+        {order.total !== null ? (
+          <span className="text-sm font-semibold leading-none text-[var(--ink)]">
+            {formatAmount(order.total)} ₾
+          </span>
+        ) : null}
         <span
           className={cn(
             "whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none",

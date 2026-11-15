@@ -443,8 +443,14 @@ function CrmOrderCard({
 }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
-  const canViewDeliveryTime = useCan("view_order_delivery_time");
-  const canViewCookingTime = useCan("view_order_cooking_time");
+  const canViewDeliveryTime = useCan(
+    order.fulfillment_type === "pickup" ? "view_order_pickup_time" : "view_order_delivery_time",
+  );
+  const canViewCookingTime = useCan(
+    order.fulfillment_type === "pickup"
+      ? "view_order_pickup_cooking_time"
+      : "view_order_delivery_cooking_time",
+  );
   const canSeeOrderAddress = useCanSeeOrderAddress(order.fulfillment_type);
   const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
   const tone = crmOrderStatusTone(order.status);
@@ -497,11 +503,11 @@ function CrmOrderCard({
       ? null
       : formatRouteMinutes(order.delivery_duration_seconds);
 
-  const cakeNum = Number.parseFloat(order.cake_price);
-  const deliveryNum = Number.parseFloat(order.delivery_price);
-  const priceNum = cakeNum + deliveryNum;
-  const prepayNum = Number.parseFloat(order.prepayment);
-  const remainingNum = Math.max(0, priceNum - prepayNum);
+  const cakeNum = order.cake_price === null ? null : Number.parseFloat(order.cake_price);
+  const deliveryNum = order.delivery_price === null ? null : Number.parseFloat(order.delivery_price);
+  const prepayNum = order.prepayment === null ? null : Number.parseFloat(order.prepayment);
+  const priceNum = cakeNum === null || deliveryNum === null ? null : cakeNum + deliveryNum;
+  const remainingNum = priceNum === null || prepayNum === null ? null : Math.max(0, priceNum - prepayNum);
 
   const nextStatus = CRM_ORDER_NEXT_STATUS[order.status];
   const NextStepIcon = nextStatus ? NEXT_STEP_ICONS[nextStatus] : null;
@@ -1147,35 +1153,39 @@ function CrmOrderCard({
                 tone.panelSoft,
               )}
             >
-              <div>
-                <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
-                <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
-                  {formatAed(priceNum)}
-                </p>
-                <p className="text-[10px] leading-tight text-[var(--muted-2)]">
-                  {t("priceSplit", {
-                    cake: formatAmount(cakeNum),
-                    delivery: formatAmount(deliveryNum),
-                  })}
-                </p>
-              </div>
-              <div>
-                <span className="text-xs text-[var(--muted-2)]">{t("prepaid")}</span>
-                <p className="mt-0.5 text-base font-semibold text-[var(--ink)]">
-                  {formatAed(order.prepayment)}
-                </p>
-              </div>
-              <div>
-                <span className="text-xs text-[var(--muted-2)]">{t("remaining")}</span>
-                <p
-                  className={cn(
-                    "mt-0.5 text-base font-bold",
-                    remainingNum > 0 ? "text-[var(--danger)]" : "text-emerald-700",
-                  )}
-                >
-                  {formatAed(remainingNum)}
-                </p>
-              </div>
+              {priceNum !== null && cakeNum !== null && deliveryNum !== null && prepayNum !== null && remainingNum !== null ? (
+                <>
+                  <div>
+                    <span className="text-xs text-[var(--muted-2)]">{t("price")}</span>
+                    <p className="mt-0.5 text-base font-bold text-[var(--ink)]">
+                      {formatAed(priceNum)}
+                    </p>
+                    <p className="text-[10px] leading-tight text-[var(--muted-2)]">
+                      {t("priceSplit", {
+                        cake: formatAmount(cakeNum),
+                        delivery: formatAmount(deliveryNum),
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-[var(--muted-2)]">{t("prepaid")}</span>
+                    <p className="mt-0.5 text-base font-semibold text-[var(--ink)]">
+                      {formatAed(prepayNum)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs text-[var(--muted-2)]">{t("remaining")}</span>
+                    <p
+                      className={cn(
+                        "mt-0.5 text-base font-bold",
+                        remainingNum > 0 ? "text-[var(--danger)]" : "text-emerald-700",
+                      )}
+                    >
+                      {formatAed(remainingNum)}
+                    </p>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <span className="text-xs text-[var(--muted-2)]">{t("paymentMethod")}</span>
                 <p className="mt-0.5 text-sm font-semibold text-[var(--ink)]">

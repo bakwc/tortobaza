@@ -19,7 +19,22 @@ function draftFrom(row: AccessGroup): AccessGroupBody {
   return { name: row.name, permissions: row.permissions };
 }
 
+const ORDER_INFO_SECTION: Record<string, string> = {
+  view_order_delivery_time: "order_info_delivery",
+  view_order_delivery_cooking_time: "order_info_delivery",
+  view_order_delivery_address: "order_info_delivery",
+  view_order_delivery_contacts: "order_info_delivery",
+  view_order_delivery_price: "order_info_delivery",
+  view_order_pickup_time: "order_info_pickup",
+  view_order_pickup_cooking_time: "order_info_pickup",
+  view_order_pickup_address: "order_info_pickup",
+  view_order_pickup_contacts: "order_info_pickup",
+  view_order_pickup_price: "order_info_pickup",
+};
+
 function sectionKey(code: string): string {
+  const info = ORDER_INFO_SECTION[code];
+  if (info !== undefined) return info;
   return code.replace(/^(view|edit_own|edit)_/, "");
 }
 

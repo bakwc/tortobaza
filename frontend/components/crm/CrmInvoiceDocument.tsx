@@ -12,9 +12,12 @@ export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
   const locale = useLocale();
   const canSeeOrderAddress = useCanSeeOrderAddress(order.fulfillment_type);
   const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
-  const priceNum = crmOrderTotal(order);
-  const prepayNum = Number.parseFloat(order.prepayment);
-  const remainingNum = Math.max(0, priceNum - prepayNum);
+  const priceNum =
+    order.cake_price === null || order.delivery_price === null
+      ? null
+      : crmOrderTotal({ cake_price: order.cake_price, delivery_price: order.delivery_price });
+  const prepayNum = order.prepayment === null ? null : Number.parseFloat(order.prepayment);
+  const remainingNum = priceNum === null || prepayNum === null ? null : Math.max(0, priceNum - prepayNum);
   const companyAddress = `${SITE_INFO.address.line1}, ${SITE_INFO.address.city}, ${SITE_INFO.address.country}`;
 
   return (
@@ -92,7 +95,9 @@ export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
             <thead>
               <tr className="border-b border-[var(--line)] text-left text-xs font-semibold uppercase tracking-[0.06em] text-[var(--ink)]/60">
                 <th className="py-2 pr-4 font-semibold">{t("invoiceItem")}</th>
-                <th className="py-2 text-right font-semibold">{t("invoiceAmount")}</th>
+                {priceNum !== null ? (
+                  <th className="py-2 text-right font-semibold">{t("invoiceAmount")}</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -106,24 +111,28 @@ export function CrmInvoiceDocument({ order }: { order: CrmOrder }) {
                     <p className="mt-1 whitespace-pre-wrap text-[var(--ink)]/80">{order.description}</p>
                   ) : null}
                 </td>
-                <td className="py-4 text-right font-semibold tabular-nums">{formatAed(priceNum)}</td>
+                {priceNum !== null ? (
+                  <td className="py-4 text-right font-semibold tabular-nums">{formatAed(priceNum)}</td>
+                ) : null}
               </tr>
             </tbody>
           </table>
-          <dl className="ml-auto mt-4 w-full max-w-xs space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--ink)]/60">{t("price")}</dt>
-              <dd className="tabular-nums">{formatAed(priceNum)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--ink)]/60">{t("prepaid")}</dt>
-              <dd className="tabular-nums">{formatAed(order.prepayment)}</dd>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-[var(--line)] pt-2 font-semibold">
-              <dt>{t("remaining")}</dt>
-              <dd className="tabular-nums">{formatAed(remainingNum)}</dd>
-            </div>
-          </dl>
+          {priceNum !== null && prepayNum !== null && remainingNum !== null ? (
+            <dl className="ml-auto mt-4 w-full max-w-xs space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--ink)]/60">{t("price")}</dt>
+                <dd className="tabular-nums">{formatAed(priceNum)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--ink)]/60">{t("prepaid")}</dt>
+                <dd className="tabular-nums">{formatAed(prepayNum)}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-t border-[var(--line)] pt-2 font-semibold">
+                <dt>{t("remaining")}</dt>
+                <dd className="tabular-nums">{formatAed(remainingNum)}</dd>
+              </div>
+            </dl>
+          ) : null}
         </section>
 
         <section className="mt-10 border-t border-[var(--line)] pt-6">

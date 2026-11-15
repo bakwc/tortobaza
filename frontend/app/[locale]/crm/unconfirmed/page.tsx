@@ -132,8 +132,14 @@ function CrmUnconfirmedBoard() {
 function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
-  const canViewDeliveryTime = useCan("view_order_delivery_time");
-  const canViewCookingTime = useCan("view_order_cooking_time");
+  const canViewDeliveryTime = useCan(
+    order.fulfillment_type === "pickup" ? "view_order_pickup_time" : "view_order_delivery_time",
+  );
+  const canViewCookingTime = useCan(
+    order.fulfillment_type === "pickup"
+      ? "view_order_pickup_cooking_time"
+      : "view_order_delivery_cooking_time",
+  );
   const canSeeOrderContacts = useCanSeeOrderContacts(order.fulfillment_type);
   const thumb = order.images[0];
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -194,9 +200,16 @@ function CrmUnconfirmedOrderRow({ order }: { order: CrmOrder }) {
               <span className="mx-1">·</span>
               <span>{order.filling}</span>
             </p>
-            <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
-              {formatAed(crmOrderTotal(order))}
-            </span>
+            {order.cake_price !== null && order.delivery_price !== null ? (
+              <span className="shrink-0 text-sm font-bold text-[var(--ink)]">
+                {formatAed(
+                  crmOrderTotal({
+                    cake_price: order.cake_price,
+                    delivery_price: order.delivery_price,
+                  }),
+                )}
+              </span>
+            ) : null}
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="flex min-w-0 flex-1 items-center gap-1 truncate text-xs font-medium text-[var(--ink)] md:text-sm">

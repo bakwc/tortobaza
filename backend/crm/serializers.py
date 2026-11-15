@@ -9,6 +9,7 @@ from accounts.permissions import (
     can_edit,
     can_see_order_address,
     can_see_order_contacts,
+    can_see_order_price,
     can_view,
     redact_order_field_changes,
 )
@@ -70,6 +71,26 @@ def _sees_order_address(context: dict, fulfillment_type: str) -> bool:
     if user is None:
         return False
     return can_see_order_address(user, fulfillment_type)
+
+
+def _sees_order_price(context: dict, fulfillment_type: str) -> bool:
+    user = _request_user(context)
+    if user is None:
+        return False
+    return can_see_order_price(user, fulfillment_type)
+
+
+def _blank_order_prices(data: dict) -> None:
+    data["cake_price"] = None
+    data["delivery_price"] = None
+    data["prepayment"] = None
+    for item in data["items"]:
+        item["price"] = None
+        item["base_price"] = None
+        for modifier in item["modifiers"]:
+            modifier["price"] = None
+        for line in item["lines"]:
+            line["price"] = None
 
 
 def order_phones(instance: CrmOrder, context: dict) -> list[dict[str, str | None]]:
@@ -400,6 +421,8 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             data["nickname"] = ""
         if not _sees_order_address(self.context, instance.fulfillment_type):
             data["delivery_address"] = ""
+        if not _sees_order_price(self.context, instance.fulfillment_type):
+            _blank_order_prices(data)
         if self.context.get("show_food_cost"):
             data["food_cost"] = str(order_cost(instance))
         if instance.taken_by_id:
@@ -456,7 +479,9 @@ class CrmClientOrderHistorySerializer(serializers.Serializer):
     total = serializers.SerializerMethodField()
     image = serializers.SerializerMethodField()
 
-    def get_total(self, instance: CrmOrder) -> str:
+    def get_total(self, instance: CrmOrder) -> str | None:
+        if not _sees_order_price(self.context, instance.fulfillment_type):
+            return None
         return str(instance.cake_price + instance.delivery_price)
 
     def get_image(self, instance: CrmOrder) -> dict[str, str] | None:

@@ -71,8 +71,13 @@ export function formatAedWhole(amount: string | number): string {
   return `${sign}${grouped} ₾`;
 }
 
-export function sumCrmCakePrices(orders: { cake_price: string; delivery_price: string }[]): number {
-  return orders.reduce((sum, order) => sum + crmOrderTotal(order), 0);
+export function sumCrmCakePrices(
+  orders: { cake_price: string | null; delivery_price: string | null }[],
+): number {
+  return orders.reduce((sum, order) => {
+    if (order.cake_price === null || order.delivery_price === null) return sum;
+    return sum + crmOrderTotal({ cake_price: order.cake_price, delivery_price: order.delivery_price });
+  }, 0);
 }
 
 export function formatPriceDelta(delta: string | number): string {
