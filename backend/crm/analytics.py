@@ -14,7 +14,8 @@ from attendance.models import AttendanceEvent
 from attendance.salary import compute_day_worked_seconds, daily_monthly_share
 from crm.models import AnalyticsOrderComposition, CrmOrder, CrmOrderEvent
 from crm.phone import extract_phones
-from menu.models import TechCard
+from menu.models import ModifierGroup, TechCard
+from menu.recipes import tech_card_group_links
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
@@ -55,6 +56,7 @@ _BARE_NUMBER_RE = re.compile(r"\s*(\d+(?:[.,]\d+)?)\s*")
 _MONEY = Decimal("0.01")
 _KILO = Decimal("0.001")
 _THOUSAND = Decimal("1000")
+_NO_TECH_CARD = "no_tech_card"
 
 
 class Customer:
@@ -870,42 +872,73 @@ def products(month: str, today: date) -> dict:
             "items__modifiers__modifier__group",
         )
     )
-    tech_cards: dict[str, _Count] = {}
+    tech_cards: dict[tuple[str, str], _Count] = {}
+    categories: dict[str, _Count] = {}
     weights: dict[Decimal, _Count] = {}
     groups: dict[int, dict] = {}
+    pairs: dict[tuple[str, str], int] = {}
     weight_unknown = 0
     with_items = 0
+    multi_category = 0
     for order in orders:
         items = list(order.items.all())
         if not items:
             continue
         with_items += 1
+        order_categories: set[str] = set()
         for item in items:
             name = item.name if item.tech_card_id is None else item.tech_card.name
+            category = _category_key(item)
+            order_categories.add(category)
             kilograms = None if item.weight_kg is None else item.weight_kg * item.quantity
-            _bump(tech_cards, name, order.id, item.quantity, kilograms)
+            _bump(tech_cards, (name, category), order.id, item.quantity, kilograms)
+            _bump(categories, category, order.id, item.quantity, kilograms)
             if item.weight_kg is None:
                 if item.tech_card_id is not None and item.tech_card.kind == TechCard.KIND_WEIGHTED:
                     weight_unknown += item.quantity
             else:
                 _bump(weights, item.weight_kg, order.id, item.quantity, kilograms)
+            linked = [] if item.tech_card_id is None else tech_card_group_links(item.tech_card)
+            for link in linked:
+                _group_bucket(groups, link.group)["available"] += 1
+            chosen: set[int] = set()
             for row in item.modifiers.all():
                 group = row.modifier.group
-                bucket = groups.get(group.id)
-                if bucket is None:
-                    bucket = {"name": group.name, "position": group.position, "modifiers": {}}
-                    groups[group.id] = bucket
+                bucket = _group_bucket(groups, group)
+                if group.id not in chosen:
+                    chosen.add(group.id)
+                    bucket["selected"] += 1
+                bucket["picked"] += row.quantity
                 counted = item.quantity * row.quantity
                 modifier_kg = None if kilograms is None else kilograms * row.quantity
                 _bump(bucket["modifiers"], row.modifier.name, order.id, counted, modifier_kg)
+        if len(order_categories) > 1:
+            multi_category += 1
+            names = sorted(order_categories)
+            for index, first in enumerate(names):
+                for second in names[index + 1 :]:
+                    key = (first, second)
+                    pairs[key] = pairs.get(key, 0) + 1
+    total_quantity = sum(bucket.quantity for bucket in tech_cards.values())
     return {
         "month": month,
         "start": start.isoformat(),
         "end": end.isoformat(),
         "coverage": {"orders": len(orders), "with_items": with_items},
         "tech_cards": [
+            {
+                "name": name,
+                "category": category,
+                "share": _quantity_share(bucket.quantity, total_quantity),
+                **_metrics(bucket),
+            }
+            for (name, category), bucket in sorted(
+                tech_cards.items(), key=lambda item: (-item[1].quantity, item[0][0], item[0][1])
+            )
+        ],
+        "categories": [
             {"name": name, **_metrics(bucket)}
-            for name, bucket in sorted(tech_cards.items(), key=lambda item: (-item[1].quantity, item[0]))
+            for name, bucket in sorted(categories.items(), key=lambda item: (-item[1].quantity, item[0]))
         ],
         "weights": [
             {"kg": _num(kg), **_metrics(bucket)}
@@ -915,6 +948,10 @@ def products(month: str, today: date) -> dict:
         "modifier_groups": [
             {
                 "name": group["name"],
+                "multi": group["multi"],
+                "available": group["available"],
+                "selected": group["selected"],
+                "average": _group_average(group),
                 "modifiers": [
                     {"name": name, **_metrics(bucket)}
                     for name, bucket in sorted(
@@ -924,7 +961,53 @@ def products(month: str, today: date) -> dict:
             }
             for group in sorted(groups.values(), key=lambda item: (item["position"], item["name"]))
         ],
+        "cross_sales": {
+            "orders": with_items,
+            "multi_category": multi_category,
+            "pairs": [
+                {"first": first, "second": second, "orders": count}
+                for (first, second), count in sorted(pairs.items(), key=lambda item: (-item[1], item[0]))
+            ],
+        },
     }
+
+
+def _category_key(item) -> str:
+    if item.tech_card_id is None:
+        return _NO_TECH_CARD
+    if item.tech_card.category_id is None:
+        return ""
+    return item.tech_card.category.name
+
+
+def _group_bucket(groups: dict[int, dict], group: ModifierGroup) -> dict:
+    bucket = groups.get(group.id)
+    if bucket is None:
+        bucket = {
+            "name": group.name,
+            "position": group.position,
+            "multi": group.selection_type == ModifierGroup.SELECTION_MULTI,
+            "available": 0,
+            "selected": 0,
+            "picked": 0,
+            "modifiers": {},
+        }
+        groups[group.id] = bucket
+    return bucket
+
+
+def _group_average(group: dict) -> str | None:
+    if not group["multi"]:
+        return None
+    if group["selected"] == 0:
+        return "0"
+    return _num(Decimal(group["picked"]) / Decimal(group["selected"]))
+
+
+def _quantity_share(quantity: int, total: int) -> str:
+    if total == 0:
+        return "0"
+    return _num(Decimal(quantity) / Decimal(total))
 
 
 class _Count:

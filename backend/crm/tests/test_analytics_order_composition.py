@@ -19,6 +19,7 @@ from crm.models import (
     CrmOrderItem,
     CrmOrderItemModifier,
 )
+from menu.models import TechCardCategory
 from menu.tests.fixtures import MenuFixture
 from orders.models import Order, OrderItem, OrderItemOption
 
@@ -256,6 +257,10 @@ class AnalyticsOrderCompositionTests(TestCase):
         menu.filling.save(update_fields=["position"])
         menu.decor.position = 1
         menu.decor.save(update_fields=["position"])
+        menu.cake.category = TechCardCategory.objects.create(name="Торты")
+        menu.cake.save(update_fields=["category"])
+        menu.bento.category = TechCardCategory.objects.create(name="Картошка")
+        menu.bento.save(update_fields=["category"])
         _crm(date=date(2026, 10, 2), weight="1 кг", filling="Сникерс")
         first = _crm(date=date(2026, 10, 3), weight="1 кг", filling="snickers")
         second = _crm(date=date(2026, 10, 4), weight="700", filling="Snickers")
@@ -296,23 +301,49 @@ class AnalyticsOrderCompositionTests(TestCase):
         report = products("2026-10", date(2026, 10, 25))
         self.assertEqual(report["coverage"], {"orders": 5, "with_items": 4})
         cards = {row["name"]: row for row in report["tech_cards"]}
+        self.assertEqual(cards["Cake"]["category"], "Торты")
         self.assertEqual(cards["Cake"]["quantity"], 5)
+        self.assertEqual(cards["Cake"]["share"], "0.556")
         self.assertEqual(cards["Cake"]["orders"], 3)
         self.assertEqual(cards["Cake"]["kilograms"], "1.7")
+        self.assertEqual(cards["Bento"]["category"], "Картошка")
         self.assertEqual(cards["Bento"]["quantity"], 2)
+        self.assertEqual(cards["Bento"]["share"], "0.222")
         self.assertEqual(cards["Bento"]["kilograms"], "0")
+        self.assertEqual(cards["Открытка"]["category"], "no_tech_card")
         self.assertEqual(cards["Открытка"]["quantity"], 2)
+        self.assertEqual(cards["Открытка"]["share"], "0.222")
+        categories = {row["name"]: row for row in report["categories"]}
+        self.assertEqual(categories["Торты"]["quantity"], 5)
+        self.assertEqual(categories["Торты"]["orders"], 3)
+        self.assertEqual(categories["Торты"]["kilograms"], "1.7")
+        self.assertEqual(categories["Картошка"]["quantity"], 2)
+        self.assertEqual(categories["no_tech_card"]["quantity"], 2)
         self.assertEqual({row["kg"]: row["quantity"] for row in report["weights"]}, {"0.7": 1, "1": 1})
         self.assertEqual(report["weight_unknown"], 3)
-        groups = {group["name"]: group["modifiers"] for group in report["modifier_groups"]}
+        groups = {group["name"]: group for group in report["modifier_groups"]}
         self.assertEqual(list(groups), ["Filling", "Decor"])
-        self.assertEqual(groups["Filling"][0]["name"], "Raspberry")
-        self.assertEqual(groups["Filling"][0]["quantity"], 2)
-        self.assertEqual(groups["Filling"][0]["orders"], 2)
-        self.assertEqual(groups["Filling"][0]["kilograms"], "1.7")
-        self.assertEqual(groups["Decor"][0]["name"], "Photo print")
-        self.assertEqual(groups["Decor"][0]["quantity"], 2)
-        self.assertEqual(groups["Decor"][0]["kilograms"], "2")
+        self.assertFalse(groups["Filling"]["multi"])
+        self.assertEqual(groups["Filling"]["available"], 3)
+        self.assertEqual(groups["Filling"]["selected"], 2)
+        self.assertIsNone(groups["Filling"]["average"])
+        self.assertEqual(groups["Filling"]["modifiers"][0]["name"], "Raspberry")
+        self.assertEqual(groups["Filling"]["modifiers"][0]["quantity"], 2)
+        self.assertEqual(groups["Filling"]["modifiers"][0]["orders"], 2)
+        self.assertEqual(groups["Filling"]["modifiers"][0]["kilograms"], "1.7")
+        self.assertTrue(groups["Decor"]["multi"])
+        self.assertEqual(groups["Decor"]["available"], 3)
+        self.assertEqual(groups["Decor"]["selected"], 1)
+        self.assertEqual(groups["Decor"]["average"], "2")
+        self.assertEqual(groups["Decor"]["modifiers"][0]["name"], "Photo print")
+        self.assertEqual(groups["Decor"]["modifiers"][0]["quantity"], 2)
+        self.assertEqual(groups["Decor"]["modifiers"][0]["kilograms"], "2")
+        self.assertEqual(report["cross_sales"]["orders"], 4)
+        self.assertEqual(report["cross_sales"]["multi_category"], 1)
+        self.assertEqual(
+            report["cross_sales"]["pairs"],
+            [{"first": "no_tech_card", "second": "Картошка", "orders": 1}],
+        )
 
 
 class AnalyticsProductsApiTests(TestCase):

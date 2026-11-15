@@ -825,6 +825,13 @@ export const AnalyticsProductsSchema = z.object({
   tech_cards: z.array(
     AnalyticsProductMetricsSchema.extend({
       name: z.string(),
+      category: z.string(),
+      share: z.string(),
+    }),
+  ),
+  categories: z.array(
+    AnalyticsProductMetricsSchema.extend({
+      name: z.string(),
     }),
   ),
   weights: z.array(
@@ -836,6 +843,10 @@ export const AnalyticsProductsSchema = z.object({
   modifier_groups: z.array(
     z.object({
       name: z.string(),
+      multi: z.boolean(),
+      available: z.number(),
+      selected: z.number(),
+      average: z.string().nullable(),
       modifiers: z.array(
         AnalyticsProductMetricsSchema.extend({
           name: z.string(),
@@ -843,6 +854,17 @@ export const AnalyticsProductsSchema = z.object({
       ),
     }),
   ),
+  cross_sales: z.object({
+    orders: z.number(),
+    multi_category: z.number(),
+    pairs: z.array(
+      z.object({
+        first: z.string(),
+        second: z.string(),
+        orders: z.number(),
+      }),
+    ),
+  }),
 });
 
 export const AnalyticsStaffPeriodSchema = z.object({
