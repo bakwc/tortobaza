@@ -272,6 +272,8 @@ export function ModifierGroupsPanel() {
                   setDraft({ ...draft, is_global: value, categories: value ? [] : draft.categories })
                 }
               />
+            </div>
+            <div className="flex items-center sm:col-span-4">
               <CheckboxField
                 label={t("hasQuantity")}
                 checked={draft.has_quantity}
