@@ -248,6 +248,7 @@ class CrmOrder(models.Model):
         default="",
         verbose_name=_("Telegram posted delivery address"),
     )
+    telegram_posted_items = models.JSONField(default=list, verbose_name=_("Telegram posted items"))
     late_prep_message_id = models.BigIntegerField(
         null=True,
         blank=True,

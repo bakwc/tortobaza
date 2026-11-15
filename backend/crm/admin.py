@@ -117,6 +117,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
         "telegram_posted_time_start",
         "telegram_posted_time_end",
         "telegram_posted_when_ready",
+        "telegram_posted_items",
     ]
     fieldsets = (
         (
@@ -178,6 +179,7 @@ class CrmOrderAdmin(admin.ModelAdmin):
                     "telegram_posted_time_start",
                     "telegram_posted_time_end",
                     "telegram_posted_when_ready",
+                    "telegram_posted_items",
                 ),
                 "classes": ("collapse",),
             },

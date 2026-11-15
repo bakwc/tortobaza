@@ -23,6 +23,9 @@ from crm.google_maps import SWEET_CHILL_COORDS
 from crm.models import (
     CrmOrder,
     CrmOrderImage,
+    CrmOrderItem,
+    CrmOrderItemLine,
+    CrmOrderItemModifier,
     DeliveryRouteResolveFailure,
     GoogleAddressResolveFailure,
     ResolvedGoogleAddress,
@@ -36,8 +39,10 @@ from crm.telegram import (
     crm_order_in_telegram_window,
     crm_order_slot_datetime,
     crm_order_telegram_hash,
+    crm_order_telegram_items,
     sync_crm_order_to_telegram,
 )
+from menu.models import Ingredient, Modifier, ModifierGroup
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -231,8 +236,7 @@ class CrmTelegramTests(TestCase):
         self.assertIsNotNone(order.telegram_message_id)
         html = self.calls[0]["payload"]["text"]
         self.assertIn("Customer", html)
-        self.assertIn("Vanilla", html)
-        self.assertIn("2kg", html)
+        self.assertIn("Note", html)
         self.assertEqual(order.telegram_payload_hash, crm_order_telegram_hash(order))
 
     def test_past_within_seven_days_posts(self):
@@ -520,6 +524,54 @@ class CrmTelegramTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.telegram_posted_delivery_address, "Gorgiladze 15")
 
+    def test_html_lists_items_without_weight_and_filling(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        item = CrmOrderItem.objects.create(
+            order=order,
+            name="Медовик",
+            quantity=2,
+            weight_kg=Decimal("1.500"),
+            comment="С днем рождения",
+            position=0,
+        )
+        group = ModifierGroup.objects.create(
+            name="Decor",
+            selection_type=ModifierGroup.SELECTION_MULTI,
+        )
+        modifier = Modifier.objects.create(group=group, name="Надпись")
+        CrmOrderItemModifier.objects.create(item=item, modifier=modifier, quantity=2)
+        ingredient = Ingredient.objects.create(name="Свечи", unit="pcs")
+        CrmOrderItemLine.objects.create(item=item, ingredient=ingredient, quantity=Decimal("1"))
+        html = build_crm_order_telegram_html(order)
+        self.assertIn("<b>Позиции:</b>", html)
+        self.assertIn("• 2 × Медовик · 1.5 кг", html)
+        self.assertIn("   Надпись × 2", html)
+        self.assertIn("   Свечи", html)
+        self.assertIn("   С днем рождения", html)
+        self.assertNotIn("<b>Вес:</b>", html)
+        self.assertNotIn("<b>Начинка:</b>", html)
+
+    def test_items_change_edits_and_replies(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        CrmOrderItem.objects.create(order=order, name="Медовик", quantity=1, position=0)
+        sync_crm_order_to_telegram(order.pk)
+        original_id = CrmOrder.objects.get(pk=order.pk).telegram_message_id
+        self.calls.clear()
+        CrmOrderItem.objects.create(order=order, name="Бенто", quantity=1, position=1)
+        sync_crm_order_to_telegram(order.pk)
+        methods = [c["method"] for c in self.calls]
+        self.assertEqual(methods, ["editMessageText", "sendMessage"])
+        reply = self.calls[1]["payload"]
+        self.assertEqual(reply["reply_to_message_id"], original_id)
+        self.assertIn("позиции поменялись", reply["text"])
+        self.assertIn("Бенто", reply["text"])
+        self.assertIn("исходное сообщение", reply["text"])
+        order.refresh_from_db()
+        self.assertEqual(order.telegram_posted_items, crm_order_telegram_items(order))
+        self.calls.clear()
+        sync_crm_order_to_telegram(order.pk)
+        self.assertEqual(self.calls, [])
+
     def test_posted_order_moved_beyond_horizon_still_edits(self):
         order = self._create_order(delta=timedelta(hours=2))
         sync_crm_order_to_telegram(order.pk)
@@ -557,6 +609,7 @@ class CrmTelegramTests(TestCase):
         posted.telegram_posted_time_start = posted.time_start
         posted.telegram_posted_time_end = posted.time_end
         posted.telegram_posted_delivery_address = posted.delivery_address
+        posted.telegram_posted_items = crm_order_telegram_items(posted)
         posted.save(
             update_fields=[
                 "telegram_message_id",
@@ -565,6 +618,7 @@ class CrmTelegramTests(TestCase):
                 "telegram_posted_time_start",
                 "telegram_posted_time_end",
                 "telegram_posted_delivery_address",
+                "telegram_posted_items",
             ]
         )
         pending = self._create_order(delta=timedelta(hours=3))
@@ -873,6 +927,7 @@ class CrmTelegramTests(TestCase):
         posted.telegram_posted_time_start = posted.time_start
         posted.telegram_posted_time_end = posted.time_end
         posted.telegram_posted_delivery_address = posted.delivery_address
+        posted.telegram_posted_items = crm_order_telegram_items(posted)
         posted.save(
             update_fields=[
                 "telegram_message_id",
@@ -881,6 +936,7 @@ class CrmTelegramTests(TestCase):
                 "telegram_posted_time_start",
                 "telegram_posted_time_end",
                 "telegram_posted_delivery_address",
+                "telegram_posted_items",
             ]
         )
         fake_response = MagicMock()

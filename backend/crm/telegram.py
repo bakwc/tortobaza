@@ -125,6 +125,57 @@ def crm_order_in_telegram_window(order: CrmOrder, now: datetime) -> bool:
     return now_tb - timedelta(days=7) <= slot and order.date <= last_allowed_date
 
 
+def _weight_kg_text(value: Decimal | None) -> str | None:
+    if value is None:
+        return None
+    text = format(value, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text
+
+
+def crm_order_telegram_items(order: CrmOrder) -> list[dict]:
+    rows = []
+    for item in order.items.all():
+        name = item.name.strip()
+        if not name and item.tech_card_id is not None:
+            name = item.tech_card.name
+        rows.append(
+            {
+                "name": name,
+                "quantity": item.quantity,
+                "weight_kg": _weight_kg_text(item.weight_kg),
+                "modifiers": [[row.modifier.name, row.quantity] for row in item.modifiers.all()],
+                "lines": [line.component.name for line in item.lines.all()],
+                "comment": item.comment,
+            }
+        )
+    return rows
+
+
+def _format_items_html(items: list[dict]) -> str:
+    if not items:
+        return ""
+    lines = ["<b>Позиции:</b>"]
+    for item in items:
+        title = _esc(item["name"])
+        if item["quantity"] > 1:
+            title = f"{item['quantity']} × {title}"
+        if item["weight_kg"] is not None:
+            title = f"{title} · {_esc(item['weight_kg'])} кг"
+        lines.append(f"• {title}")
+        for name, quantity in item["modifiers"]:
+            modifier = _esc(name)
+            if quantity > 1:
+                modifier = f"{modifier} × {quantity}"
+            lines.append(f"   {modifier}")
+        for name in item["lines"]:
+            lines.append(f"   {_esc(name)}")
+        if item["comment"]:
+            lines.append(f"   {_esc(item['comment'])}")
+    return "\n".join(lines)
+
+
 def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
     images = [[img.id, img.position] for img in order.images.all()]
     payload = {
@@ -136,9 +187,9 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "deleted": order.deleted,
         "delivery_address": order.delivery_address,
         "description": order.description,
-        "filling": order.filling,
         "fulfillment_type": order.fulfillment_type,
         "images": images,
+        "items": crm_order_telegram_items(order),
         "is_paid": order.is_paid,
         "status": order.status,
         "nickname": order.nickname,
@@ -151,7 +202,6 @@ def build_crm_order_telegram_payload(order: CrmOrder) -> dict:
         "time_end": order.time_end.isoformat() if order.time_end is not None else None,
         "time_start": order.time_start.isoformat() if order.time_start is not None else None,
         "time_lines": "delivery_prep_two_lines",
-        "weight": order.weight,
         "when_ready": order.when_ready,
     }
     links = contact_links(order.contact)
@@ -353,8 +403,9 @@ def build_crm_order_telegram_html(order: CrmOrder) -> str:
         lines.append(f'<a href="{wa_href}">WhatsApp</a>')
     if order.nickname:
         lines.append(f"<b>Отправитель:</b> {_esc(order.nickname)}")
-    lines.append(f"<b>Вес:</b> {_esc(order.weight)}")
-    lines.append(f"<b>Начинка:</b> {_esc(order.filling)}")
+    items_html = _format_items_html(crm_order_telegram_items(order))
+    if items_html:
+        lines.append(items_html)
     if order.description:
         lines.append(f"<b>Описание:</b> {_esc(order.description)}")
     lines.append(f"<b>Цена:</b> {_format_money(order.total_price)}")
@@ -541,6 +592,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
     order.telegram_posted_time_end = order.time_end
     order.telegram_posted_when_ready = order.when_ready
     order.telegram_posted_delivery_address = order.delivery_address
+    order.telegram_posted_items = crm_order_telegram_items(order)
     order.save(
         update_fields=[
             "telegram_message_id",
@@ -551,6 +603,7 @@ def _persist_telegram_state(order: CrmOrder, message_id: int, media: list, paylo
             "telegram_posted_time_end",
             "telegram_posted_when_ready",
             "telegram_posted_delivery_address",
+            "telegram_posted_items",
             "updated_at",
         ]
     )
@@ -576,10 +629,21 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
     if not token or not chat_id:
         return
     with transaction.atomic():
-        order = CrmOrder.objects.select_for_update().select_related(
-            "taken_by", "created_by", "delivered_by"
-        ).get(pk=order_id)
+        order = (
+            CrmOrder.objects.select_for_update()
+            .select_related("taken_by", "created_by", "delivered_by")
+            .prefetch_related(
+                "images",
+                "items__tech_card",
+                "items__modifiers__modifier",
+                "items__lines__ingredient",
+                "items__lines__semi_product",
+                "items__lines__tech_card",
+            )
+            .get(pk=order_id)
+        )
         list(order.images.all())
+        list(order.items.all())
         new_hash = crm_order_telegram_hash(order)
         posted_before = order.telegram_message_id is not None
         if posted_before and order.telegram_payload_hash == new_hash:
@@ -650,6 +714,22 @@ def sync_crm_order_to_telegram(order_id: int) -> None:
                 "chat_id": chat_id,
                 "text": (
                     f"адрес поменялся на {_esc(order.delivery_address)}\n"
+                    f'<a href="{link}">исходное сообщение</a>'
+                ),
+                "parse_mode": "HTML",
+                "reply_to_message_id": order.telegram_message_id,
+                "disable_web_page_preview": True,
+            },
+        )
+    items = crm_order_telegram_items(order)
+    if items != order.telegram_posted_items:
+        link = _channel_message_link(chat_id, order.telegram_message_id)
+        _telegram_json(
+            "sendMessage",
+            {
+                "chat_id": chat_id,
+                "text": (
+                    f"позиции поменялись:\n{_format_items_html(items)}\n"
                     f'<a href="{link}">исходное сообщение</a>'
                 ),
                 "parse_mode": "HTML",
