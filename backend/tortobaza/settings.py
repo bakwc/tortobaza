@@ -229,6 +229,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
+        "crm.telegram": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
         "inventory": {
             "handlers": ["console", "inventory_file"],
             "level": "INFO",

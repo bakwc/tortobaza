@@ -1,6 +1,7 @@
 import hashlib
 import html
 import json
+import logging
 import math
 import time as time_module
 import urllib.error
@@ -19,6 +20,8 @@ from accounts.models import UserProfile, chef_identity
 from crm.models import CrmOrder, CrmOrderImage
 from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
+
+logger = logging.getLogger(__name__)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -541,25 +544,34 @@ def _post_photos(order: CrmOrder, chat_id: str) -> list[dict]:
         if len(chunk) == 1:
             img = chunk[0]
             name, content = _read_image(img)
-            result = _telegram_multipart(
-                "sendPhoto",
-                {"chat_id": chat_id},
-                [("photo", name, content)],
+            method = "sendPhoto"
+            fields = {"chat_id": chat_id}
+            files = [("photo", name, content)]
+        else:
+            files = []
+            media = []
+            for idx, img in enumerate(chunk):
+                name, content = _read_image(img)
+                attach = f"file{idx}"
+                files.append((attach, name, content))
+                media.append({"type": "photo", "media": f"attach://{attach}"})
+            method = "sendMediaGroup"
+            fields = {"chat_id": chat_id, "media": json.dumps(media)}
+        try:
+            result = _telegram_multipart(method, fields, files)
+        except urllib.error.HTTPError as exc:
+            if exc.code != 400:
+                raise
+            logger.warning(
+                "telegram photo skipped order_id=%s files=%s: %s",
+                order.pk,
+                [img.image.name for img in chunk],
+                exc.read().decode(),
             )
-            posted.append({"message_id": result["result"]["message_id"], "image_id": img.id})
             continue
-        files = []
-        media = []
-        for idx, img in enumerate(chunk):
-            name, content = _read_image(img)
-            attach = f"file{idx}"
-            files.append((attach, name, content))
-            media.append({"type": "photo", "media": f"attach://{attach}"})
-        result = _telegram_multipart(
-            "sendMediaGroup",
-            {"chat_id": chat_id, "media": json.dumps(media)},
-            files,
-        )
+        if len(chunk) == 1:
+            posted.append({"message_id": result["result"]["message_id"], "image_id": chunk[0].id})
+            continue
         for img, item in zip(chunk, result["result"], strict=True):
             posted.append({"message_id": item["message_id"], "image_id": img.id})
     return posted
