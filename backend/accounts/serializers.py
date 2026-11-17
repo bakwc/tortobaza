@@ -17,7 +17,7 @@ PROFILE_FIELDS = (
     "internal_name",
     "gender",
     "is_active_courier",
-    "pushover_user",
+    "bark_device_key",
     "position",
     "in_schedule",
     "skip_late_alerts",
@@ -80,7 +80,7 @@ class EmployeeSerializer(serializers.Serializer):
     gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES)
     is_active_courier = serializers.BooleanField()
     groups = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
-    pushover_user = serializers.CharField(max_length=30, allow_blank=True)
+    bark_device_key = serializers.CharField(max_length=128, allow_blank=True)
     position = serializers.CharField(max_length=64, allow_blank=True)
     in_schedule = serializers.BooleanField()
     skip_late_alerts = serializers.BooleanField()
@@ -147,7 +147,7 @@ class EmployeeSerializer(serializers.Serializer):
             internal_name = ""
             gender = UserProfile.GENDER_FEMALE
             is_active_courier = False
-            pushover_user = ""
+            bark_device_key = ""
             position = ""
             in_schedule = False
             skip_late_alerts = False
@@ -159,7 +159,7 @@ class EmployeeSerializer(serializers.Serializer):
             internal_name = profile.internal_name
             gender = profile.gender
             is_active_courier = profile.is_active_courier
-            pushover_user = profile.pushover_user
+            bark_device_key = profile.bark_device_key
             position = profile.position
             in_schedule = profile.in_schedule
             skip_late_alerts = profile.skip_late_alerts
@@ -179,7 +179,7 @@ class EmployeeSerializer(serializers.Serializer):
             "gender": gender,
             "is_active_courier": is_active_courier,
             "groups": list(instance.groups.values_list("id", flat=True)),
-            "pushover_user": pushover_user,
+            "bark_device_key": bark_device_key,
             "position": position,
             "in_schedule": in_schedule,
             "skip_late_alerts": skip_late_alerts,

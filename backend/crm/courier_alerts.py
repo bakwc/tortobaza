@@ -8,7 +8,7 @@ from accounts.models import UserProfile
 from crm.models import CrmOrder
 from crm.telegram import crm_order_departure_datetime
 
-_PUSHOVER_MESSAGES_URL = "https://api.pushover.net/1/messages.json"
+_BARK_PUSH_URL = "https://api.day.app/push"
 _ALERT_BEFORE = timedelta(minutes=20)
 _ALERT_AFTER = timedelta(hours=6)
 _SKIP_STATUSES = (
@@ -20,7 +20,7 @@ _SKIP_STATUSES = (
 
 def notify_courier_departures(now: datetime) -> None:
     couriers = list(
-        UserProfile.objects.filter(is_active_courier=True).exclude(pushover_user="")
+        UserProfile.objects.filter(is_active_courier=True).exclude(bark_device_key="")
     )
     if not couriers:
         return
@@ -37,16 +37,12 @@ def notify_courier_departures(now: datetime) -> None:
         remaining = departure - now
         if now < departure - _ALERT_BEFORE or now >= departure + _ALERT_AFTER:
             continue
-        if order.courier_alerted_departure_at == departure:
-            continue
         for profile in couriers:
-            _send_departure_alert(profile.pushover_user, order, departure, remaining)
-        order.courier_alerted_departure_at = departure
-        order.save(update_fields=["courier_alerted_departure_at", "updated_at"])
+            _send_departure_alert(profile.bark_device_key, order, departure, remaining)
 
 
 def _send_departure_alert(
-    user_key: str,
+    device_key: str,
     order: CrmOrder,
     departure: datetime,
     remaining: timedelta,
@@ -61,7 +57,7 @@ def _send_departure_alert(
         slot = f"{start} – {order.time_end.strftime('%H:%M')}"
     else:
         slot = start
-    message = "\n".join(
+    body = "\n".join(
         [
             f"Заказ #{order.pk}",
             f"Адрес: {order.delivery_address}",
@@ -70,18 +66,13 @@ def _send_departure_alert(
         ]
     )
     response = requests.post(
-        _PUSHOVER_MESSAGES_URL,
-        data={
-            "token": settings.PUSHOVER_API_TOKEN,
-            "user": user_key,
+        _BARK_PUSH_URL,
+        json={
+            "device_key": device_key,
             "title": title,
-            "message": message,
             "url": f"{settings.SITE_URL}/ru/crm?date={order.date.isoformat()}&order={order.pk}",
-            "url_title": "Открыть заказ",
-            "priority": "2",
-            "sound": "siren",
-            "retry": "60",
-            "expire": "3600",
+            "body": body,
+            "sound": "alarm",
         },
         timeout=20,
     )

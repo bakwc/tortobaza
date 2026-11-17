@@ -36,11 +36,11 @@ def _courier(username: str, active: bool, key: str) -> UserProfile:
     return UserProfile.objects.create(
         user=user,
         is_active_courier=active,
-        pushover_user=key,
+        bark_device_key=key,
     )
 
 
-@override_settings(PUSHOVER_API_TOKEN="app-token", SITE_URL="https://sweet-chill.ge")
+@override_settings(SITE_URL="https://sweet-chill.ge")
 class NotifyCourierDeparturesTests(TestCase):
     def setUp(self):
         self.post_patcher = patch("crm.courier_alerts.requests.post")
@@ -49,7 +49,7 @@ class NotifyCourierDeparturesTests(TestCase):
         self.response = MagicMock()
         self.post.return_value = self.response
 
-    def test_window_sends_emergency_to_each_active_courier(self):
+    def test_window_sends_alarm_to_each_active_courier(self):
         order = _order()
         _courier("one", True, "key-one")
         _courier("two", True, "key-two")
@@ -59,25 +59,20 @@ class NotifyCourierDeparturesTests(TestCase):
         notify_courier_departures(_NOW)
 
         self.assertEqual(self.post.call_count, 2)
-        users = set()
+        keys = set()
         for call in self.post.call_args_list:
-            self.assertEqual(call.args[0], "https://api.pushover.net/1/messages.json")
+            self.assertEqual(call.args[0], "https://api.day.app/push")
             self.assertEqual(call.kwargs["timeout"], 20)
-            payload = call.kwargs["data"]
-            users.add(payload["user"])
-            self.assertEqual(payload["token"], "app-token")
-            self.assertEqual(payload["priority"], "2")
-            self.assertEqual(payload["sound"], "siren")
-            self.assertEqual(payload["retry"], "60")
-            self.assertEqual(payload["expire"], "3600")
+            payload = call.kwargs["json"]
+            keys.add(payload["device_key"])
+            self.assertEqual(payload["sound"], "alarm")
             self.assertEqual(payload["title"], "Выезд через 20 мин")
-            self.assertEqual(payload["url_title"], "Открыть заказ")
             self.assertEqual(
                 payload["url"],
                 f"https://sweet-chill.ge/ru/crm?date=2026-10-24&order={order.pk}",
             )
             self.assertEqual(
-                payload["message"],
+                payload["body"],
                 "\n".join(
                     [
                         f"Заказ #{order.pk}",
@@ -87,12 +82,10 @@ class NotifyCourierDeparturesTests(TestCase):
                     ]
                 ),
             )
-        self.assertEqual(users, {"key-one", "key-two"})
+        self.assertEqual(keys, {"key-one", "key-two"})
         self.response.raise_for_status.assert_called()
-        order.refresh_from_db()
-        self.assertEqual(order.courier_alerted_departure_at, datetime(2026, 10, 24, 12, 30, tzinfo=_TB))
 
-    def test_same_departure_is_not_sent_again(self):
+    def test_same_departure_is_sent_on_every_sync(self):
         _order()
         _courier("one", True, "key-one")
 
@@ -100,9 +93,12 @@ class NotifyCourierDeparturesTests(TestCase):
         self.post.reset_mock()
         notify_courier_departures(_NOW)
 
-        self.post.assert_not_called()
+        self.assertEqual(self.post.call_count, 1)
+        payload = self.post.call_args.kwargs["json"]
+        self.assertEqual(payload["device_key"], "key-one")
+        self.assertEqual(payload["title"], "Выезд через 20 мин")
 
-    def test_shifted_departure_sends_again(self):
+    def test_shifted_departure_sends_updated_time(self):
         order = _order()
         _courier("one", True, "key-one")
         notify_courier_departures(_NOW)
@@ -113,11 +109,9 @@ class NotifyCourierDeparturesTests(TestCase):
         notify_courier_departures(_NOW)
 
         self.assertEqual(self.post.call_count, 1)
-        payload = self.post.call_args.kwargs["data"]
-        self.assertIn("Выезд: 12:20", payload["message"])
+        payload = self.post.call_args.kwargs["json"]
+        self.assertIn("Выезд: 12:20", payload["body"])
         self.assertEqual(payload["title"], "Выезд через 10 мин")
-        order.refresh_from_db()
-        self.assertEqual(order.courier_alerted_departure_at, datetime(2026, 10, 24, 12, 20, tzinfo=_TB))
 
     def test_outside_window_is_silent(self):
         _order()
@@ -134,13 +128,14 @@ class NotifyCourierDeparturesTests(TestCase):
 
         notify_courier_departures(datetime(2026, 10, 24, 12, 30, tzinfo=_TB))
 
-        self.assertEqual(self.post.call_args.kwargs["data"]["title"], "Выезд просрочен")
+        self.assertEqual(self.post.call_args.kwargs["json"]["title"], "Выезд просрочен")
         self.post.reset_mock()
         _order()
         notify_courier_departures(datetime(2026, 10, 24, 18, 29, tzinfo=_TB))
 
-        self.assertEqual(self.post.call_count, 1)
-        self.assertEqual(self.post.call_args.kwargs["data"]["title"], "Выезд просрочен")
+        self.assertEqual(self.post.call_count, 2)
+        for call in self.post.call_args_list:
+            self.assertEqual(call.kwargs["json"]["title"], "Выезд просрочен")
 
     def test_pickup_when_ready_and_in_delivery_are_silent(self):
         _order(fulfillment_type=CrmOrder.FULFILLMENT_PICKUP)

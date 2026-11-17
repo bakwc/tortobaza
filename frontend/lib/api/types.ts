@@ -275,7 +275,7 @@ export const EmployeeSchema = z.object({
   gender: z.enum(["male", "female"]),
   is_active_courier: z.boolean(),
   groups: z.array(z.number()),
-  pushover_user: z.string(),
+  bark_device_key: z.string(),
   position: z.string(),
   in_schedule: z.boolean(),
   skip_late_alerts: z.boolean(),
@@ -1212,7 +1212,7 @@ export type EmployeeBody = {
   gender: "male" | "female";
   is_active_courier: boolean;
   groups: number[];
-  pushover_user: string;
+  bark_device_key: string;
   position: string;
   in_schedule: boolean;
   skip_late_alerts: boolean;

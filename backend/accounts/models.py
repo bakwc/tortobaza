@@ -41,7 +41,7 @@ class UserProfile(models.Model):
         verbose_name=_("Gender"),
     )
     is_active_courier = models.BooleanField(default=False, verbose_name=_("Active courier"))
-    pushover_user = models.CharField(max_length=30, blank=True, verbose_name=_("Pushover user"))
+    bark_device_key = models.CharField(max_length=128, blank=True, verbose_name=_("Bark device key"))
     position = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Position"))
     in_schedule = models.BooleanField(default=False, verbose_name=_("In schedule"))
     skip_late_alerts = models.BooleanField(default=False, verbose_name=_("Skip late alerts"))

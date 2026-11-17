@@ -29,7 +29,7 @@ function emptyDraft(): EmployeeBody {
     gender: "female",
     groups: [],
     is_active_courier: false,
-    pushover_user: "",
+    bark_device_key: "",
     position: "",
     in_schedule: false,
     skip_late_alerts: false,
@@ -53,7 +53,7 @@ function draftFrom(row: Employee): EmployeeBody {
     gender: row.gender,
     groups: row.groups,
     is_active_courier: row.is_active_courier,
-    pushover_user: row.pushover_user,
+    bark_device_key: row.bark_device_key,
     position: row.position,
     in_schedule: row.in_schedule,
     skip_late_alerts: row.skip_late_alerts,
@@ -177,7 +177,7 @@ export function EmployeesPanel() {
                   gender: draft.gender,
                   groups: draft.groups,
                   is_active_courier: draft.is_active_courier,
-                  pushover_user: draft.pushover_user.trim(),
+                  bark_device_key: draft.bark_device_key.trim(),
                   position: draft.position.trim(),
                   in_schedule: draft.in_schedule,
                   skip_late_alerts: draft.skip_late_alerts,
@@ -240,8 +240,8 @@ export function EmployeesPanel() {
                 <option value="male">{t("genderMale")}</option>
               </NativeSelect>
             </Field>
-            <Field label={t("pushover")}>
-              <Input value={draft.pushover_user} onChange={(event) => setDraft({ ...draft, pushover_user: event.target.value })} />
+            <Field label={t("bark")}>
+              <Input value={draft.bark_device_key} onChange={(event) => setDraft({ ...draft, bark_device_key: event.target.value })} />
             </Field>
             <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
               <CheckboxField label={t("canLogin")} checked={draft.can_login} onChange={(value) => setDraft({ ...draft, can_login: value })} />
