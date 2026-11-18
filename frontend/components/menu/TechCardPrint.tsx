@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { MarkdownView } from "@/components/menu/MarkdownView";
+import { formatShelfLife } from "@/components/menu/shelfLife";
 import { Button } from "@/components/ui/button";
 import { formatQuantity } from "@/components/menu/ui";
 import type { RecipeLine, TechCard } from "@/lib/api/types";
@@ -89,6 +90,19 @@ export function TechCardPrint({ card }: { card: TechCard }) {
         ? t("basisPieces", { count: card.basis_quantity })
         : "";
   const chapters = printChapters(card, t("method"));
+  const storage: string[] = [];
+  if (card.shelf_life_seconds !== null) {
+    storage.push(
+      `${t("shelfLife")}: ${formatShelfLife(
+        card.shelf_life_seconds,
+        (count) => t("shelfLifeDays", { count }),
+        (count) => t("shelfLifeHours", { count }),
+      )}`,
+    );
+  }
+  if (card.storage_temperature !== null) {
+    storage.push(`${t("storageTemperature")}: ${card.storage_temperature} ${t("celsius")}`);
+  }
 
   return (
     <div>
@@ -103,6 +117,7 @@ export function TechCardPrint({ card }: { card: TechCard }) {
         </div>
         <h1 className="mt-4 text-center text-xl font-bold uppercase tracking-wide">{card.name}</h1>
         {basis ? <p className="mt-1 text-center text-sm">{basis}</p> : null}
+        {storage.length > 0 ? <p className="mt-1 text-center text-sm">{storage.join(" · ")}</p> : null}
         <table className="mt-5 w-full table-fixed border-collapse border border-black">
           <colgroup>
             <col className="w-[32%]" />

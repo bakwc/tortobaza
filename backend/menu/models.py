@@ -383,6 +383,17 @@ class TechCard(models.Model):
         verbose_name=_("Sale price"),
     )
     method = models.TextField(blank=True, default="", verbose_name=_("Method"))
+    shelf_life_seconds = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name=_("Shelf life"),
+    )
+    storage_temperature = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Storage temperature"),
+    )
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
 

@@ -563,6 +563,8 @@ class TechCardSerializer(serializers.ModelSerializer):
             "basis_quantity",
             "sale_price",
             "method",
+            "shelf_life_seconds",
+            "storage_temperature",
             "is_active",
             "lines",
             "sections",
@@ -574,6 +576,8 @@ class TechCardSerializer(serializers.ModelSerializer):
             "basis_quantity": {"required": True, "allow_null": True},
             "sale_price": {"required": False, "allow_null": True, "min_value": Decimal("0")},
             "method": {"required": True, "allow_blank": True},
+            "shelf_life_seconds": {"required": False, "allow_null": True, "min_value": 1},
+            "storage_temperature": {"required": False, "allow_null": True},
         }
 
     def to_representation(self, instance):

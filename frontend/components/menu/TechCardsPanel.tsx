@@ -46,6 +46,7 @@ import {
   type ComponentLineDraft,
   type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
+import { formatShelfLife, shelfLifeDraft, shelfLifeSeconds } from "@/components/menu/shelfLife";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
   Card,
@@ -94,6 +95,9 @@ type TechCardDraft = {
   basis_quantity: string;
   sale_price: string;
   method: string;
+  shelf_life_days: string;
+  shelf_life_hours: string;
+  storage_temperature: string;
   is_active: boolean;
   lines: ComponentLineDraft[];
   sections: SectionDraft[];
@@ -153,6 +157,9 @@ function draftFromImport(row: TechCardImport): TechCardDraft {
     basis_quantity: row.basis_quantity === null ? "1" : String(row.basis_quantity),
     sale_price: "",
     method: row.method,
+    shelf_life_days: "",
+    shelf_life_hours: "",
+    storage_temperature: "",
     is_active: true,
     lines: row.lines.map(importLine),
     sections: row.sections.map((section) => ({
@@ -185,6 +192,9 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       basis_quantity: "1",
       sale_price: "",
       method: "",
+      shelf_life_days: "",
+      shelf_life_hours: "",
+      storage_temperature: "",
       is_active: true,
       lines: [],
       sections: [],
@@ -192,6 +202,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
       compositions: {},
     };
   }
+  const stored = shelfLifeDraft(row.shelf_life_seconds);
   const compositions: Record<number, ModifierComposition> = {};
   for (const line of row.modifier_lines) {
     if (line.is_global) continue;
@@ -207,6 +218,9 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     basis_quantity: row.basis_quantity === null ? "" : String(row.basis_quantity),
     sale_price: row.sale_price ?? "",
     method: row.method,
+    shelf_life_days: stored.days,
+    shelf_life_hours: stored.hours,
+    storage_temperature: row.storage_temperature === null ? "" : String(row.storage_temperature),
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
     sections: row.sections.map((section) => ({
@@ -640,6 +654,9 @@ export function TechCardsPanel() {
           basis_quantity: draft.kind === "piece" ? Number(draft.basis_quantity) : null,
           sale_price: draft.sale_price.trim() === "" ? null : draft.sale_price.replace(",", "."),
           method: draft.method,
+          shelf_life_seconds: shelfLifeSeconds(draft.shelf_life_days, draft.shelf_life_hours),
+          storage_temperature:
+            draft.storage_temperature.trim() === "" ? null : Number(draft.storage_temperature),
           is_active: draft.is_active,
           lines: linesToBody(draft.lines),
           sections: draft.sections.map((section) => ({
@@ -917,6 +934,26 @@ export function TechCardsPanel() {
                       },
                     ]
                   : []),
+                ...(current.shelf_life_seconds !== null
+                  ? [
+                      {
+                        label: t("shelfLife"),
+                        value: formatShelfLife(
+                          current.shelf_life_seconds,
+                          (count) => t("shelfLifeDays", { count }),
+                          (count) => t("shelfLifeHours", { count }),
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(current.storage_temperature !== null
+                  ? [
+                      {
+                        label: t("storageTemperature"),
+                        value: `${current.storage_temperature} ${t("celsius")}`,
+                      },
+                    ]
+                  : []),
                 ...(canSeeCosts && current.cost_min !== undefined && current.cost_max !== undefined
                   ? [
                       {
@@ -1098,6 +1135,27 @@ export function TechCardsPanel() {
                 inputMode="decimal"
                 value={draft.sale_price}
                 onChange={(event) => setDraft({ ...draft, sale_price: event.target.value })}
+              />
+            </Field>
+            <Field label={t("shelfLifeDaysLabel")}>
+              <Input
+                inputMode="numeric"
+                value={draft.shelf_life_days}
+                onChange={(event) => setDraft({ ...draft, shelf_life_days: event.target.value })}
+              />
+            </Field>
+            <Field label={t("shelfLifeHoursLabel")}>
+              <Input
+                inputMode="numeric"
+                value={draft.shelf_life_hours}
+                onChange={(event) => setDraft({ ...draft, shelf_life_hours: event.target.value })}
+              />
+            </Field>
+            <Field label={t("storageTemperature")}>
+              <Input
+                inputMode="numeric"
+                value={draft.storage_temperature}
+                onChange={(event) => setDraft({ ...draft, storage_temperature: event.target.value })}
               />
             </Field>
             <div className="flex items-end pb-3">

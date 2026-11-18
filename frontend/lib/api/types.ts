@@ -1575,6 +1575,8 @@ export const TechCardSchema = z.object({
   basis_quantity: z.number().int().nullable(),
   sale_price: z.string().nullable(),
   method: z.string(),
+  shelf_life_seconds: z.number().int().nullable(),
+  storage_temperature: z.number().int().nullable(),
   is_active: z.boolean(),
   lines: z.array(TechCardRecipeLineSchema),
   sections: z.array(TechCardSectionSchema),
@@ -1720,6 +1722,8 @@ export type TechCardBody = {
   basis_quantity: number | null;
   sale_price: string | null;
   method: string;
+  shelf_life_seconds: number | null;
+  storage_temperature: number | null;
   is_active: boolean;
   lines: (RecipeLineBody & { nested_tech_card: number | null })[];
   sections: { name: string; method: string; lines: (RecipeLineBody & { nested_tech_card: number | null })[] }[];
