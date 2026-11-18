@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
   AnalyticsClients,
+  AnalyticsCogs,
   AnalyticsEmployees,
   AnalyticsLoad,
   AnalyticsOverview,
@@ -47,6 +48,14 @@ export function useAnalyticsProducts(month: string) {
   return useQuery<AnalyticsProducts>({
     queryKey: ["analytics-products", month] as const,
     queryFn: () => api.getAnalyticsProducts(month),
+    staleTime: 0,
+  });
+}
+
+export function useAnalyticsCogs(month: string) {
+  return useQuery<AnalyticsCogs>({
+    queryKey: ["analytics-cogs", month] as const,
+    queryFn: () => api.getAnalyticsCogs(month),
     staleTime: 0,
   });
 }

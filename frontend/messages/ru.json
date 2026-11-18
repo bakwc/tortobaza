@@ -1041,6 +1041,7 @@
     "load": "Загрузка",
     "clients": "Клиенты",
     "products": "Состав",
+    "cogs": "Себестоимость",
     "employees": "Сотрудники",
     "pace": "Темп",
     "asOfDay": "на {day} день",
@@ -1198,7 +1199,19 @@
     "kindCupcake": "Капкейк",
     "kindMacaron": "Макарон",
     "kindAddon": "Дополнение",
-    "kindOther": "Другое"
+    "kindOther": "Другое",
+    "cogsFoodCost": "Себестоимость",
+    "cogsRevenue": "Выручка посчитанных позиций",
+    "cogsShare": "Доля себестоимости",
+    "cogsCoverage": "Заказы с себестоимостью",
+    "cogsIngredients": "Ингредиенты по стоимости",
+    "cogsIngredient": "Ингредиент",
+    "cogsCost": "Стоимость",
+    "cogsShareOfCost": "Доля себестоимости",
+    "cogsCategories": "Категории ингредиентов",
+    "cogsTechCards": "Техкарты",
+    "cogsShareOfRevenue": "Доля в выручке",
+    "cogsEmpty": "В этом месяце нет позиций с посчитанной себестоимостью."
   },
   "operationHistory": {
     "title": "История операций",

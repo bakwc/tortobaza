@@ -1041,6 +1041,7 @@
     "load": "დატვირთვა",
     "clients": "კლიენტები",
     "products": "შემადგენლობა",
+    "cogs": "თვითღირებულება",
     "employees": "თანამშრომლები",
     "pace": "ტემპი",
     "asOfDay": "{day} დღისთვის",
@@ -1198,7 +1199,19 @@
     "kindCupcake": "კაპკეიკი",
     "kindMacaron": "მაკარონი",
     "kindAddon": "დამატება",
-    "kindOther": "სხვა"
+    "kindOther": "სხვა",
+    "cogsFoodCost": "თვითღირებულება",
+    "cogsRevenue": "დათვლილი პოზიციების შემოსავალი",
+    "cogsShare": "თვითღირებულების წილი",
+    "cogsCoverage": "შეკვეთები თვითღირებულებით",
+    "cogsIngredients": "ინგრედიენტები ღირებულებით",
+    "cogsIngredient": "ინგრედიენტი",
+    "cogsCost": "ღირებულება",
+    "cogsShareOfCost": "თვითღირებულების წილი",
+    "cogsCategories": "ინგრედიენტების კატეგორიები",
+    "cogsTechCards": "ტექნოლოგიური ბარათები",
+    "cogsShareOfRevenue": "წილი შემოსავალში",
+    "cogsEmpty": "ამ თვეში პოზიციები დათვლილი თვითღირებულებით არ არის."
   },
   "operationHistory": {
     "title": "ოპერაციების ისტორია",

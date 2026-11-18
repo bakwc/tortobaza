@@ -815,6 +815,46 @@ export const AnalyticsProductMetricsSchema = z.object({
 
 export const AnalyticsProductKindSchema = z.enum(["cake", "bento", "cupcake", "macaron", "addon", "other"]);
 
+export const AnalyticsCogsSchema = z.object({
+  month: z.string(),
+  start: z.string(),
+  end: z.string(),
+  food_cost: z.string(),
+  revenue: z.string(),
+  food_cost_share: z.string(),
+  coverage: z.object({
+    orders: z.number(),
+    with_cost: z.number(),
+  }),
+  ingredients: z.array(
+    z.object({
+      name: z.string(),
+      category: z.string(),
+      unit: MenuUnitSchema,
+      quantity: z.string(),
+      cost: z.string(),
+      share: z.string(),
+    }),
+  ),
+  categories: z.array(
+    z.object({
+      name: z.string(),
+      cost: z.string(),
+      share: z.string(),
+    }),
+  ),
+  tech_cards: z.array(
+    z.object({
+      name: z.string(),
+      category: z.string(),
+      quantity: z.number(),
+      cost: z.string(),
+      revenue: z.string(),
+      share: z.string(),
+    }),
+  ),
+});
+
 export const AnalyticsProductsSchema = z.object({
   month: z.string(),
   start: z.string(),
@@ -1270,6 +1310,7 @@ export type AnalyticsPace = z.infer<typeof AnalyticsPaceSchema>;
 export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;
+export type AnalyticsCogs = z.infer<typeof AnalyticsCogsSchema>;
 export type AnalyticsEmployees = z.infer<typeof AnalyticsEmployeesSchema>;
 export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;

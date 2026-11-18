@@ -14,8 +14,8 @@ from attendance.models import AttendanceEvent
 from attendance.salary import compute_day_worked_seconds, daily_monthly_share
 from crm.models import AnalyticsOrderComposition, CrmOrder, CrmOrderEvent
 from crm.phone import extract_phones
-from menu.models import ModifierGroup, TechCard
-from menu.recipes import tech_card_group_links
+from menu.models import Ingredient, ModifierGroup, SemiProduct, TechCard
+from menu.recipes import expand_order_item, item_food_cost, tech_card_group_links
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _GENERIC_NAMES = {"флао", "флоу", "сайт", "вотсап", "смм", "инст"}
@@ -973,6 +973,129 @@ def products(month: str, today: date) -> dict:
             ],
         },
     }
+
+
+def cogs(month: str, today: date) -> dict:
+    start, end = windows(month, today)[:2]
+    orders = list(
+        CrmOrder.objects.filter(deleted=False, date__gte=start, date__lte=end)
+        .order_by("date", "id")
+        .prefetch_related(
+            "items__tech_card__category",
+            "items__modifiers__modifier",
+            "items__lines__ingredient__category",
+            "items__lines__semi_product",
+            "items__lines__tech_card",
+        )
+    )
+    uses: dict[tuple[str, int], _Use] = {}
+    cards: dict[tuple[str, str], _CardCost] = {}
+    food_cost = Decimal("0")
+    revenue = Decimal("0")
+    with_cost = 0
+    for order in orders:
+        order_has_cost = False
+        for item in order.items.all():
+            cost = item_food_cost(item)
+            if cost is None:
+                continue
+            order_has_cost = True
+            food_cost += cost
+            revenue += Decimal("0") if item.price is None else item.price
+            needs = expand_order_item(
+                item.tech_card,
+                item.weight_kg,
+                item.quantity,
+                [(row.modifier, row.quantity) for row in item.modifiers.all()],
+                [(row.component, row.quantity) for row in item.lines.all()],
+            )
+            for component, quantity in needs.items():
+                kind = "ingredient" if isinstance(component, Ingredient) else "semi"
+                use = uses.get((kind, component.pk))
+                if use is None:
+                    use = _Use(component)
+                    uses[(kind, component.pk)] = use
+                use.quantity += quantity
+            name = item.name if item.tech_card_id is None else item.tech_card.name
+            category = _category_key(item)
+            card = cards.get((name, category))
+            if card is None:
+                card = _CardCost()
+                cards[(name, category)] = card
+            card.quantity += item.quantity
+            card.cost += cost
+            card.revenue += Decimal("0") if item.price is None else item.price
+        if order_has_cost:
+            with_cost += 1
+    ingredient_rows = []
+    category_costs: dict[str, Decimal] = {}
+    for use in uses.values():
+        raw = use.quantity * use.component.avg_cost
+        category = _component_category(use.component)
+        category_costs[category] = category_costs.get(category, Decimal("0")) + raw
+        ingredient_rows.append((use, raw, category))
+    ingredient_rows.sort(key=lambda row: (-row[1], row[0].component.name))
+    return {
+        "month": month,
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "food_cost": _money(food_cost),
+        "revenue": _money(revenue),
+        "food_cost_share": _revenue_share(food_cost, revenue),
+        "coverage": {"orders": len(orders), "with_cost": with_cost},
+        "ingredients": [
+            {
+                "name": use.component.name,
+                "category": category,
+                "unit": use.component.unit,
+                "quantity": _num(use.quantity),
+                "cost": _money(raw),
+                "share": _revenue_share(raw, food_cost),
+            }
+            for use, raw, category in ingredient_rows
+        ],
+        "categories": [
+            {
+                "name": name,
+                "cost": _money(cost),
+                "share": _revenue_share(cost, food_cost),
+            }
+            for name, cost in sorted(category_costs.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "tech_cards": [
+            {
+                "name": name,
+                "category": category,
+                "quantity": card.quantity,
+                "cost": _money(card.cost),
+                "revenue": _money(card.revenue),
+                "share": _revenue_share(card.cost, card.revenue),
+            }
+            for (name, category), card in sorted(
+                cards.items(),
+                key=lambda item: (-item[1].cost, -item[1].quantity, item[0][0], item[0][1]),
+            )
+        ],
+    }
+
+
+def _component_category(component: Ingredient | SemiProduct) -> str:
+    if component.category_id is None:
+        return ""
+    return component.category.name
+
+
+class _Use:
+    def __init__(self, component: Ingredient | SemiProduct) -> None:
+        self.component = component
+        self.quantity = Decimal("0")
+
+
+class _CardCost:
+    def __init__(self) -> None:
+        self.quantity = 0
+        self.cost = Decimal("0")
+        self.revenue = Decimal("0")
 
 
 def _category_key(item) -> str:

@@ -1041,6 +1041,7 @@
     "load": "Production",
     "clients": "Clients",
     "products": "Composition",
+    "cogs": "Food cost",
     "employees": "Staff",
     "pace": "Pace",
     "asOfDay": "as of day {day}",
@@ -1198,7 +1199,19 @@
     "kindCupcake": "Cupcake",
     "kindMacaron": "Macaron",
     "kindAddon": "Add-on",
-    "kindOther": "Other"
+    "kindOther": "Other",
+    "cogsFoodCost": "Food cost",
+    "cogsRevenue": "Revenue of costed items",
+    "cogsShare": "Food cost share",
+    "cogsCoverage": "Orders with a cost",
+    "cogsIngredients": "Ingredients by cost",
+    "cogsIngredient": "Ingredient",
+    "cogsCost": "Cost",
+    "cogsShareOfCost": "Share of cost",
+    "cogsCategories": "Ingredient categories",
+    "cogsTechCards": "Tech cards",
+    "cogsShareOfRevenue": "Share of revenue",
+    "cogsEmpty": "This month has no items with a calculated food cost."
   },
   "operationHistory": {
     "title": "Operation history",

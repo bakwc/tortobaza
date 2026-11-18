@@ -11,8 +11,10 @@ from accounts.models import UserProfile
 from accounts.permissions import grant
 from attendance.models import AttendanceEvent
 from attendance.salary import daily_monthly_share
-from crm.analytics import clients, employees, overview, pace, production, weight_kg, windows
-from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder, CrmOrderEvent
+from crm.analytics import clients, cogs, employees, overview, pace, production, weight_kg, windows
+from menu.models import UNIT_GRAM, Ingredient, IngredientCategory, TechCard, TechCardLine
+from menu.recipes import item_food_cost
+from crm.models import AnalyticsOrderComposition, AnalyticsOrderCompositionItem, CrmOrder, CrmOrderEvent, CrmOrderItem
 from orders.models import Order
 
 _UTC = ZoneInfo("UTC")
@@ -582,3 +584,52 @@ class AnalyticsEmployeesTests(TestCase):
         self.assertEqual(row["production_orders"], 1)
         self.assertEqual(report["gaps"]["without_composition"], 1)
         self.assertEqual(report["gaps"]["without_production"], 1)
+
+
+class AnalyticsCogsTests(TestCase):
+    def test_ingredients_sorted_by_cost(self):
+        flour_category = IngredientCategory.objects.create(name="Мука")
+        flour = Ingredient.objects.create(
+            name="Мука пшеничная",
+            category=flour_category,
+            unit=UNIT_GRAM,
+            avg_cost=Decimal("0.050000"),
+        )
+        sugar = Ingredient.objects.create(name="Сахар", unit=UNIT_GRAM, avg_cost=Decimal("0.020000"))
+        card = TechCard.objects.create(name="Медовик", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        TechCardLine.objects.create(
+            tech_card=card,
+            ingredient=flour,
+            quantity=Decimal("200"),
+            quantity_unit=UNIT_GRAM,
+        )
+        TechCardLine.objects.create(
+            tech_card=card,
+            ingredient=sugar,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+        )
+        order = _order(date=date(2026, 10, 3))
+        item = CrmOrderItem.objects.create(
+            order=order,
+            tech_card=card,
+            quantity=1,
+            price=Decimal("40.00"),
+        )
+        _order(date=date(2026, 10, 4))
+        _order(date=date(2026, 9, 1))
+        deleted = _order(date=date(2026, 10, 5), deleted=True)
+        CrmOrderItem.objects.create(order=deleted, tech_card=card, quantity=10, price=Decimal("1.00"))
+        report = cogs("2026-10", date(2026, 10, 25))
+        self.assertEqual([row["name"] for row in report["ingredients"]], ["Мука пшеничная", "Сахар"])
+        self.assertEqual(report["ingredients"][0]["cost"], "10.00")
+        self.assertEqual(report["ingredients"][0]["quantity"], "200")
+        self.assertEqual(report["ingredients"][0]["category"], "Мука")
+        self.assertEqual(report["ingredients"][1]["cost"], "2.00")
+        self.assertEqual(report["ingredients"][1]["quantity"], "100")
+        self.assertEqual(report["food_cost"], "12.00")
+        self.assertEqual(report["food_cost"], format(item_food_cost(item), "f"))
+        self.assertEqual(report["coverage"], {"orders": 2, "with_cost": 1})
+        self.assertEqual(report["tech_cards"][0]["name"], "Медовик")
+        self.assertEqual(report["tech_cards"][0]["cost"], "12.00")
+        self.assertEqual(report["tech_cards"][0]["share"], "0.3")

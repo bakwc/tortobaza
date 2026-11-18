@@ -30,6 +30,7 @@ import {
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
   AnalyticsClientsSchema,
+  AnalyticsCogsSchema,
   AnalyticsEmployeesSchema,
   AnalyticsLoadSchema,
   AnalyticsOverviewSchema,
@@ -96,6 +97,7 @@ import {
   type CrmExpensesDay,
   type CrmExpensesMonth,
   type AnalyticsClients,
+  type AnalyticsCogs,
   type AnalyticsEmployees,
   type AnalyticsLoad,
   type AnalyticsOverview,
@@ -813,6 +815,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(AnalyticsProductsSchema, raw);
+    },
+
+    async getAnalyticsCogs(month: string): Promise<AnalyticsCogs> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/cogs/", {
+        searchParams: { month },
+      });
+      return parse(AnalyticsCogsSchema, raw);
     },
 
     async getAnalyticsEmployees(month: string): Promise<AnalyticsEmployees> {
