@@ -32,6 +32,8 @@ type ModifierDraft = {
   name: string;
   catalog_option: number | null;
   component: string;
+  default_modifier: number | null;
+  priority: string;
   is_active: boolean;
 };
 
@@ -86,6 +88,8 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       name: modifier.name,
       catalog_option: modifier.catalog_option,
       component: modifierComponent(modifier),
+      default_modifier: modifier.default_modifier,
+      priority: String(modifier.priority),
       is_active: modifier.is_active,
     })),
   };
@@ -113,6 +117,17 @@ export function ModifierGroupsPanel() {
   ];
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
+  const defaultModifierOptions = [
+    { value: "", label: t("noDefaultModifier") },
+    ...(groups.list.data ?? [])
+      .filter((group) => group.id !== editingId)
+      .flatMap((group) =>
+        group.modifiers.map((modifier) => ({
+          value: String(modifier.id),
+          label: `${group.name}: ${modifier.name}`,
+        })),
+      ),
+  ];
 
   const open = (row: ModifierGroup | null) => {
     groups.save.reset();
@@ -210,6 +225,8 @@ export function ModifierGroupsPanel() {
                     ...(row.component === ""
                       ? { ingredient: null, semi_product: null, nested_tech_card: null }
                       : componentRef(row.component)),
+                    default_modifier: row.default_modifier,
+                    priority: Number(row.priority),
                     is_active: row.is_active,
                   })),
                 },
@@ -309,7 +326,7 @@ export function ModifierGroupsPanel() {
                 key={row.key}
                 data-field-group={tForms("rowNumber", { number: index + 1 })}
                 data-error-list="modifiers"
-                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]"
+                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,1.2fr)_4.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
               >
                 <Input
                   name="name"
@@ -318,6 +335,15 @@ export function ModifierGroupsPanel() {
                   value={row.name}
                   onChange={(event) => updateModifier(row.key, { name: event.target.value })}
                   className="col-span-2 sm:col-span-1"
+                />
+                <Input
+                  name="priority"
+                  required
+                  inputMode="numeric"
+                  aria-label={t("priority")}
+                  value={row.priority}
+                  onChange={(event) => updateModifier(row.key, { priority: event.target.value })}
+                  className="w-full"
                 />
                 <NativeSelect
                   value={row.catalog_option ?? ""}
@@ -344,6 +370,19 @@ export function ModifierGroupsPanel() {
                   value={row.component}
                   onChange={(component) => updateModifier(row.key, { component })}
                   placeholder={t("noDefaultComponent")}
+                  required={false}
+                  name={null}
+                  className=""
+                  onCreate={null}
+                  createPending={false}
+                />
+                <SearchSelect
+                  options={defaultModifierOptions}
+                  value={row.default_modifier === null ? "" : String(row.default_modifier)}
+                  onChange={(value) =>
+                    updateModifier(row.key, { default_modifier: value === "" ? null : Number(value) })
+                  }
+                  placeholder={t("noDefaultModifier")}
                   required={false}
                   name={null}
                   className=""
@@ -386,6 +425,8 @@ export function ModifierGroupsPanel() {
                         name: "",
                         catalog_option: null,
                         component: "",
+                        default_modifier: null,
+                        priority: "0",
                         is_active: true,
                       },
                     ],

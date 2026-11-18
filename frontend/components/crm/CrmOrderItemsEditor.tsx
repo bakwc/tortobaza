@@ -6,7 +6,6 @@ import { Check, MessageSquare, Trash2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchSelect } from "@/components/menu/SearchSelect";
-import { NativeSelect } from "@/components/menu/ui";
 import { useCrmItemCost } from "@/hooks/useCrmOrders";
 import { useTechCards } from "@/hooks/useStock";
 import type { TechCard, TechCardGroup } from "@/lib/api/types";
@@ -49,6 +48,31 @@ function selectOnReveal(input: HTMLInputElement) {
   requestAnimationFrame(() => input.select());
 }
 
+function withDefaultModifier(card: TechCard, previous: CrmItemModifierDraft[], next: CrmItemModifierDraft[]) {
+  const previousIds = new Set(previous.map((row) => row.modifier));
+  const chosen = next.find((row) => !previousIds.has(row.modifier));
+  if (chosen === undefined) return next;
+  const source = card.modifier_groups
+    .flatMap((group) => group.modifiers)
+    .find((modifier) => modifier.id === chosen.modifier);
+  if (source === undefined || source.default_modifier === null) return next;
+  const targetId = source.default_modifier;
+  const targetGroup = card.modifier_groups.find((group) =>
+    group.modifiers.some((modifier) => modifier.id === targetId),
+  );
+  if (targetGroup === undefined) return next;
+  if (targetGroup.selection_type === "single") {
+    const targetIds = new Set(targetGroup.modifiers.map((modifier) => modifier.id));
+    const existing = next.find((row) => targetIds.has(row.modifier));
+    return [
+      ...next.filter((row) => !targetIds.has(row.modifier)),
+      { modifier: targetId, quantity: existing === undefined ? "1" : existing.quantity },
+    ];
+  }
+  if (next.some((row) => row.modifier === targetId)) return next;
+  return [...next, { modifier: targetId, quantity: "1" }];
+}
+
 function SingleModifier({
   group,
   selected,
@@ -71,32 +95,32 @@ function SingleModifier({
   const label = `${group.group_name}${group.effective_is_required ? " *" : ""}`;
   return (
     <>
-      <NativeSelect
-        required={required}
-        aria-label={label}
+      <SearchSelect
+        options={[
+          { value: "", label: t("notSelected") },
+          ...group.modifiers.map((modifier) => ({ value: String(modifier.id), label: modifier.name })),
+        ]}
         value={current ? String(current.modifier) : ""}
-        onChange={(event) =>
+        onChange={(value) =>
           onChange(
-            event.target.value === ""
+            value === ""
               ? others
               : [
                   ...others,
                   {
-                    modifier: Number(event.target.value),
+                    modifier: Number(value),
                     quantity: current === undefined ? "1" : current.quantity,
                   },
                 ],
           )
         }
-        className="h-9 w-auto max-w-40 px-3"
-      >
-        <option value="">{label}</option>
-        {group.modifiers.map((modifier) => (
-          <option key={modifier.id} value={modifier.id}>
-            {modifier.name}
-          </option>
-        ))}
-      </NativeSelect>
+        placeholder={label}
+        required={required}
+        name={null}
+        className="w-40"
+        onCreate={null}
+        createPending={false}
+      />
       {current && group.has_quantity ? (
         <Input
           name="quantity"
@@ -309,7 +333,7 @@ function ItemComposer({
         onChange={(event) => update({ quantity: event.target.value })}
         className="h-9 w-28 px-3 text-center"
       />
-      {card?.modifier_groups.map((group) =>
+      {card === undefined ? null : card.modifier_groups.map((group) =>
         group.selection_type === "single" ? (
           <SingleModifier
             key={group.group}
@@ -317,7 +341,7 @@ function ItemComposer({
             selected={item.modifiers}
             modifierPrice={(modifierId) => crmModifierSale(item, techCards, modifierId)}
             required={listed && group.effective_is_required}
-            onChange={(modifiers) => update({ modifiers })}
+            onChange={(modifiers) => update({ modifiers: withDefaultModifier(card, item.modifiers, modifiers) })}
           />
         ) : (
           <MultiModifiers
@@ -325,7 +349,7 @@ function ItemComposer({
             group={group}
             selected={item.modifiers}
             modifierPrice={(modifierId) => crmModifierSale(item, techCards, modifierId)}
-            onChange={(modifiers) => update({ modifiers })}
+            onChange={(modifiers) => update({ modifiers: withDefaultModifier(card, item.modifiers, modifiers) })}
           />
         ),
       )}

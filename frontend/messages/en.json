@@ -725,6 +725,8 @@
     "maxSelections": "Maximum",
     "modifiers": "Modifiers",
     "noWebsiteOption": "No website option",
+    "priority": "Priority",
+    "noDefaultModifier": "No default",
     "addModifier": "Add modifier",
     "websiteOptionHint": "A website option links website orders to this modifier automatically.",
     "noDefaultComponent": "No component",

@@ -725,6 +725,8 @@
     "maxSelections": "Максимум",
     "modifiers": "Модификаторы",
     "noWebsiteOption": "Без опции сайта",
+    "priority": "Приоритет",
+    "noDefaultModifier": "Без дефолта",
     "addModifier": "Добавить модификатор",
     "websiteOptionHint": "Опция сайта связывает заказы с сайта с этим модификатором автоматически.",
     "noDefaultComponent": "Без компонента",

@@ -321,6 +321,8 @@ class ModifierInputSerializer(serializers.Serializer):
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
+    default_modifier = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all(), allow_null=True)
+    priority = serializers.IntegerField(min_value=0)
     is_active = serializers.BooleanField()
 
     def validate(self, attrs):
@@ -371,6 +373,8 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "ingredient": modifier.ingredient_id,
                 "semi_product": modifier.semi_product_id,
                 "nested_tech_card": modifier.nested_tech_card_id,
+                "default_modifier": modifier.default_modifier_id,
+                "priority": modifier.priority,
                 "is_active": modifier.is_active,
             }
             for modifier in instance.modifiers.select_related("catalog_option__group")
@@ -393,6 +397,13 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
         for row in attrs["modifiers"]:
             if row["id"] is not None and row["id"] not in existing_ids:
                 raise serializers.ValidationError("Unknown modifier id.")
+            default = row["default_modifier"]
+            if default is None:
+                continue
+            if row["id"] is not None and default.pk == row["id"]:
+                raise serializers.ValidationError("A modifier cannot default to itself.")
+            if self.instance is not None and default.group_id == self.instance.pk:
+                raise serializers.ValidationError("Default modifier must belong to another group.")
         taken = Modifier.objects.filter(catalog_option_id__in=options)
         if self.instance is not None:
             taken = taken.exclude(group=self.instance)
@@ -439,6 +450,8 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 "ingredient": row["ingredient"],
                 "semi_product": row["semi_product"],
                 "nested_tech_card": row["nested_tech_card"],
+                "default_modifier": row["default_modifier"],
+                "priority": row["priority"],
                 "is_active": row["is_active"],
                 "position": position,
             }
@@ -615,7 +628,11 @@ class TechCardSerializer(serializers.ModelSerializer):
                 "is_global": link.pk is None,
                 "has_quantity": link.group.has_quantity,
                 "modifiers": [
-                    {"id": modifier.pk, "name": modifier.name}
+                    {
+                        "id": modifier.pk,
+                        "name": modifier.name,
+                        "default_modifier": modifier.default_modifier_id,
+                    }
                     for modifier in link.group.modifiers.filter(is_active=True)
                 ],
             }

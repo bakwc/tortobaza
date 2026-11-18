@@ -69,7 +69,7 @@ export function SearchSelect({
   const [edited, setEdited] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [placement, setPlacement] = useState({ upward: false, maxHeight: 240 });
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? "";
+  const selectedLabel = options.find((option) => option.value !== "" && option.value === value)?.label ?? "";
   const typed = open && edited ? query.trim() : "";
   const needle = typed.toLowerCase();
   const filtered =

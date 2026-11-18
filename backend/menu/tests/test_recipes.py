@@ -697,6 +697,8 @@ class NestedTechCardTests(TestCase):
                         "ingredient": self.menu.flour.pk,
                         "semi_product": self.menu.sponge.pk,
                         "nested_tech_card": None,
+                        "default_modifier": None,
+                        "priority": 0,
                         "is_active": True,
                     }
                 ],
@@ -926,9 +928,106 @@ class CategoryModifierGroupTests(TestCase):
                         "ingredient": self.menu.paper.pk,
                         "semi_product": None,
                         "nested_tech_card": None,
+                        "default_modifier": None,
+                        "priority": 0,
                         "is_active": True,
                     }
                 ],
             },
         )
         self.assertFalse(serializer.is_valid())
+
+
+class ModifierDefaultTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+
+    def _body(self, group: ModifierGroup, modifiers: list[dict]) -> dict:
+        return {
+            "name": group.name,
+            "selection_type": group.selection_type,
+            "is_required": group.is_required,
+            "is_global": group.is_global,
+            "has_quantity": group.has_quantity,
+            "categories": [],
+            "min_selections": group.min_selections,
+            "max_selections": group.max_selections,
+            "position": group.position,
+            "modifiers": modifiers,
+        }
+
+    def _row(self, modifier: Modifier, default_modifier: Modifier | None, priority: int) -> dict:
+        return {
+            "id": modifier.pk,
+            "name": modifier.name,
+            "catalog_option": None,
+            "ingredient": None,
+            "semi_product": None,
+            "nested_tech_card": None,
+            "default_modifier": None if default_modifier is None else default_modifier.pk,
+            "priority": priority,
+            "is_active": True,
+        }
+
+    def test_saves_default_modifier_from_another_group(self):
+        serializer = ModifierGroupSerializer(
+            self.menu.filling,
+            data=self._body(
+                self.menu.filling,
+                [
+                    self._row(self.menu.raspberry_filling, self.menu.photo, 4),
+                    self._row(self.menu.mango_filling, None, 0),
+                ],
+            ),
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        self.menu.raspberry_filling.refresh_from_db()
+        self.assertEqual(self.menu.raspberry_filling.default_modifier_id, self.menu.photo.pk)
+        self.assertEqual(self.menu.raspberry_filling.priority, 4)
+        saved = {row["id"]: row for row in serializer.data["modifiers"]}
+        self.assertEqual(saved[self.menu.raspberry_filling.pk]["default_modifier"], self.menu.photo.pk)
+
+    def test_rejects_default_in_the_same_group(self):
+        serializer = ModifierGroupSerializer(
+            self.menu.filling,
+            data=self._body(
+                self.menu.filling,
+                [
+                    self._row(self.menu.raspberry_filling, self.menu.mango_filling, 0),
+                    self._row(self.menu.mango_filling, None, 0),
+                ],
+            ),
+        )
+        self.assertFalse(serializer.is_valid())
+
+    def test_rejects_default_to_itself(self):
+        serializer = ModifierGroupSerializer(
+            self.menu.filling,
+            data=self._body(
+                self.menu.filling,
+                [
+                    self._row(self.menu.raspberry_filling, self.menu.raspberry_filling, 0),
+                    self._row(self.menu.mango_filling, None, 0),
+                ],
+            ),
+        )
+        self.assertFalse(serializer.is_valid())
+
+    def test_tech_card_lists_modifiers_by_descending_priority(self):
+        self.menu.raspberry_filling.priority = 1
+        self.menu.raspberry_filling.save(update_fields=["priority"])
+        self.menu.mango_filling.priority = 9
+        self.menu.mango_filling.save(update_fields=["priority"])
+        user = User.objects.create_user("viewer", password="x")
+        grant(user, "view_menu")
+        client = APIClient()
+        client.force_authenticate(user)
+        response = client.get(f"/api/menu/tech-cards/{self.menu.cake.pk}/")
+        self.assertEqual(response.status_code, 200, response.content)
+        filling = next(group for group in response.json()["modifier_groups"] if group["group"] == self.menu.filling.pk)
+        self.assertEqual(
+            [row["id"] for row in filling["modifiers"]],
+            [self.menu.mango_filling.pk, self.menu.raspberry_filling.pk],
+        )
+        self.assertEqual(filling["modifiers"][0]["default_modifier"], None)

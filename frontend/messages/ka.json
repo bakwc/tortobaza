@@ -725,6 +725,8 @@
     "maxSelections": "მაქსიმუმი",
     "modifiers": "მოდიფიკატორები",
     "noWebsiteOption": "საიტის ოფციის გარეშე",
+    "priority": "პრიორიტეტი",
+    "noDefaultModifier": "ნაგულისხმევის გარეშე",
     "addModifier": "მოდიფიკატორის დამატება",
     "websiteOptionHint": "საიტის ოფცია საიტის შეკვეთებს ამ მოდიფიკატორთან ავტომატურად აკავშირებს.",
     "noDefaultComponent": "კომპონენტის გარეშე",

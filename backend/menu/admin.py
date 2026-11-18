@@ -66,7 +66,7 @@ class SemiProductAdmin(admin.ModelAdmin):
 class ModifierInline(admin.TabularInline):
     model = Modifier
     extra = 1
-    fields = ["name", "catalog_option", "position", "is_active"]
+    fields = ["name", "catalog_option", "default_modifier", "priority", "position", "is_active"]
 
 
 @admin.register(ModifierGroup)

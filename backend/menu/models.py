@@ -290,11 +290,20 @@ class Modifier(models.Model):
         blank=True,
         verbose_name=_("Default tech card"),
     )
+    default_modifier = models.ForeignKey(
+        "self",
+        related_name="default_sources",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Default modifier"),
+    )
+    priority = models.PositiveIntegerField(default=0, verbose_name=_("Priority"))
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
 
     class Meta:
-        ordering = ["position", "name"]
+        ordering = ["-priority", "position", "name"]
         verbose_name = _("Modifier")
         verbose_name_plural = _("Modifiers")
         constraints = [
