@@ -33,7 +33,6 @@ type ModifierDraft = {
   catalog_option: number | null;
   component: string;
   default_modifier: number | null;
-  priority: string;
   is_active: boolean;
 };
 
@@ -53,6 +52,7 @@ type GroupDraft = {
   categories: number[];
   min_selections: string;
   max_selections: string;
+  priority: string;
   position: number;
   modifiers: ModifierDraft[];
 };
@@ -68,6 +68,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       categories: [],
       min_selections: "0",
       max_selections: "",
+      priority: "0",
       position,
       modifiers: [],
     };
@@ -81,6 +82,7 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
     categories: row.categories,
     min_selections: String(row.min_selections),
     max_selections: row.max_selections === null ? "" : String(row.max_selections),
+    priority: String(row.priority),
     position: row.position,
     modifiers: row.modifiers.map((modifier) => ({
       key: newDraftKey(),
@@ -89,7 +91,6 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       catalog_option: modifier.catalog_option,
       component: modifierComponent(modifier),
       default_modifier: modifier.default_modifier,
-      priority: String(modifier.priority),
       is_active: modifier.is_active,
     })),
   };
@@ -217,6 +218,7 @@ export function ModifierGroupsPanel() {
                   categories: draft.is_global ? [] : draft.categories,
                   min_selections: Number(draft.min_selections || "0"),
                   max_selections: draft.max_selections === "" ? null : Number(draft.max_selections),
+                  priority: Number(draft.priority),
                   position: draft.position,
                   modifiers: draft.modifiers.map((row) => ({
                     id: row.id,
@@ -226,7 +228,6 @@ export function ModifierGroupsPanel() {
                       ? { ingredient: null, semi_product: null, nested_tech_card: null }
                       : componentRef(row.component)),
                     default_modifier: row.default_modifier,
-                    priority: Number(row.priority),
                     is_active: row.is_active,
                   })),
                 },
@@ -253,6 +254,15 @@ export function ModifierGroupsPanel() {
                 <option value="single">{t("selectionSingle")}</option>
                 <option value="multi">{t("selectionMulti")}</option>
               </NativeSelect>
+            </Field>
+            <Field label={t("priority")}>
+              <Input
+                name="priority"
+                required
+                inputMode="numeric"
+                value={draft.priority}
+                onChange={(event) => setDraft({ ...draft, priority: event.target.value })}
+              />
             </Field>
             {draft.selection_type === "multi" ? (
               <>
@@ -326,7 +336,7 @@ export function ModifierGroupsPanel() {
                 key={row.key}
                 data-field-group={tForms("rowNumber", { number: index + 1 })}
                 data-error-list="modifiers"
-                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,1.2fr)_4.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
+                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
               >
                 <Input
                   name="name"
@@ -335,15 +345,6 @@ export function ModifierGroupsPanel() {
                   value={row.name}
                   onChange={(event) => updateModifier(row.key, { name: event.target.value })}
                   className="col-span-2 sm:col-span-1"
-                />
-                <Input
-                  name="priority"
-                  required
-                  inputMode="numeric"
-                  aria-label={t("priority")}
-                  value={row.priority}
-                  onChange={(event) => updateModifier(row.key, { priority: event.target.value })}
-                  className="w-full"
                 />
                 <NativeSelect
                   value={row.catalog_option ?? ""}
@@ -426,7 +427,6 @@ export function ModifierGroupsPanel() {
                         catalog_option: null,
                         component: "",
                         default_modifier: null,
-                        priority: "0",
                         is_active: true,
                       },
                     ],

@@ -66,12 +66,12 @@ class SemiProductAdmin(admin.ModelAdmin):
 class ModifierInline(admin.TabularInline):
     model = Modifier
     extra = 1
-    fields = ["name", "catalog_option", "default_modifier", "priority", "position", "is_active"]
+    fields = ["name", "catalog_option", "default_modifier", "position", "is_active"]
 
 
 @admin.register(ModifierGroup)
 class ModifierGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "selection_type", "is_required", "is_global", "has_quantity", "min_selections", "max_selections", "position"]
+    list_display = ["name", "selection_type", "is_required", "is_global", "has_quantity", "min_selections", "max_selections", "priority", "position"]
     list_filter = ["is_global", "is_required", "selection_type"]
     filter_horizontal = ["categories"]
     search_fields = ["name"]

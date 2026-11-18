@@ -689,6 +689,7 @@ class NestedTechCardTests(TestCase):
                 "min_selections": 0,
                 "max_selections": None,
                 "position": 0,
+                "priority": 0,
                 "modifiers": [
                     {
                         "id": self.menu.balloon.pk,
@@ -698,7 +699,6 @@ class NestedTechCardTests(TestCase):
                         "semi_product": self.menu.sponge.pk,
                         "nested_tech_card": None,
                         "default_modifier": None,
-                        "priority": 0,
                         "is_active": True,
                     }
                 ],
@@ -920,6 +920,7 @@ class CategoryModifierGroupTests(TestCase):
                 "min_selections": 0,
                 "max_selections": None,
                 "position": 0,
+                "priority": 0,
                 "modifiers": [
                     {
                         "id": self.menu.balloon.pk,
@@ -929,7 +930,6 @@ class CategoryModifierGroupTests(TestCase):
                         "semi_product": None,
                         "nested_tech_card": None,
                         "default_modifier": None,
-                        "priority": 0,
                         "is_active": True,
                     }
                 ],
@@ -952,11 +952,12 @@ class ModifierDefaultTests(TestCase):
             "categories": [],
             "min_selections": group.min_selections,
             "max_selections": group.max_selections,
+            "priority": group.priority,
             "position": group.position,
             "modifiers": modifiers,
         }
 
-    def _row(self, modifier: Modifier, default_modifier: Modifier | None, priority: int) -> dict:
+    def _row(self, modifier: Modifier, default_modifier: Modifier | None) -> dict:
         return {
             "id": modifier.pk,
             "name": modifier.name,
@@ -965,7 +966,6 @@ class ModifierDefaultTests(TestCase):
             "semi_product": None,
             "nested_tech_card": None,
             "default_modifier": None if default_modifier is None else default_modifier.pk,
-            "priority": priority,
             "is_active": True,
         }
 
@@ -975,8 +975,8 @@ class ModifierDefaultTests(TestCase):
             data=self._body(
                 self.menu.filling,
                 [
-                    self._row(self.menu.raspberry_filling, self.menu.photo, 4),
-                    self._row(self.menu.mango_filling, None, 0),
+                    self._row(self.menu.raspberry_filling, self.menu.photo),
+                    self._row(self.menu.mango_filling, None),
                 ],
             ),
         )
@@ -984,7 +984,6 @@ class ModifierDefaultTests(TestCase):
         serializer.save()
         self.menu.raspberry_filling.refresh_from_db()
         self.assertEqual(self.menu.raspberry_filling.default_modifier_id, self.menu.photo.pk)
-        self.assertEqual(self.menu.raspberry_filling.priority, 4)
         saved = {row["id"]: row for row in serializer.data["modifiers"]}
         self.assertEqual(saved[self.menu.raspberry_filling.pk]["default_modifier"], self.menu.photo.pk)
 
@@ -994,8 +993,8 @@ class ModifierDefaultTests(TestCase):
             data=self._body(
                 self.menu.filling,
                 [
-                    self._row(self.menu.raspberry_filling, self.menu.mango_filling, 0),
-                    self._row(self.menu.mango_filling, None, 0),
+                    self._row(self.menu.raspberry_filling, self.menu.mango_filling),
+                    self._row(self.menu.mango_filling, None),
                 ],
             ),
         )
@@ -1007,27 +1006,25 @@ class ModifierDefaultTests(TestCase):
             data=self._body(
                 self.menu.filling,
                 [
-                    self._row(self.menu.raspberry_filling, self.menu.raspberry_filling, 0),
-                    self._row(self.menu.mango_filling, None, 0),
+                    self._row(self.menu.raspberry_filling, self.menu.raspberry_filling),
+                    self._row(self.menu.mango_filling, None),
                 ],
             ),
         )
         self.assertFalse(serializer.is_valid())
 
-    def test_tech_card_lists_modifiers_by_descending_priority(self):
-        self.menu.raspberry_filling.priority = 1
-        self.menu.raspberry_filling.save(update_fields=["priority"])
-        self.menu.mango_filling.priority = 9
-        self.menu.mango_filling.save(update_fields=["priority"])
+    def test_tech_card_lists_groups_by_descending_priority(self):
+        self.menu.filling.priority = 1
+        self.menu.filling.save(update_fields=["priority"])
+        self.menu.decor.priority = 9
+        self.menu.decor.save(update_fields=["priority"])
         user = User.objects.create_user("viewer", password="x")
         grant(user, "view_menu")
         client = APIClient()
         client.force_authenticate(user)
         response = client.get(f"/api/menu/tech-cards/{self.menu.cake.pk}/")
         self.assertEqual(response.status_code, 200, response.content)
-        filling = next(group for group in response.json()["modifier_groups"] if group["group"] == self.menu.filling.pk)
         self.assertEqual(
-            [row["id"] for row in filling["modifiers"]],
-            [self.menu.mango_filling.pk, self.menu.raspberry_filling.pk],
+            [group["group"] for group in response.json()["modifier_groups"]],
+            [self.menu.decor.pk, self.menu.filling.pk],
         )
-        self.assertEqual(filling["modifiers"][0]["default_modifier"], None)

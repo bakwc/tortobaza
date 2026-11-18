@@ -180,6 +180,7 @@ def tech_card_group_links(tech_card: TechCard) -> list[TechCardModifierGroup]:
         if any(modifier.nested_tech_card_id == tech_card.pk for modifier in group.modifiers.all()):
             continue
         links.append(TechCardModifierGroup(tech_card=tech_card, group=group, is_required=None))
+    links.sort(key=lambda link: -link.group.priority)
     return links
 
 

@@ -1498,7 +1498,6 @@ export const ModifierSchema = z.object({
   semi_product: z.number().nullable(),
   nested_tech_card: z.number().nullable(),
   default_modifier: z.number().nullable(),
-  priority: z.number(),
   is_active: z.boolean(),
 });
 
@@ -1512,6 +1511,7 @@ export const ModifierGroupSchema = z.object({
   categories: z.array(z.number()),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
+  priority: z.number(),
   position: z.number(),
   modifiers: z.array(ModifierSchema),
 });
@@ -1702,6 +1702,7 @@ export type ModifierGroupBody = {
   categories: number[];
   min_selections: number;
   max_selections: number | null;
+  priority: number;
   position: number;
   modifiers: {
     id: number | null;
@@ -1711,7 +1712,6 @@ export type ModifierGroupBody = {
     semi_product: number | null;
     nested_tech_card: number | null;
     default_modifier: number | null;
-    priority: number;
     is_active: boolean;
   }[];
 };
