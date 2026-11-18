@@ -63,8 +63,11 @@ function withDefaultModifier(card: TechCard, previous: CrmItemModifierDraft[], n
   if (targetGroup === undefined) return next;
   if (targetGroup.selection_type === "single") {
     const targetIds = new Set(targetGroup.modifiers.map((modifier) => modifier.id));
-    if (next.some((row) => targetIds.has(row.modifier))) return next;
-    return [...next, { modifier: targetId, quantity: "1" }];
+    const existing = next.find((row) => targetIds.has(row.modifier));
+    return [
+      ...next.filter((row) => !targetIds.has(row.modifier)),
+      { modifier: targetId, quantity: existing === undefined ? "1" : existing.quantity },
+    ];
   }
   if (next.some((row) => row.modifier === targetId)) return next;
   return [...next, { modifier: targetId, quantity: "1" }];
