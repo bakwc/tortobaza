@@ -65,11 +65,7 @@ function displayName(row: { internal_name: string; username: string }): string {
   return internal || row.username;
 }
 
-function rowTone(row: { is_active: boolean; is_staff: boolean }): string {
-  if (!row.is_active) return "bg-neutral-100 hover:bg-neutral-200";
-  if (row.is_staff) return "bg-purple-50 hover:bg-purple-100";
-  return "bg-blue-50 hover:bg-blue-100";
-}
+type ActivityFilter = "active" | "inactive" | "all";
 
 export function EmployeesPanel() {
   const t = useTranslations("employees");
@@ -79,6 +75,7 @@ export function EmployeesPanel() {
   const groups = useGroups();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<EmployeeBody | null>(null);
+  const [activity, setActivity] = useState<ActivityFilter>("active");
 
   const open = (row: Employee | null) => {
     employees.save.reset();
@@ -89,6 +86,16 @@ export function EmployeesPanel() {
   const close = () => setDraft(null);
 
   const flag = (value: boolean) => (value ? t("yes") : t("no"));
+  const rows = (employees.list.data ?? []).filter((row) => {
+    if (activity === "active") return row.is_active;
+    if (activity === "inactive") return !row.is_active;
+    return true;
+  });
+  const filters: { key: ActivityFilter; label: string }[] = [
+    { key: "active", label: t("filterActive") },
+    { key: "inactive", label: t("filterInactive") },
+    { key: "all", label: t("filterAll") },
+  ];
 
   return (
     <div className="grid gap-6">
@@ -101,6 +108,22 @@ export function EmployeesPanel() {
             {t("add")}
           </Button>
           ) : null}
+        </div>
+        <div className="mt-4 inline-flex rounded-full border border-[var(--line)] bg-white p-0.5">
+          {filters.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setActivity(item.key)}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                item.key === activity
+                  ? "bg-[var(--brand)] text-[var(--brand-foreground)]"
+                  : "text-[var(--ink)]"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
         <QueryState isLoading={employees.list.isLoading} isError={employees.list.isError}>
           <div className="mt-4 overflow-x-auto">
@@ -120,13 +143,27 @@ export function EmployeesPanel() {
                 </tr>
               </thead>
               <tbody>
-                {(employees.list.data ?? []).map((row) => (
+                {rows.map((row) => (
                   <tr
                     key={row.id}
                     onClick={() => open(row)}
-                    className={`cursor-pointer border-t border-[var(--line)] ${rowTone(row)}`}
+                    className="cursor-pointer border-t border-[var(--line)] hover:bg-[var(--cream)]"
                   >
-                    <td className="py-2 pr-3">{displayName(row)}</td>
+                    <td className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-2">
+                        {displayName(row)}
+                        {row.is_staff ? (
+                          <span className="rounded-full bg-[var(--brand)]/15 px-2 py-0.5 text-xs text-[var(--brand)]">
+                            {t("staff")}
+                          </span>
+                        ) : null}
+                        {!row.is_active ? (
+                          <span className="rounded-full bg-[var(--cream)] px-2 py-0.5 text-xs text-[var(--muted)]">
+                            {t("inactive")}
+                          </span>
+                        ) : null}
+                      </span>
+                    </td>
                     <td className="py-2 pr-3">{row.position}</td>
                     <td className="py-2 pr-3">{row.username}</td>
                     <td className="py-2 pr-3 tabular-nums">{row.hourly_rate}</td>
