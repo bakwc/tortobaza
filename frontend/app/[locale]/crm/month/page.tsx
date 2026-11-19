@@ -23,6 +23,7 @@ import { CrmUnconfirmedOrdersLink } from "@/components/crm/CrmUnconfirmedOrdersL
 import { CrmDeleteOrderDialog } from "@/components/crm/CrmDeleteOrderDialog";
 import { CrmExpenseStats } from "@/components/crm/CrmExpenseStats";
 import { CrmIncomeStats } from "@/components/crm/CrmIncomeStats";
+import { CrmProfitStats } from "@/components/crm/CrmProfitStats";
 import { CrmOrderActionsMenu } from "@/components/crm/CrmOrderActionsMenu";
 import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
@@ -207,6 +208,13 @@ function CrmMonthBoard() {
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          <CrmProfitStats
+            orders={orders}
+            salary={expensesQuery.data?.salary}
+            rent={expensesQuery.data?.rent}
+            foodCost={expensesQuery.data?.food_cost}
+            compact={false}
+          />
           <CrmIncomeStats orders={orders} compact={false} detailed={true} />
           <CrmExpenseStats
             salary={expensesQuery.data?.salary}
@@ -251,6 +259,26 @@ function CrmMonthBoard() {
                 </span>
                 <span className="flex shrink-0 items-baseline gap-2 text-xs font-medium text-[var(--muted-2)]">
                   <span>{group.orders.length}</span>
+                  <CrmProfitStats
+                    orders={group.orders}
+                    salary={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date]?.salary ?? "0.00")
+                        : undefined
+                    }
+                    rent={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date]?.rent ??
+                          dailyRentFromMonth(expensesQuery.data.rent, selectedMonth))
+                        : undefined
+                    }
+                    foodCost={
+                      expensesQuery.data
+                        ? (expensesQuery.data.by_date[group.date]?.food_cost ?? "0.00")
+                        : undefined
+                    }
+                    compact={true}
+                  />
                   <CrmIncomeStats orders={group.orders} compact={true} detailed={false} />
                   <CrmExpenseStats
                     salary={
