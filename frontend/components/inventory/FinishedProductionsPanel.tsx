@@ -290,6 +290,7 @@ export function FinishedProductionsPanel() {
                     className=""
                     onCreate={null}
                     createPending={false}
+                    keepSelectedOnDigit={false}
                   />
                 </Field>
               ) : null}
@@ -323,6 +324,7 @@ export function FinishedProductionsPanel() {
                         className=""
                         onCreate={null}
                         createPending={false}
+                        keepSelectedOnDigit={false}
                       />
                     </Field>
                     {card?.kind === "weighted" ? (

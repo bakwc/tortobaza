@@ -367,6 +367,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                   className="col-span-2 sm:col-span-1"
                   onCreate={null}
                   createPending={false}
+                  keepSelectedOnDigit={false}
                 />
                 <div className="relative">
                   <Input

@@ -223,6 +223,7 @@ export function WriteOffsPanel() {
             onCreateSuggestion={null}
             onCreateIngredient={null}
             suggestionPending={false}
+            keepSelectedOnDigit={false}
           />
         </EditorDialog>
       ) : null}

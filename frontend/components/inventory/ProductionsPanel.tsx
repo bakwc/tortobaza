@@ -128,6 +128,7 @@ export function ProductionsPanel() {
                 className=""
                 onCreate={null}
                 createPending={false}
+                keepSelectedOnDigit={false}
               />
             </Field>
             <Field label={selected ? `${t("quantity")}, ${units(selected.unit)}` : t("quantity")}>

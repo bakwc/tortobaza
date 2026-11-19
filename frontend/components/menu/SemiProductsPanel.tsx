@@ -696,6 +696,7 @@ export function SemiProductsPanel() {
             onCreateSuggestion={null}
             onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
             suggestionPending={ingredients.save.isPending}
+            keepSelectedOnDigit={true}
           />
         </EditorDialog>
       ) : null}

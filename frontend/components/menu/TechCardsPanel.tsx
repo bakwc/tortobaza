@@ -1216,6 +1216,7 @@ export function TechCardsPanel() {
             onCreateSuggestion={createSuggestion}
             onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
             suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
+            keepSelectedOnDigit={true}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1269,6 +1270,7 @@ export function TechCardsPanel() {
                 onCreateSuggestion={createSuggestion}
                 onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
                 suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
+                keepSelectedOnDigit={true}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>

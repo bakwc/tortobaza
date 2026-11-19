@@ -376,6 +376,7 @@ export function ModifierGroupsPanel() {
                   className=""
                   onCreate={null}
                   createPending={false}
+                  keepSelectedOnDigit={false}
                 />
                 <SearchSelect
                   options={defaultModifierOptions}
@@ -389,6 +390,7 @@ export function ModifierGroupsPanel() {
                   className=""
                   onCreate={null}
                   createPending={false}
+                  keepSelectedOnDigit={false}
                 />
                 <div className="flex items-center">
                   <CheckboxField

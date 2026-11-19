@@ -180,6 +180,7 @@ export function ComponentLinesEditor({
   onCreateSuggestion,
   onCreateIngredient,
   suggestionPending,
+  keepSelectedOnDigit,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -191,6 +192,7 @@ export function ComponentLinesEditor({
   onCreateSuggestion: ((line: ComponentLineDraft, kind: "ingredient" | "semi_product") => void) | null;
   onCreateIngredient: ((line: ComponentLineDraft, name: string) => void) | null;
   suggestionPending: boolean;
+  keepSelectedOnDigit: boolean;
 }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
@@ -227,6 +229,7 @@ export function ComponentLinesEditor({
               className="col-span-2 sm:col-span-1"
               onCreate={onCreateIngredient === null ? null : (name) => onCreateIngredient(line, name)}
               createPending={suggestionPending}
+              keepSelectedOnDigit={keepSelectedOnDigit}
             />
             <div className="relative">
               <Input

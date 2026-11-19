@@ -47,6 +47,7 @@ export function SearchSelect({
   className,
   onCreate,
   createPending,
+  keepSelectedOnDigit,
 }: {
   options: SearchSelectOption[];
   value: string;
@@ -57,6 +58,7 @@ export function SearchSelect({
   className: string;
   onCreate: ((name: string) => void) | null;
   createPending: boolean;
+  keepSelectedOnDigit: boolean;
 }) {
   const t = useTranslations("stock");
   const listId = useId();
@@ -201,12 +203,29 @@ export function SearchSelect({
           openList();
         }}
         onMouseUp={() => {
-          if (!edited) inputRef.current?.select();
+          if (edited) return;
+          const input = inputRef.current;
+          if (input === null || document.activeElement !== input) return;
+          input.select();
         }}
         onFocus={() => {
           if (!open) openList();
         }}
         onKeyDown={(event) => {
+          if (
+            keepSelectedOnDigit &&
+            value !== "" &&
+            !edited &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            event.key !== "Backspace" &&
+            !(event.key.length === 1 && /^\p{L}$/u.test(event.key)) &&
+            (event.key.length === 1 || event.key === "Delete")
+          ) {
+            event.preventDefault();
+            return;
+          }
           if (event.key === "ArrowDown") {
             event.preventDefault();
             if (!open) {

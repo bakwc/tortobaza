@@ -120,6 +120,7 @@ function SingleModifier({
         className="w-40"
         onCreate={null}
         createPending={false}
+        keepSelectedOnDigit={false}
       />
       {current && group.has_quantity ? (
         <Input
@@ -302,6 +303,7 @@ function ItemComposer({
         className="min-w-0 basis-full sm:basis-64 sm:flex-1"
         onCreate={null}
         createPending={false}
+        keepSelectedOnDigit={false}
       />
       {card?.kind === "weighted" ? (
         <Input
