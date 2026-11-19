@@ -66,10 +66,10 @@ export function WishlistPanel() {
   const close = () => setDraft(null);
 
   return (
-    <WishlistShell>
+    <WishlistShell section="purchases">
       <Card>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>{t("title")}</CardTitle>
+          <CardTitle>{t("purchases")}</CardTitle>
           {canEdit ? (
             <Button type="button" size="sm" onClick={() => open(null)}>
               <Plus className="mr-1 h-4 w-4" />
@@ -117,7 +117,7 @@ export function WishlistPanel() {
           open
           onOpenChange={(value) => (value ? null : close())}
           onCancel={null}
-          title={editingId === null ? t("newItem") : draft.title}
+          title={editingId === null ? t("newPurchase") : draft.title}
           pending={items.save.isPending}
           error={items.save.error ?? items.remove.error}
           submitLabel={canEdit ? stock("save") : null}

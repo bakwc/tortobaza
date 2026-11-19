@@ -1936,6 +1936,25 @@ export const WishlistItemSchema = z.object({
   cost: z.string().nullable(),
 });
 
+export const IdeaStatusSchema = z.enum([
+  "doing",
+  "planned",
+  "unknown",
+  "rejected",
+  "succeeded",
+  "failed",
+]);
+
+export const IdeaSchema = z.object({
+  id: z.number(),
+  priority: z.number(),
+  problem: z.string(),
+  description: z.string(),
+  cost: z.string().nullable(),
+  duration_seconds: z.number().nullable(),
+  status: IdeaStatusSchema,
+});
+
 export const SupplyTransactionSchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -2325,6 +2344,8 @@ export type RsgePendingCount = z.infer<typeof RsgePendingCountSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type WishlistItem = z.infer<typeof WishlistItemSchema>;
+export type IdeaStatus = z.infer<typeof IdeaStatusSchema>;
+export type Idea = z.infer<typeof IdeaSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
 export type SupplyReceipt = z.infer<typeof SupplyReceiptSchema>;
 export type Supply = z.infer<typeof SupplySchema>;
@@ -2374,6 +2395,15 @@ export type WishlistItemBody = {
   purpose: string;
   priority: number;
   cost: string | null;
+};
+
+export type IdeaBody = {
+  priority: number;
+  problem: string;
+  description: string;
+  cost: string | null;
+  duration_seconds: number | null;
+  status: IdeaStatus;
 };
 
 export type SupplyBody = {
