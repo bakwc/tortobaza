@@ -1928,6 +1928,14 @@ export const WriteOffReasonSchema = z.object({
   name: z.string(),
 });
 
+export const WishlistItemSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  purpose: z.string(),
+  priority: z.number(),
+  cost: z.string().nullable(),
+});
+
 export const SupplyTransactionSchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -2316,6 +2324,7 @@ export type RsInvoice = z.infer<typeof RsInvoiceSchema>;
 export type RsgePendingCount = z.infer<typeof RsgePendingCountSchema>;
 export type Supplier = z.infer<typeof SupplierSchema>;
 export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
+export type WishlistItem = z.infer<typeof WishlistItemSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
 export type SupplyReceipt = z.infer<typeof SupplyReceiptSchema>;
 export type Supply = z.infer<typeof SupplySchema>;
@@ -2360,6 +2369,12 @@ export type SocialSearchQueryBody = {
   position: number;
 };
 export type WriteOffReasonBody = { name: string };
+export type WishlistItemBody = {
+  title: string;
+  purpose: string;
+  priority: number;
+  cost: string | null;
+};
 
 export type SupplyBody = {
   date: string;

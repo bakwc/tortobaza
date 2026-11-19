@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, UserRound, Users, Wallet, Warehouse } from "lucide-react";
+import { BookOpen, ChartColumn, ClipboardList, Globe, History, LogOut, MessageSquare, MoreHorizontal, Receipt, Sparkles, UserRound, Users, Wallet, Warehouse } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCan, useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useRsgePendingCount } from "@/hooks/useRsgePendingCount";
@@ -38,6 +38,7 @@ export function CrmOverflowMenu() {
   const canViewLeads = useCan("view_leads");
   const canViewAnalytics = useCan("view_analytics");
   const canViewFinance = useCan("view_finance");
+  const canViewWishlist = useCan("view_wishlist");
   const canViewEmployees = useCan("view_employees");
   const canViewSchedule = useCan("view_schedule");
   const canViewRsge = useCan("view_rsge");
@@ -112,6 +113,17 @@ export function CrmOverflowMenu() {
             label: t("finance"),
             icon: Wallet,
             active: isUnder(pathname, "/finance"),
+          },
+        ]
+      : []),
+    ...(canViewWishlist
+      ? [
+          {
+            key: "wishlist",
+            href: "/wishlist",
+            label: t("wishlistSection"),
+            icon: Sparkles,
+            active: isUnder(pathname, "/wishlist"),
           },
         ]
       : []),

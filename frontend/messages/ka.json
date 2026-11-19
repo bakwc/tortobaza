@@ -499,6 +499,7 @@
     "inventorySection": "საწყობი",
     "rsgeSection": "RS.GE",
     "historySection": "ოპერაციების ისტორია",
+    "wishlistSection": "სურვილები",
     "items": {
       "section": "პოზიციები",
       "foodCost": "თვითღირებულება: {value} ₾",
@@ -1241,6 +1242,16 @@
       "attendance": "დასწრება"
     }
   },
+  "wishlist": {
+    "title": "სურვილები",
+    "add": "დამატება",
+    "newItem": "ახალი სურვილი",
+    "what": "რა",
+    "why": "რატომ",
+    "priority": "პრიორიტეტი",
+    "cost": "ღირებულება",
+    "empty": "ჯერ ცარიელია"
+  },
   "employees": {
     "add": "დამატება",
     "save": "შენახვა",
@@ -1272,6 +1283,7 @@
     "section_costs": "თვითღირებულება",
     "section_catalog": "კატალოგი",
     "section_leads": "ლიდები",
+    "section_wishlist": "სურვილები",
     "section_order_info_delivery": "ინფორმაცია შეკვეთაზე — მიწოდება",
     "section_order_info_pickup": "ინფორმაცია შეკვეთაზე — თვითგატანა",
     "section_order_payment_link": "გადახდის ბმული",
@@ -1299,6 +1311,8 @@
     "perm_edit_catalog": "რედაქტირება",
     "perm_view_leads": "ნახვა",
     "perm_edit_leads": "რედაქტირება",
+    "perm_view_wishlist": "ნახვა",
+    "perm_edit_wishlist": "რედაქტირება",
     "perm_view_order_delivery_time": "მიწოდების დრო",
     "perm_view_order_delivery_cooking_time": "მომზადების დრო",
     "perm_view_order_delivery_address": "მისამართი",

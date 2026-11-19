@@ -20,6 +20,8 @@ export function SiteChrome({
     pathname.startsWith("/leads/") ||
     pathname === "/finance" ||
     pathname.startsWith("/finance/") ||
+    pathname === "/wishlist" ||
+    pathname.startsWith("/wishlist/") ||
     pathname === "/menu" ||
     pathname.startsWith("/menu/") ||
     pathname === "/inventory" ||

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "menu",
     "inventory",
     "rsge",
+    "wishlist",
     "audit",
     "tortobaza",
 ]

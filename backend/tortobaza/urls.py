@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/", include("menu.urls")),
     path("api/", include("inventory.urls")),
     path("api/", include("rsge.urls")),
+    path("api/", include("wishlist.urls")),
     path("api/", include("audit.urls")),
 ]
 

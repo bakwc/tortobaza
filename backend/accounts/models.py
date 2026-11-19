@@ -83,6 +83,8 @@ class SectionAccess(models.Model):
             ("edit_catalog", _("Catalog: edit")),
             ("view_leads", _("Leads: view")),
             ("edit_leads", _("Leads: edit")),
+            ("view_wishlist", _("Wishlist: view")),
+            ("edit_wishlist", _("Wishlist: edit")),
             ("view_order_delivery_time", _("Orders: view delivery time")),
             ("view_order_delivery_cooking_time", _("Orders: view delivery cooking time")),
             ("view_order_delivery_address", _("Orders: view delivery address")),

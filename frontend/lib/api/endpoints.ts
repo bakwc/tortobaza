@@ -191,6 +191,7 @@ import {
   TechCardSchema,
   WriteOffReasonSchema,
   WriteOffSchema,
+  WishlistItemSchema,
   type CatalogOption,
   type ComponentRefBody,
   type Ingredient,
@@ -233,6 +234,8 @@ import {
   type WriteOffBody,
   type WriteOffReason,
   type WriteOffReasonBody,
+  type WishlistItem,
+  type WishlistItemBody,
 } from "./types";
 import { z } from "zod";
 
@@ -379,6 +382,7 @@ export function endpoints(fetcher: Fetcher) {
       "/api/inventory/write-off-reasons/",
       WriteOffReasonSchema,
     ),
+    wishlistItems: resource<WishlistItem, WishlistItemBody>(fetcher, "/api/wishlist/", WishlistItemSchema),
     inventoryWriteOffs: resource<WriteOff, WriteOffBody>(fetcher, "/api/inventory/write-offs/", WriteOffSchema),
     inventoryCounts: resource<InventoryCount, InventoryCountBody>(
       fetcher,

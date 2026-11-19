@@ -499,6 +499,7 @@
     "inventorySection": "Склад",
     "rsgeSection": "RS.GE",
     "historySection": "История операций",
+    "wishlistSection": "Хотелки",
     "items": {
       "section": "Позиции",
       "foodCost": "Себестоимость: {value} ₾",
@@ -1241,6 +1242,16 @@
       "attendance": "Явка"
     }
   },
+  "wishlist": {
+    "title": "Хотелки",
+    "add": "Добавить",
+    "newItem": "Новая хотелка",
+    "what": "Что",
+    "why": "Зачем",
+    "priority": "Приоритет",
+    "cost": "Стоимость",
+    "empty": "Пока пусто"
+  },
   "employees": {
     "add": "Добавить",
     "save": "Сохранить",
@@ -1272,6 +1283,7 @@
     "section_costs": "Себестоимость",
     "section_catalog": "Каталог",
     "section_leads": "Лиды",
+    "section_wishlist": "Хотелки",
     "section_order_info_delivery": "Информация о заказе — доставка",
     "section_order_info_pickup": "Информация о заказе — самовывоз",
     "section_order_payment_link": "Ссылка на оплату",
@@ -1299,6 +1311,8 @@
     "perm_edit_catalog": "Редактирование",
     "perm_view_leads": "Просмотр",
     "perm_edit_leads": "Редактирование",
+    "perm_view_wishlist": "Просмотр",
+    "perm_edit_wishlist": "Редактирование",
     "perm_view_order_delivery_time": "Время доставки",
     "perm_view_order_delivery_cooking_time": "Время готовки",
     "perm_view_order_delivery_address": "Адрес",

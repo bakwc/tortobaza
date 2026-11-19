@@ -499,6 +499,7 @@
     "inventorySection": "Inventory",
     "rsgeSection": "RS.GE",
     "historySection": "Operation history",
+    "wishlistSection": "Wishlist",
     "items": {
       "section": "Items",
       "foodCost": "Food cost: {value} ₾",
@@ -1241,6 +1242,16 @@
       "attendance": "Attendance"
     }
   },
+  "wishlist": {
+    "title": "Wishlist",
+    "add": "Add",
+    "newItem": "New item",
+    "what": "What",
+    "why": "Why",
+    "priority": "Priority",
+    "cost": "Cost",
+    "empty": "Nothing yet"
+  },
   "employees": {
     "add": "Add",
     "save": "Save",
@@ -1272,6 +1283,7 @@
     "section_costs": "Costs",
     "section_catalog": "Catalog",
     "section_leads": "Leads",
+    "section_wishlist": "Wishlist",
     "section_order_info_delivery": "Order info — delivery",
     "section_order_info_pickup": "Order info — pickup",
     "section_order_payment_link": "Payment link",
@@ -1299,6 +1311,8 @@
     "perm_edit_catalog": "Edit",
     "perm_view_leads": "View",
     "perm_edit_leads": "Edit",
+    "perm_view_wishlist": "View",
+    "perm_edit_wishlist": "Edit",
     "perm_view_order_delivery_time": "Delivery time",
     "perm_view_order_delivery_cooking_time": "Cooking time",
     "perm_view_order_delivery_address": "Address",
