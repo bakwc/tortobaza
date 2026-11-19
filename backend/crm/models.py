@@ -1072,6 +1072,7 @@ class SocialMessage(models.Model):
     topic = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Topic"))
     sent_at = models.DateTimeField(verbose_name=_("Sent at"))
     text = models.TextField(blank=True, default="", verbose_name=_("Text"))
+    text_folded = models.TextField(blank=True, default="", editable=False, verbose_name=_("Folded text"))
     sender_id = models.CharField(max_length=255, null=True, blank=True, verbose_name=_("Sender ID"))
     sender_username = models.CharField(
         max_length=255,
@@ -1093,6 +1094,13 @@ class SocialMessage(models.Model):
                 name="uniq_socialmessage_channel_external_id",
             ),
         ]
+
+    def save(self, *args, **kwargs):
+        self.text_folded = self.text.casefold()
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "text" in update_fields:
+            kwargs["update_fields"] = set(update_fields) | {"text_folded"}
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return f"{self.channel_id}#{self.external_id}"

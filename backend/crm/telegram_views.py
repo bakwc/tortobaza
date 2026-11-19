@@ -105,17 +105,11 @@ class SocialMessageListView(APIView):
         stripped = q.strip()
         if stripped:
             needle, excluded = _message_search_terms(stripped)
-            rows = []
-            for row in qs:
-                text = row.text.casefold()
-                if needle and needle not in text:
-                    continue
-                if any(term in text for term in excluded):
-                    continue
-                rows.append(row)
-            page = Paginator(rows, PAGE_SIZE).page(page_number)
-        else:
-            page = Paginator(qs, PAGE_SIZE).page(page_number)
+            if needle:
+                qs = qs.filter(text_folded__contains=needle)
+            for term in excluded:
+                qs = qs.exclude(text_folded__contains=term)
+        page = Paginator(qs, PAGE_SIZE).page(page_number)
         return Response(
             {
                 "page": page.number,
