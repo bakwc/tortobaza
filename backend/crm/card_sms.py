@@ -42,6 +42,8 @@ _MONTHS = {
 BOG_BUSINESS_GEL = "BOG business GEL"
 _PURCHASE_RE = re.compile(r"Purchase:\s*([A-Z]{3})(\d+\.\d{2})")
 _PAYMENT_RE = re.compile(r"Payment:\s*([A-Z]{3})(\d+\.\d{2})")
+_REVERSAL_RE = re.compile(r"Reversal:\s*([A-Z]{3})(\d+\.\d{2})")
+_DEPOSIT_RE = re.compile(r"Deposit:\s*([A-Z]{3})([\d,]+\.\d{2})")
 _CARD_RE = re.compile(r"Card:\*+(\d{4})")
 _ACCOUNT_MASK_RE = re.compile(r"([A-Z0-9]+)\*+([A-Z0-9]+)([A-Z]{3})")
 _IBAN_LENGTH = 22
@@ -113,6 +115,12 @@ def parse_card_sms(body: str) -> ParsedCardSms | None:
     payment = _parse_payment(lines)
     if payment is not None:
         return payment
+    reversal = _parse_reversal(lines)
+    if reversal is not None:
+        return reversal
+    deposit = _parse_deposit(lines)
+    if deposit is not None:
+        return deposit
     operation = _parse_account_operation(lines)
     if operation is not None:
         return operation
@@ -423,6 +431,101 @@ def _parse_payment(lines: list[str]) -> ParsedCardSms | None:
         account_suffix=account_match.group(2),
         card_type="",
     )
+
+
+def _parse_reversal(lines: list[str]) -> ParsedCardSms | None:
+    reversal = _REVERSAL_RE.fullmatch(lines[0])
+    sms_date = _sms_date(lines[-1])
+    if reversal is None or sms_date is None:
+        return None
+    card_index = _card_index(lines)
+    if card_index is None or card_index == 0 or card_index == len(lines) - 1:
+        return None
+    card_match = _CARD_RE.fullmatch(lines[card_index])
+    merchant_lines = _merchant_lines(lines[card_index + 1 : -1])
+    if card_match is None or len(merchant_lines) == 0:
+        return None
+    amount = Decimal(reversal.group(2)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return ParsedCardSms(
+        card_last4=card_match.group(1),
+        currency=reversal.group(1),
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_INCOME,
+        account_prefix="",
+        account_suffix="",
+        card_type="",
+    )
+
+
+def _parse_deposit(lines: list[str]) -> ParsedCardSms | None:
+    deposit = _DEPOSIT_RE.fullmatch(lines[0])
+    sms_date = _sms_date(lines[-1])
+    if deposit is None or sms_date is None:
+        return None
+    amount = _comma_amount(deposit.group(2))
+    if amount is None:
+        return None
+    card_index = _card_index(lines)
+    if card_index is not None:
+        return _parse_card_deposit(lines, deposit.group(1), amount, sms_date, card_index)
+    return _parse_account_deposit(lines, deposit.group(1), amount, sms_date)
+
+
+def _parse_card_deposit(
+    lines: list[str],
+    currency: str,
+    amount: Decimal,
+    sms_date: date,
+    card_index: int,
+) -> ParsedCardSms | None:
+    if card_index == 0 or card_index == len(lines) - 1:
+        return None
+    card_match = _CARD_RE.fullmatch(lines[card_index])
+    merchant_lines = _merchant_lines(lines[card_index + 1 : -1])
+    if card_match is None or len(merchant_lines) == 0:
+        return None
+    return ParsedCardSms(
+        card_last4=card_match.group(1),
+        currency=currency,
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_INCOME,
+        account_prefix="",
+        account_suffix="",
+        card_type="",
+    )
+
+
+def _parse_account_deposit(
+    lines: list[str],
+    currency: str,
+    amount: Decimal,
+    sms_date: date,
+) -> ParsedCardSms | None:
+    merchant_lines = lines[2:-1]
+    if len(merchant_lines) == 0:
+        return None
+    return ParsedCardSms(
+        card_last4="",
+        currency=currency,
+        amount=amount,
+        merchant=" ".join(merchant_lines),
+        sms_date=sms_date,
+        kind=CardSmsMessage.KIND_INCOME,
+        account_prefix="",
+        account_suffix="",
+        card_type="",
+    )
+
+
+def _comma_amount(raw: str) -> Decimal | None:
+    normalized = raw.replace(",", "")
+    if _DECIMAL_AMOUNT_RE.fullmatch(normalized) is None:
+        return None
+    return Decimal(normalized).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def _parse_account_operation(lines: list[str]) -> ParsedCardSms | None:

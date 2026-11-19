@@ -39,6 +39,13 @@ PAYMENT_HTML = (
     "You received: 112.50 PLUS<br/>Total: 433,767.95 PLUS<br/>29.10.2026"
 )
 PAYMENT_IBAN = "GE30BG0000000000001239GEL"
+REVERSAL_HTML = "Reversal: GEL46.18<br/>Card:***3319<br/>Wolt<br/>18.11.2026"
+CARD_DEPOSIT_HTML = "Deposit: USD10,402.00<br/>Card:***3319<br/>Lets Deel&gt;London GB<br/>07.11.2026"
+ACCOUNT_DEPOSIT_HTML = "Deposit: GEL96.00<br/>Sweet Chill<br/>turunj alihan<br/>19.11.2026"
+PENDING_REFUND_HTML = (
+    "Deposit: GEL20.74<br/>Card:***3319<br/>Wildberries&gt;TBILISI GE<br/>03.11.2026<br/>"
+    "The refund will appear on your card within 2-3 business days."
+)
 TBC_EXPENSE_HTML = "7.10GEL<br/>(*1911)<br/>LTD KEEPZ.ME*YANDEX GO<br/>Balance: 2146.99GEL"
 TBC_EXPENSE_STAMP_HTML = (
     "7.70GEL<br/>(*1911)<br/>LTD KEEPZ.ME*YANDEX GO<br/>Balance: 2254.64GEL <br/> <br/>08/11/26 08:55"
@@ -352,6 +359,71 @@ class CardSmsTests(TestCase):
         self.assertEqual(row.status, CardSmsMessage.STATUS_UNMATCHED)
         self.assertEqual(row.amount, Decimal("151.20"))
         self.assertEqual(row.kind, CardSmsMessage.KIND_EXPENSE)
+
+    def test_parse_reversal_and_deposits(self):
+        reversal = parse_card_sms(html_to_text(REVERSAL_HTML))
+        self.assertIsNotNone(reversal)
+        self.assertEqual(reversal.currency, "GEL")
+        self.assertEqual(reversal.amount, Decimal("46.18"))
+        self.assertEqual(reversal.card_last4, "3319")
+        self.assertEqual(reversal.merchant, "Wolt")
+        self.assertEqual(reversal.sms_date, date(2026, 11, 18))
+        self.assertEqual(reversal.kind, CardSmsMessage.KIND_INCOME)
+        card_deposit = parse_card_sms(html_to_text(CARD_DEPOSIT_HTML))
+        self.assertIsNotNone(card_deposit)
+        self.assertEqual(card_deposit.currency, "USD")
+        self.assertEqual(card_deposit.amount, Decimal("10402.00"))
+        self.assertEqual(card_deposit.card_last4, "3319")
+        self.assertEqual(card_deposit.merchant, "Lets Deel>London GB")
+        self.assertEqual(card_deposit.sms_date, date(2026, 11, 7))
+        self.assertEqual(card_deposit.kind, CardSmsMessage.KIND_INCOME)
+        account_deposit = parse_card_sms(html_to_text(ACCOUNT_DEPOSIT_HTML))
+        self.assertIsNotNone(account_deposit)
+        self.assertEqual(account_deposit.currency, "GEL")
+        self.assertEqual(account_deposit.amount, Decimal("96.00"))
+        self.assertEqual(account_deposit.card_last4, "")
+        self.assertEqual(account_deposit.merchant, "turunj alihan")
+        self.assertEqual(account_deposit.sms_date, date(2026, 11, 19))
+        self.assertEqual(account_deposit.kind, CardSmsMessage.KIND_INCOME)
+        self.assertIsNone(parse_card_sms(html_to_text(PENDING_REFUND_HTML)))
+
+    def test_reversal_matches_card(self):
+        account = _account("Card", "GEL", "3319", "default")
+        _import([_message("<rev@gmail.com>", REVERSAL_HTML)])
+        rows = _transactions("default")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertEqual(rows[0].amount, Decimal("46.18"))
+        self.assertEqual(rows[0].kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(rows[0].income_type, FinancialTransaction.INCOME_TRANSFER)
+        self.assertEqual(rows[0].counterparty_name, "Wolt")
+        self.assertEqual(rows[0].description, "Wolt")
+        self.assertEqual(rows[0].date, date(2026, 11, 18))
+        self.assertEqual(_transactions("personal"), [])
+        stored = CardSmsMessage.objects.get(message_id="<rev@gmail.com>")
+        self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored.kind, CardSmsMessage.KIND_INCOME)
+        self.assertEqual(stored.finance_db, "default")
+        self.assertEqual(stored.transaction_id, rows[0].pk)
+
+    def test_account_deposit_matches_bog_business_gel(self):
+        account = _account("BOG business GEL", "GEL", "", "default")
+        _import([_message("<dep@gmail.com>", ACCOUNT_DEPOSIT_HTML)])
+        rows = _transactions("default")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].account_id, account.pk)
+        self.assertEqual(rows[0].amount, Decimal("96.00"))
+        self.assertEqual(rows[0].kind, FinancialTransaction.KIND_INCOME)
+        self.assertEqual(rows[0].income_type, FinancialTransaction.INCOME_TRANSFER)
+        self.assertEqual(rows[0].counterparty_name, "turunj alihan")
+        self.assertEqual(rows[0].description, "turunj alihan")
+        self.assertEqual(rows[0].date, date(2026, 11, 19))
+        self.assertEqual(_transactions("personal"), [])
+        stored = CardSmsMessage.objects.get(message_id="<dep@gmail.com>")
+        self.assertEqual(stored.card_last4, "")
+        self.assertEqual(stored.status, CardSmsMessage.STATUS_INSERTED)
+        self.assertEqual(stored.finance_db, "default")
+        self.assertEqual(stored.transaction_id, rows[0].pk)
 
     def test_unparsed_body_does_not_create_transaction(self):
         _account("Business GEL", "GEL", "3319", "default")
