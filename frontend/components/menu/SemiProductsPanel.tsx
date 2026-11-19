@@ -564,7 +564,7 @@ export function SemiProductsPanel() {
               sections={[]}
               method={current.method}
               onEdit={openEdit}
-              printHref={null}
+              printHref={`/menu/semi-products/${current.id}/print`}
               copyPath={null}
             >
               {null}
