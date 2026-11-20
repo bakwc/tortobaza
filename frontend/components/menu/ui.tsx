@@ -162,6 +162,11 @@ export function formatQuantity(value: string): string {
   return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(3)));
 }
 
+export function formatLineAmount(quantity: string | null, unit: string): string {
+  if (quantity === null) return "—";
+  return `${formatQuantity(quantity)} ${unit}`;
+}
+
 export function formatMoney(value: string): string {
   return `${Number(value).toFixed(2)} ₾`;
 }

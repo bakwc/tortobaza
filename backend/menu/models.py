@@ -398,7 +398,8 @@ class TechCard(models.Model):
         validators=[MinValueValidator(1)],
         verbose_name=_("Shelf life"),
     )
-    storage_temperature = models.IntegerField(
+    storage_temperature = models.CharField(
+        max_length=200,
         null=True,
         blank=True,
         verbose_name=_("Storage temperature"),
@@ -481,7 +482,13 @@ class TechCardLine(ComponentRef):
         blank=True,
         verbose_name=_("Section"),
     )
-    quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Quantity"),
+    )
     quantity_unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Quantity unit"))
     loss_percent = models.DecimalField(
         max_digits=5,
@@ -583,7 +590,13 @@ class TechCardModifierLine(ComponentRef):
         on_delete=models.PROTECT,
         verbose_name=_("Modifier"),
     )
-    quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        verbose_name=_("Quantity"),
+    )
     quantity_unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Quantity unit"))
     loss_percent = models.DecimalField(
         max_digits=5,

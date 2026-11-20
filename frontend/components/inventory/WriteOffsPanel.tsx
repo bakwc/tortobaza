@@ -224,6 +224,7 @@ export function WriteOffsPanel() {
             onCreateIngredient={null}
             suggestionPending={false}
             keepSelectedOnDigit={false}
+            quantityRequired={true}
           />
         </EditorDialog>
       ) : null}

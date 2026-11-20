@@ -6,11 +6,14 @@ import { Check, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
-import { formatMoney, formatQuantity } from "@/components/menu/ui";
+import { formatLineAmount, formatMoney, formatQuantity } from "@/components/menu/ui";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
 
-type CompositionLine = RecipeLine & { nested_tech_card: number | null };
+type CompositionLine = Omit<RecipeLine, "quantity"> & {
+  quantity: string | null;
+  nested_tech_card: number | null;
+};
 import { cn } from "@/lib/utils";
 
 export type RecipeTableRow = {
@@ -112,7 +115,7 @@ export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
               : line.semi_product !== null
                 ? t("semiProduct").toLowerCase()
                 : null,
-          amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
+          amount: formatLineAmount(line.quantity, units(line.quantity_unit)),
           loss: loss === "0" ? "—" : `${loss}%`,
           cost: line.cost === undefined ? null : formatMoney(line.cost),
           warning: false,

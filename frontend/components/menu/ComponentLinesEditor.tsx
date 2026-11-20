@@ -91,7 +91,7 @@ export function emptyLine(): ComponentLineDraft {
 
 export function draftFromLine(
   line: ComponentRefBody & {
-    quantity: string;
+    quantity: string | null;
     loss_percent?: string;
     quantity_unit: MenuUnit;
     finished_good?: number | null;
@@ -101,7 +101,7 @@ export function draftFromLine(
   return {
     key: newDraftKey(),
     component: componentValue(line),
-    quantity: line.quantity,
+    quantity: line.quantity ?? "",
     quantity_unit: line.quantity_unit,
     loss_percent: line.loss_percent ?? "0",
     unit_cost: "",
@@ -181,6 +181,7 @@ export function ComponentLinesEditor({
   onCreateIngredient,
   suggestionPending,
   keepSelectedOnDigit,
+  quantityRequired,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -193,6 +194,7 @@ export function ComponentLinesEditor({
   onCreateIngredient: ((line: ComponentLineDraft, name: string) => void) | null;
   suggestionPending: boolean;
   keepSelectedOnDigit: boolean;
+  quantityRequired: boolean;
 }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
@@ -234,7 +236,7 @@ export function ComponentLinesEditor({
             <div className="relative">
               <Input
                 name="quantity"
-                required
+                required={quantityRequired}
                 inputMode="decimal"
                 placeholder={quantityLabel}
                 value={line.quantity}

@@ -1500,6 +1500,7 @@ export const RecipeLineSchema = z.object({
 
 export const TechCardRecipeLineSchema = RecipeLineSchema.extend({
   nested_tech_card: z.number().nullable(),
+  quantity: z.string().nullable(),
 });
 
 export const MenuImageSchema = z.object({
@@ -1619,7 +1620,7 @@ export const TechCardSchema = z.object({
   sale_price: z.string().nullable(),
   method: z.string(),
   shelf_life_seconds: z.number().int().nullable(),
-  storage_temperature: z.number().int().nullable(),
+  storage_temperature: z.string().nullable(),
   is_active: z.boolean(),
   lines: z.array(TechCardRecipeLineSchema),
   sections: z.array(TechCardSectionSchema),
@@ -1759,6 +1760,11 @@ export type ModifierGroupBody = {
 
 export type TechCardCategoryBody = { name: string; position: number };
 
+type TechCardRecipeLineBody = Omit<RecipeLineBody, "quantity"> & {
+  quantity: string | null;
+  nested_tech_card: number | null;
+};
+
 export type TechCardBody = {
   name: string;
   category: number | null;
@@ -1768,15 +1774,14 @@ export type TechCardBody = {
   sale_price: string | null;
   method: string;
   shelf_life_seconds: number | null;
-  storage_temperature: number | null;
+  storage_temperature: string | null;
   is_active: boolean;
-  lines: (RecipeLineBody & { nested_tech_card: number | null })[];
-  sections: { name: string; method: string; lines: (RecipeLineBody & { nested_tech_card: number | null })[] }[];
+  lines: TechCardRecipeLineBody[];
+  sections: { name: string; method: string; lines: TechCardRecipeLineBody[] }[];
   modifier_groups: { group: number; is_required: boolean | null }[];
-  modifier_lines: (RecipeLineBody & {
+  modifier_lines: (TechCardRecipeLineBody & {
     modifier: number;
     scales_by_weight: boolean;
-    nested_tech_card: number | null;
   })[];
 };
 

@@ -186,7 +186,7 @@ def component_payload(line) -> dict:
         "semi_product": line.semi_product_id,
         "name": component.name,
         "unit": component.unit,
-        "quantity": str(line.quantity),
+        "quantity": None if line.quantity is None else str(line.quantity),
     }
 
 
@@ -483,6 +483,7 @@ class CatalogOptionSerializer(serializers.ModelSerializer):
 
 class TechCardLineInputSerializer(RecipeLineSerializer):
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
+    quantity = serializers.DecimalField(**QUANTITY_FIELD, allow_null=True)
 
     def validate(self, attrs):
         nested = attrs["nested_tech_card"]
@@ -589,7 +590,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             "sale_price": {"required": False, "allow_null": True, "min_value": Decimal("0")},
             "method": {"required": True, "allow_blank": True},
             "shelf_life_seconds": {"required": False, "allow_null": True, "min_value": 1},
-            "storage_temperature": {"required": False, "allow_null": True},
+            "storage_temperature": {"required": False, "allow_null": True, "allow_blank": True},
         }
 
     def to_representation(self, instance):
@@ -659,6 +660,14 @@ class TechCardSerializer(serializers.ModelSerializer):
             data["cost_min"] = str(low)
             data["cost_max"] = str(high)
         return data
+
+    def validate_storage_temperature(self, value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = value.strip()
+        if text == "":
+            return None
+        return text
 
     def validate(self, attrs):
         kind = attrs["kind"]

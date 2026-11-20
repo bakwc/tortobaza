@@ -297,6 +297,8 @@ def line_needs(component: Ingredient | SemiProduct | TechCard, quantity: Decimal
 
 
 def _line_needs(line, factor: Decimal, needs: Needs) -> None:
+    if line.quantity is None:
+        return
     if line.nested_tech_card_id is not None:
         gross = line_component_quantity(line) * factor
         _merge(needs, _nested_base_needs(line.nested_tech_card, gross))
@@ -398,7 +400,9 @@ def semi_product_cost(semi_product: SemiProduct) -> Decimal:
     return needs_cost(needs)
 
 
-def stock_line_cost(line) -> Decimal:
+def stock_line_cost(line) -> Decimal | None:
+    if line.quantity is None:
+        return None
     if isinstance(line, (TechCardLine, TechCardModifierLine)) and line.nested_tech_card_id is not None:
         needs: Needs = {}
         _line_needs(line, _ONE, needs)
@@ -519,7 +523,7 @@ def modifier_lines_sale_price(
     for modifier, modifier_quantity in modifiers:
         for line in by_modifier[modifier.pk]:
             nested = line.nested_tech_card
-            if nested is None or nested.sale_price is None:
+            if nested is None or nested.sale_price is None or line.quantity is None:
                 continue
             factor = Decimal(modifier_quantity) * item_quantity
             if line.scales_by_weight:

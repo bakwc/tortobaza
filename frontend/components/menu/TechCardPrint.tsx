@@ -4,14 +4,14 @@ import { useTranslations } from "next-intl";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { formatShelfLife } from "@/components/menu/shelfLife";
 import { Button } from "@/components/ui/button";
-import { formatQuantity } from "@/components/menu/ui";
-import type { RecipeLine, TechCard } from "@/lib/api/types";
+import { formatLineAmount } from "@/components/menu/ui";
+import type { TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type PrintChapter = {
   key: string;
   name: string | null;
-  lines: RecipeLine[];
+  lines: TechCard["lines"];
   method: string;
 };
 
@@ -69,7 +69,7 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
           >
             <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
             <div className="px-2 py-1 text-right text-sm tabular-nums">
-              {formatQuantity(line.quantity)} {units(line.quantity_unit)}
+              {formatLineAmount(line.quantity, units(line.quantity_unit))}
             </div>
           </div>
         ))}
@@ -101,7 +101,7 @@ export function TechCardPrint({ card }: { card: TechCard }) {
     );
   }
   if (card.storage_temperature !== null) {
-    storage.push(`${t("storageTemperature")}: ${card.storage_temperature} ${t("celsius")}`);
+    storage.push(`${t("storageTemperature")}: ${card.storage_temperature}`);
   }
 
   return (

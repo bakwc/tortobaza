@@ -57,6 +57,7 @@ import {
   GroupSelect,
   NativeSelect,
   QueryState,
+  formatLineAmount,
   formatMoney,
   formatQuantity,
 } from "@/components/menu/ui";
@@ -121,6 +122,13 @@ function perPieceCost(value: string, count: number): string {
 function displayedCost(value: string, kind: TechCard["kind"], basisQuantity: number | null): string {
   if (kind === "weighted") return value;
   return perPieceCost(value, basisQuantity as number);
+}
+
+function savedLines(lines: ComponentLineDraft[]) {
+  return linesToBody(lines).map((line) => ({
+    ...line,
+    quantity: line.quantity.trim() === "" ? null : line.quantity,
+  }));
 }
 
 function emptySection(): SectionDraft {
@@ -220,7 +228,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     method: row.method,
     shelf_life_days: stored.days,
     shelf_life_hours: stored.hours,
-    storage_temperature: row.storage_temperature === null ? "" : String(row.storage_temperature),
+    storage_temperature: row.storage_temperature ?? "",
     is_active: row.is_active,
     lines: row.lines.map(draftFromLine),
     sections: row.sections.map((section) => ({
@@ -638,7 +646,7 @@ export function TechCardsPanel() {
       for (const modifier of group.modifiers) {
         const composition = draft.compositions[modifier.id];
         if (!composition) continue;
-        for (const line of linesToBody(composition.lines)) {
+        for (const line of savedLines(composition.lines)) {
           modifierLines.push({ ...line, modifier: modifier.id, scales_by_weight: composition.scales_by_weight });
         }
       }
@@ -655,14 +663,13 @@ export function TechCardsPanel() {
           sale_price: draft.sale_price.trim() === "" ? null : draft.sale_price.replace(",", "."),
           method: draft.method,
           shelf_life_seconds: shelfLifeSeconds(draft.shelf_life_days, draft.shelf_life_hours),
-          storage_temperature:
-            draft.storage_temperature.trim() === "" ? null : Number(draft.storage_temperature),
+          storage_temperature: draft.storage_temperature.trim() === "" ? null : draft.storage_temperature.trim(),
           is_active: draft.is_active,
-          lines: linesToBody(draft.lines),
+          lines: savedLines(draft.lines),
           sections: draft.sections.map((section) => ({
             name: section.name,
             method: section.method,
-            lines: linesToBody(section.lines),
+            lines: savedLines(section.lines),
           })),
           modifier_groups: draft.groups,
           modifier_lines: modifierLines,
@@ -950,7 +957,7 @@ export function TechCardsPanel() {
                   ? [
                       {
                         label: t("storageTemperature"),
-                        value: `${current.storage_temperature} ${t("celsius")}`,
+                        value: current.storage_temperature,
                       },
                     ]
                   : []),
@@ -1034,7 +1041,7 @@ export function TechCardsPanel() {
                                   ? `/menu?card=${line.nested_tech_card}`
                                   : componentHref(line.ingredient, line.semi_product),
                               tag: null,
-                              amount: `${formatQuantity(line.quantity)} ${units(line.quantity_unit)}`,
+                              amount: formatLineAmount(line.quantity, units(line.quantity_unit)),
                               loss: loss === "0" ? "—" : `${loss}%`,
                               cost: line.cost === undefined ? null : formatMoney(line.cost),
                               warning: false,
@@ -1151,9 +1158,8 @@ export function TechCardsPanel() {
                 onChange={(event) => setDraft({ ...draft, shelf_life_hours: event.target.value })}
               />
             </Field>
-            <Field label={t("storageTemperature")}>
+            <Field label={t("storageTemperature")} className="sm:col-span-3">
               <Input
-                inputMode="numeric"
                 value={draft.storage_temperature}
                 onChange={(event) => setDraft({ ...draft, storage_temperature: event.target.value })}
               />
@@ -1217,6 +1223,7 @@ export function TechCardsPanel() {
             onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
             suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
             keepSelectedOnDigit={true}
+            quantityRequired={false}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1271,6 +1278,7 @@ export function TechCardsPanel() {
                 onCreateIngredient={(line, name) => createIngredient(line, name, line.quantity_unit)}
                 suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
                 keepSelectedOnDigit={true}
+                quantityRequired={false}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
@@ -1378,7 +1386,6 @@ export function TechCardsPanel() {
                                   >
                                     <Input
                                       name="quantity"
-                                      required
                                       inputMode="decimal"
                                       placeholder={t("quantity")}
                                       value={line.quantity}
