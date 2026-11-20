@@ -34,6 +34,7 @@ import {
 import { useIngredients, useSemiProductCategories, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import { useRouter } from "@/i18n/navigation";
 import type { IngredientBody, MenuUnit, SemiProduct } from "@/lib/api/types";
+import { nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
@@ -332,7 +333,7 @@ export function SemiProductsPanel() {
   ].filter((group) => group.rows.length > 0);
   const groups = allGroups
     .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
-    .map((group) => ({ ...group, rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)) }))
+    .map((group) => ({ ...group, rows: group.rows.filter((row) => nameMatches(row.name, query)) }))
     .filter((group) => group.rows.length > 0);
   const activeCount = rows.filter((row) => row.is_active).length;
 

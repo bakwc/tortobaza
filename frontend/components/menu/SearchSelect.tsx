@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { nameMatches, namesEqual } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 export type SearchSelectOption = { value: string; label: string };
@@ -73,13 +74,14 @@ export function SearchSelect({
   const [placement, setPlacement] = useState({ upward: false, maxHeight: 240 });
   const selectedLabel = options.find((option) => option.value !== "" && option.value === value)?.label ?? "";
   const typed = open && edited ? query.trim() : "";
-  const needle = typed.toLowerCase();
-  const filtered =
-    needle === "" ? options : options.filter((option) => option.label.toLowerCase().includes(needle));
+  const filtered = options.filter((option) => nameMatches(option.label, typed));
   const showCreate =
     onCreate !== null &&
     typed !== "" &&
-    !options.some((option) => optionIngredientName(option)?.toLowerCase() === needle);
+    !options.some((option) => {
+      const ingredientName = optionIngredientName(option);
+      return ingredientName !== null && namesEqual(ingredientName, typed);
+    });
   const highlightIndex = filtered.length === 0 ? 0 : Math.min(highlight, filtered.length - 1);
   const active = filtered[highlightIndex] ?? null;
 
@@ -146,7 +148,7 @@ export function SearchSelect({
     const itemBottom = itemTop + item.offsetHeight;
     if (itemTop < list.scrollTop) list.scrollTop = itemTop;
     else if (itemBottom > list.scrollTop + list.clientHeight) list.scrollTop = itemBottom - list.clientHeight;
-  }, [highlightIndex, open, needle]);
+  }, [highlightIndex, open, typed]);
 
   useEffect(() => {
     if (!open) return;

@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { listPlacement } from "@/components/menu/SearchSelect";
 import { formatQuantity } from "@/components/menu/ui";
 import type { Ingredient, MenuUnit, WaybillSupplyDraftLine } from "@/lib/api/types";
+import { nameMatches, namesEqual } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type PickerItem =
@@ -34,7 +35,7 @@ function scaledQuantity(quantity: string, factor: string): string {
 }
 
 function matches(label: string, needle: string): boolean {
-  return needle === "" || label.toLowerCase().includes(needle);
+  return nameMatches(label, needle);
 }
 
 function pickerItems(
@@ -100,7 +101,7 @@ function pickerItems(
     items.push({ kind: "ingredient", key: `ingredient-${ingredientId}`, ingredientId, name: item.name });
   }
   if (createName !== "") {
-    const exact = ingredients.some((item) => item.name.toLowerCase() === createName.toLowerCase());
+    const exact = ingredients.some((item) => namesEqual(item.name, createName));
     if (!exact) items.push({ kind: "create", key: "create", name: createName });
   }
   return items;

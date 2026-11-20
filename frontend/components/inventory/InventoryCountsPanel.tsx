@@ -22,6 +22,7 @@ import {
 import { Link } from "@/i18n/navigation";
 import type { InventoryCount, MenuUnit, StockRow } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
+import { nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type CountDraft = { date: string; comment: string; quantities: Record<string, string> };
@@ -202,7 +203,7 @@ function CountLines({
       label: group.label,
       total: group.rows.length,
       counted: group.rows.filter((row) => filled(quantities, row.key)).length,
-      rows: group.rows.filter((row) => row.name.toLowerCase().includes(query)),
+      rows: group.rows.filter((row) => nameMatches(row.name, query)),
     }))
     .filter((group) => group.rows.length > 0);
   const setQuantity = (key: string, quantity: string) => onQuantities({ ...quantities, [key]: quantity });

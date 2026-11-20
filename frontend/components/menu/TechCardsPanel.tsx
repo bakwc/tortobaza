@@ -75,6 +75,7 @@ import {
   useTechCardList,
 } from "@/hooks/useStock";
 import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
+import { nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type GroupLinkDraft = { group: number; is_required: boolean | null };
@@ -621,7 +622,7 @@ export function TechCardsPanel() {
   ].filter((group) => group.cards.length > 0);
   const cardGroups = allCardGroups
     .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
-    .map((group) => ({ ...group, cards: group.cards.filter((row) => row.name.toLowerCase().includes(query)) }))
+    .map((group) => ({ ...group, cards: group.cards.filter((row) => nameMatches(row.name, query)) }))
     .filter((group) => group.cards.length > 0);
   const activeCount = cards.filter((row) => row.is_active).length;
   const basisLabel = (row: Pick<TechCardListItem, "kind" | "basis_weight_kg" | "basis_quantity">) =>

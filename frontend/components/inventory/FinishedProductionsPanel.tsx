@@ -16,6 +16,7 @@ import { useFinishedProductions, useProducers, useTechCardCategories, useTechCar
 import type { FinishedProduction, FinishedProductionBody, TechCard } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
+import { nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type LineDraft = {
@@ -114,7 +115,7 @@ export function FinishedProductionsPanel() {
   ].filter((group) => group.count > 0);
   const visible = rows.filter((row) => {
     const categoryOk = categoryFilter === "all" || matchesCategory(row, categoryFilter);
-    const nameOk = query === "" || row.lines.some((line) => line.name.toLowerCase().includes(query));
+    const nameOk = row.lines.some((line) => nameMatches(line.name, query));
     return categoryOk && nameOk;
   });
   const userId = currentUser.data?.id;
