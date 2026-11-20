@@ -13,6 +13,7 @@ import type { MenuImage, RecipeLine } from "@/lib/api/types";
 type CompositionLine = Omit<RecipeLine, "quantity"> & {
   quantity: string | null;
   nested_tech_card: number | null;
+  nested_section: number | null;
 };
 import { cn } from "@/lib/utils";
 
@@ -106,15 +107,19 @@ export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
           key: String(line.id),
           name: line.name,
           href:
-            line.nested_tech_card !== null
-              ? `/menu?card=${line.nested_tech_card}`
-              : componentHref(line.ingredient, line.semi_product),
+            line.nested_section !== null
+              ? null
+              : line.nested_tech_card !== null
+                ? `/menu?card=${line.nested_tech_card}`
+                : componentHref(line.ingredient, line.semi_product),
           tag:
-            line.nested_tech_card !== null
-              ? t("techCard")
-              : line.semi_product !== null
-                ? t("semiProduct").toLowerCase()
-                : null,
+            line.nested_section !== null
+              ? t("section")
+              : line.nested_tech_card !== null
+                ? t("techCard")
+                : line.semi_product !== null
+                  ? t("semiProduct").toLowerCase()
+                  : null,
           amount: formatLineAmount(line.quantity, units(line.quantity_unit)),
           loss: loss === "0" ? "—" : `${loss}%`,
           cost: line.cost === undefined ? null : formatMoney(line.cost),

@@ -566,7 +566,7 @@ export function SemiProductsPanel() {
               ]}
               images={current.images}
               compositionTitle={t("composition")}
-              lines={current.lines.map((line) => ({ ...line, nested_tech_card: null }))}
+              lines={current.lines.map((line) => ({ ...line, nested_tech_card: null, nested_section: null }))}
               sections={[]}
               method={current.method}
               onEdit={openEdit}

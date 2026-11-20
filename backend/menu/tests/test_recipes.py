@@ -32,6 +32,7 @@ from menu.recipes import (
     expand_semi_product,
     order_cost,
     semi_product_cost,
+    stock_line_cost,
     tech_card_cost,
     tech_card_cost_range,
     validate_order_item,
@@ -1028,3 +1029,125 @@ class ModifierDefaultTests(TestCase):
             [group["group"] for group in response.json()["modifier_groups"]],
             [self.menu.decor.pk, self.menu.filling.pk],
         )
+
+
+class OwnSectionBaseLineTests(TestCase):
+    def setUp(self):
+        self.menu = MenuFixture()
+        self.client = APIClient()
+        self.staff = User.objects.create_user("chef", password="x")
+        grant(self.staff, "edit_menu")
+        self.client.force_authenticate(self.staff)
+
+    def _line(self, ingredient: Ingredient, quantity: str, unit: str) -> dict:
+        return {
+            "ingredient": ingredient.pk,
+            "semi_product": None,
+            "nested_tech_card": None,
+            "quantity": quantity,
+            "quantity_unit": unit,
+            "loss_percent": "0",
+        }
+
+    def _payload(self, lines: list[dict], sections: list[dict]) -> dict:
+        return {
+            "name": "Layer cake",
+            "category": None,
+            "kind": TechCard.KIND_WEIGHTED,
+            "basis_weight_kg": "1",
+            "basis_quantity": None,
+            "method": "",
+            "is_active": True,
+            "lines": lines,
+            "sections": sections,
+            "modifier_groups": [],
+            "modifier_lines": [],
+        }
+
+    def _chapter(self) -> dict:
+        return {
+            "name": "Глава_1",
+            "method": "",
+            "lines": [
+                self._line(self.menu.flour, "100", UNIT_GRAM),
+                self._line(self.menu.sugar, "200", UNIT_GRAM),
+            ],
+        }
+
+    def _section_base_line(self, name: str) -> dict:
+        return {
+            "ingredient": None,
+            "semi_product": None,
+            "nested_tech_card": None,
+            "nested_section_name": name,
+            "quantity": None,
+            "quantity_unit": UNIT_GRAM,
+            "loss_percent": "0",
+        }
+
+    def test_base_line_stores_the_gram_sum_and_counts_the_chapter_once(self):
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload([self._section_base_line("Глава_1")], [self._chapter()]),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        line = body["lines"][0]
+        self.assertEqual(line["name"], "Глава_1")
+        self.assertEqual(line["nested_section"], body["sections"][0]["id"])
+        self.assertEqual(Decimal(line["quantity"]), Decimal("300"))
+        self.assertEqual(line["quantity_unit"], UNIT_GRAM)
+        self.assertEqual(Decimal(line["loss_percent"]), Decimal("0"))
+        card = TechCard.objects.get(pk=body["id"])
+        self.assertEqual(card.lines.get(section__isnull=True).nested_section.name, "Глава_1")
+        needs = expand_order_item(card, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.flour], Decimal("100"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("200"))
+        self.assertEqual(stock_line_cost(card.lines.get(nested_section__isnull=False)), Decimal("2.00"))
+        self.assertEqual(tech_card_cost(card, [], Decimal("1")), Decimal("2.00"))
+        doubled = expand_order_item(card, Decimal("2"), 1, [], [])
+        self.assertEqual(doubled[self.menu.flour], Decimal("200"))
+        self.assertEqual(doubled[self.menu.sugar], Decimal("400"))
+
+    def test_unreferenced_chapter_is_still_counted(self):
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload([], [self._chapter()]),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        card = TechCard.objects.get(pk=response.json()["id"])
+        needs = expand_order_item(card, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.flour], Decimal("100"))
+        self.assertEqual(needs[self.menu.sugar], Decimal("200"))
+
+    def test_unknown_section_name_is_rejected(self):
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload([self._section_base_line("Нет такой")], [self._chapter()]),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn("Unknown section", response.content.decode())
+
+    def test_milliliters_and_pieces_do_not_change_the_shown_grams(self):
+        section = self._chapter()
+        section["lines"].extend(
+            [
+                self._line(self.menu.cream, "50", UNIT_MILLILITER),
+                self._line(self.menu.paper, "2", UNIT_PIECE),
+            ]
+        )
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload([self._section_base_line("Глава_1")], [section]),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        self.assertEqual(Decimal(body["lines"][0]["quantity"]), Decimal("300"))
+        card = TechCard.objects.get(pk=body["id"])
+        needs = expand_order_item(card, Decimal("1"), 1, [], [])
+        self.assertEqual(needs[self.menu.cream], Decimal("50"))
+        self.assertEqual(needs[self.menu.paper], Decimal("2"))

@@ -40,6 +40,7 @@ import {
   defaultQuantityUnit,
   draftFromLine,
   emptyLine,
+  isSectionComponent,
   linesToBody,
   newDraftKey,
   techCardOptions,
@@ -84,6 +85,7 @@ type ModifierComposition = { scales_by_weight: boolean; lines: ComponentLineDraf
 
 type SectionDraft = {
   key: string;
+  id: number | null;
   name: string;
   method: string;
   lines: ComponentLineDraft[];
@@ -132,8 +134,60 @@ function savedLines(lines: ComponentLineDraft[]) {
   }));
 }
 
+function sectionGrams(section: SectionDraft): string {
+  let total = 0;
+  for (const line of section.lines) {
+    if (line.quantity_unit !== "g") continue;
+    const value = Number(line.quantity.replace(",", "."));
+    if (!Number.isFinite(value)) continue;
+    total += value;
+  }
+  return String(Math.round(total * 1000) / 1000);
+}
+
+function baseLines(draft: TechCardDraft): ComponentLineDraft[] {
+  return draft.lines.map((line) => {
+    if (!isSectionComponent(line.component)) return line;
+    const key = line.component.slice("section:".length);
+    const section = draft.sections.find((row) => row.key === key);
+    return {
+      ...line,
+      quantity: section === undefined ? "0" : sectionGrams(section),
+      quantity_unit: "g",
+      loss_percent: "0",
+    };
+  });
+}
+
+function savedBaseLines(draft: TechCardDraft) {
+  return baseLines(draft).map((line) => {
+    const key = isSectionComponent(line.component) ? line.component.slice("section:".length) : null;
+    const section = key === null ? undefined : draft.sections.find((row) => row.key === key);
+    const body = savedLines([line])[0];
+    return {
+      ...body,
+      nested_section_name: section === undefined ? null : section.name.trim(),
+      quantity: section === undefined ? body.quantity : null,
+      quantity_unit: section === undefined ? body.quantity_unit : "g",
+      loss_percent: section === undefined ? body.loss_percent : "0",
+    };
+  });
+}
+
+function sectionOptions(sections: SectionDraft[], label: string): ComponentOption[] {
+  return sections
+    .filter((section) => section.name.trim() !== "")
+    .map((section) => ({
+      value: `section:${section.key}`,
+      label: `${label}: ${section.name.trim()}`,
+      unit: "g",
+      ingredient: false,
+      grams_per_unit: null,
+    }));
+}
+
 function emptySection(): SectionDraft {
-  return { key: newDraftKey(), name: "", method: "", lines: [] };
+  return { key: newDraftKey(), id: null, name: "", method: "", lines: [] };
 }
 
 function importLine(line: TechCardImportLine): ComponentLineDraft {
@@ -173,6 +227,7 @@ function draftFromImport(row: TechCardImport): TechCardDraft {
     lines: row.lines.map(importLine),
     sections: row.sections.map((section) => ({
       key: newDraftKey(),
+      id: null,
       name: section.name,
       method: section.method,
       lines: section.lines.map(importLine),
@@ -219,6 +274,14 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     entry.lines.push(draftFromLine(line));
     compositions[line.modifier] = entry;
   }
+  const sections = row.sections.map((section) => ({
+    key: newDraftKey(),
+    id: section.id,
+    name: section.name,
+    method: section.method,
+    lines: section.lines.map(draftFromLine),
+  }));
+  const sectionKey = new Map(sections.map((section) => [section.id, section.key]));
   return {
     name: row.name,
     category: row.category,
@@ -231,13 +294,17 @@ function draftFrom(row: TechCard | null): TechCardDraft {
     shelf_life_hours: stored.hours,
     storage_temperature: row.storage_temperature ?? "",
     is_active: row.is_active,
-    lines: row.lines.map(draftFromLine),
-    sections: row.sections.map((section) => ({
-      key: newDraftKey(),
-      name: section.name,
-      method: section.method,
-      lines: section.lines.map(draftFromLine),
-    })),
+    lines: row.lines.map((line) => {
+      const draft = draftFromLine(line);
+      if (line.nested_section !== null) {
+        const key = sectionKey.get(line.nested_section);
+        draft.component = key === undefined ? "" : `section:${key}`;
+        draft.quantity_unit = "g";
+        draft.loss_percent = "0";
+      }
+      return draft;
+    }),
+    sections,
     groups: row.modifier_groups
       .filter((link) => !link.is_global)
       .map((link) => ({ group: link.group, is_required: link.is_required })),
@@ -671,7 +738,7 @@ export function TechCardsPanel() {
           shelf_life_seconds: shelfLifeSeconds(draft.shelf_life_days, draft.shelf_life_hours),
           storage_temperature: draft.storage_temperature.trim() === "" ? null : draft.storage_temperature.trim(),
           is_active: draft.is_active,
-          lines: savedLines(draft.lines),
+          lines: savedBaseLines(draft),
           sections: draft.sections.map((section) => ({
             name: section.name,
             method: section.method,
@@ -1218,9 +1285,9 @@ export function TechCardsPanel() {
               : t("baseCompositionPerPiece", { count: draft.basis_quantity })}
           </CardTitle>
           <ComponentLinesEditor
-            lines={draft.lines}
+            lines={baseLines(draft)}
             onChange={(lines) => setDraft({ ...draft, lines })}
-            options={options}
+            options={[...sectionOptions(draft.sections, t("section")), ...options]}
             extraColumn="loss"
             quantityLabel={t("quantity")}
             chooseQuantityUnit={true}
@@ -1261,7 +1328,11 @@ export function TechCardsPanel() {
                   size="icon"
                   aria-label={t("removeLine")}
                   onClick={() =>
-                    setDraft({ ...draft, sections: draft.sections.filter((row) => row.key !== section.key) })
+                    setDraft({
+                      ...draft,
+                      sections: draft.sections.filter((row) => row.key !== section.key),
+                      lines: draft.lines.filter((line) => line.component !== `section:${section.key}`),
+                    })
                   }
                 >
                   <Trash2 className="h-4 w-4" />

@@ -59,6 +59,10 @@ export function componentValue(ref: {
   return ref.ingredient !== null ? `ingredient:${ref.ingredient}` : `semi_product:${ref.semi_product}`;
 }
 
+export function isSectionComponent(value: string): boolean {
+  return value.startsWith("section:");
+}
+
 export function componentRef(
   value: string,
 ): ComponentRefBody & { finished_good: number | null; nested_tech_card: number | null } {
@@ -73,6 +77,9 @@ export function componentRef(
   }
   if (kind === "tech_card") {
     return { ingredient: null, semi_product: null, finished_good: null, nested_tech_card: pk };
+  }
+  if (kind === "section") {
+    return { ingredient: null, semi_product: null, finished_good: null, nested_tech_card: null };
   }
   return { ingredient: null, semi_product: pk, finished_good: null, nested_tech_card: null };
 }
@@ -206,6 +213,7 @@ export function ComponentLinesEditor({
       {lines.map((line, index) => {
         const option = options.find((row) => row.value === line.component);
         const price = linePrice === null ? null : linePrice(line);
+        const locked = isSectionComponent(line.component);
         return (
           <div
             key={line.key}
@@ -236,7 +244,8 @@ export function ComponentLinesEditor({
             <div className="relative">
               <Input
                 name="quantity"
-                required={quantityRequired}
+                required={quantityRequired && !locked}
+                readOnly={locked}
                 inputMode="decimal"
                 placeholder={quantityLabel}
                 value={line.quantity}
@@ -254,6 +263,7 @@ export function ComponentLinesEditor({
               <div className="relative">
                 <Input
                   name="loss_percent"
+                  readOnly={locked}
                   inputMode="decimal"
                   placeholder={t("lossPercent")}
                   value={line.loss_percent}

@@ -1500,6 +1500,7 @@ export const RecipeLineSchema = z.object({
 
 export const TechCardRecipeLineSchema = RecipeLineSchema.extend({
   nested_tech_card: z.number().nullable(),
+  nested_section: z.number().nullable(),
   quantity: z.string().nullable(),
 });
 
@@ -1776,7 +1777,7 @@ export type TechCardBody = {
   shelf_life_seconds: number | null;
   storage_temperature: string | null;
   is_active: boolean;
-  lines: TechCardRecipeLineBody[];
+  lines: (TechCardRecipeLineBody & { nested_section_name: string | null })[];
   sections: { name: string; method: string; lines: TechCardRecipeLineBody[] }[];
   modifier_groups: { group: number; is_required: boolean | null }[];
   modifier_lines: (TechCardRecipeLineBody & {

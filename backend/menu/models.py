@@ -505,6 +505,14 @@ class TechCardLine(ComponentRef):
         blank=True,
         verbose_name=_("Tech card"),
     )
+    nested_section = models.ForeignKey(
+        TechCardSection,
+        related_name="nested_in_lines",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Section"),
+    )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
 
     class Meta(ComponentRef.Meta):
@@ -518,16 +526,25 @@ class TechCardLine(ComponentRef):
                         ingredient__isnull=False,
                         semi_product__isnull=True,
                         nested_tech_card__isnull=True,
+                        nested_section__isnull=True,
                     )
                     | models.Q(
                         ingredient__isnull=True,
                         semi_product__isnull=False,
                         nested_tech_card__isnull=True,
+                        nested_section__isnull=True,
                     )
                     | models.Q(
                         ingredient__isnull=True,
                         semi_product__isnull=True,
                         nested_tech_card__isnull=False,
+                        nested_section__isnull=True,
+                    )
+                    | models.Q(
+                        ingredient__isnull=True,
+                        semi_product__isnull=True,
+                        nested_tech_card__isnull=True,
+                        nested_section__isnull=False,
                     )
                 ),
                 name="%(app_label)s_%(class)s_one_component",

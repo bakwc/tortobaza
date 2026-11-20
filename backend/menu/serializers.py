@@ -27,6 +27,7 @@ from menu.recipes import (
     missing_modifier_compositions,
     recipe_line_cost,
     semi_product_cost,
+    section_gram_quantity,
     stock_line_cost,
     tech_card_cost,
     tech_card_cost_range,
@@ -191,8 +192,25 @@ def component_payload(line) -> dict:
 
 
 def tech_card_line_payload(line, cost: Decimal | None) -> dict:
+    if line.nested_section_id is not None:
+        payload = {
+            "id": line.pk,
+            "ingredient": None,
+            "semi_product": None,
+            "name": line.nested_section.name,
+            "unit": UNIT_GRAM,
+            "quantity": str(line.quantity),
+            "loss_percent": str(line.loss_percent),
+            "quantity_unit": line.quantity_unit,
+        }
+        if cost is not None:
+            payload["cost"] = str(cost)
+        payload["nested_tech_card"] = None
+        payload["nested_section"] = line.nested_section_id
+        return payload
     payload = recipe_line_payload(line, cost)
     payload["nested_tech_card"] = line.nested_tech_card_id
+    payload["nested_section"] = None
     return payload
 
 
@@ -500,6 +518,29 @@ class TechCardLineInputSerializer(RecipeLineSerializer):
         return super().validate(attrs)
 
 
+class TechCardBaseLineInputSerializer(TechCardLineInputSerializer):
+    nested_section_name = serializers.CharField(allow_null=True, allow_blank=True, required=False)
+
+    def validate(self, attrs):
+        name = attrs["nested_section_name"] if "nested_section_name" in attrs else None
+        if name is not None:
+            name = name.strip()
+        if name == "":
+            name = None
+        attrs["nested_section_name"] = name
+        if name is not None:
+            if (
+                attrs["ingredient"] is not None
+                or attrs["semi_product"] is not None
+                or attrs["nested_tech_card"] is not None
+            ):
+                raise serializers.ValidationError(
+                    "Pass exactly one of ingredient, semi_product, nested_tech_card or nested_section_name."
+                )
+            return attrs
+        return super().validate(attrs)
+
+
 class TechCardSectionInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200)
     method = serializers.CharField(allow_blank=True, trim_whitespace=False)
@@ -559,7 +600,7 @@ class TechCardListItemSerializer(serializers.ModelSerializer):
 
 class TechCardSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
-    lines = TechCardLineInputSerializer(many=True, write_only=True)
+    lines = TechCardBaseLineInputSerializer(many=True, write_only=True)
     sections = TechCardSectionInputSerializer(many=True, write_only=True)
     modifier_groups = TechCardGroupInputSerializer(many=True, write_only=True)
     modifier_lines = TechCardModifierLineInputSerializer(many=True, write_only=True)
@@ -599,7 +640,7 @@ class TechCardSerializer(serializers.ModelSerializer):
         data["lines"] = [
             tech_card_line_payload(line, stock_line_cost(line) if costs else None)
             for line in instance.lines.filter(section__isnull=True).select_related(
-                "ingredient", "semi_product", "nested_tech_card"
+                "ingredient", "semi_product", "nested_tech_card", "nested_section"
             )
         ]
         data["sections"] = [
@@ -644,6 +685,7 @@ class TechCardSerializer(serializers.ModelSerializer):
             payload["modifier"] = line.modifier_id
             payload["scales_by_weight"] = line.scales_by_weight
             payload["nested_tech_card"] = line.nested_tech_card_id
+            payload["nested_section"] = None
             payload["is_global"] = line.pk is None
             modifier_lines.append(payload)
         data["modifier_lines"] = modifier_lines
@@ -729,6 +771,7 @@ class TechCardSerializer(serializers.ModelSerializer):
         instance.sections.all().delete()
         instance.modifier_groups.all().delete()
         instance.modifier_lines.all().delete()
+        saved_sections: dict[str, TechCardSection] = {}
         for position, section in enumerate(children["sections"]):
             saved = TechCardSection.objects.create(
                 tech_card=instance,
@@ -736,6 +779,7 @@ class TechCardSerializer(serializers.ModelSerializer):
                 method=section["method"],
                 position=position,
             )
+            saved_sections[saved.name] = saved
             for line_position, line in enumerate(section["lines"]):
                 TechCardLine.objects.create(
                     tech_card=instance,
@@ -744,6 +788,18 @@ class TechCardSerializer(serializers.ModelSerializer):
                     **line,
                 )
         for position, line in enumerate(children["lines"]):
+            section_name = line.pop("nested_section_name")
+            if section_name is not None:
+                if section_name not in saved_sections:
+                    raise serializers.ValidationError({"lines": f"Unknown section {section_name}."})
+                section = saved_sections[section_name]
+                line["ingredient"] = None
+                line["semi_product"] = None
+                line["nested_tech_card"] = None
+                line["nested_section"] = section
+                line["quantity"] = section_gram_quantity(section)
+                line["quantity_unit"] = UNIT_GRAM
+                line["loss_percent"] = Decimal("0")
             TechCardLine.objects.create(tech_card=instance, position=position, **line)
         for position, row in enumerate(children["modifier_groups"]):
             TechCardModifierGroup.objects.create(

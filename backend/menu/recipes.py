@@ -18,6 +18,7 @@ from menu.models import (
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
+    TechCardSection,
 )
 
 Component = Ingredient | SemiProduct
@@ -94,8 +95,25 @@ def _semi_lines(semi_product: SemiProduct):
 def _tech_card_lines(tech_card: TechCard):
     return _cached(
         ("tech_card_lines", tech_card.pk),
-        lambda: list(tech_card.lines.select_related("ingredient", "semi_product", "nested_tech_card")),
+        lambda: list(
+            tech_card.lines.select_related("ingredient", "semi_product", "nested_tech_card", "nested_section")
+        ),
     )
+
+
+def _section_lines(section: TechCardSection):
+    return _cached(
+        ("section_lines", section.pk),
+        lambda: list(section.lines.select_related("ingredient", "semi_product", "nested_tech_card")),
+    )
+
+
+def section_gram_quantity(section: TechCardSection) -> Decimal:
+    total = Decimal("0")
+    for line in section.lines.all():
+        if line.quantity is not None and line.quantity_unit == UNIT_GRAM:
+            total += line.quantity
+    return total
 
 
 def _explode(component: Component, quantity: Decimal, needs: Needs, path: frozenset[int]) -> None:
@@ -297,6 +315,10 @@ def line_needs(component: Ingredient | SemiProduct | TechCard, quantity: Decimal
 
 
 def _line_needs(line, factor: Decimal, needs: Needs) -> None:
+    if isinstance(line, TechCardLine) and line.nested_section_id is not None:
+        for section_line in _section_lines(line.nested_section):
+            _line_needs(section_line, factor, needs)
+        return
     if line.quantity is None:
         return
     if line.nested_tech_card_id is not None:
@@ -327,7 +349,11 @@ def expand_order_item(
         else:
             weight_factor = _ONE
             line_factor = item_quantity / Decimal(tech_card.basis_quantity)
-        for line in _tech_card_lines(tech_card):
+        card_lines = _tech_card_lines(tech_card)
+        referenced = {line.nested_section_id for line in card_lines if line.nested_section_id is not None}
+        for line in card_lines:
+            if line.section_id is not None and line.section_id in referenced:
+                continue
             _line_needs(line, line_factor, needs)
         if modifiers:
             by_modifier = defaultdict(list)
@@ -401,6 +427,13 @@ def semi_product_cost(semi_product: SemiProduct) -> Decimal:
 
 
 def stock_line_cost(line) -> Decimal | None:
+    if isinstance(line, TechCardLine) and line.nested_section_id is not None:
+        total = Decimal("0")
+        for section_line in _section_lines(line.nested_section):
+            cost = stock_line_cost(section_line)
+            if cost is not None:
+                total += cost
+        return total.quantize(_CENT)
     if line.quantity is None:
         return None
     if isinstance(line, (TechCardLine, TechCardModifierLine)) and line.nested_tech_card_id is not None:
