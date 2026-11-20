@@ -16,7 +16,7 @@ import { useFinishedProductions, useProducers, useTechCardCategories, useTechCar
 import type { FinishedProduction, FinishedProductionBody, TechCard } from "@/lib/api/types";
 import type { CrmItemModifierDraft } from "@/lib/crmItems";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
-import { nameMatches } from "@/lib/nameMatch";
+import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type LineDraft = {
@@ -31,6 +31,15 @@ type FinishedDraft = { date: string; comment: string; created_by: string; lines:
 
 function emptyLine(): LineDraft {
   return { key: newDraftKey(), tech_card: "", weight_kg: "", modifiers: [], quantity: "1" };
+}
+
+function bestMatchedName(names: string[], query: string): string {
+  let best = "";
+  for (const name of names) {
+    if (!nameMatches(name, query)) continue;
+    if (best === "" || compareNameMatch(name, best, query) < 0) best = name;
+  }
+  return best;
 }
 
 function draftFrom(row: FinishedProduction | null, selfId: number): FinishedDraft {
@@ -113,11 +122,25 @@ export function FinishedProductionsPanel() {
       count: rows.filter((row) => matchesCategory(row, "none")).length,
     },
   ].filter((group) => group.count > 0);
-  const visible = rows.filter((row) => {
-    const categoryOk = categoryFilter === "all" || matchesCategory(row, categoryFilter);
-    const nameOk = row.lines.some((line) => nameMatches(line.name, query));
-    return categoryOk && nameOk;
-  });
+  const visible = rows
+    .filter((row) => {
+      const categoryOk = categoryFilter === "all" || matchesCategory(row, categoryFilter);
+      const nameOk = row.lines.some((line) => nameMatches(line.name, query));
+      return categoryOk && nameOk;
+    })
+    .sort((left, right) =>
+      compareNameMatch(
+        bestMatchedName(
+          left.lines.map((line) => line.name),
+          query,
+        ),
+        bestMatchedName(
+          right.lines.map((line) => line.name),
+          query,
+        ),
+        query,
+      ),
+    );
   const userId = currentUser.data?.id;
   const canChange = (row: FinishedProduction | null) => {
     if (canEditAll) return true;

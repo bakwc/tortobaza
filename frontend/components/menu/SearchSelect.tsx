@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { nameMatches, namesEqual } from "@/lib/nameMatch";
+import { compareNameMatch, nameMatches, namesEqual } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 export type SearchSelectOption = { value: string; label: string };
@@ -74,7 +74,9 @@ export function SearchSelect({
   const [placement, setPlacement] = useState({ upward: false, maxHeight: 240 });
   const selectedLabel = options.find((option) => option.value !== "" && option.value === value)?.label ?? "";
   const typed = open && edited ? query.trim() : "";
-  const filtered = options.filter((option) => nameMatches(option.label, typed));
+  const filtered = options
+    .filter((option) => nameMatches(option.label, typed))
+    .sort((left, right) => compareNameMatch(left.label, right.label, typed));
   const showCreate =
     onCreate !== null &&
     typed !== "" &&

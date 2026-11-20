@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardTitle, Field, QueryState, formatMoney, formatQuantity, formatUnitCost } from "@/components/menu/ui";
 import { useIngredientCategories, useIngredients, useStockLevels, useStockMovements } from "@/hooks/useStock";
 import type { StockRow } from "@/lib/api/types";
-import { nameMatches } from "@/lib/nameMatch";
+import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type StockGroup = { key: string; label: string; rows: StockRow[] };
@@ -125,7 +125,12 @@ export function StockPanel() {
   const query = search.trim().toLowerCase();
   const groups = allGroups
     .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
-    .map((group) => ({ ...group, rows: group.rows.filter((row) => nameMatches(row.name, query)) }))
+    .map((group) => ({
+      ...group,
+      rows: group.rows
+        .filter((row) => nameMatches(row.name, query))
+        .sort((left, right) => compareNameMatch(left.name, right.name, query)),
+    }))
     .filter((group) => group.rows.length > 0);
   const visibleRows = groups.flatMap((group) => group.rows);
   const hasCosts = visibleRows.some((row) => row.value !== undefined);

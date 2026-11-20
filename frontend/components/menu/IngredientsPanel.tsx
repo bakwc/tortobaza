@@ -24,7 +24,7 @@ import { useCan } from "@/hooks/useAuth";
 import { useIngredientCategories, useIngredients, useSemiProducts, useTechCards } from "@/hooks/useStock";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Ingredient, IngredientBody, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
-import { nameMatches } from "@/lib/nameMatch";
+import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
@@ -382,7 +382,12 @@ export function IngredientsPanel() {
   ].filter((group) => group.rows.length > 0);
   const groups = allGroups
     .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
-    .map((group) => ({ ...group, rows: group.rows.filter((row) => nameMatches(row.name, query)) }))
+    .map((group) => ({
+      ...group,
+      rows: group.rows
+        .filter((row) => nameMatches(row.name, query))
+        .sort((left, right) => compareNameMatch(left.name, right.name, query)),
+    }))
     .filter((group) => group.rows.length > 0);
   const activeCount = rows.filter((row) => row.is_active).length;
 

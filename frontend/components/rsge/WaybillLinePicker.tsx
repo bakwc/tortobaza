@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { listPlacement } from "@/components/menu/SearchSelect";
 import { formatQuantity } from "@/components/menu/ui";
 import type { Ingredient, MenuUnit, WaybillSupplyDraftLine } from "@/lib/api/types";
-import { nameMatches, namesEqual } from "@/lib/nameMatch";
+import { compareNameMatch, nameMatches, namesEqual } from "@/lib/nameMatch";
 import { cn } from "@/lib/utils";
 
 type PickerItem =
@@ -69,9 +69,10 @@ function pickerItems(
       pinnedIds.add(ingredientId);
     }
   }
+  const suggestions: PickerItem[] = [];
   line.suggestions.forEach((suggestion, index) => {
     if (suggestion.ingredient_id === null) {
-      items.push({
+      suggestions.push({
         kind: "aiCreate",
         key: `ai-create-${index}`,
         unit: suggestion.unit,
@@ -82,7 +83,7 @@ function pickerItems(
     const match = ingredients.find((item) => item.id === suggestion.ingredient_id);
     if (match === undefined || !matches(match.name, needle)) return;
     const ingredientId = String(match.id);
-    items.push({
+    suggestions.push({
       kind: "suggestion",
       key: `ai-${ingredientId}-${suggestion.factor}-${index}`,
       ingredientId,
@@ -93,13 +94,25 @@ function pickerItems(
     });
     pinnedIds.add(ingredientId);
   });
-  for (const item of ingredients) {
-    const ingredientId = String(item.id);
-    if (pinnedIds.has(ingredientId)) continue;
-    if (!item.is_active && ingredientId !== selectedId) continue;
-    if (!matches(item.name, needle)) continue;
-    items.push({ kind: "ingredient", key: `ingredient-${ingredientId}`, ingredientId, name: item.name });
+  const named = suggestions.flatMap((item) => (item.kind === "suggestion" ? [item] : []));
+  named.sort((left, right) => compareNameMatch(left.name, right.name, needle));
+  let namedIndex = 0;
+  for (let index = 0; index < suggestions.length; index += 1) {
+    const item = named[namedIndex];
+    if (suggestions[index].kind !== "suggestion" || item === undefined) continue;
+    suggestions[index] = item;
+    namedIndex += 1;
   }
+  items.push(...suggestions);
+  const catalog = ingredients.flatMap((item) => {
+    const ingredientId = String(item.id);
+    if (pinnedIds.has(ingredientId)) return [];
+    if (!item.is_active && ingredientId !== selectedId) return [];
+    if (!matches(item.name, needle)) return [];
+    return [{ kind: "ingredient" as const, key: `ingredient-${ingredientId}`, ingredientId, name: item.name }];
+  });
+  catalog.sort((left, right) => compareNameMatch(left.name, right.name, needle));
+  items.push(...catalog);
   if (createName !== "") {
     const exact = ingredients.some((item) => namesEqual(item.name, createName));
     if (!exact) items.push({ kind: "create", key: "create", name: createName });
