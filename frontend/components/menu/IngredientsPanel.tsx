@@ -99,10 +99,12 @@ function ingredientRequest(draft: IngredientBody): IngredientBody {
     grams_per_unit: gramsPerUnitRequest(draft.unit, draft.grams_per_unit),
     sale_price: draft.sale_price === null ? null : draft.sale_price.replace(",", "."),
   };
-  if (draft.avg_cost !== null && draft.cost_quantity !== null) {
+  if (draft.cost_quantity !== null) {
     const quantity = draft.cost_quantity.replace(",", ".");
     body.cost_quantity = quantity;
-    body.avg_cost = trimDecimal(decimalNumber(draft.avg_cost) / decimalNumber(quantity));
+    if (draft.avg_cost !== null && draft.avg_cost.trim() !== "") {
+      body.avg_cost = trimDecimal(decimalNumber(draft.avg_cost) / decimalNumber(quantity));
+    }
   }
   if (body.avg_cost === null) {
     Reflect.deleteProperty(body, "avg_cost");
@@ -655,7 +657,6 @@ export function IngredientsPanel() {
             {draft.avg_cost !== null && draft.cost_quantity !== null ? (
               <Field label={t("avgCost")}>
                 <Input
-                  required
                   inputMode="decimal"
                   value={draft.avg_cost}
                   onChange={(event) => setDraft({ ...draft, avg_cost: event.target.value })}

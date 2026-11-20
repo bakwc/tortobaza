@@ -20,13 +20,12 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         inputMode={inputMode}
         pattern={resolvedPattern}
         onChange={(event) => {
-          if (
-            (inputMode === "decimal" || inputMode === "numeric") &&
-            event.currentTarget.value.includes(",")
-          ) {
+          if (inputMode === "decimal" || inputMode === "numeric") {
             const input = event.currentTarget;
-            const next = input.value.replace(/,/g, ".");
-            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, next);
+            const next = input.value.replace(/,/g, ".").trim();
+            if (next !== input.value) {
+              Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, next);
+            }
           }
           onChange?.(event);
         }}
