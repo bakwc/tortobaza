@@ -43,6 +43,7 @@ from attendance.salary import (
 from catalog.responsive_urls import detail_image
 from crm.analytics import client_order_counts, client_orders
 from crm.analytics import clients as analytics_clients
+from crm.analytics import cashflow as analytics_cashflow
 from crm.analytics import cogs as analytics_cogs
 from crm.analytics import employees as analytics_employees
 from crm.analytics import overview as analytics_overview
@@ -916,6 +917,20 @@ class AnalyticsCogsView(APIView):
         if month is None:
             month = f"{today.year:04d}-{today.month:02d}"
         return Response(analytics_cogs(month, today))
+
+
+class AnalyticsCashflowView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
+
+    def get(self, request):
+        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        today = _tbilisi_now().date()
+        month = query_serializer.validated_data.get("month")
+        if month is None:
+            month = f"{today.year:04d}-{today.month:02d}"
+        return Response(analytics_cashflow(month))
 
 
 class AnalyticsEmployeesView(APIView):

@@ -12,7 +12,13 @@ from django.utils import timezone
 from accounts.models import UserProfile, chef_identity
 from attendance.models import AttendanceEvent
 from attendance.salary import compute_day_worked_seconds, daily_monthly_share
-from crm.models import AnalyticsOrderComposition, CrmOrder, CrmOrderEvent
+from crm.models import (
+    AnalyticsOrderComposition,
+    CrmOrder,
+    CrmOrderEvent,
+    ExchangeRateSnapshot,
+    FinancialTransaction,
+)
 from crm.phone import extract_phones
 from menu.models import Ingredient, ModifierGroup, SemiProduct, TechCard
 from menu.recipes import expand_order_item, item_food_cost, tech_card_group_links
@@ -1685,3 +1691,125 @@ def _group_revenue(customers: list[Customer]) -> Decimal:
     for customer in customers:
         total += _revenue(customer.orders)
     return total
+
+
+_CASHFLOW_INCOME_TYPES = (
+    FinancialTransaction.INCOME_ONLINE,
+    FinancialTransaction.INCOME_TERMINAL,
+    FinancialTransaction.INCOME_CASH,
+    FinancialTransaction.INCOME_TRANSFER,
+)
+_CASHFLOW_OPERATING_EXPENSE_TYPES = (
+    FinancialTransaction.EXPENSE_SALARY,
+    FinancialTransaction.EXPENSE_RENT,
+    FinancialTransaction.EXPENSE_PRODUCTS,
+    FinancialTransaction.EXPENSE_CONSUMABLES,
+    FinancialTransaction.EXPENSE_FEES,
+    FinancialTransaction.EXPENSE_TAXI,
+    FinancialTransaction.EXPENSE_GASOLINE,
+    FinancialTransaction.EXPENSE_MARKETING,
+    FinancialTransaction.EXPENSE_TRAINING,
+)
+_CASHFLOW_FINANCING_KINDS = (
+    FinancialTransaction.KIND_INVESTMENT,
+    FinancialTransaction.KIND_WITHDRAWAL,
+)
+_CASHFLOW_UNCLASSIFIED_KEYS = (
+    FinancialTransaction.KIND_INCOME,
+    FinancialTransaction.KIND_EXPENSE,
+    FinancialTransaction.KIND_CORRECTION,
+    FinancialTransaction.KIND_OTHER,
+)
+
+
+def _cashflow_gel(amount: Decimal, currency: str, rates: dict[str, str] | None) -> Decimal:
+    converted = amount if currency == "GEL" else amount * Decimal(rates[currency])
+    return converted.quantize(_MONEY, rounding=ROUND_HALF_UP)
+
+
+def _cashflow_lines(order: tuple[str, ...], amounts: dict[str, Decimal]) -> list[dict[str, str]]:
+    lines = []
+    for key in order:
+        amount = amounts[key]
+        if amount == 0:
+            continue
+        lines.append({"key": key, "amount": _money(amount)})
+    return lines
+
+
+def _cashflow_total(amounts: dict[str, Decimal]) -> Decimal:
+    total = Decimal("0")
+    for amount in amounts.values():
+        total += amount
+    return total
+
+
+def cashflow(month: str) -> dict:
+    start, end = _month_bounds(month)
+    snapshot = ExchangeRateSnapshot.objects.order_by("-fetched_at", "-pk").first()
+    rates = None if snapshot is None else snapshot.rates
+    inflows = {key: Decimal("0") for key in _CASHFLOW_INCOME_TYPES}
+    outflows = {key: Decimal("0") for key in _CASHFLOW_OPERATING_EXPENSE_TYPES}
+    investing = {FinancialTransaction.EXPENSE_EQUIPMENT: Decimal("0")}
+    financing = {key: Decimal("0") for key in _CASHFLOW_FINANCING_KINDS}
+    unclassified = {key: Decimal("0") for key in _CASHFLOW_UNCLASSIFIED_KEYS}
+    opening = Decimal("0")
+    transfers = Decimal("0")
+    rows = FinancialTransaction.objects.filter(date__lte=end).select_related("account")
+    for tx in rows:
+        gel = _cashflow_gel(tx.amount, tx.account.currency, rates)
+        if tx.date < start:
+            opening += gel
+            continue
+        if tx.kind == FinancialTransaction.KIND_INCOME:
+            if tx.income_type in inflows:
+                inflows[tx.income_type] += gel
+            else:
+                unclassified[FinancialTransaction.KIND_INCOME] += gel
+        elif tx.kind == FinancialTransaction.KIND_EXPENSE:
+            if tx.expense_type == FinancialTransaction.EXPENSE_EQUIPMENT:
+                investing[FinancialTransaction.EXPENSE_EQUIPMENT] += gel
+            elif tx.expense_type in outflows:
+                outflows[tx.expense_type] += gel
+            else:
+                unclassified[FinancialTransaction.KIND_EXPENSE] += gel
+        elif tx.kind == FinancialTransaction.KIND_INVESTMENT:
+            financing[FinancialTransaction.KIND_INVESTMENT] += gel
+        elif tx.kind == FinancialTransaction.KIND_WITHDRAWAL:
+            financing[FinancialTransaction.KIND_WITHDRAWAL] += gel
+        elif tx.kind == FinancialTransaction.KIND_TRANSFER:
+            transfers += gel
+        elif tx.kind == FinancialTransaction.KIND_CORRECTION:
+            unclassified[FinancialTransaction.KIND_CORRECTION] += gel
+        elif tx.kind == FinancialTransaction.KIND_OTHER:
+            unclassified[FinancialTransaction.KIND_OTHER] += gel
+        else:
+            raise ValueError(tx.kind)
+    operating_total = _cashflow_total(inflows) + _cashflow_total(outflows)
+    investing_total = _cashflow_total(investing)
+    financing_total = _cashflow_total(financing)
+    unclassified_total = _cashflow_total(unclassified)
+    net = operating_total + investing_total + financing_total + unclassified_total
+    return {
+        "opening": _money(opening),
+        "operating": {
+            "inflows": _cashflow_lines(_CASHFLOW_INCOME_TYPES, inflows),
+            "outflows": _cashflow_lines(_CASHFLOW_OPERATING_EXPENSE_TYPES, outflows),
+            "total": _money(operating_total),
+        },
+        "investing": {
+            "lines": _cashflow_lines((FinancialTransaction.EXPENSE_EQUIPMENT,), investing),
+            "total": _money(investing_total),
+        },
+        "financing": {
+            "lines": _cashflow_lines(_CASHFLOW_FINANCING_KINDS, financing),
+            "total": _money(financing_total),
+        },
+        "unclassified": {
+            "lines": _cashflow_lines(_CASHFLOW_UNCLASSIFIED_KEYS, unclassified),
+            "total": _money(unclassified_total),
+        },
+        "net": _money(net),
+        "transfers": _money(transfers),
+        "closing": _money(opening + net + transfers),
+    }

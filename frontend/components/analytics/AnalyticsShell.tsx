@@ -13,7 +13,7 @@ import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { Link } from "@/i18n/navigation";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
-export type AnalyticsSection = "overview" | "pace" | "load" | "clients" | "products" | "cogs" | "employees";
+export type AnalyticsSection = "overview" | "pace" | "load" | "clients" | "products" | "cogs" | "employees" | "cashflow";
 
 const SECTIONS: { section: AnalyticsSection; href: string }[] = [
   { section: "overview", href: "/analytics" },
@@ -23,6 +23,7 @@ const SECTIONS: { section: AnalyticsSection; href: string }[] = [
   { section: "products", href: "/analytics/products" },
   { section: "cogs", href: "/analytics/cogs" },
   { section: "employees", href: "/analytics/employees" },
+  { section: "cashflow", href: "/analytics/cashflow" },
 ];
 
 export function AnalyticsShell({ section, children }: { section: AnalyticsSection; children: ReactNode }) {
@@ -54,7 +55,12 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
   const showPeriod =
-    section === "pace" || section === "load" || section === "products" || section === "cogs" || section === "employees";
+    section === "pace" ||
+    section === "load" ||
+    section === "products" ||
+    section === "cogs" ||
+    section === "employees" ||
+    section === "cashflow";
 
   if (!allowed) {
     return (

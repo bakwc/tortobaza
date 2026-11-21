@@ -20,6 +20,7 @@ from crm.telegram_views import (
 )
 from crm.views import (
     AnalyticsClientsView,
+    AnalyticsCashflowView,
     AnalyticsCogsView,
     AnalyticsEmployeesView,
     AnalyticsLoadView,
@@ -97,6 +98,7 @@ urlpatterns = [
     path("crm/analytics/clients/", AnalyticsClientsView.as_view(), name="crm-analytics-clients"),
     path("crm/analytics/products/", AnalyticsProductsView.as_view(), name="crm-analytics-products"),
     path("crm/analytics/cogs/", AnalyticsCogsView.as_view(), name="crm-analytics-cogs"),
+    path("crm/analytics/cashflow/", AnalyticsCashflowView.as_view(), name="crm-analytics-cashflow"),
     path("crm/analytics/employees/", AnalyticsEmployeesView.as_view(), name="crm-analytics-employees"),
     path("crm/expenses/", CrmExpensesView.as_view(), name="crm-expenses"),
     path("crm/salaries/", CrmSalariesView.as_view(), name="crm-salaries"),

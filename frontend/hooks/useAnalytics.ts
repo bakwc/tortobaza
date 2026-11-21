@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type {
+  AnalyticsCashflow,
   AnalyticsClients,
   AnalyticsCogs,
   AnalyticsEmployees,
@@ -48,6 +49,14 @@ export function useAnalyticsProducts(month: string) {
   return useQuery<AnalyticsProducts>({
     queryKey: ["analytics-products", month] as const,
     queryFn: () => api.getAnalyticsProducts(month),
+    staleTime: 0,
+  });
+}
+
+export function useAnalyticsCashflow(month: string) {
+  return useQuery<AnalyticsCashflow>({
+    queryKey: ["analytics-cashflow", month] as const,
+    queryFn: () => api.getAnalyticsCashflow(month),
     staleTime: 0,
   });
 }
