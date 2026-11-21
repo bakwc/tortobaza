@@ -77,6 +77,7 @@ class CashflowTests(TestCase):
                 {"key": "online", "amount": "20.00"},
                 {"key": "cash", "amount": "30.00"},
                 {"key": "transfer", "amount": "40.00"},
+                {"key": "", "amount": "11.00"},
             ],
         )
         self.assertEqual(
@@ -91,9 +92,10 @@ class CashflowTests(TestCase):
                 {"key": "gasoline", "amount": "-2.00"},
                 {"key": "marketing", "amount": "-3.00"},
                 {"key": "training", "amount": "-4.00"},
+                {"key": "", "amount": "-12.00"},
             ],
         )
-        self.assertEqual(report["operating"]["total"], "45.00")
+        self.assertEqual(report["operating"]["total"], "44.00")
         self.assertEqual(report["investing"], {"lines": [{"key": "equipment", "amount": "-50.00"}], "total": "-50.00"})
         self.assertEqual(
             report["financing"],
@@ -109,12 +111,10 @@ class CashflowTests(TestCase):
             report["unclassified"],
             {
                 "lines": [
-                    {"key": "income", "amount": "11.00"},
-                    {"key": "expense", "amount": "-12.00"},
                     {"key": "correction", "amount": "-1.00"},
                     {"key": "other", "amount": "3.00"},
                 ],
-                "total": "1.00",
+                "total": "2.00",
             },
         )
         self.assertEqual(report["net"], "51.00")

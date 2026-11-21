@@ -1229,6 +1229,8 @@
     "cogsShareOfRevenue": "წილი შემოსავალში",
     "cogsEmpty": "ამ თვეში პოზიციები დათვლილი თვითღირებულებით არ არის.",
     "cashflowStatement": "ფულადი სახსრების მოძრაობა",
+    "cashflowItem": "მუხლი",
+    "cashflowAmount": "თანხა",
     "cashflowOpening": "ნაშთი დასაწყისში",
     "cashflowOperating": "საოპერაციო საქმიანობა",
     "cashflowInflows": "შემოსულობები",

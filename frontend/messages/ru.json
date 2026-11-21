@@ -1229,6 +1229,8 @@
     "cogsShareOfRevenue": "Доля в выручке",
     "cogsEmpty": "В этом месяце нет позиций с посчитанной себестоимостью.",
     "cashflowStatement": "Движение денежных средств",
+    "cashflowItem": "Статья",
+    "cashflowAmount": "Сумма",
     "cashflowOpening": "Остаток на начало",
     "cashflowOperating": "Операционная деятельность",
     "cashflowInflows": "Поступления",

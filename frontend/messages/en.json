@@ -1229,6 +1229,8 @@
     "cogsShareOfRevenue": "Share of revenue",
     "cogsEmpty": "This month has no items with a calculated food cost.",
     "cashflowStatement": "Cash flow statement",
+    "cashflowItem": "Item",
+    "cashflowAmount": "Amount",
     "cashflowOpening": "Opening balance",
     "cashflowOperating": "Operating activities",
     "cashflowInflows": "Receipts",

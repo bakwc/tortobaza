@@ -1693,11 +1693,13 @@ def _group_revenue(customers: list[Customer]) -> Decimal:
     return total
 
 
+_CASHFLOW_UNTYPED = ""
 _CASHFLOW_INCOME_TYPES = (
     FinancialTransaction.INCOME_ONLINE,
     FinancialTransaction.INCOME_TERMINAL,
     FinancialTransaction.INCOME_CASH,
     FinancialTransaction.INCOME_TRANSFER,
+    _CASHFLOW_UNTYPED,
 )
 _CASHFLOW_OPERATING_EXPENSE_TYPES = (
     FinancialTransaction.EXPENSE_SALARY,
@@ -1709,14 +1711,13 @@ _CASHFLOW_OPERATING_EXPENSE_TYPES = (
     FinancialTransaction.EXPENSE_GASOLINE,
     FinancialTransaction.EXPENSE_MARKETING,
     FinancialTransaction.EXPENSE_TRAINING,
+    _CASHFLOW_UNTYPED,
 )
 _CASHFLOW_FINANCING_KINDS = (
     FinancialTransaction.KIND_INVESTMENT,
     FinancialTransaction.KIND_WITHDRAWAL,
 )
 _CASHFLOW_UNCLASSIFIED_KEYS = (
-    FinancialTransaction.KIND_INCOME,
-    FinancialTransaction.KIND_EXPENSE,
     FinancialTransaction.KIND_CORRECTION,
     FinancialTransaction.KIND_OTHER,
 )
@@ -1762,17 +1763,14 @@ def cashflow(month: str) -> dict:
             opening += gel
             continue
         if tx.kind == FinancialTransaction.KIND_INCOME:
-            if tx.income_type in inflows:
-                inflows[tx.income_type] += gel
-            else:
-                unclassified[FinancialTransaction.KIND_INCOME] += gel
+            key = tx.income_type if tx.income_type in inflows else _CASHFLOW_UNTYPED
+            inflows[key] += gel
         elif tx.kind == FinancialTransaction.KIND_EXPENSE:
             if tx.expense_type == FinancialTransaction.EXPENSE_EQUIPMENT:
                 investing[FinancialTransaction.EXPENSE_EQUIPMENT] += gel
-            elif tx.expense_type in outflows:
-                outflows[tx.expense_type] += gel
             else:
-                unclassified[FinancialTransaction.KIND_EXPENSE] += gel
+                key = tx.expense_type if tx.expense_type in outflows else _CASHFLOW_UNTYPED
+                outflows[key] += gel
         elif tx.kind == FinancialTransaction.KIND_INVESTMENT:
             financing[FinancialTransaction.KIND_INVESTMENT] += gel
         elif tx.kind == FinancialTransaction.KIND_WITHDRAWAL:
