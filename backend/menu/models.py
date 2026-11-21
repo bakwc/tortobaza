@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -180,9 +180,8 @@ class ComponentRef(models.Model):
         return self.semi_product
 
 
-LOSS_PERCENT_VALIDATORS = [
+LOSS_QUANTITY_VALIDATORS = [
     MinValueValidator(Decimal("0")),
-    MaxValueValidator(Decimal("99.99")),
 ]
 
 
@@ -195,12 +194,12 @@ class SemiProductLine(ComponentRef):
     )
     quantity = models.DecimalField(max_digits=12, decimal_places=3, verbose_name=_("Quantity"))
     quantity_unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Quantity unit"))
-    loss_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    loss_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
         default=Decimal("0"),
-        validators=LOSS_PERCENT_VALIDATORS,
-        verbose_name=_("Loss percent"),
+        validators=LOSS_QUANTITY_VALIDATORS,
+        verbose_name=_("Loss"),
     )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
 
@@ -490,12 +489,12 @@ class TechCardLine(ComponentRef):
         verbose_name=_("Quantity"),
     )
     quantity_unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Quantity unit"))
-    loss_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    loss_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
         default=Decimal("0"),
-        validators=LOSS_PERCENT_VALIDATORS,
-        verbose_name=_("Loss percent"),
+        validators=LOSS_QUANTITY_VALIDATORS,
+        verbose_name=_("Loss"),
     )
     nested_tech_card = models.ForeignKey(
         TechCard,
@@ -615,12 +614,12 @@ class TechCardModifierLine(ComponentRef):
         verbose_name=_("Quantity"),
     )
     quantity_unit = models.CharField(max_length=3, choices=UNIT_CHOICES, verbose_name=_("Quantity unit"))
-    loss_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+    loss_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
         default=Decimal("0"),
-        validators=LOSS_PERCENT_VALIDATORS,
-        verbose_name=_("Loss percent"),
+        validators=LOSS_QUANTITY_VALIDATORS,
+        verbose_name=_("Loss"),
     )
     nested_tech_card = models.ForeignKey(
         TechCard,

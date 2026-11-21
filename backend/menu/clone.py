@@ -64,7 +64,7 @@ def clone_tech_card(source: TechCard, name: str) -> TechCard:
             semi_product=line.semi_product,
             quantity=line.quantity,
             quantity_unit=line.quantity_unit,
-            loss_percent=line.loss_percent,
+            loss_quantity=line.loss_quantity,
             nested_tech_card=line.nested_tech_card,
             nested_section=None if line.nested_section_id is None else sections[line.nested_section_id],
             position=line.position,
@@ -85,7 +85,7 @@ def clone_tech_card(source: TechCard, name: str) -> TechCard:
             nested_tech_card=line.nested_tech_card,
             quantity=line.quantity,
             quantity_unit=line.quantity_unit,
-            loss_percent=line.loss_percent,
+            loss_quantity=line.loss_quantity,
             scales_by_weight=line.scales_by_weight,
             position=line.position,
         )
@@ -115,7 +115,7 @@ def clone_semi_product(source: SemiProduct, name: str) -> SemiProduct:
             semi_product=line.semi_product,
             quantity=line.quantity,
             quantity_unit=line.quantity_unit,
-            loss_percent=line.loss_percent,
+            loss_quantity=line.loss_quantity,
             position=line.position,
         )
     for image in source.images.all():

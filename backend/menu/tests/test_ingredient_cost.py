@@ -217,7 +217,7 @@ class IngredientCostApiTests(TestCase):
                     "nested_tech_card": None,
                     "quantity": "100",
                     "quantity_unit": "g",
-                    "loss_percent": "0",
+                    "loss_quantity": "0",
                 }
             ],
             "sections": [],

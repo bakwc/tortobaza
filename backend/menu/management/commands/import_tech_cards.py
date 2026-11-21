@@ -194,7 +194,7 @@ class Command(BaseCommand):
                     modifier=modifiers[(group.name, line["modifier"])],
                     quantity=Decimal(line["quantity"]),
                     quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
-                    loss_percent=Decimal(line["loss_percent"]),
+                    loss_quantity=Decimal(line["loss_quantity"]),
                     scales_by_weight=line["scales_by_weight"],
                     position=position,
                     **component,
@@ -225,7 +225,7 @@ class Command(BaseCommand):
                     section=saved,
                     quantity=Decimal(line["quantity"]),
                     quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
-                    loss_percent=Decimal(line["loss_percent"]),
+                    loss_quantity=Decimal(line["loss_quantity"]),
                     position=line_position,
                     **component,
                 )
@@ -252,7 +252,7 @@ class Command(BaseCommand):
                 **{parent_field: parent},
                 quantity=Decimal(row["quantity"]),
                 quantity_unit=(component["ingredient"] or component["semi_product"]).unit,
-                loss_percent=Decimal(row["loss_percent"]),
+                loss_quantity=Decimal(row["loss_quantity"]),
                 position=position,
                 **component,
             )

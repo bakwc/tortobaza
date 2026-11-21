@@ -50,7 +50,7 @@ class SemiProductLineInline(admin.TabularInline):
     model = SemiProductLine
     fk_name = "parent"
     extra = 1
-    fields = ["ingredient", "semi_product", "quantity", "quantity_unit", "loss_percent", "position"]
+    fields = ["ingredient", "semi_product", "quantity", "quantity_unit", "loss_quantity", "position"]
     autocomplete_fields = ["ingredient", "semi_product"]
 
 
@@ -101,7 +101,7 @@ class TechCardLineInline(admin.TabularInline):
     model = TechCardLine
     fk_name = "tech_card"
     extra = 1
-    fields = ["section", "ingredient", "semi_product", "nested_tech_card", "nested_section", "quantity", "quantity_unit", "loss_percent", "position"]
+    fields = ["section", "ingredient", "semi_product", "nested_tech_card", "nested_section", "quantity", "quantity_unit", "loss_quantity", "position"]
     autocomplete_fields = ["ingredient", "semi_product", "nested_tech_card"]
 
 
@@ -115,7 +115,7 @@ class TechCardModifierLineInline(admin.TabularInline):
     model = TechCardModifierLine
     fk_name = "tech_card"
     extra = 1
-    fields = ["modifier", "ingredient", "semi_product", "nested_tech_card", "quantity", "quantity_unit", "loss_percent", "scales_by_weight", "position"]
+    fields = ["modifier", "ingredient", "semi_product", "nested_tech_card", "quantity", "quantity_unit", "loss_quantity", "scales_by_weight", "position"]
     autocomplete_fields = ["modifier", "ingredient", "semi_product", "nested_tech_card"]
 
 

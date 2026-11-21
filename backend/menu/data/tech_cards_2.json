@@ -155,7 +155,7 @@
             {
               "semi_product": "Шоколадный бисквит",
               "quantity": "850",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -166,12 +166,12 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "175",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -182,17 +182,17 @@
             {
               "ingredient": "Катаифи",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фисташковая паста",
               "quantity": "160",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -203,12 +203,12 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -231,12 +231,12 @@
             {
               "semi_product": "Медовые коржи",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Грецкий орех",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -247,22 +247,22 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "85",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "35",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мёд",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -273,12 +273,12 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -289,7 +289,7 @@
             {
               "ingredient": "Грецкий орех",
               "quantity": "42",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -312,32 +312,32 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "133",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре кокоса",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "3.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "semi_product": "Кокосовый бисквит",
               "quantity": "800",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -348,12 +348,12 @@
             {
               "ingredient": "Кокосовая стружка",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -364,17 +364,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кокосовая стружка",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -397,17 +397,17 @@
             {
               "semi_product": "Морковный бисквит",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Курага",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Чернослив",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -418,17 +418,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "65",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -439,12 +439,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -455,7 +455,7 @@
             {
               "ingredient": "Грецкий орех",
               "quantity": "42",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -478,32 +478,32 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "84",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "151",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильная паста",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "12",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -514,12 +514,12 @@
             {
               "ingredient": "Воздушный рис",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -530,27 +530,27 @@
             {
               "semi_product": "Ванильный бисквит",
               "quantity": "800",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "72",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Воздушный рис",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -561,17 +561,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "160",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Криспи",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -594,17 +594,17 @@
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "240",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "360",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "semi_product": "Шоколадный бисквит",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -615,22 +615,22 @@
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундучная паста",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -641,22 +641,22 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундук",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вафельная крошка",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "70",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -667,22 +667,22 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундук",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Золото пищевое",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -705,17 +705,17 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "239",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "semi_product": "Шоколадный бисквит",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -726,12 +726,12 @@
             {
               "ingredient": "Шоколад",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -754,17 +754,17 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "239",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "semi_product": "Шоколадный бисквит",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -775,17 +775,17 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сублимированная клубника или малина",
               "quantity": "1.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -808,17 +808,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "239",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "semi_product": "Ванильный бисквит",
               "quantity": "1000",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -829,17 +829,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сублимированная клубника или малина",
               "quantity": "1.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }

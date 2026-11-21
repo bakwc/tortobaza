@@ -74,8 +74,8 @@ class ExpandOrderItemTests(TestCase):
             },
         )
 
-    def test_loss_percent_increases_gross_quantity(self):
-        TechCardLine.objects.filter(tech_card=self.menu.bento).update(loss_percent=Decimal("20"))
+    def test_loss_quantity_increases_gross_quantity(self):
+        TechCardLine.objects.filter(tech_card=self.menu.bento).update(loss_quantity=Decimal("25"))
         needs = expand_order_item(self.menu.bento, None, 1, [], [])
         self.assertEqual(needs, {self.menu.flour: Decimal("125")})
 
@@ -309,7 +309,7 @@ class GramsConversionTests(TestCase):
         TechCardLine.objects.filter(tech_card=self.menu.cake, ingredient=self.menu.cream).update(
             quantity=Decimal("100"),
             quantity_unit=UNIT_GRAM,
-            loss_percent=Decimal("20"),
+            loss_quantity=Decimal("25"),
         )
         needs = expand_order_item(self.menu.cake, Decimal("1"), 1, [], [])
         self.assertEqual(needs[self.menu.cream], Decimal("62.5"))
@@ -409,7 +409,7 @@ class GramsConversionTests(TestCase):
                 "ingredient": self.menu.paper.pk,
                 "semi_product": None,
                 "quantity": "1",
-                "loss_percent": "0",
+                "loss_quantity": "0",
                 "quantity_unit": UNIT_MILLILITER,
             }
         )
@@ -655,7 +655,7 @@ class NestedTechCardTests(TestCase):
                     "nested_tech_card": nested.pk,
                     "quantity": "1",
                     "quantity_unit": nested.unit,
-                    "loss_percent": "0",
+                    "loss_quantity": "0",
                     "scales_by_weight": False,
                 }
             ],
@@ -762,7 +762,7 @@ class NestedTechCardLineTests(TestCase):
             "nested_tech_card": card.pk,
             "quantity": quantity,
             "quantity_unit": card.unit,
-            "loss_percent": "0",
+            "loss_quantity": "0",
         }
 
     def test_base_and_section_lines_save_a_nested_tech_card(self):
@@ -1052,7 +1052,7 @@ class OwnSectionBaseLineTests(TestCase):
             "nested_tech_card": None,
             "quantity": quantity,
             "quantity_unit": unit,
-            "loss_percent": "0",
+            "loss_quantity": "0",
         }
 
     def _payload(self, lines: list[dict], sections: list[dict]) -> dict:
@@ -1088,7 +1088,7 @@ class OwnSectionBaseLineTests(TestCase):
             "nested_section_name": name,
             "quantity": None,
             "quantity_unit": UNIT_GRAM,
-            "loss_percent": "0",
+            "loss_quantity": "0",
         }
 
     def test_base_line_stores_the_gram_sum_and_counts_the_chapter_once(self):
@@ -1104,7 +1104,7 @@ class OwnSectionBaseLineTests(TestCase):
         self.assertEqual(line["nested_section"], body["sections"][0]["id"])
         self.assertEqual(Decimal(line["quantity"]), Decimal("300"))
         self.assertEqual(line["quantity_unit"], UNIT_GRAM)
-        self.assertEqual(Decimal(line["loss_percent"]), Decimal("0"))
+        self.assertEqual(Decimal(line["loss_quantity"]), Decimal("0"))
         card = TechCard.objects.get(pk=body["id"])
         self.assertEqual(card.lines.get(section__isnull=True).nested_section.name, "Глава_1")
         needs = expand_order_item(card, Decimal("1"), 1, [], [])
@@ -1198,7 +1198,7 @@ class CloneApiTests(TestCase):
             nested_section=self.section,
             quantity=Decimal("100"),
             quantity_unit=UNIT_GRAM,
-            loss_percent=Decimal("0"),
+            loss_quantity=Decimal("0"),
             position=2,
         )
         TechCardLine.objects.create(

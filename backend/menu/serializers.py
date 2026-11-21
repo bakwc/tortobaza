@@ -38,10 +38,9 @@ from menu.recipes import (
 
 QUANTITY_FIELD = {"max_digits": 12, "decimal_places": 3, "min_value": Decimal("0.001")}
 LOSS_FIELD = {
-    "max_digits": 5,
-    "decimal_places": 2,
+    "max_digits": 12,
+    "decimal_places": 3,
     "min_value": Decimal("0"),
-    "max_value": Decimal("99.99"),
 }
 
 
@@ -161,7 +160,7 @@ class ComponentLineSerializer(serializers.Serializer):
 
 
 class RecipeLineSerializer(ComponentLineSerializer):
-    loss_percent = serializers.DecimalField(**LOSS_FIELD)
+    loss_quantity = serializers.DecimalField(**LOSS_FIELD)
     quantity_unit = serializers.ChoiceField(choices=UNIT_CHOICES)
 
     def validate(self, attrs):
@@ -200,7 +199,7 @@ def tech_card_line_payload(line, cost: Decimal | None) -> dict:
             "name": line.nested_section.name,
             "unit": UNIT_GRAM,
             "quantity": str(line.quantity),
-            "loss_percent": str(line.loss_percent),
+            "loss_quantity": str(line.loss_quantity),
             "quantity_unit": line.quantity_unit,
         }
         if cost is not None:
@@ -216,7 +215,7 @@ def tech_card_line_payload(line, cost: Decimal | None) -> dict:
 
 def recipe_line_payload(line, cost: Decimal | None) -> dict:
     payload = component_payload(line)
-    payload["loss_percent"] = str(line.loss_percent)
+    payload["loss_quantity"] = str(line.loss_quantity)
     payload["quantity_unit"] = line.quantity_unit
     if cost is not None:
         payload["cost"] = str(cost)
@@ -799,7 +798,7 @@ class TechCardSerializer(serializers.ModelSerializer):
                 line["nested_section"] = section
                 line["quantity"] = section_gram_quantity(section)
                 line["quantity_unit"] = UNIT_GRAM
-                line["loss_percent"] = Decimal("0")
+                line["loss_quantity"] = Decimal("0")
             TechCardLine.objects.create(tech_card=instance, position=position, **line)
         for position, row in enumerate(children["modifier_groups"]):
             TechCardModifierGroup.objects.create(

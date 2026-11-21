@@ -39,6 +39,7 @@ import {
   componentValue,
   defaultQuantityUnit,
   draftFromLine,
+  draftLoss,
   emptyLine,
   isSectionComponent,
   linesToBody,
@@ -60,8 +61,9 @@ import {
   NativeSelect,
   QueryState,
   formatLineAmount,
+  formatLossLabel,
   formatMoney,
-  formatQuantity,
+  lossPercentText,
 } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
 import { useRouter } from "@/i18n/navigation";
@@ -134,7 +136,7 @@ function baseLines(draft: TechCardDraft): ComponentLineDraft[] {
       ...line,
       quantity: section === undefined ? "0" : sectionGrams(section),
       quantity_unit: "g",
-      loss_percent: "0",
+      loss_quantity: "",
     };
   });
 }
@@ -149,7 +151,7 @@ function savedBaseLines(draft: TechCardDraft) {
       nested_section_name: section === undefined ? null : section.name.trim(),
       quantity: section === undefined ? body.quantity : null,
       quantity_unit: section === undefined ? body.quantity_unit : "g",
-      loss_percent: section === undefined ? body.loss_percent : "0",
+      loss_quantity: section === undefined ? body.loss_quantity : "0",
     };
   });
 }
@@ -182,7 +184,7 @@ function importLine(line: TechCardImportLine): ComponentLineDraft {
     component,
     quantity: line.quantity,
     quantity_unit: line.unit,
-    loss_percent: line.loss_percent,
+    loss_quantity: draftLoss(line.loss_quantity),
     unit_cost: "",
     suggestion:
       component === ""
@@ -280,7 +282,7 @@ function draftFrom(row: TechCard | null): TechCardDraft {
         const key = sectionKey.get(line.nested_section);
         draft.component = key === undefined ? "" : `section:${key}`;
         draft.quantity_unit = "g";
-        draft.loss_percent = "0";
+        draft.loss_quantity = "";
       }
       return draft;
     }),
@@ -1175,14 +1177,13 @@ export function TechCardsPanel() {
                                 href: null,
                                 tag: null,
                                 amount: "—",
-                                loss: "—",
+                                loss: "",
                                 cost: null,
                                 warning: true,
                               },
                             ];
                           }
                           return composition.map((line) => {
-                            const loss = formatQuantity(line.loss_percent);
                             return {
                               key: String(line.id),
                               name: line.name === modifier.name ? modifier.name : `${modifier.name}: ${line.name}`,
@@ -1192,7 +1193,7 @@ export function TechCardsPanel() {
                                   : componentHref(line.ingredient, line.semi_product),
                               tag: null,
                               amount: formatLineAmount(line.quantity, units(line.quantity_unit)),
-                              loss: loss === "0" ? "—" : `${loss}%`,
+                              loss: formatLossLabel(line.quantity, line.loss_quantity, units(line.quantity_unit)),
                               cost: line.cost === undefined ? null : formatMoney(line.cost),
                               warning: false,
                             };
@@ -1554,6 +1555,7 @@ export function TechCardsPanel() {
                             lines: [],
                           };
                           const line = composition.lines[0];
+                          const lossPercent = line ? lossPercentText(line.quantity, line.loss_quantity) : null;
                           return (
                             <tr key={modifier.id} className="border-t border-[var(--line)]">
                               <td className="py-2 pr-3">
@@ -1602,24 +1604,29 @@ export function TechCardsPanel() {
                               </td>
                               <td className="py-2">
                                 {line ? (
-                                  <div className="relative ml-auto w-28">
-                                    <Input
-                                      inputMode="decimal"
-                                      value={line.loss_percent}
-                                      onChange={(event) =>
-                                        setComposition(modifier.id, {
-                                          lines: [{ ...line, loss_percent: event.target.value }],
-                                        })
-                                      }
-                                      className="pr-8 text-right"
-                                    />
-                                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
-                                      %
-                                    </span>
+                                  <div className="ml-auto flex w-44 items-center justify-end gap-2">
+                                    <div className="relative min-w-0 flex-1">
+                                      <Input
+                                        name="loss_quantity"
+                                        inputMode="decimal"
+                                        placeholder={t("lossPercent")}
+                                        value={line.loss_quantity}
+                                        onChange={(event) =>
+                                          setComposition(modifier.id, {
+                                            lines: [{ ...line, loss_quantity: event.target.value }],
+                                          })
+                                        }
+                                        className="pr-10 text-right"
+                                      />
+                                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                                        {units(line.quantity_unit)}
+                                      </span>
+                                    </div>
+                                    {lossPercent !== null ? (
+                                      <span className="shrink-0 text-xs tabular-nums text-[var(--muted-2)]">{lossPercent}%</span>
+                                    ) : null}
                                   </div>
-                                ) : (
-                                  <p className="text-right">—</p>
-                                )}
+                                ) : null}
                               </td>
                             </tr>
                           );

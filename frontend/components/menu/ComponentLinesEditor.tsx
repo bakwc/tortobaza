@@ -5,6 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchSelect } from "@/components/menu/SearchSelect";
+import { lossPercentText } from "@/components/menu/ui";
 import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 
 export type LineSuggestion = {
@@ -19,7 +20,7 @@ export type ComponentLineDraft = {
   component: string;
   quantity: string;
   quantity_unit: MenuUnit;
-  loss_percent: string;
+  loss_quantity: string;
   unit_cost: string;
   suggestion: LineSuggestion | null;
 };
@@ -90,16 +91,23 @@ export function emptyLine(): ComponentLineDraft {
     component: "",
     quantity: "",
     quantity_unit: "g",
-    loss_percent: "0",
+    loss_quantity: "",
     unit_cost: "",
     suggestion: null,
   };
 }
 
+export function draftLoss(value: string | undefined): string {
+  if (value === undefined || value.trim() === "") return "";
+  const number = Number(value.replace(",", "."));
+  if (!Number.isFinite(number) || number === 0) return "";
+  return value.replace(",", ".");
+}
+
 export function draftFromLine(
   line: ComponentRefBody & {
     quantity: string | null;
-    loss_percent?: string;
+    loss_quantity?: string;
     quantity_unit: MenuUnit;
     finished_good?: number | null;
     nested_tech_card?: number | null;
@@ -110,7 +118,7 @@ export function draftFromLine(
     component: componentValue(line),
     quantity: line.quantity ?? "",
     quantity_unit: line.quantity_unit,
-    loss_percent: line.loss_percent ?? "0",
+    loss_quantity: draftLoss(line.loss_quantity),
     unit_cost: "",
     suggestion: null,
   };
@@ -205,6 +213,7 @@ export function ComponentLinesEditor({
 }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
+  const units = useTranslations("stock.units");
   const update = (key: string, patch: Partial<ComponentLineDraft>) =>
     onChange(lines.map((line) => (line.key === key ? { ...line, ...patch } : line)));
 
@@ -214,12 +223,17 @@ export function ComponentLinesEditor({
         const option = options.find((row) => row.value === line.component);
         const price = linePrice === null ? null : linePrice(line);
         const locked = isSectionComponent(line.component);
+        const lossPercent = extraColumn === "loss" ? lossPercentText(line.quantity, line.loss_quantity) : null;
         return (
           <div
             key={line.key}
             data-field-group={tForms("rowNumber", { number: index + 1 })}
             data-error-list="lines"
-            className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]"
+            className={
+              extraColumn === "loss"
+                ? "grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_11rem_auto]"
+                : "grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_9rem_7rem_auto]"
+            }
           >
             <SearchSelect
               options={options}
@@ -260,19 +274,24 @@ export function ComponentLinesEditor({
               />
             </div>
             {extraColumn === "loss" ? (
-              <div className="relative">
-                <Input
-                  name="loss_percent"
-                  readOnly={locked}
-                  inputMode="decimal"
-                  placeholder={t("lossPercent")}
-                  value={line.loss_percent}
-                  onChange={(event) => update(line.key, { loss_percent: event.target.value })}
-                  className="pr-8"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
-                  %
-                </span>
+              <div className="flex items-center gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <Input
+                    name="loss_quantity"
+                    readOnly={locked}
+                    inputMode="decimal"
+                    placeholder={t("lossPercent")}
+                    value={line.loss_quantity}
+                    onChange={(event) => update(line.key, { loss_quantity: event.target.value })}
+                    className="pr-10"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-2)]">
+                    {units(line.quantity_unit)}
+                  </span>
+                </div>
+                {lossPercent !== null ? (
+                  <span className="shrink-0 text-xs tabular-nums text-[var(--muted-2)]">{lossPercent}%</span>
+                ) : null}
               </div>
             ) : extraColumn === "unitCost" ? (
               <Input
@@ -339,7 +358,7 @@ export function linesToBody(lines: ComponentLineDraft[]) {
     ...componentRef(line.component),
     quantity: line.quantity.replace(",", "."),
     quantity_unit: line.quantity_unit,
-    loss_percent: (line.loss_percent || "0").replace(",", "."),
+    loss_quantity: (line.loss_quantity || "0").replace(",", "."),
   }));
 }
 

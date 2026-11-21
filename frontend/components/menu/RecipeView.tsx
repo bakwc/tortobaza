@@ -6,7 +6,7 @@ import { Check, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
-import { formatLineAmount, formatMoney, formatQuantity } from "@/components/menu/ui";
+import { formatLineAmount, formatLossLabel, formatMoney } from "@/components/menu/ui";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
 
@@ -47,6 +47,7 @@ export function RecipeHeading({ number, title, note }: { number: number | null; 
 export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
   const t = useTranslations("stock");
   const showCost = rows.some((row) => row.cost !== null);
+  const showLoss = rows.some((row) => row.loss !== "");
   if (rows.length === 0) return null;
   return (
     <div className="overflow-x-auto">
@@ -55,7 +56,7 @@ export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
           <tr>
             <th className="py-1.5 pr-3 font-medium">{t("name")}</th>
             <th className="py-1.5 pr-3 text-right font-medium">{t("quantity")}</th>
-            <th className="w-20 py-1.5 pr-3 text-right font-medium">{t("lossPercent")}</th>
+            {showLoss ? <th className="py-1.5 pr-3 text-right font-medium">{t("lossPercent")}</th> : null}
             {showCost ? <th className="w-28 py-1.5 text-right font-medium">{t("recipeCost")}</th> : null}
           </tr>
         </thead>
@@ -82,7 +83,9 @@ export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
               <td className="whitespace-nowrap py-2 pr-3 text-right font-medium tabular-nums text-[var(--ink)]">
                 {row.amount}
               </td>
-              <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums text-[var(--muted-2)]">{row.loss}</td>
+              {showLoss ? (
+                <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums text-[var(--muted-2)]">{row.loss}</td>
+              ) : null}
               {showCost ? (
                 <td className="whitespace-nowrap py-2 text-right font-medium tabular-nums text-[var(--ink)]">
                   {row.cost ?? "—"}
@@ -102,7 +105,6 @@ export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
   return (
     <RecipeTable
       rows={lines.map((line) => {
-        const loss = formatQuantity(line.loss_percent);
         return {
           key: String(line.id),
           name: line.name,
@@ -121,7 +123,7 @@ export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
                   ? t("semiProduct").toLowerCase()
                   : null,
           amount: formatLineAmount(line.quantity, units(line.quantity_unit)),
-          loss: loss === "0" ? "—" : `${loss}%`,
+          loss: formatLossLabel(line.quantity, line.loss_quantity, units(line.quantity_unit)),
           cost: line.cost === undefined ? null : formatMoney(line.cost),
           warning: false,
         };

@@ -130,7 +130,7 @@ class Command(BaseCommand):
                     semi_product=None,
                     quantity=quantity,
                     quantity_unit=ingredients[name].unit,
-                    loss_percent=Decimal("0"),
+                    loss_quantity=Decimal("0"),
                     position=line_position,
                 )
                 lines_count += 1

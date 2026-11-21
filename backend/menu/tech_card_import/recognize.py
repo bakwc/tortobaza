@@ -41,7 +41,7 @@ quantity is a decimal string with a dot. unit is g, ml, or pcs and is the unit o
 "2 л" is 2000 ml. "1 кг" is 1000 g. "500 мг" is 0.5 g. "65 г" is 65 g. "≈ 73 г" is 73 g.
 Eggs, yolks, and whites written as штуки stay pcs. The same items written in grams stay g.
 "1 порция", "по вкусу", "по необходимости", and inventory lists are not lines. Put them in the method of the section they belong to.
-loss_percent is "0" unless the card states a loss percentage. It is a decimal string.
+loss_quantity is the loss amount in the same unit as quantity. It is a decimal string and "0" unless the card states a loss.
 
 original_text is the source row as printed. name is a short Russian name without the amount.
 Set ingredient_id or semi_product_id only when the row clearly matches one catalog entry. Never invent an id. At most one of the two is set, and the other is null.
@@ -54,7 +54,7 @@ class ImportedLine(BaseModel):
     name: str
     quantity: str
     unit: Literal["g", "ml", "pcs"]
-    loss_percent: str
+    loss_quantity: str
     ingredient_id: int | None
     semi_product_id: int | None
     suggested_kind: Literal["ingredient", "semi_product"]
@@ -94,7 +94,7 @@ def line_payload(line: ImportedLine, ingredients: set[int], semi_products: set[i
         "name": line.name.strip(),
         "quantity": decimal_text(line.quantity),
         "unit": line.unit,
-        "loss_percent": decimal_text(line.loss_percent),
+        "loss_quantity": decimal_text(line.loss_quantity),
         "ingredient_id": line.ingredient_id,
         "semi_product_id": line.semi_product_id,
         "suggested_kind": line.suggested_kind,

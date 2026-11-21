@@ -162,6 +162,21 @@ export function formatQuantity(value: string): string {
   return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(3)));
 }
 
+export function lossPercentText(quantity: string | null, loss: string): string | null {
+  if (quantity === null || quantity.trim() === "" || loss.trim() === "") return null;
+  const net = Number(quantity.replace(",", "."));
+  const waste = Number(loss.replace(",", "."));
+  if (!Number.isFinite(net) || !Number.isFinite(waste) || waste <= 0 || net + waste <= 0) return null;
+  const rounded = Number(((waste / (net + waste)) * 100).toFixed(2));
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+export function formatLossLabel(quantity: string | null, loss: string, unit: string): string {
+  const percent = lossPercentText(quantity, loss);
+  if (percent === null) return "";
+  return `${formatQuantity(loss)} ${unit} (${percent}%)`;
+}
+
 export function formatLineAmount(quantity: string | null, unit: string): string {
   if (quantity === null) return "—";
   return `${formatQuantity(quantity)} ${unit}`;

@@ -677,7 +677,7 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[di
             notes.append(f"Без веса: {label}")
             continue
         for ingredient, quantity, unit in parsed:
-            line = {"ingredient": ingredient, "quantity": qstr(quantity), "loss_percent": "0", "unit": unit}
+            line = {"ingredient": ingredient, "quantity": qstr(quantity), "loss_quantity": "0", "unit": unit}
             if current:
                 section_lines.setdefault(current, []).append(line)
                 if current not in section_order:
@@ -696,11 +696,11 @@ def rows_to_parts(rows: list[tuple[str, str, str]]) -> tuple[list[dict], list[di
 
 
 def component_line(name: str, quantity: Decimal, unit: str) -> dict:
-    return {"ingredient": name, "quantity": qstr(quantity), "loss_percent": "0", "unit": unit}
+    return {"ingredient": name, "quantity": qstr(quantity), "loss_quantity": "0", "unit": unit}
 
 
 def semi_line(name: str, quantity: Decimal) -> dict:
-    return {"semi_product": name, "quantity": qstr(quantity), "loss_percent": "0"}
+    return {"semi_product": name, "quantity": qstr(quantity), "loss_quantity": "0"}
 
 
 def yield_of(lines: list[dict]) -> str:
@@ -1650,7 +1650,7 @@ def jar_line(row: tuple[str, Decimal] | dict) -> dict:
         return {
             "semi_product": row["semi_product"],
             "quantity": qstr(Decimal(row["quantity"])),
-            "loss_percent": "0",
+            "loss_quantity": "0",
         }
     ingredient, quantity = row
     return component_line(ingredient, quantity, "g")

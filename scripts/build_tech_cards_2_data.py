@@ -152,7 +152,7 @@ def resolve_name(name: str) -> tuple[str, str]:
 
 
 def ingredient_line(name: str, quantity: Decimal) -> dict:
-    return {"ingredient": name, "quantity": base.qstr(quantity), "loss_percent": "0"}
+    return {"ingredient": name, "quantity": base.qstr(quantity), "loss_quantity": "0"}
 
 
 def amount_lines(label: str, amount: str) -> tuple[list[dict], list[str]]:

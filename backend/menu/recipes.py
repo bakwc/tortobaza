@@ -24,7 +24,6 @@ from menu.models import (
 Component = Ingredient | SemiProduct
 Needs = dict[Component, Decimal]
 
-_HUNDRED = Decimal("100")
 _ONE = Decimal("1")
 _CENT = Decimal("0.01")
 
@@ -49,8 +48,8 @@ def _cached(key: tuple, load: Callable[[], list]) -> list:
     return cache[key]
 
 
-def gross_quantity(quantity: Decimal, loss_percent: Decimal) -> Decimal:
-    return quantity * _HUNDRED / (_HUNDRED - loss_percent)
+def gross_quantity(quantity: Decimal, loss_quantity: Decimal) -> Decimal:
+    return quantity + loss_quantity
 
 
 def component_quantity(component: Component, quantity: Decimal, quantity_unit: str) -> Decimal:
@@ -71,7 +70,7 @@ def component_quantity(component: Component, quantity: Decimal, quantity_unit: s
 def line_component_quantity(line) -> Decimal:
     return component_quantity(
         line.component,
-        gross_quantity(line.quantity, line.loss_percent),
+        gross_quantity(line.quantity, line.loss_quantity),
         line.quantity_unit,
     )
 
@@ -219,7 +218,7 @@ def _virtual_modifier_line(tech_card: TechCard, modifier: Modifier) -> TechCardM
         modifier=modifier,
         quantity=Decimal("1"),
         quantity_unit=unit,
-        loss_percent=Decimal("0"),
+        loss_quantity=Decimal("0"),
         scales_by_weight=False,
         **fields,
     )

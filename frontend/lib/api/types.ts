@@ -1494,7 +1494,7 @@ export const RecipeLineSchema = z.object({
   unit: MenuUnitSchema,
   quantity: z.string(),
   quantity_unit: MenuUnitSchema,
-  loss_percent: z.string(),
+  loss_quantity: z.string(),
   cost: z.string().optional(),
 });
 
@@ -1640,7 +1640,7 @@ export const TechCardImportLineSchema = z.object({
   name: z.string(),
   quantity: z.string(),
   unit: MenuUnitSchema,
-  loss_percent: z.string(),
+  loss_quantity: z.string(),
   ingredient_id: z.number().nullable(),
   semi_product_id: z.number().nullable(),
   suggested_kind: z.enum(["ingredient", "semi_product"]),
@@ -1707,7 +1707,7 @@ export type ComponentRefBody = {
 export type RecipeLineBody = ComponentRefBody & {
   quantity: string;
   quantity_unit: MenuUnit;
-  loss_percent: string;
+  loss_quantity: string;
 };
 
 export type IngredientCategoryBody = { name: string; position: number };

@@ -48,7 +48,7 @@ export function crmItemDraftFromItem(item: CrmOrderItem): CrmItemDraft {
       key: newDraftKey(),
       component: componentValue({ ...line, nested_tech_card: line.tech_card }),
       quantity: line.quantity,
-      loss_percent: "0",
+      loss_quantity: "",
       unit_cost: "",
       quantity_unit: line.unit,
       suggestion: null,

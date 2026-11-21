@@ -442,12 +442,12 @@
         {
           "ingredient": "Яичный белок",
           "quantity": "1000",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "2066",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -461,22 +461,22 @@
         {
           "ingredient": "Белый шоколад",
           "quantity": "500",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сливки 33%",
           "quantity": "180",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "230",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Глюкозный сироп",
           "quantity": "57",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -490,12 +490,12 @@
         {
           "ingredient": "Белый шоколад",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Какао-масло",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -509,42 +509,42 @@
         {
           "ingredient": "Яйцо",
           "quantity": "750",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "1350",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "300",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло подсолнечное",
           "quantity": "600",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мацони",
           "quantity": "1350",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "1950",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "150",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Какао алкализованное",
           "quantity": "30",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -558,32 +558,32 @@
         {
           "ingredient": "Сливки 33%",
           "quantity": "832",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "832",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Ванильная паста",
           "quantity": "16",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Желток",
           "quantity": "320",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "320",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "86",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -597,47 +597,47 @@
         {
           "ingredient": "Мука пшеничная",
           "quantity": "390",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "330",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Какао алкализованное",
           "quantity": "67",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "15",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сода",
           "quantity": "7.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "2",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "360",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "135",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Уксус 6%",
           "quantity": "22.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -651,42 +651,42 @@
         {
           "ingredient": "Мука пшеничная",
           "quantity": "450",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "330",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "18",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сода",
           "quantity": "6",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "2",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "495",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "135",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Уксус 6%",
           "quantity": "22.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -700,22 +700,22 @@
         {
           "ingredient": "Вишня заморозка цельная",
           "quantity": "600",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "105",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "21",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "66",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -729,42 +729,42 @@
         {
           "ingredient": "Яйцо",
           "quantity": "2260",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "1860",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "1860",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Какао",
           "quantity": "340",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "120",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "676",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "880",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "4",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -778,42 +778,42 @@
         {
           "ingredient": "Яйцо",
           "quantity": "2000",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "2350",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "1350",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "675",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "2350",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "95",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Ванилин",
           "quantity": "3",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "5.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -827,27 +827,27 @@
         {
           "ingredient": "Сахар",
           "quantity": "741",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "296",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "222",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сливки 33%",
           "quantity": "741",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "10",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -861,27 +861,27 @@
         {
           "ingredient": "Клубника",
           "quantity": "750",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "130",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "30",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "45",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Лимонная кислота",
           "quantity": "1.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -895,32 +895,32 @@
         {
           "ingredient": "Пюре малины",
           "quantity": "750",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "150",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "155",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "38",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "60",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Лимонная кислота",
           "quantity": "1.5",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -934,32 +934,32 @@
         {
           "ingredient": "Пюре манго",
           "quantity": "500",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Пюре маракуйи",
           "quantity": "250",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "120",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "40",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Вода",
           "quantity": "80",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Лимонная кислота",
           "quantity": "2",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -973,17 +973,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "300",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "90",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "80",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -997,42 +997,42 @@
         {
           "ingredient": "Масло растительное",
           "quantity": "1440",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "2400",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Яйцо",
           "quantity": "1500",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "2040",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сода",
           "quantity": "48",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Корица",
           "quantity": "72",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Морковь",
           "quantity": "1620",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Грецкий орех",
           "quantity": "480",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -1046,42 +1046,42 @@
         {
           "ingredient": "Яйцо",
           "quantity": "2080",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "2340",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "944",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "472",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "1970",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "4",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "38",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кокосовая стружка",
           "quantity": "152",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -1095,47 +1095,47 @@
         {
           "ingredient": "Яйцо",
           "quantity": "2490",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "1576",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "2160",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло растительное",
           "quantity": "746",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "746",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Фисташковая паста",
           "quantity": "356",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Ароматизатор",
           "quantity": "10.6",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "7.2",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     },
@@ -1149,32 +1149,32 @@
         {
           "ingredient": "Сливки 33%",
           "quantity": "85",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "85",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "20",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Желток",
           "quantity": "40",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кукурузный крахмал",
           "quantity": "8",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "25",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ]
     }
@@ -1192,52 +1192,52 @@
         {
           "ingredient": "Масло сливочное",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Яйцо",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "110",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "3",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "140",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Разрыхлитель",
           "quantity": "4",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Молоко",
           "quantity": "100",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Кремчиз",
           "quantity": "400",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "130",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "130",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -1259,27 +1259,27 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "390",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "128",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "11",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1290,17 +1290,17 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "128",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "375",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "75",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1323,27 +1323,27 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "520",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "170",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "240",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "14",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1354,17 +1354,17 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "170",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "500",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1387,27 +1387,27 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "650",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "213",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "300",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1418,17 +1418,17 @@
             {
               "ingredient": "Сгущённое молоко",
               "quantity": "213",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "625",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1451,17 +1451,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "76",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Криспи",
               "quantity": "44",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1472,32 +1472,32 @@
             {
               "ingredient": "Пюре манго",
               "quantity": "160",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Манго",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре маракуйи",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "88",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1508,32 +1508,32 @@
             {
               "ingredient": "Пюре манго",
               "quantity": "320",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре маракуйи",
               "quantity": "160",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "504",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1556,17 +1556,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "76",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Криспи",
               "quantity": "44",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1577,27 +1577,27 @@
             {
               "ingredient": "Клубника",
               "quantity": "320",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре лайма",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "88",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1608,32 +1608,32 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "260",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мятная эссенция",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "260",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "520",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1656,32 +1656,32 @@
             {
               "ingredient": "Вода",
               "quantity": "260",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Уксус 6%",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "860",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "730",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "12",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1692,17 +1692,17 @@
             {
               "semi_product": "Заварной крем",
               "quantity": "2200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "600",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахарная пудра",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1725,17 +1725,17 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1746,42 +1746,42 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "900",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "36",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундучная паста",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1792,32 +1792,32 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундук жареный",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1840,17 +1840,17 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мускатный орех",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1861,37 +1861,37 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "95",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "75",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре манго",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1902,37 +1902,37 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "95",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "75",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре маракуйи",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -1943,22 +1943,22 @@
             {
               "ingredient": "Пюре маракуйи с косточкой",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "65",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -1981,22 +1981,22 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мускатный орех",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2007,37 +2007,37 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "900",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "36",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2048,42 +2048,42 @@
             {
               "ingredient": "Сахар",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "70",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "55",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "3.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Арахис",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2101,32 +2101,32 @@
         {
           "ingredient": "Сахар",
           "quantity": "31",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Фундук",
           "quantity": "136",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Соль",
           "quantity": "0.7",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахар",
           "quantity": "146",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Яичный белок",
           "quantity": "179",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Мука пшеничная",
           "quantity": "37",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": [
@@ -2137,37 +2137,37 @@
             {
               "ingredient": "Желток",
               "quantity": "156",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Молоко",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильный сахар",
               "quantity": "7",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло слив",
               "quantity": "286",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Амаретто",
               "quantity": "19",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2190,17 +2190,17 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мускатный орех",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2211,42 +2211,42 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "900",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "36",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильная паста",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Корица",
               "quantity": "2.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2257,37 +2257,37 @@
             {
               "ingredient": "Яблоки кубиком",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Корица",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2310,37 +2310,37 @@
             {
               "ingredient": "Мёд",
               "quantity": "186",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сода",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2351,27 +2351,27 @@
             {
               "ingredient": "Сметана",
               "quantity": "570",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сыр творожный",
               "quantity": "366",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мёд",
               "quantity": "34",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахарная пудра",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2394,17 +2394,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "76",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Криспи",
               "quantity": "44",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2415,32 +2415,32 @@
             {
               "ingredient": "Смородина",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вишня",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Малина",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "88",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2451,32 +2451,32 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "260",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильная паста",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "260",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "520",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2499,17 +2499,17 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мускатный орех",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2520,57 +2520,57 @@
             {
               "ingredient": "Кремчиз",
               "quantity": "900",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "36",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фисташковая паста",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре малины",
               "quantity": "300",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2593,62 +2593,62 @@
             {
               "ingredient": "Маргарин",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Песочное печенье",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мускатный орех",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "900",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "190",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "36",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ксантановая камедь",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Малина",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Черника",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ежевика",
               "quantity": "60",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -2671,17 +2671,17 @@
             {
               "ingredient": "Корки апельсина",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2692,27 +2692,27 @@
             {
               "ingredient": "Сок апельсиновый свежевыжатый",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "38",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кукурузный крахмал",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонная кислота",
               "quantity": "1.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2723,32 +2723,32 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "72",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "116",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "220",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильная паста",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2759,12 +2759,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2775,7 +2775,7 @@
             {
               "ingredient": "Хвостик мандарина",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2813,37 +2813,37 @@
             {
               "ingredient": "Арахис",
               "quantity": "19",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "23",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "19",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яичный белок",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2854,27 +2854,27 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Карамелизированная вафельная крошка",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Арахис",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "0.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2885,27 +2885,27 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Арахисовая паста",
               "quantity": "33",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "0.7",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "4.2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "77",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2916,37 +2916,37 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "170",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "17",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "1.4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Арахисовая паста",
               "quantity": "52",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Маскарпоне",
               "quantity": "68",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2957,32 +2957,32 @@
             {
               "ingredient": "Сахар",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "210",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатиновая масса",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -2993,12 +2993,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3009,7 +3009,7 @@
             {
               "ingredient": "Какао",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3052,47 +3052,47 @@
             {
               "ingredient": "Яйцо",
               "quantity": "21",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Коричневый сахар",
               "quantity": "13",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Молочный шоколад",
               "quantity": "21",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "21",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "11",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "11",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Грецкий орех",
               "quantity": "12",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Банан",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3103,27 +3103,27 @@
             {
               "ingredient": "Сахар",
               "quantity": "74",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "48",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "13",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3134,42 +3134,42 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "102",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "68",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Банан",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Эспрессо",
               "quantity": "23",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "135",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3180,12 +3180,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3218,37 +3218,37 @@
             {
               "ingredient": "Масло сливочное",
               "quantity": "32",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Эспрессо",
               "quantity": "28",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "42",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар тростниковый",
               "quantity": "42",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "28",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "14",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3259,37 +3259,37 @@
             {
               "ingredient": "Масло сливочное",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Миндальная мука",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "24",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундук",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3300,32 +3300,32 @@
             {
               "ingredient": "Сахар",
               "quantity": "66",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "66",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3336,42 +3336,42 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "135",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Эспрессо",
               "quantity": "26",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "1.3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "7.8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Молочный шоколад",
               "quantity": "42",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Маскарпоне",
               "quantity": "65",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3382,12 +3382,12 @@
             {
               "ingredient": "Тёмный шоколад",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3420,17 +3420,17 @@
             {
               "ingredient": "Корки лайма",
               "quantity": "65",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "135",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3441,22 +3441,22 @@
             {
               "ingredient": "Сок лайма",
               "quantity": "74",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "93",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "78",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Агар-агар",
               "quantity": "2.4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3472,27 +3472,27 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "53",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "3.2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "19.2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "86",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "160",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3508,12 +3508,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "170",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "170",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3524,22 +3524,22 @@
             {
               "ingredient": "Сахар",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "3.3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сок лимона",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3567,32 +3567,32 @@
             {
               "ingredient": "Пюре малины",
               "quantity": "376",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "37",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сок лимона",
               "quantity": "13",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "37",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Агар-агар",
               "quantity": "4.8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Малина",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3603,27 +3603,27 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "47",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "1.8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "10.8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "76",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "140",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3639,12 +3639,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3655,22 +3655,22 @@
             {
               "ingredient": "Сахар",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "3.3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сок лимона",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3698,37 +3698,37 @@
             {
               "ingredient": "Пюре маракуйи",
               "quantity": "82",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре манго",
               "quantity": "130",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "32",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сок лайма",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Агар-агар",
               "quantity": "2.7",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кусочки свежего манго",
               "quantity": "70",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3739,27 +3739,27 @@
             {
               "ingredient": "Пюре манго",
               "quantity": "55",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2.2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "13.2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "89",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "167",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3770,12 +3770,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3808,22 +3808,22 @@
             {
               "ingredient": "Пюре персика",
               "quantity": "356",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "57",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Агар-агар",
               "quantity": "5.3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кусочки консервированного персика",
               "quantity": "124",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3834,32 +3834,32 @@
             {
               "ingredient": "Молоко",
               "quantity": "76",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Жасминовый чай",
               "quantity": "4.8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2.4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "96",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3870,17 +3870,17 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пластичный тёмный шоколад",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3913,47 +3913,47 @@
             {
               "ingredient": "Масло сливочное",
               "quantity": "63",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "53",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яичный белок",
               "quantity": "37",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "62",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фисташковая паста",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3964,27 +3964,27 @@
             {
               "ingredient": "Фисташка",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "17",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -3995,37 +3995,37 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "312",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желток",
               "quantity": "32",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фисташковая паста",
               "quantity": "95",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Маскарпоне",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4036,12 +4036,12 @@
             {
               "ingredient": "Какао-масло",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4074,32 +4074,32 @@
             {
               "ingredient": "Пюре черники",
               "quantity": "220",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "38",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Глюкозный сироп",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Лимонный сок",
               "quantity": "8",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Черника целая",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4110,32 +4110,32 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "18",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильная паста",
               "quantity": "3.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "240",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4146,12 +4146,12 @@
             {
               "ingredient": "Белый шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Какао-масло",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4162,7 +4162,7 @@
             {
               "ingredient": "Часть готовой глазури",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4195,37 +4195,37 @@
             {
               "ingredient": "Масло сливочное",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар тростниковый",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "135",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "70",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Молочный шоколад",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4236,27 +4236,27 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "80",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "300",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4267,22 +4267,22 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "20",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4293,22 +4293,22 @@
             {
               "ingredient": "Катаифи",
               "quantity": "225",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Белый шоколад",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фисташковая паста",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4331,42 +4331,42 @@
             {
               "ingredient": "Мука пшеничная",
               "quantity": "280",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "180",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Миндальная мука",
               "quantity": "52",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "7",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Ванильный экстракт",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Молочный шоколад",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4377,22 +4377,22 @@
             {
               "ingredient": "Сахар",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4403,27 +4403,27 @@
             {
               "ingredient": "Шоколад",
               "quantity": "225",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "6",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4434,22 +4434,22 @@
             {
               "ingredient": "Шоколад",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "200",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "10",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4472,42 +4472,42 @@
             {
               "ingredient": "Масло сливочное",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "110",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мёд",
               "quantity": "75",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сода",
               "quantity": "9",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "310",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "85",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сок лимона",
               "quantity": "12",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4518,27 +4518,27 @@
             {
               "ingredient": "Сметана 30%",
               "quantity": "320",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Маскарпоне",
               "quantity": "176",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мёд",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахарная пудра",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4549,27 +4549,27 @@
             {
               "ingredient": "Пюре облепихи",
               "quantity": "360",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пектин NH",
               "quantity": "12",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4592,62 +4592,62 @@
             {
               "ingredient": "Морковь",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пекан",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Изюм",
               "quantity": "30",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Мука пшеничная",
               "quantity": "105",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Разрыхлитель",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сода",
               "quantity": "2.5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Корица",
               "quantity": "4",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "3",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар тростниковый",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло растительное",
               "quantity": "135",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яйцо",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4658,27 +4658,27 @@
             {
               "ingredient": "Сливки 33%",
               "quantity": "450",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахарная пудра",
               "quantity": "60",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кремчиз",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Маскарпоне",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Корица",
               "quantity": "2",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4701,27 +4701,27 @@
             {
               "ingredient": "Яичный белок",
               "quantity": "75",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахарная пудра",
               "quantity": "60",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Миндальная мука",
               "quantity": "60",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундучное пралине",
               "quantity": "15",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4732,22 +4732,22 @@
             {
               "ingredient": "Сахар",
               "quantity": "120",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Масло сливочное",
               "quantity": "40",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Соль",
               "quantity": "1",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4758,27 +4758,27 @@
             {
               "semi_product": "Заварной крем для банок",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Фундучное пралине",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "600",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "5",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4794,12 +4794,12 @@
             {
               "ingredient": "Молочный шоколад",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "100",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4822,27 +4822,27 @@
             {
               "ingredient": "Сахарная пудра",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Миндальная мука",
               "quantity": "25",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Кокосовая стружка",
               "quantity": "125",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Яичный белок",
               "quantity": "150",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "50",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4853,27 +4853,27 @@
             {
               "ingredient": "Пюре манго",
               "quantity": "360",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре маракуйи",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сахар",
               "quantity": "90",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Желатин",
               "quantity": "9",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Вода",
               "quantity": "45",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         },
@@ -4889,17 +4889,17 @@
             {
               "semi_product": "Заварной крем для банок",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Пюре кокоса",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             },
             {
               "ingredient": "Сливки 33%",
               "quantity": "250",
-              "loss_percent": "0"
+              "loss_quantity": "0"
             }
           ]
         }
@@ -4917,17 +4917,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "240",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "70",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "50",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -4944,17 +4944,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "320",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "94",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "66",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -4971,17 +4971,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "600",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "180",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "160",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -4998,17 +4998,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "800",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "240",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "210",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -5025,17 +5025,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "1000",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "270",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "240",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -5052,17 +5052,17 @@
         {
           "ingredient": "Кремчиз",
           "quantity": "1200",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Масло сливочное",
           "quantity": "324",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         },
         {
           "ingredient": "Сахарная пудра",
           "quantity": "288",
-          "loss_percent": "0"
+          "loss_quantity": "0"
         }
       ],
       "sections": []
@@ -5104,28 +5104,28 @@
           "modifier": "Ванильный бисквит",
           "semi_product": "Ванильный бисквит",
           "quantity": "360",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Тропический бисквит",
           "semi_product": "Тропический бисквит",
           "quantity": "360",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Шоколадный бисквит",
           "semi_product": "Шоколадный бисквит",
           "quantity": "330",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Фисташковый бисквит",
           "semi_product": "Фисташковый бисквит",
           "quantity": "330",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         }
       ]
@@ -5139,28 +5139,28 @@
           "modifier": "Ванильный бисквит",
           "semi_product": "Ванильный бисквит",
           "quantity": "500",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Тропический бисквит",
           "semi_product": "Тропический бисквит",
           "quantity": "500",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Шоколадный бисквит",
           "semi_product": "Шоколадный бисквит",
           "quantity": "450",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Фисташковый бисквит",
           "semi_product": "Фисташковый бисквит",
           "quantity": "450",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         }
       ]
@@ -5174,28 +5174,28 @@
           "modifier": "Ванильный бисквит",
           "semi_product": "Ванильный бисквит",
           "quantity": "1000",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Тропический бисквит",
           "semi_product": "Тропический бисквит",
           "quantity": "1000",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Шоколадный бисквит",
           "semi_product": "Шоколадный бисквит",
           "quantity": "900",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Фисташковый бисквит",
           "semi_product": "Фисташковый бисквит",
           "quantity": "900",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         }
       ]
@@ -5209,28 +5209,28 @@
           "modifier": "Ванильный бисквит",
           "semi_product": "Ванильный бисквит",
           "quantity": "1320",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Тропический бисквит",
           "semi_product": "Тропический бисквит",
           "quantity": "1320",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Шоколадный бисквит",
           "semi_product": "Шоколадный бисквит",
           "quantity": "1200",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Фисташковый бисквит",
           "semi_product": "Фисташковый бисквит",
           "quantity": "1200",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         }
       ]
@@ -5244,28 +5244,28 @@
           "modifier": "Ванильный бисквит",
           "semi_product": "Ванильный бисквит",
           "quantity": "1650",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Тропический бисквит",
           "semi_product": "Тропический бисквит",
           "quantity": "1650",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Шоколадный бисквит",
           "semi_product": "Шоколадный бисквит",
           "quantity": "1500",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         },
         {
           "modifier": "Фисташковый бисквит",
           "semi_product": "Фисташковый бисквит",
           "quantity": "1500",
-          "loss_percent": "0",
+          "loss_quantity": "0",
           "scales_by_weight": true
         }
       ]

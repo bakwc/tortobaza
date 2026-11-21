@@ -61,7 +61,7 @@ function normalizeLine(line: ComponentLineDraft, sectionKeys: Map<string, string
     component: remapComponent(line.component, sectionKeys),
     quantity: line.quantity,
     quantity_unit: line.quantity_unit,
-    loss_percent: line.loss_percent,
+    loss_quantity: line.loss_quantity,
     unit_cost: line.unit_cost,
     suggestion: line.suggestion,
   };

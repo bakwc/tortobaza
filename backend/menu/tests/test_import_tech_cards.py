@@ -28,7 +28,7 @@ class ImportTechCardsTests(TestCase):
                         "yield_quantity": "100",
                         "method": "Взбить.",
                         "images": [],
-                        "lines": [{"ingredient": "Мука", "quantity": "100", "loss_percent": "0"}],
+                        "lines": [{"ingredient": "Мука", "quantity": "100", "loss_quantity": "0"}],
                     }
                 ],
                 "tech_cards": [
@@ -40,12 +40,12 @@ class ImportTechCardsTests(TestCase):
                         "category": "Торты",
                         "method": "## Сборка\n\n1. Собрать слои.",
                         "images": ["images/card.png"],
-                        "lines": [{"semi_product": "Бисквит", "quantity": "500", "loss_percent": "0"}],
+                        "lines": [{"semi_product": "Бисквит", "quantity": "500", "loss_quantity": "0"}],
                         "sections": [
                             {
                                 "name": "Пропитка",
                                 "method": "Смешать.",
-                                "lines": [{"ingredient": "Мука", "quantity": "200", "loss_percent": "0"}],
+                                "lines": [{"ingredient": "Мука", "quantity": "200", "loss_quantity": "0"}],
                             },
                             {"name": "Сборка", "method": "Собрать слои.", "lines": []},
                         ],
@@ -71,7 +71,7 @@ class ImportTechCardsTests(TestCase):
                                 "modifier": "Бисквит",
                                 "semi_product": "Бисквит",
                                 "quantity": "300",
-                                "loss_percent": "0",
+                                "loss_quantity": "0",
                                 "scales_by_weight": True,
                             }
                         ],
@@ -118,7 +118,7 @@ class ImportTechCardsTests(TestCase):
                 {
                     "name": "Крем",
                     "method": "Взбить.",
-                    "lines": [{"semi_product": "Бисквит", "quantity": "40", "loss_percent": "0"}],
+                    "lines": [{"semi_product": "Бисквит", "quantity": "40", "loss_quantity": "0"}],
                 }
             ]
             path.write_text(json.dumps(payload), encoding="utf-8")
