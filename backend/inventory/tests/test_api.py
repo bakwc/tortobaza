@@ -20,11 +20,11 @@ class InventoryApiTests(TestCase):
         grant(self.admin, "edit_inventory", "view_costs")
         self.account = FinancialAccount.objects.create(name="BOG", kind=FinancialAccount.KIND_BANK)
 
-    def _supply_payload(self, transaction_id: int | None) -> dict:
+    def _supply_payload(self, transaction_ids: list[int]) -> dict:
         return {
             "date": "2026-10-01",
             "supplier": None,
-            "financial_transaction": transaction_id,
+            "financial_transactions": transaction_ids,
             "comment": "",
             "lines": [{"ingredient": self.menu.flour.pk, "quantity": "1000", "total": "10.00"}],
             "receipts": [],
@@ -32,23 +32,40 @@ class InventoryApiTests(TestCase):
 
     def test_supplies_require_finance_admin(self):
         self.client.force_authenticate(self.staff)
-        response = self.client.post("/api/inventory/supplies/", self._supply_payload(None), format="json")
+        response = self.client.post("/api/inventory/supplies/", self._supply_payload([]), format="json")
         self.assertEqual(response.status_code, 403)
 
     def test_supply_links_product_expense(self):
-        transaction = FinancialTransaction.objects.create(
+        first = FinancialTransaction.objects.create(
             account=self.account,
             date="2026-10-01",
-            amount=Decimal("-10.00"),
+            amount=Decimal("-6.00"),
+            kind=FinancialTransaction.KIND_EXPENSE,
+            expense_type=FinancialTransaction.EXPENSE_PRODUCTS,
+        )
+        second = FinancialTransaction.objects.create(
+            account=self.account,
+            date="2026-10-01",
+            amount=Decimal("-4.00"),
             kind=FinancialTransaction.KIND_EXPENSE,
             expense_type=FinancialTransaction.EXPENSE_PRODUCTS,
         )
         self.client.force_authenticate(self.admin)
-        response = self.client.post("/api/inventory/supplies/", self._supply_payload(transaction.pk), format="json")
+        response = self.client.post(
+            "/api/inventory/supplies/",
+            self._supply_payload([first.pk, second.pk]),
+            format="json",
+        )
         self.assertEqual(response.status_code, 201, response.content)
-        self.assertEqual(Supply.objects.get().financial_transaction, transaction)
+        self.assertEqual(
+            set(Supply.objects.get().financial_transactions.values_list("pk", flat=True)),
+            {first.pk, second.pk},
+        )
         self.assertEqual(StockMovement.objects.get().quantity, Decimal("1000"))
-        self.assertEqual(response.json()["financial_transaction"]["id"], transaction.pk)
+        self.assertEqual(
+            {row["id"] for row in response.json()["financial_transactions"]},
+            {first.pk, second.pk},
+        )
 
     def test_supply_rejects_non_product_expense(self):
         transaction = FinancialTransaction.objects.create(
@@ -59,7 +76,7 @@ class InventoryApiTests(TestCase):
             expense_type=FinancialTransaction.EXPENSE_RENT,
         )
         self.client.force_authenticate(self.admin)
-        response = self.client.post("/api/inventory/supplies/", self._supply_payload(transaction.pk), format="json")
+        response = self.client.post("/api/inventory/supplies/", self._supply_payload([transaction.pk]), format="json")
         self.assertEqual(response.status_code, 400)
 
     def test_staff_records_production_without_costs(self):

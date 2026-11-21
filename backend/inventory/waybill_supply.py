@@ -10,6 +10,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 from rest_framework.exceptions import ValidationError
 
+from crm.rsge_links import link_supply_transactions
 from inventory.models import Supplier, Supply, SupplyLine, WaybillIngredientAlias
 from inventory.services import apply_supply
 from menu.models import Ingredient
@@ -322,4 +323,5 @@ def create_waybill_supply(waybill: Waybill, lines: list[dict], user) -> Supply:
         )
         upsert_alias(waybill, good, line["ingredient"], factor, False)
     apply_supply(supply)
+    link_supply_transactions()
     return supply

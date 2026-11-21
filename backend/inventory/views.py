@@ -169,8 +169,9 @@ class WriteOffReasonDetailView(InventoryDetailView):
 
 
 def supplies_queryset():
-    return Supply.objects.select_related("supplier", "financial_transaction__account", "waybill").prefetch_related(
-        "receipts"
+    return Supply.objects.select_related("supplier", "waybill").prefetch_related(
+        "receipts",
+        "financial_transactions__account",
     )
 
 
@@ -458,9 +459,9 @@ class SupplyTransactionListView(APIView):
     def get(self, request):
         query = FinancialTransactionQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        free = Q(supply__isnull=True)
+        free = Q(supply_transaction__isnull=True)
         if "supply" in query.validated_data:
-            free = free | Q(supply__pk=query.validated_data["supply"])
+            free = free | Q(supplies__pk=query.validated_data["supply"])
         transactions = (
             FinancialTransaction.objects.filter(
                 kind=FinancialTransaction.KIND_EXPENSE,

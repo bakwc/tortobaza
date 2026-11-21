@@ -82,14 +82,14 @@ def transaction_payload(transaction: FinancialTransaction | None) -> dict | None
 class SupplySerializer(serializers.ModelSerializer):
     lines = SupplyLineInputSerializer(many=True, write_only=True)
     receipts = serializers.PrimaryKeyRelatedField(queryset=SupplyReceipt.objects.all(), many=True)
-    financial_transaction = serializers.PrimaryKeyRelatedField(
+    financial_transactions = serializers.PrimaryKeyRelatedField(
         queryset=FinancialTransaction.objects.select_related("account"),
-        allow_null=True,
+        many=True,
     )
 
     class Meta:
         model = Supply
-        fields = ["id", "date", "supplier", "financial_transaction", "comment", "lines", "receipts", "created_at"]
+        fields = ["id", "date", "supplier", "financial_transactions", "comment", "lines", "receipts", "created_at"]
         read_only_fields = ["created_at"]
         extra_kwargs = {
             "supplier": {"required": True},
@@ -97,16 +97,18 @@ class SupplySerializer(serializers.ModelSerializer):
             "receipts": {"required": True},
         }
 
-    def validate_financial_transaction(self, value: FinancialTransaction | None) -> FinancialTransaction | None:
-        if value is None:
-            return value
-        if value.kind != FinancialTransaction.KIND_EXPENSE or value.expense_type != FinancialTransaction.EXPENSE_PRODUCTS:
-            raise serializers.ValidationError("Only product expenses can be linked to a supply.")
-        linked = Supply.objects.filter(financial_transaction=value)
-        if self.instance is not None:
-            linked = linked.exclude(pk=self.instance.pk)
-        if linked.exists():
-            raise serializers.ValidationError("This bank transaction is already linked to another supply.")
+    def validate_financial_transactions(self, value: list[FinancialTransaction]) -> list[FinancialTransaction]:
+        for transaction in value:
+            if (
+                transaction.kind != FinancialTransaction.KIND_EXPENSE
+                or transaction.expense_type != FinancialTransaction.EXPENSE_PRODUCTS
+            ):
+                raise serializers.ValidationError("Only product expenses can be linked to a supply.")
+            linked = Supply.objects.filter(financial_transactions=transaction)
+            if self.instance is not None:
+                linked = linked.exclude(pk=self.instance.pk)
+            if linked.exists():
+                raise serializers.ValidationError("This bank transaction is already linked to another supply.")
         return value
 
     def validate_lines(self, value: list[dict]) -> list[dict]:
@@ -123,7 +125,9 @@ class SupplySerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data["supplier_name"] = instance.supplier.name if instance.supplier_id is not None else None
-        data["financial_transaction"] = transaction_payload(instance.financial_transaction)
+        data["financial_transactions"] = [
+            transaction_payload(transaction) for transaction in instance.financial_transactions.all()
+        ]
         lines = []
         total = Decimal("0")
         for line in instance.lines.select_related("ingredient"):
@@ -157,8 +161,10 @@ class SupplySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         lines = validated_data.pop("lines")
         receipts = validated_data.pop("receipts")
+        transactions = validated_data.pop("financial_transactions")
         validated_data["created_by"] = self.context["request"].user
         instance = Supply.objects.create(**validated_data)
+        instance.financial_transactions.set(transactions)
         self._save_lines(instance, lines)
         self._save_receipts(instance, receipts)
         return instance
@@ -166,9 +172,11 @@ class SupplySerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         lines = validated_data.pop("lines")
         receipts = validated_data.pop("receipts")
+        transactions = validated_data.pop("financial_transactions")
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+        instance.financial_transactions.set(transactions)
         self._save_lines(instance, lines)
         self._save_receipts(instance, receipts)
         return instance

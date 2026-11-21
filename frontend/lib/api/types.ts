@@ -2052,7 +2052,7 @@ export const SupplySchema = z.object({
   date: z.string(),
   supplier: z.number().nullable(),
   supplier_name: z.string().nullable(),
-  financial_transaction: SupplyTransactionSchema.nullable(),
+  financial_transactions: z.array(SupplyTransactionSchema),
   comment: z.string(),
   created_at: z.string(),
   total: z.string(),
@@ -2461,7 +2461,7 @@ export type IdeaBody = {
 export type SupplyBody = {
   date: string;
   supplier: number | null;
-  financial_transaction: number | null;
+  financial_transactions: number[];
   comment: string;
   lines: { ingredient: number; quantity: string; total: string }[];
   receipts: number[];

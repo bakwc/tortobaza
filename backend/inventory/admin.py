@@ -51,9 +51,9 @@ class SupplyLineInline(admin.TabularInline):
 
 @admin.register(Supply)
 class SupplyAdmin(admin.ModelAdmin):
-    list_display = ["id", "date", "supplier", "financial_transaction", "created_by"]
+    list_display = ["id", "date", "supplier", "created_by"]
     list_filter = ["date", "supplier"]
-    readonly_fields = ["date", "supplier", "financial_transaction", "comment", "waybill", "created_by", "created_at"]
+    readonly_fields = ["date", "supplier", "financial_transactions", "comment", "waybill", "created_by", "created_at"]
     inlines = [SupplyReceiptInline, SupplyLineInline]
 
     def has_add_permission(self, request):

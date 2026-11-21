@@ -32,13 +32,12 @@ class Supply(models.Model):
         blank=True,
         verbose_name=_("Supplier"),
     )
-    financial_transaction = models.OneToOneField(
+    financial_transactions = models.ManyToManyField(
         "crm.FinancialTransaction",
-        related_name="supply",
-        on_delete=models.SET_NULL,
-        null=True,
+        through="SupplyTransaction",
+        related_name="supplies",
         blank=True,
-        verbose_name=_("Bank transaction"),
+        verbose_name=_("Bank transactions"),
     )
     comment = models.TextField(blank=True, verbose_name=_("Comment"))
     waybill = models.OneToOneField(
@@ -66,6 +65,25 @@ class Supply(models.Model):
 
     def __str__(self) -> str:
         return f"{self.date} #{self.pk}"
+
+
+class SupplyTransaction(models.Model):
+    supply = models.ForeignKey(
+        Supply,
+        related_name="supply_transactions",
+        on_delete=models.CASCADE,
+        verbose_name=_("Supply"),
+    )
+    financial_transaction = models.OneToOneField(
+        "crm.FinancialTransaction",
+        related_name="supply_transaction",
+        on_delete=models.CASCADE,
+        verbose_name=_("Bank transaction"),
+    )
+
+    class Meta:
+        verbose_name = _("Supply transaction")
+        verbose_name_plural = _("Supply transactions")
 
 
 class SupplyReceipt(models.Model):

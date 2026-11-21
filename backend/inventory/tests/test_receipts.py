@@ -193,7 +193,7 @@ class SupplyReceiptApiTests(TestCase):
         return {
             "date": "2026-10-16",
             "supplier": None,
-            "financial_transaction": None,
+            "financial_transactions": [],
             "comment": "",
             "lines": [{"ingredient": self.menu.flour.pk, "quantity": "200", "total": "11.00"}],
             "receipts": receipts,

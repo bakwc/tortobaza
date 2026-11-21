@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from crm.internal_transfers import normalize_iban
 from crm.models import FinancialTransaction
+from inventory.models import Supply, SupplyTransaction
 from rsge.models import Invoice, InvoiceLine, Waybill
 
 WINDOW_DAYS = 4
@@ -59,6 +60,7 @@ def sync_rsge_document_links() -> None:
     _link_expenses_to_invoices()
     _rebind_recent_waybills()
     _propagate_invoices()
+    link_supply_transactions()
 
 
 def _link_waybills_to_invoices() -> None:
@@ -257,6 +259,7 @@ def _move_waybill_link(
     through = FinancialTransaction.waybills.through
     through.objects.filter(financialtransaction_id=current.pk, waybill_id=waybill.pk).delete()
     through.objects.create(financialtransaction_id=winner.pk, waybill_id=waybill.pk)
+    _move_supply_transaction(waybill, current, winner)
     invoice_ids = [invoice.pk for invoice in waybill.invoices.all()]
     if not invoice_ids:
         return
@@ -273,6 +276,50 @@ def _move_waybill_link(
         financialtransaction_id=current.pk,
         invoice_id__in=drop,
     ).delete()
+
+
+def link_supply_transactions() -> None:
+    supplies = Supply.objects.filter(waybill__isnull=False).prefetch_related("waybill__financial_transactions")
+    taken = set(SupplyTransaction.objects.values_list("financial_transaction_id", flat=True))
+    for supply in supplies:
+        for transaction in supply.waybill.financial_transactions.all():
+            if transaction.pk in taken or not _supply_payment(transaction):
+                continue
+            _assign_product_expense(transaction)
+            SupplyTransaction.objects.create(supply=supply, financial_transaction=transaction)
+            taken.add(transaction.pk)
+
+
+def _move_supply_transaction(
+    waybill: Waybill,
+    current: FinancialTransaction,
+    winner: FinancialTransaction,
+) -> None:
+    current_link = SupplyTransaction.objects.filter(supply__waybill=waybill, financial_transaction=current).first()
+    if current_link is None or not _supply_payment(winner):
+        return
+    winner_link = SupplyTransaction.objects.filter(financial_transaction=winner).first()
+    if winner_link is not None and winner_link.supply_id != current_link.supply_id:
+        return
+    _assign_product_expense(winner)
+    if winner_link is not None:
+        current_link.delete()
+        return
+    current_link.financial_transaction = winner
+    current_link.save(update_fields=["financial_transaction"])
+
+
+def _supply_payment(transaction: FinancialTransaction) -> bool:
+    if transaction.kind != FinancialTransaction.KIND_EXPENSE:
+        return False
+    return transaction.expense_type in ("", FinancialTransaction.EXPENSE_PRODUCTS)
+
+
+def _assign_product_expense(transaction: FinancialTransaction) -> None:
+    if transaction.expense_type != "":
+        return
+    transaction.expense_type = FinancialTransaction.EXPENSE_PRODUCTS
+    transaction.save(update_fields=["expense_type", "updated_at"])
 
 
 def _link_expenses_to_invoices() -> None:

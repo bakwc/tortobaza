@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from crm.models import FinancialAccount, FinancialTransaction
 from crm.rsge_links import sync_rsge_document_links
+from inventory.models import Supply
 from rsge.models import Invoice, InvoiceLine, Waybill
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -41,6 +42,10 @@ def _expense(
         counterparty_name=name,
         counterparty_iban=iban,
     )
+
+
+def _supply(waybill: Waybill) -> Supply:
+    return Supply.objects.create(date=waybill.create_date.date(), waybill=waybill, comment=waybill.waybill_number)
 
 
 def _waybill(
@@ -597,3 +602,100 @@ class SyncRsgeDocumentLinksTests(TestCase):
         call_command("sync_crm_orders_to_telegram")
 
         self.assertEqual(transaction.waybills.get().pk, waybill.pk)
+
+    def test_links_supply_to_waybill_payment(self):
+        account = _account()
+        waybill = _waybill(1, "86", date(2026, 9, 9), Decimal("86.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        transaction = _expense(account, date(2026, 9, 9), Decimal("86.00"), "LLC  biko", "")
+        supply = _supply(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(supply.financial_transactions.get().pk, transaction.pk)
+        transaction.refresh_from_db()
+        self.assertEqual(transaction.expense_type, FinancialTransaction.EXPENSE_PRODUCTS)
+
+    def test_links_supply_to_split_payments(self):
+        account = _account()
+        waybill = _waybill(
+            1,
+            "1498",
+            date(2026, 7, 22),
+            Decimal("1498.30"),
+            "ია ქოქოლაძე",
+            "Ия Коколадзе",
+            "61006029098",
+            "GE64BG0000000600293470GEL",
+            None,
+        )
+        bog = _expense(account, date(2026, 7, 26), Decimal("880.00"), "IE IA KOKOLADZE", "GE64BG0000000600293470GEL")
+        liberty = _expense(account, date(2026, 7, 26), Decimal("618.30"), "ია ქოქოლაძე", "GE64BG0000000600293470")
+        supply = _supply(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(set(supply.financial_transactions.values_list("pk", flat=True)), {bog.pk, liberty.pk})
+
+    def test_supply_skips_other_expense_type(self):
+        account = _account()
+        waybill = _waybill(1, "86", date(2026, 9, 9), Decimal("86.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        transaction = _expense(account, date(2026, 9, 9), Decimal("86.00"), "LLC  biko", "")
+        transaction.expense_type = FinancialTransaction.EXPENSE_RENT
+        transaction.save(update_fields=["expense_type", "updated_at"])
+        transaction.waybills.add(waybill)
+        supply = _supply(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(supply.financial_transactions.count(), 0)
+        transaction.refresh_from_db()
+        self.assertEqual(transaction.expense_type, FinancialTransaction.EXPENSE_RENT)
+
+    def test_supply_does_not_take_transaction_from_another_supply(self):
+        account = _account()
+        waybill = _waybill(1, "86", date(2026, 9, 9), Decimal("86.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        transaction = _expense(account, date(2026, 9, 9), Decimal("86.00"), "LLC  biko", "")
+        transaction.expense_type = FinancialTransaction.EXPENSE_PRODUCTS
+        transaction.save(update_fields=["expense_type", "updated_at"])
+        other = Supply.objects.create(date=date(2026, 9, 1), comment="manual")
+        other.financial_transactions.add(transaction)
+        supply = _supply(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(transaction.waybills.get().pk, waybill.pk)
+        self.assertEqual(supply.financial_transactions.count(), 0)
+        self.assertEqual(other.financial_transactions.get().pk, transaction.pk)
+
+    def test_supply_keeps_manual_transactions(self):
+        account = _account()
+        waybill = _waybill(1, "86", date(2026, 9, 9), Decimal("86.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        payment = _expense(account, date(2026, 9, 9), Decimal("86.00"), "LLC  biko", "")
+        manual = _expense(account, date(2026, 9, 1), Decimal("10.00"), "someone else", "")
+        manual.expense_type = FinancialTransaction.EXPENSE_PRODUCTS
+        manual.save(update_fields=["expense_type", "updated_at"])
+        supply = _supply(waybill)
+        supply.financial_transactions.add(manual)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(set(supply.financial_transactions.values_list("pk", flat=True)), {manual.pk, payment.pk})
+
+    def test_rebind_moves_supply_payment(self):
+        account = _account()
+        today = timezone.localdate()
+        waybill = _waybill(1, "1054", today, Decimal("100.00"), "შპს ბიკო", "ООО Бико", "445568476", "", None)
+        salary = _expense(account, today - timedelta(days=1), Decimal("99.50"), "Котик Настя", "")
+        supply = _supply(waybill)
+
+        sync_rsge_document_links()
+
+        self.assertEqual(supply.financial_transactions.get().pk, salary.pk)
+
+        payment = _expense(account, today, Decimal("100.00"), "SWEET CHILL", "")
+        sync_rsge_document_links()
+
+        self.assertEqual(payment.waybills.get().pk, waybill.pk)
+        self.assertEqual(supply.financial_transactions.get().pk, payment.pk)
+        payment.refresh_from_db()
+        self.assertEqual(payment.expense_type, FinancialTransaction.EXPENSE_PRODUCTS)

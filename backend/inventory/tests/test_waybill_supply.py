@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
@@ -8,6 +8,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
+from crm.models import FinancialAccount, FinancialTransaction
 from inventory.models import StockMovement, Supplier, Supply, WaybillIngredientAlias
 from inventory.waybill_supply import (
     WAYBILL_MATCH_MODEL,
@@ -261,7 +262,7 @@ class WaybillSupplyApiTests(TestCase):
         self.assertEqual(supply.waybill_id, self.waybill.pk)
         self.assertEqual(supply.date.isoformat(), "2026-10-14")
         self.assertEqual(supply.comment, "101")
-        self.assertIsNone(supply.financial_transaction_id)
+        self.assertEqual(supply.financial_transactions.count(), 0)
         self.assertEqual(supply.created_by_id, self.admin.pk)
         self.assertEqual(list(supply.receipts.all()), [])
         line = supply.lines.get()
@@ -288,6 +289,24 @@ class WaybillSupplyApiTests(TestCase):
         self.assertEqual(listed.json()[0]["supply"]["id"], supply.pk)
         self.assertEqual(listed.json()[0]["supply"]["date"], "2026-10-14")
         self.assertEqual(listed.json()[0]["supply"]["total"], "45.50")
+
+    def test_create_links_existing_waybill_payment(self):
+        account = FinancialAccount.objects.create(name="BOG", kind=FinancialAccount.KIND_BANK)
+        transaction = FinancialTransaction.objects.create(
+            account=account,
+            date=date(2026, 10, 14),
+            amount=Decimal("-45.50"),
+            kind=FinancialTransaction.KIND_EXPENSE,
+            counterparty_name="Молочный",
+        )
+        transaction.waybills.add(self.waybill)
+        self.client.force_authenticate(self.admin)
+        response = self.create(self.waybill, [supply_line(self.milk_good, self.milk, "10000", False)])
+        self.assertEqual(response.status_code, 201, response.content)
+        supply = Supply.objects.get()
+        self.assertEqual(supply.financial_transactions.get().pk, transaction.pk)
+        transaction.refresh_from_db()
+        self.assertEqual(transaction.expense_type, FinancialTransaction.EXPENSE_PRODUCTS)
 
     @patch("inventory.waybill_supply.OpenAI")
     def test_second_waybill_with_the_same_name_is_prefilled(self, openai_cls):

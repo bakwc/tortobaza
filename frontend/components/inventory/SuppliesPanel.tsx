@@ -58,7 +58,7 @@ type ReceiptMismatch = { receiptId: number; total: string; lines: string };
 type SupplyDraft = {
   date: string;
   supplier: number | null;
-  financial_transaction: number | null;
+  financial_transactions: number[];
   comment: string;
   lines: SupplyLineDraft[];
   receipts: ReceiptPreview[];
@@ -82,7 +82,7 @@ function draftFrom(row: Supply | null): SupplyDraft {
     return {
       date: getTbilisiTodayIsoDate(),
       supplier: null,
-      financial_transaction: null,
+      financial_transactions: [],
       comment: "",
       lines: [],
       receipts: [],
@@ -92,7 +92,7 @@ function draftFrom(row: Supply | null): SupplyDraft {
   return {
     date: row.date,
     supplier: row.supplier,
-    financial_transaction: row.financial_transaction?.id ?? null,
+    financial_transactions: row.financial_transactions.map((transaction) => transaction.id),
     comment: row.comment,
     lines: row.lines.map((line) => ({
       key: newDraftKey(),
@@ -171,8 +171,9 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   };
 
   const total = draft.lines.reduce((sum, line) => sum + Number(decimal(line.total) || "0"), 0);
-  const linked = (transactions.data ?? []).find((row) => row.id === draft.financial_transaction);
-  const mismatch = linked !== undefined && Math.abs(Math.abs(Number(linked.amount)) - total) >= 0.01;
+  const linked = (transactions.data ?? []).filter((row) => draft.financial_transactions.includes(row.id));
+  const linkedAmount = linked.reduce((sum, row) => sum + Math.abs(Number(row.amount)), 0);
+  const mismatch = linked.length > 0 && Math.abs(linkedAmount - total) >= 0.01;
 
   return (
     <>
@@ -193,7 +194,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
             body: {
               date: draft.date,
               supplier: draft.supplier,
-              financial_transaction: draft.financial_transaction,
+              financial_transactions: draft.financial_transactions,
               comment: draft.comment,
               receipts: draft.receipts.map((receipt) => receipt.id),
               lines: draft.lines.map((line) => ({
@@ -264,24 +265,36 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
           </Button>
         </div>
         <ErrorText error={suppliers.save.error} />
-        <Field label={t("bankTransaction")} className="sm:col-span-2">
-          <NativeSelect
-            value={draft.financial_transaction ?? ""}
-            onChange={(event) =>
-              setDraft({
-                ...draft,
-                financial_transaction: event.target.value === "" ? null : Number(event.target.value),
-              })
-            }
-          >
-            <option value="">{t("noBankTransaction")}</option>
-            {(transactions.data ?? []).map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.date} · {formatMoney(row.amount)} · {row.counterparty_name || row.description} · {row.account_name}
-              </option>
-            ))}
-          </NativeSelect>
-        </Field>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("bankTransaction")}</span>
+          {(transactions.data ?? []).length === 0 ? (
+            <p className="text-sm text-[var(--muted-2)]">{t("noBankTransaction")}</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {(transactions.data ?? []).map((row) => {
+                const checked = draft.financial_transactions.includes(row.id);
+                return (
+                  <label key={row.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          financial_transactions: event.target.checked
+                            ? [...draft.financial_transactions, row.id]
+                            : draft.financial_transactions.filter((id) => id !== row.id),
+                        })
+                      }
+                      className="h-4 w-4 accent-[var(--brand)]"
+                    />
+                    {row.date} · {formatMoney(row.amount)} · {row.counterparty_name || row.description} · {row.account_name}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
         <Field label={t("comment")} className="sm:col-span-2">
           <Textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
         </Field>
@@ -468,7 +481,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
       </div>
       <p className={mismatch ? "text-sm font-semibold text-amber-700" : "text-sm text-[var(--ink)]"}>
         {t("total")}: {formatMoney(String(total))}
-        {mismatch && linked ? ` · ${t("bankAmountDiffers", { amount: formatMoney(linked.amount) })}` : ""}
+        {mismatch ? ` · ${t("bankAmountDiffers", { amount: formatMoney(linkedAmount.toFixed(2)) })}` : ""}
       </p>
     </EditorDialog>
     {creating === null ? null : (
@@ -563,15 +576,16 @@ function SuppliesList() {
                           {formatGel(row.waybill.full_amount, "GEL")}
                         </RsgeChip>
                       ) : null}
-                      {row.financial_transaction !== null ? (
+                      {row.financial_transactions.map((transaction) => (
                         <RsgeChip
-                          href={`/finance?month=${row.financial_transaction.date.slice(0, 7)}&transaction=${row.financial_transaction.id}`}
+                          key={transaction.id}
+                          href={`/finance?month=${transaction.date.slice(0, 7)}&transaction=${transaction.id}`}
                           className="bg-violet-100 text-violet-900"
                         >
-                          {rsge("paymentBadge")} {formatCrmCompactDate(row.financial_transaction.date, locale)}{" "}
-                          {formatGel(row.financial_transaction.amount, "GEL")} {row.financial_transaction.counterparty_name}
+                          {rsge("paymentBadge")} {formatCrmCompactDate(transaction.date, locale)}{" "}
+                          {formatGel(transaction.amount, "GEL")} {transaction.counterparty_name}
                         </RsgeChip>
-                      ) : null}
+                      ))}
                     </>
                   }
                   onConfirm={null}
