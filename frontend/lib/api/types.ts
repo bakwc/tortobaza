@@ -1594,6 +1594,15 @@ export const TechCardCategorySchema = z.object({
   position: z.number(),
 });
 
+export const TechCardDraftRecordSchema = z.object({
+  client_id: z.string(),
+  tech_card: z.number().nullable(),
+  name: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  client_updated_at: z.string(),
+  updated_by: z.string(),
+});
+
 export const TechCardListItemSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -1692,6 +1701,13 @@ export type TechCardGroup = z.infer<typeof TechCardGroupSchema>;
 export type TechCardModifierLine = z.infer<typeof TechCardModifierLineSchema>;
 export type TechCardSection = z.infer<typeof TechCardSectionSchema>;
 export type TechCardCategory = z.infer<typeof TechCardCategorySchema>;
+export type TechCardDraftRecord = z.infer<typeof TechCardDraftRecordSchema>;
+export type TechCardDraftWriteBody = {
+  client_id: string;
+  tech_card: number | null;
+  client_updated_at: string;
+  payload: object;
+};
 export type TechCardListItem = z.infer<typeof TechCardListItemSchema>;
 export type TechCard = z.infer<typeof TechCardSchema>;
 export type TechCardImportLine = z.infer<typeof TechCardImportLineSchema>;

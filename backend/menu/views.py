@@ -24,6 +24,7 @@ from menu.models import (
     SemiProductImage,
     TechCard,
     TechCardCategory,
+    TechCardDraft,
     TechCardImage,
 )
 from menu.clone import CloneNameSerializer, clone_semi_product, clone_tech_card
@@ -44,6 +45,8 @@ from menu.serializers import (
     menu_image_rows,
     TechCardCategorySerializer,
     TechCardCostQuerySerializer,
+    TechCardDraftSerializer,
+    TechCardDraftWriteSerializer,
     TechCardListItemSerializer,
     TechCardSerializer,
 )
@@ -443,6 +446,54 @@ class TechCardImportView(APIView):
         if extension not in IMPORT_EXTENSIONS:
             raise ValidationError({"file": "Upload a docx, pages, or pdf file."})
         return Response(recognize_tech_card(upload.name, upload.read()))
+
+
+class TechCardDraftListView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    def get(self, request):
+        queryset = TechCardDraft.objects.select_related("updated_by")
+        return Response(TechCardDraftSerializer(queryset, many=True).data)
+
+    @transaction.atomic
+    def put(self, request):
+        write = TechCardDraftWriteSerializer(data=request.data)
+        write.is_valid(raise_exception=True)
+        data = write.validated_data
+        client_id = data["client_id"]
+        tech_card = data["tech_card"]
+        client_updated_at = data["client_updated_at"]
+        payload = data["payload"]
+        raw_name = payload.get("name")
+        name = raw_name if isinstance(raw_name, str) else ""
+        if tech_card is not None:
+            current = TechCardDraft.objects.select_for_update().filter(tech_card=tech_card).first()
+        else:
+            current = TechCardDraft.objects.select_for_update().filter(client_id=client_id).first()
+        if current is not None and current.client_updated_at > client_updated_at:
+            return Response(TechCardDraftSerializer(current).data, status=status.HTTP_409_CONFLICT)
+        if current is not None and current.client_id != client_id:
+            TechCardDraft.objects.filter(client_id=client_id).delete()
+            current.client_id = client_id
+        if current is None:
+            current = TechCardDraft(client_id=client_id)
+        current.tech_card = tech_card
+        current.name = name
+        current.payload = payload
+        current.client_updated_at = client_updated_at
+        current.updated_by = request.user
+        current.save()
+        return Response(TechCardDraftSerializer(current).data)
+
+
+class TechCardDraftDetailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    def delete(self, request, client_id):
+        TechCardDraft.objects.filter(client_id=client_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CatalogOptionListView(APIView):

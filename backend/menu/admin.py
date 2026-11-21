@@ -11,6 +11,7 @@ from menu.models import (
     SemiProductLine,
     TechCard,
     TechCardCategory,
+    TechCardDraft,
     TechCardImage,
     TechCardLine,
     TechCardModifierGroup,
@@ -123,6 +124,12 @@ class TechCardModifierLineInline(admin.TabularInline):
 class TechCardCategoryAdmin(admin.ModelAdmin):
     list_display = ["name", "position"]
     list_editable = ["position"]
+    search_fields = ["name"]
+
+
+@admin.register(TechCardDraft)
+class TechCardDraftAdmin(admin.ModelAdmin):
+    list_display = ["name", "tech_card", "updated_by", "client_updated_at"]
     search_fields = ["name"]
 
 

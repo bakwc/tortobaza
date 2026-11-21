@@ -18,6 +18,7 @@ from menu.models import (
     SemiProductLine,
     TechCard,
     TechCardCategory,
+    TechCardDraft,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -827,6 +828,31 @@ class TechCardCostQuerySerializer(serializers.Serializer):
         if len(by_id) != len({int(pk) for pk, _qty in pairs}):
             raise serializers.ValidationError({"modifiers": "Unknown modifier id."})
         return [(by_id[int(pk)], int(quantity)) for pk, quantity in pairs]
+
+
+class TechCardDraftSerializer(serializers.ModelSerializer):
+    updated_by = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TechCardDraft
+        fields = ["client_id", "tech_card", "name", "payload", "client_updated_at", "updated_by"]
+
+    def get_updated_by(self, instance: TechCardDraft) -> str:
+        if instance.updated_by_id is None:
+            return ""
+        return instance.updated_by.get_username()
+
+
+class TechCardDraftWriteSerializer(serializers.Serializer):
+    client_id = serializers.UUIDField()
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
+    client_updated_at = serializers.DateTimeField()
+    payload = serializers.JSONField()
+
+    def validate_payload(self, value: object) -> dict:
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Payload must be an object.")
+        return value
 
 
 class MissingModifierLineSerializer(serializers.Serializer):

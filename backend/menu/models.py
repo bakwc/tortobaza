@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -666,3 +667,36 @@ class TechCardModifierLine(ComponentRef):
         if self.semi_product_id is not None:
             return self.semi_product
         return self.nested_tech_card
+
+
+class TechCardDraft(models.Model):
+    client_id = models.UUIDField(unique=True, verbose_name=_("Client id"))
+    tech_card = models.ForeignKey(
+        TechCard,
+        related_name="drafts",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        unique=True,
+        verbose_name=_("Tech card"),
+    )
+    name = models.TextField(blank=True, default="", verbose_name=_("Name"))
+    payload = models.JSONField(verbose_name=_("Payload"))
+    client_updated_at = models.DateTimeField(verbose_name=_("Client updated at"))
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="tech_card_drafts",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Updated by"),
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
+
+    class Meta:
+        ordering = ["-client_updated_at"]
+        verbose_name = _("Tech card draft")
+        verbose_name_plural = _("Tech card drafts")
+
+    def __str__(self) -> str:
+        return self.name

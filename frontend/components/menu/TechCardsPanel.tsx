@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -74,19 +75,26 @@ import {
   useSemiProducts,
   useTechCard,
   useTechCardCategories,
+  useTechCardDrafts,
   useTechCardImages,
   useTechCardImport,
   useTechCardList,
 } from "@/hooks/useStock";
-import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
+import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardDraftRecord, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
 import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
 import {
-  clearTechCardDraft,
-  readTechCardDraft,
+  deleteStoredTechCardDraft,
+  findStoredTechCardDraftByCard,
+  flushPendingTechCardDrafts,
+  listStoredTechCardDrafts,
+  mergeServerTechCardDrafts,
+  pushStoredTechCardDraft,
+  readStoredTechCardDraft,
   techCardDraftsEqual,
-  writeTechCardDraft,
+  writeStoredTechCardDraft,
   type ModifierComposition,
   type SectionDraft,
+  type StoredTechCardDraft,
   type TechCardDraft,
 } from "@/lib/tech-card-draft";
 import { cn } from "@/lib/utils";
@@ -331,6 +339,54 @@ function componentsTotal(row: TechCard): number {
   return row.lines.length + row.sections.reduce((sum, section) => sum + section.lines.length, 0);
 }
 
+function techCardDraftRows(records: TechCardDraftRecord[]) {
+  const rows = new Map<
+    string,
+    {
+      clientId: string;
+      techCardId: number | null;
+      name: string;
+      updatedBy: string;
+      pending: boolean;
+      clientUpdatedAt: string;
+      draft: TechCardDraft;
+    }
+  >();
+  for (const record of records) {
+    const key = record.tech_card !== null ? `card:${record.tech_card}` : record.client_id;
+    rows.set(key, {
+      clientId: record.client_id,
+      techCardId: record.tech_card,
+      name: record.name,
+      updatedBy: record.updated_by,
+      pending: false,
+      clientUpdatedAt: record.client_updated_at,
+      draft: record.payload as TechCardDraft,
+    });
+  }
+  for (const local of listStoredTechCardDrafts()) {
+    const key = local.techCardId !== null ? `card:${local.techCardId}` : local.clientId;
+    const existing = rows.get(key);
+    if (
+      existing !== undefined &&
+      !local.pending &&
+      Date.parse(local.clientUpdatedAt) < Date.parse(existing.clientUpdatedAt)
+    ) {
+      continue;
+    }
+    rows.set(key, {
+      clientId: local.clientId,
+      techCardId: local.techCardId,
+      name: local.draft.name,
+      updatedBy: existing?.updatedBy ?? "",
+      pending: local.pending,
+      clientUpdatedAt: local.clientUpdatedAt,
+      draft: local.draft,
+    });
+  }
+  return [...rows.values()];
+}
+
 function TechCardRow({
   row,
   basis,
@@ -462,8 +518,12 @@ export function TechCardsPanel() {
   const techCardImport = useTechCardImport();
   const fileRef = useRef<HTMLInputElement>(null);
   const baselineRef = useRef<TechCardDraft | null>(null);
-  const storageIdRef = useRef<number | null>(null);
+  const clientIdRef = useRef<string | null>(null);
+  const techCardIdRef = useRef<number | null>(null);
+  const pendingApplyRef = useRef<StoredTechCardDraft | null>(null);
   const persistTimer = useRef<number | null>(null);
+  const queryClient = useQueryClient();
+  const draftsQuery = useTechCardDrafts();
   const canSeeCosts = useCan("view_costs");
   const canEdit = useCan("edit_menu");
   const cardParam = searchParams.get("card");
@@ -481,7 +541,7 @@ export function TechCardsPanel() {
   const [assignCategory, setAssignCategory] = useState("");
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
-  const [discardOpen, setDiscardOpen] = useState(false);
+  const [draftRevision, setDraftRevision] = useState(0);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreDraft, setRestoreDraft] = useState<TechCardDraft | null>(null);
   const requestedId = ignoreCardParam
@@ -498,14 +558,69 @@ export function TechCardsPanel() {
     if (ignoreCardParam && cardParam === null) setIgnoreCardParam(false);
   }, [ignoreCardParam, cardParam]);
 
+  const rememberDrafts = () => {
+    setDraftRevision((value) => value + 1);
+  };
+  const refreshServerDrafts = () => {
+    void queryClient.invalidateQueries({ queryKey: ["menu", "tech-card-drafts"] });
+  };
+  const syncStored = (row: StoredTechCardDraft) => {
+    void pushStoredTechCardDraft(row, clientIdRef.current === row.clientId).then((result) => {
+      rememberDrafts();
+      if (result === "saved") refreshServerDrafts();
+    });
+  };
+
+  useEffect(() => {
+    if (draftsQuery.data === undefined) return;
+    mergeServerTechCardDrafts(
+      draftsQuery.data,
+      clientIdRef.current,
+      mode === "edit" ? techCardIdRef.current : null,
+    );
+    rememberDrafts();
+  }, [draftsQuery.data, mode]);
+
+  useEffect(() => {
+    const flush = () => {
+      void flushPendingTechCardDrafts(clientIdRef.current).then(() => {
+        rememberDrafts();
+        refreshServerDrafts();
+      });
+    };
+    flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [queryClient]);
+
   useEffect(() => {
     if (mode !== "edit" || draft === null || baselineRef.current === null || restoreOpen) return;
-    const storageId = storageIdRef.current;
+    const clientId = clientIdRef.current;
+    const techCardId = techCardIdRef.current;
     const baseline = baselineRef.current;
+    if (clientId === null) return;
     persistTimer.current = window.setTimeout(() => {
       persistTimer.current = null;
-      if (techCardDraftsEqual(draft, baseline)) clearTechCardDraft(storageId);
-      else writeTechCardDraft(storageId, draft);
+      if (techCardDraftsEqual(draft, baseline)) {
+        if (readStoredTechCardDraft(clientId) !== null) {
+          void deleteStoredTechCardDraft(clientId).then(() => {
+            rememberDrafts();
+            refreshServerDrafts();
+          });
+        }
+        return;
+      }
+      const row: StoredTechCardDraft = {
+        clientId,
+        techCardId,
+        clientUpdatedAt: new Date().toISOString(),
+        pending: true,
+        rejectedAt: null,
+        draft,
+      };
+      writeStoredTechCardDraft(row);
+      rememberDrafts();
+      syncStored(row);
     }, 500);
     return () => {
       if (persistTimer.current !== null) {
@@ -513,7 +628,7 @@ export function TechCardsPanel() {
         persistTimer.current = null;
       }
     };
-  }, [draft, mode, restoreOpen]);
+  }, [draft, mode, restoreOpen, queryClient]);
 
   useEffect(() => {
     if (mode !== "edit" || draft === null || baselineRef.current === null) return;
@@ -542,21 +657,44 @@ export function TechCardsPanel() {
       persistTimer.current = null;
     }
   };
-  const beginEdit = (baseline: TechCardDraft, storageId: number | null) => {
+  const persistNow = (next: TechCardDraft) => {
     stopPersist();
-    baselineRef.current = baseline;
-    storageIdRef.current = storageId;
-    setDiscardOpen(false);
-    setDraft(baseline);
-    setMode("edit");
-    const stored = readTechCardDraft(storageId);
-    if (stored !== null && !techCardDraftsEqual(stored, baseline)) {
-      setRestoreDraft(stored);
-      setRestoreOpen(true);
+    const baseline = baselineRef.current;
+    const clientId = clientIdRef.current;
+    if (baseline === null || clientId === null) return;
+    if (techCardDraftsEqual(next, baseline)) {
+      if (readStoredTechCardDraft(clientId) !== null) {
+        void deleteStoredTechCardDraft(clientId).then(() => {
+          rememberDrafts();
+          refreshServerDrafts();
+        });
+      }
       return;
     }
+    const existing = readStoredTechCardDraft(clientId);
+    if (existing !== null && techCardDraftsEqual(existing.draft, next)) return;
+    const row: StoredTechCardDraft = {
+      clientId,
+      techCardId: techCardIdRef.current,
+      clientUpdatedAt: new Date().toISOString(),
+      pending: true,
+      rejectedAt: null,
+      draft: next,
+    };
+    writeStoredTechCardDraft(row);
+    rememberDrafts();
+    syncStored(row);
+  };
+  const beginEdit = (baseline: TechCardDraft, techCardId: number | null, clientId: string, editor: TechCardDraft) => {
+    stopPersist();
+    baselineRef.current = baseline;
+    techCardIdRef.current = techCardId;
+    clientIdRef.current = clientId;
+    pendingApplyRef.current = null;
     setRestoreDraft(null);
     setRestoreOpen(false);
+    setDraft(editor);
+    setMode("edit");
   };
   const openNew = () => {
     techCards.save.reset();
@@ -566,23 +704,33 @@ export function TechCardsPanel() {
     setGroupToAdd("");
     setImportedFrom(null);
     router.replace("/menu", { scroll: false });
-    beginEdit(draftFrom(null), null);
+    const baseline = draftFrom(null);
+    beginEdit(baseline, null, crypto.randomUUID(), baseline);
   };
   const openEdit = () => {
     if (current === null) return;
     setGroupToAdd("");
     setImportedFrom(null);
-    beginEdit(withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options), current.id);
+    const baseline = withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options);
+    const stored = findStoredTechCardDraftByCard(current.id);
+    const clientId = stored === null ? crypto.randomUUID() : stored.clientId;
+    beginEdit(baseline, current.id, clientId, baseline);
+    if (stored !== null && !techCardDraftsEqual(stored.draft, baseline)) {
+      setRestoreDraft(stored.draft);
+      setRestoreOpen(true);
+    }
   };
   const openClone = () => {
     techCards.clone.reset();
     setCloneOpen(true);
   };
   const close = () => {
-    setDiscardOpen(false);
     setRestoreOpen(false);
     setRestoreDraft(null);
     baselineRef.current = null;
+    clientIdRef.current = null;
+    techCardIdRef.current = null;
+    pendingApplyRef.current = null;
     setMode(null);
     setDraft(null);
     setIgnoreCardParam(true);
@@ -591,28 +739,44 @@ export function TechCardsPanel() {
     router.replace("/menu", { scroll: false });
   };
   const cancelEdit = () => {
-    setDiscardOpen(false);
     setRestoreOpen(false);
     setRestoreDraft(null);
     setDraft(null);
     baselineRef.current = null;
+    clientIdRef.current = null;
+    techCardIdRef.current = null;
+    pendingApplyRef.current = null;
     if (current === null) close();
     else setMode("view");
   };
   const requestClose = () => {
     if (restoreOpen) return;
-    if (draft !== null && baselineRef.current !== null && !techCardDraftsEqual(draft, baselineRef.current)) {
-      setDiscardOpen(true);
-      return;
-    }
-    stopPersist();
-    clearTechCardDraft(storageIdRef.current);
+    if (draft !== null) persistNow(draft);
     cancelEdit();
   };
-  const confirmDiscard = () => {
+  const forgetDraft = (clientId: string) => {
+    const local = readStoredTechCardDraft(clientId);
+    const techCardId = local === null ? null : local.techCardId;
+    const ids = new Set<string>([clientId]);
+    if (techCardId !== null) {
+      for (const record of draftsQuery.data ?? []) {
+        if (record.tech_card === techCardId) ids.add(record.client_id);
+      }
+      const stored = findStoredTechCardDraftByCard(techCardId);
+      if (stored !== null) ids.add(stored.clientId);
+    }
+    for (const id of ids) {
+      void deleteStoredTechCardDraft(id).then(() => {
+        rememberDrafts();
+        refreshServerDrafts();
+      });
+    }
+  };
+  const resetDraft = (clientId: string) => {
     stopPersist();
-    clearTechCardDraft(storageIdRef.current);
-    cancelEdit();
+    const editing = clientIdRef.current === clientId;
+    forgetDraft(clientId);
+    if (editing) cancelEdit();
   };
   const keepStoredDraft = () => {
     if (restoreDraft !== null) setDraft(restoreDraft);
@@ -620,9 +784,35 @@ export function TechCardsPanel() {
     setRestoreOpen(false);
   };
   const dropStoredDraft = () => {
-    clearTechCardDraft(storageIdRef.current);
+    const clientId = clientIdRef.current;
+    if (clientId !== null) forgetDraft(clientId);
     setRestoreDraft(null);
     setRestoreOpen(false);
+  };
+  const openStoredDraft = (row: StoredTechCardDraft) => {
+    techCards.save.reset();
+    techCards.remove.reset();
+    setGroupToAdd("");
+    setImportedFrom(null);
+    if (row.techCardId === null) {
+      beginEdit(draftFrom(null), null, row.clientId, row.draft);
+      setIgnoreCardParam(true);
+      setOpenedId(null);
+      router.replace("/menu", { scroll: false });
+      return;
+    }
+    stopPersist();
+    baselineRef.current = null;
+    clientIdRef.current = row.clientId;
+    techCardIdRef.current = row.techCardId;
+    pendingApplyRef.current = row;
+    setRestoreDraft(null);
+    setRestoreOpen(false);
+    setIgnoreCardParam(false);
+    setOpenedId(row.techCardId);
+    setDraft(row.draft);
+    setMode("edit");
+    router.replace(`/menu?card=${row.techCardId}`, { scroll: false });
   };
   const openImported = (file: File) => {
     techCardImport.mutate(file, {
@@ -634,7 +824,7 @@ export function TechCardsPanel() {
         setImportedFrom(result.source_name);
         setGroupToAdd("");
         router.replace("/menu", { scroll: false });
-        beginEdit(draftFromImport(result), null);
+        beginEdit(draftFrom(null), null, crypto.randomUUID(), draftFromImport(result));
       },
     });
   };
@@ -751,6 +941,18 @@ export function TechCardsPanel() {
   }
   const cards = techCards.list.data ?? [];
   const query = search.trim().toLowerCase();
+  const draftRows = useMemo(() => {
+    return techCardDraftRows(draftsQuery.data ?? []).filter((row) => nameMatches(row.name, query));
+  }, [draftsQuery.data, draftRevision, query]);
+
+  useEffect(() => {
+    const pending = pendingApplyRef.current;
+    if (pending === null || pending.techCardId === null || current === null || current.id !== pending.techCardId) {
+      return;
+    }
+    baselineRef.current = withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options);
+    pendingApplyRef.current = null;
+  }, [current, groups.list.data, options]);
   const allCardGroups = [
     ...(categories.list.data ?? []).map((category) => ({
       key: String(category.id),
@@ -823,10 +1025,18 @@ export function TechCardsPanel() {
       {
         onSuccess: (saved) => {
           stopPersist();
-          clearTechCardDraft(storageIdRef.current);
+          const clientId = clientIdRef.current;
+          clientIdRef.current = null;
+          techCardIdRef.current = null;
+          pendingApplyRef.current = null;
+          if (clientId !== null) {
+            void deleteStoredTechCardDraft(clientId).then(() => {
+              rememberDrafts();
+              refreshServerDrafts();
+            });
+          }
           setIgnoreCardParam(false);
           setOpenedId(saved.id);
-          setDiscardOpen(false);
           setRestoreOpen(false);
           setRestoreDraft(null);
           setDraft(null);
@@ -940,6 +1150,49 @@ export function TechCardsPanel() {
           ) : null}
         </div>
       </Card>
+
+      {draftRows.length > 0 ? (
+        <section className="overflow-hidden rounded-3xl border border-[var(--line)] bg-white shadow-sm">
+          <div className="flex items-center gap-2.5 border-b border-[var(--line)] bg-[var(--cream-soft)] px-4 py-3">
+            <h3 className="flex-1 text-sm font-semibold uppercase tracking-wide text-[var(--ink)]/70">{t("drafts")}</h3>
+            <span className="rounded-full bg-[var(--cream)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ink)]/70">
+              {draftRows.length}
+            </span>
+          </div>
+          <div className="divide-y divide-[var(--line)]">
+            {draftRows.map((row) => (
+              <div key={row.clientId} className="flex items-center gap-2 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openStoredDraft({
+                      clientId: row.clientId,
+                      techCardId: row.techCardId,
+                      clientUpdatedAt: row.clientUpdatedAt,
+                      pending: row.pending,
+                      rejectedAt: null,
+                      draft: row.draft,
+                    })
+                  }
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <p className="font-semibold text-[var(--ink)]">{row.name.trim() === "" ? t("newTechCard") : row.name}</p>
+                  {[row.updatedBy, row.pending ? t("draftNotSent") : ""].filter((part) => part !== "").length > 0 ? (
+                    <p className="mt-0.5 text-xs text-[var(--muted-2)]">
+                      {[row.updatedBy, row.pending ? t("draftNotSent") : ""].filter((part) => part !== "").join(" · ")}
+                    </p>
+                  ) : null}
+                </button>
+                {canEdit ? (
+                  <Button type="button" variant="outline" onClick={() => resetDraft(row.clientId)}>
+                    {t("resetDraft")}
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <QueryState isLoading={techCards.list.isLoading} isError={techCards.list.isError}>
         {cardGroups.length === 0 ? (
@@ -1254,14 +1507,33 @@ export function TechCardsPanel() {
                   techCards.remove.mutate(current.id, {
                     onSuccess: () => {
                       stopPersist();
-                      clearTechCardDraft(current.id);
+                      const stored = findStoredTechCardDraftByCard(current.id);
+                      if (stored !== null) {
+                        void deleteStoredTechCardDraft(stored.clientId).then(() => {
+                          rememberDrafts();
+                          refreshServerDrafts();
+                        });
+                      }
                       close();
                     },
                   })
               : null
           }
           deletePending={techCards.remove.isPending}
-          headerAction={null}
+          headerAction={
+            canEdit && clientIdRef.current !== null ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const clientId = clientIdRef.current;
+                  if (clientId !== null) resetDraft(clientId);
+                }}
+              >
+                {t("resetDraft")}
+              </Button>
+            ) : null
+          }
           below={null}
         >
           {importedFrom !== null && current === null ? (
@@ -1671,27 +1943,6 @@ export function TechCardsPanel() {
             <p className="text-xs text-[var(--muted-2)]">{t("noGroupsToAdd")}</p>
           ) : null}
         </EditorDialog>
-      ) : null}
-
-      {discardOpen ? (
-        <Dialog open onOpenChange={(value) => (value ? null : setDiscardOpen(false))}>
-          <DialogContent className="w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] p-6">
-            <DialogTitle className="pr-10 text-lg font-semibold text-[var(--ink)]">{t("discardDraftTitle")}</DialogTitle>
-            <DialogDescription className="mt-2 text-sm text-[var(--muted-2)]">{t("discardDraftBody")}</DialogDescription>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)}>
-                {t("stayEditing")}
-              </Button>
-              <Button
-                type="button"
-                onClick={confirmDiscard}
-                className="bg-[var(--danger)] text-white hover:bg-[var(--danger)]/90"
-              >
-                {t("discardDraft")}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       ) : null}
 
       {restoreOpen ? (

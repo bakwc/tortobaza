@@ -79,6 +79,13 @@ export function useTechCardImport() {
   });
 }
 
+export function useTechCardDrafts() {
+  return useQuery({
+    queryKey: ["menu", "tech-card-drafts"],
+    queryFn: () => api.menuTechCardDrafts(),
+  });
+}
+
 export function useTechCardList() {
   const invalidate = useInvalidateStock();
   const list = useQuery({

@@ -186,6 +186,7 @@ import {
   SupplyTransactionSchema,
   TechCardCategorySchema,
   TechCardCostSchema,
+  TechCardDraftRecordSchema,
   TechCardListItemSchema,
   TechCardImportSchema,
   TechCardSchema,
@@ -227,6 +228,8 @@ import {
   type SupplyTransaction,
   type TechCard,
   type TechCardBody,
+  type TechCardDraftRecord,
+  type TechCardDraftWriteBody,
   type TechCardImport,
   type TechCardListItem,
   type TechCardCategory,
@@ -335,6 +338,20 @@ export function endpoints(fetcher: Fetcher) {
       TechCardCategorySchema,
     ),
     menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    async menuTechCardDrafts(): Promise<TechCardDraftRecord[]> {
+      const raw = await fetcher<unknown>("/api/menu/tech-card-drafts/");
+      return parse(z.array(TechCardDraftRecordSchema), raw);
+    },
+    async saveTechCardDraft(body: TechCardDraftWriteBody): Promise<TechCardDraftRecord> {
+      const raw = await fetcher<unknown>("/api/menu/tech-card-drafts/", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      return parse(TechCardDraftRecordSchema, raw);
+    },
+    deleteTechCardDraft(clientId: string): Promise<void> {
+      return fetcher<void>(`/api/menu/tech-card-drafts/${clientId}/`, { method: "DELETE" });
+    },
     async cloneTechCard(id: number, name: string): Promise<TechCard> {
       const raw = await fetcher<unknown>(`/api/menu/tech-cards/${id}/clone/`, {
         method: "POST",
