@@ -34,6 +34,8 @@ export function SiteChrome({
     pathname.startsWith("/history/") ||
     pathname === "/employees" ||
     pathname.startsWith("/employees/") ||
+    pathname === "/attendance" ||
+    pathname.startsWith("/attendance/") ||
     pathname === "/site" ||
     pathname.startsWith("/site/");
 
