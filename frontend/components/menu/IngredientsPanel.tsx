@@ -77,6 +77,11 @@ function priceForQuantity(avgCost: string, costQuantity: string, unitLabel: stri
   return `${formatUnitCost(packPrice(avgCost, costQuantity))} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
 
+function missingPrice(row: Ingredient): boolean {
+  if (row.avg_cost === undefined) return true;
+  return decimalNumber(row.avg_cost) === 0;
+}
+
 function salePriceForQuantity(salePrice: string, costQuantity: string, unitLabel: string): string {
   return `${formatMoney(salePrice)} / ${unitCostDraft(costQuantity)} ${unitLabel}`;
 }
@@ -301,6 +306,7 @@ export function IngredientsPanel() {
   const [newCategory, setNewCategory] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [missingPriceOnly, setMissingPriceOnly] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [assignCategory, setAssignCategory] = useState("");
@@ -374,6 +380,7 @@ export function IngredientsPanel() {
 
   const rows = ingredients.list.data ?? [];
   const query = search.trim().toLowerCase();
+  const hidePriced = canSeeCosts && missingPriceOnly;
   const allGroups = [
     ...(categories.list.data ?? []).map((category) => ({
       key: String(category.id),
@@ -387,10 +394,16 @@ export function IngredientsPanel() {
     .map((group) => ({
       ...group,
       rows: group.rows
-        .filter((row) => nameMatches(row.name, query))
+        .filter((row) => nameMatches(row.name, query) && (!hidePriced || missingPrice(row)))
         .sort((left, right) => compareNameMatch(left.name, right.name, query)),
     }))
     .filter((group) => group.rows.length > 0);
+  const missingPriceCount = allGroups
+    .filter((group) => categoryFilter === "all" || group.key === categoryFilter)
+    .reduce(
+      (total, group) => total + group.rows.filter((row) => nameMatches(row.name, query) && missingPrice(row)).length,
+      0,
+    );
   const activeCount = rows.filter((row) => row.is_active).length;
 
   return (
@@ -448,6 +461,28 @@ export function IngredientsPanel() {
               </span>
             </button>
           ))}
+          {canSeeCosts ? (
+            <button
+              type="button"
+              onClick={() => setMissingPriceOnly((value) => !value)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                missingPriceOnly
+                  ? "bg-[var(--brand)] text-white"
+                  : "border border-[var(--line)] bg-white text-[var(--ink)] hover:bg-[var(--cream-soft)]",
+              )}
+            >
+              {t("noPrice")}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px]",
+                  missingPriceOnly ? "bg-white/25" : "bg-[var(--cream)]",
+                )}
+              >
+                {missingPriceCount}
+              </span>
+            </button>
+          ) : null}
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-[var(--line)] pt-4 text-xs sm:gap-6 sm:text-sm">
           <div className="flex items-center gap-1.5 text-[var(--ink)]">
