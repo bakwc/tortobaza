@@ -155,6 +155,15 @@ function AttendancePanel({ user }: { user: SessionUser }) {
     });
   };
 
+  const todayArrival = summary.data?.rows.find(
+    (row) => row.date === getTbilisiTodayIsoDate(),
+  )?.arrival;
+  const marked: { eventType: AttendanceEventType; timestamp: string } | null = lastEvent
+    ? { eventType: lastEvent.event_type, timestamp: lastEvent.timestamp }
+    : todayArrival
+      ? { eventType: "arrival", timestamp: todayArrival }
+      : null;
+
   return (
     <div className="grid gap-6">
       <div className="rounded-3xl border border-[var(--line)] bg-white p-8 shadow-sm">
@@ -205,10 +214,10 @@ function AttendancePanel({ user }: { user: SessionUser }) {
           </Button>
         </div>
 
-        {lastEvent ? (
+        {marked ? (
           <p className="mt-6 text-center text-sm text-[var(--ink)]/70">
-            {lastEvent.event_type === "arrival" ? "Arrival" : "Departure"} marked at{" "}
-            {new Date(lastEvent.timestamp).toLocaleString()}
+            {marked.eventType === "arrival" ? "Arrival" : "Departure"} marked at{" "}
+            {new Date(marked.timestamp).toLocaleString()}
           </p>
         ) : null}
 
