@@ -140,6 +140,19 @@ function LoginForm() {
   );
 }
 
+function todayAttendanceCaption(arrival: string | null, departure: string | null): string | null {
+  if (arrival !== null && departure !== null) {
+    return `${formatAttendanceTime(arrival)} – ${formatAttendanceTime(departure)}`;
+  }
+  if (arrival !== null) {
+    return `Arrival marked at ${formatAttendanceTime(arrival)}`;
+  }
+  if (departure !== null) {
+    return `Departure marked at ${formatAttendanceTime(departure)}`;
+  }
+  return null;
+}
+
 function AttendancePanel({ user }: { user: SessionUser }) {
   const logout = useLogout();
   const mark = useMarkAttendance();
@@ -155,14 +168,16 @@ function AttendancePanel({ user }: { user: SessionUser }) {
     });
   };
 
-  const todayArrival = summary.data?.rows.find(
-    (row) => row.date === getTbilisiTodayIsoDate(),
-  )?.arrival;
-  const marked: { eventType: AttendanceEventType; timestamp: string } | null = lastEvent
-    ? { eventType: lastEvent.event_type, timestamp: lastEvent.timestamp }
-    : todayArrival
-      ? { eventType: "arrival", timestamp: todayArrival }
-      : null;
+  const todayRow = summary.data?.rows.find((row) => row.date === getTbilisiTodayIsoDate());
+  let arrival = todayRow?.arrival ?? null;
+  let departure = todayRow?.departure ?? null;
+  if (lastEvent?.event_type === "arrival" && arrival === null) {
+    arrival = lastEvent.timestamp;
+  }
+  if (lastEvent?.event_type === "departure") {
+    departure = lastEvent.timestamp;
+  }
+  const marked = todayAttendanceCaption(arrival, departure);
 
   return (
     <div className="grid gap-6">
@@ -215,10 +230,7 @@ function AttendancePanel({ user }: { user: SessionUser }) {
         </div>
 
         {marked ? (
-          <p className="mt-6 text-center text-sm text-[var(--ink)]/70">
-            {marked.eventType === "arrival" ? "Arrival" : "Departure"} marked at{" "}
-            {new Date(marked.timestamp).toLocaleString()}
-          </p>
+          <p className="mt-6 text-center text-sm text-[var(--ink)]/70">{marked}</p>
         ) : null}
 
         {mark.isError ? (
