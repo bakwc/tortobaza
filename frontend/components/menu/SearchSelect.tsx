@@ -82,7 +82,8 @@ export function SearchSelect({
     typed !== "" &&
     !options.some((option) => {
       const ingredientName = optionIngredientName(option);
-      return ingredientName !== null && namesEqual(ingredientName, typed);
+      if (ingredientName !== null && namesEqual(ingredientName, typed)) return true;
+      return namesEqual(option.label, typed);
     });
   const highlightIndex = filtered.length === 0 ? 0 : Math.min(highlight, filtered.length - 1);
   const active = filtered[highlightIndex] ?? null;

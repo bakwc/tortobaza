@@ -31,6 +31,7 @@ import {
   sumGel,
   type RsgeColumn,
 } from "@/components/rsge/RsgeDocumentRow";
+import { WaybillIngredientDialog } from "@/components/rsge/WaybillIngredientDialog";
 import { WaybillPriceChange } from "@/components/rsge/WaybillPriceChange";
 import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
 import { useCan } from "@/hooks/useAuth";
@@ -151,6 +152,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const dateEdited = useRef(supply !== null);
   const [draft, setDraft] = useState<SupplyDraft>(() => draftFrom(supply));
   const [newSupplier, setNewSupplier] = useState("");
+  const [creating, setCreating] = useState<{ key: string; name: string; unit: MenuUnit } | null>(null);
 
   const updateLine = (key: string, patch: Partial<SupplyLineDraft>) =>
     setDraft((prev) => ({ ...prev, lines: prev.lines.map((line) => (line.key === key ? { ...line, ...patch } : line)) }));
@@ -173,9 +175,12 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const mismatch = linked !== undefined && Math.abs(Math.abs(Number(linked.amount)) - total) >= 0.01;
 
   return (
+    <>
     <EditorDialog
       open
-      onOpenChange={(value) => (value ? null : onClose())}
+      onOpenChange={(value) => {
+        if (!value && creating === null) onClose();
+      }}
       onCancel={null}
       title={supply === null ? t("newSupply") : `${t("inventory.supplies")} · ${supply.date}`}
       pending={supplies.save.isPending}
@@ -365,7 +370,9 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
                   required={true}
                   name="ingredient"
                   className="col-span-2 sm:col-span-1"
-                  onCreate={null}
+                  onCreate={(name) =>
+                    setCreating({ key: line.key, name, unit: line.suggestedUnit ?? "g" })
+                  }
                   createPending={false}
                   keepSelectedOnDigit={false}
                 />
@@ -464,6 +471,18 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
         {mismatch && linked ? ` · ${t("bankAmountDiffers", { amount: formatMoney(linked.amount) })}` : ""}
       </p>
     </EditorDialog>
+    {creating === null ? null : (
+      <WaybillIngredientDialog
+        name={creating.name}
+        unit={creating.unit}
+        onClose={() => setCreating(null)}
+        onCreated={(id) => {
+          updateLine(creating.key, { ingredient: String(id) });
+          setCreating(null);
+        }}
+      />
+    )}
+    </>
   );
 }
 
