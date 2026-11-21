@@ -48,6 +48,7 @@ import {
   type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
 import { formatShelfLife, shelfLifeDraft, shelfLifeSeconds } from "@/components/menu/shelfLife";
+import { CloneNameDialog } from "@/components/menu/CloneNameDialog";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
   Card,
@@ -495,6 +496,7 @@ export function TechCardsPanel() {
   const [selected, setSelected] = useState<number[]>([]);
   const [assignCategory, setAssignCategory] = useState("");
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
+  const [cloneOpen, setCloneOpen] = useState(false);
   const requestedId = ignoreCardParam
     ? openedId
     : openedId !== null
@@ -537,6 +539,10 @@ export function TechCardsPanel() {
     setMode("edit");
     setGroupToAdd("");
     setImportedFrom(null);
+  };
+  const openClone = () => {
+    techCards.clone.reset();
+    setCloneOpen(true);
   };
   const close = () => {
     setMode(null);
@@ -1060,6 +1066,7 @@ export function TechCardsPanel() {
               sections={current.sections}
               method={current.method}
               onEdit={openEdit}
+              onClone={canEdit ? openClone : null}
               printHref={`/menu/${current.id}/print`}
               copyPath={`/menu?card=${current.id}`}
             >
@@ -1129,6 +1136,30 @@ export function TechCardsPanel() {
             </RecipeView>
           </DialogContent>
         </Dialog>
+      ) : null}
+
+      {cloneOpen && current !== null ? (
+        <CloneNameDialog
+          name={current.name}
+          pending={techCards.clone.isPending}
+          error={techCards.clone.error}
+          onOpenChange={(value) => (value ? null : setCloneOpen(false))}
+          onSubmit={(name) =>
+            techCards.clone.mutate(
+              { id: current.id, name },
+              {
+                onSuccess: (saved) => {
+                  setCloneOpen(false);
+                  setIgnoreCardParam(false);
+                  setOpenedId(saved.id);
+                  setDraft(null);
+                  setMode("view");
+                  router.replace(`/menu?card=${saved.id}`, { scroll: false });
+                },
+              },
+            )
+          }
+        />
       ) : null}
 
       {draft ? (

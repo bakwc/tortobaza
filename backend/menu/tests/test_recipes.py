@@ -1,12 +1,15 @@
+import tempfile
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from rest_framework.exceptions import ValidationError as ApiValidationError
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
+from catalog.models import Category, Product
 from crm.models import CrmOrder, CrmOrderItemLine
 from crm.serializers import crm_item_sale_price
 from menu.models import (
@@ -17,9 +20,12 @@ from menu.models import (
     Modifier,
     ModifierGroup,
     SemiProduct,
+    SemiProductCategory,
+    SemiProductImage,
     SemiProductLine,
     TechCard,
     TechCardCategory,
+    TechCardImage,
     TechCardLine,
     TechCardModifierGroup,
     TechCardModifierLine,
@@ -1151,3 +1157,170 @@ class OwnSectionBaseLineTests(TestCase):
         needs = expand_order_item(card, Decimal("1"), 1, [], [])
         self.assertEqual(needs[self.menu.cream], Decimal("50"))
         self.assertEqual(needs[self.menu.paper], Decimal("2"))
+
+
+class CloneApiTests(TestCase):
+    def setUp(self):
+        self.media = tempfile.TemporaryDirectory()
+        self.addCleanup(self.media.cleanup)
+        media_settings = override_settings(MEDIA_ROOT=self.media.name)
+        media_settings.enable()
+        self.addCleanup(media_settings.disable)
+        self.menu = MenuFixture()
+        self.client = APIClient()
+        self.staff = User.objects.create_user("chef", password="x")
+        grant(self.staff, "edit_menu")
+        self.client.force_authenticate(self.staff)
+        self.category = TechCardCategory.objects.create(name="Cakes")
+        self.menu.cake.category = self.category
+        self.menu.cake.method = "Bake."
+        self.menu.cake.sale_price = Decimal("80.00")
+        self.menu.cake.shelf_life_seconds = 172800
+        self.menu.cake.storage_temperature = "+4"
+        self.menu.cake.is_active = False
+        self.menu.cake.save()
+        self.section = TechCardSection.objects.create(
+            tech_card=self.menu.cake,
+            name="Syrup",
+            method="Boil.",
+            position=0,
+        )
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            section=self.section,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+            position=0,
+        )
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            nested_section=self.section,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+            loss_percent=Decimal("0"),
+            position=2,
+        )
+        TechCardLine.objects.create(
+            tech_card=self.menu.cake,
+            nested_tech_card=self.menu.bento,
+            quantity=Decimal("1"),
+            quantity_unit=UNIT_PIECE,
+            position=3,
+        )
+        self.menu.extras.is_global = True
+        self.menu.extras.save(update_fields=["is_global"])
+        TechCardModifierGroup.objects.filter(tech_card=self.menu.cake, group=self.menu.filling).update(
+            is_required=False
+        )
+        TechCardImage.objects.create(
+            tech_card=self.menu.cake,
+            image=SimpleUploadedFile("cake.png", b"cake-bytes", content_type="image/png"),
+            position=0,
+        )
+        site_category = Category.objects.create(name="Shop", slug="shop")
+        self.product = Product.objects.create(
+            category=site_category,
+            name="Site cake",
+            slug="site-cake",
+            base_price=Decimal("90.00"),
+            tech_card=self.menu.cake,
+        )
+        semi_category = SemiProductCategory.objects.create(name="Bases")
+        self.menu.sponge.category = semi_category
+        self.menu.sponge.method = "Mix."
+        self.menu.sponge.is_produced = True
+        self.menu.sponge.avg_cost = Decimal("4.500000")
+        self.menu.sponge.save()
+        SemiProductImage.objects.create(
+            semi_product=self.menu.sponge,
+            image=SimpleUploadedFile("sponge.png", b"sponge-bytes", content_type="image/png"),
+            position=0,
+        )
+
+    def test_clones_tech_card_without_site_products_or_global_groups(self):
+        response = self.client.post(
+            f"/api/menu/tech-cards/{self.menu.cake.pk}/clone/",
+            {"name": "Cake copy"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        clone = TechCard.objects.get(pk=body["id"])
+        self.assertNotEqual(clone.pk, self.menu.cake.pk)
+        self.assertEqual(clone.name, "Cake copy")
+        self.assertEqual(clone.category_id, self.category.pk)
+        self.assertEqual(clone.kind, TechCard.KIND_WEIGHTED)
+        self.assertEqual(clone.basis_weight_kg, Decimal("1"))
+        self.assertEqual(clone.method, "Bake.")
+        self.assertEqual(clone.sale_price, Decimal("80.00"))
+        self.assertEqual(clone.shelf_life_seconds, 172800)
+        self.assertEqual(clone.storage_temperature, "+4")
+        self.assertFalse(clone.is_active)
+        section = clone.sections.get()
+        self.assertEqual(section.name, "Syrup")
+        self.assertEqual(section.method, "Boil.")
+        self.assertNotEqual(section.pk, self.section.pk)
+        self.assertEqual(section.lines.get().ingredient_id, self.menu.sugar.pk)
+        base = clone.lines.get(nested_section__isnull=False, section__isnull=True)
+        self.assertEqual(base.nested_section_id, section.pk)
+        nested = clone.lines.get(nested_tech_card__isnull=False)
+        self.assertEqual(nested.nested_tech_card_id, self.menu.bento.pk)
+        self.assertEqual(
+            set(clone.modifier_groups.values_list("group_id", flat=True)),
+            {self.menu.filling.pk, self.menu.decor.pk},
+        )
+        self.assertFalse(clone.modifier_groups.get(group=self.menu.filling).is_required)
+        self.assertEqual(clone.modifier_lines.count(), self.menu.cake.modifier_lines.count())
+        image = clone.images.get()
+        self.assertNotEqual(image.image.name, self.menu.cake.images.get().image.name)
+        self.assertEqual(image.image.read(), b"cake-bytes")
+        self.assertEqual(list(clone.products.values_list("pk", flat=True)), [])
+        self.assertEqual(self.product.tech_card_id, self.menu.cake.pk)
+
+    def test_rejects_a_tech_card_name_that_is_taken_or_blank(self):
+        taken = self.client.post(
+            f"/api/menu/tech-cards/{self.menu.cake.pk}/clone/",
+            {"name": self.menu.cake.name},
+            format="json",
+        )
+        self.assertEqual(taken.status_code, 400, taken.content)
+        self.assertIn("name", taken.json())
+        self.assertEqual(TechCard.objects.filter(name=self.menu.cake.name).count(), 1)
+        blank = self.client.post(
+            f"/api/menu/tech-cards/{self.menu.cake.pk}/clone/",
+            {"name": "  "},
+            format="json",
+        )
+        self.assertEqual(blank.status_code, 400, blank.content)
+        self.assertIn("name", blank.json())
+
+    def test_clones_semi_product_lines_and_image_without_average_cost(self):
+        response = self.client.post(
+            f"/api/menu/semi-products/{self.menu.sponge.pk}/clone/",
+            {"name": "Sponge copy"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        clone = SemiProduct.objects.get(pk=response.json()["id"])
+        self.assertEqual(clone.name, "Sponge copy")
+        self.assertEqual(clone.category_id, self.menu.sponge.category_id)
+        self.assertEqual(clone.unit, self.menu.sponge.unit)
+        self.assertEqual(clone.yield_quantity, self.menu.sponge.yield_quantity)
+        self.assertTrue(clone.is_produced)
+        self.assertEqual(clone.method, "Mix.")
+        self.assertEqual(clone.avg_cost, Decimal("0"))
+        self.assertEqual(
+            list(clone.lines.values_list("ingredient_id", "quantity")),
+            list(self.menu.sponge.lines.values_list("ingredient_id", "quantity")),
+        )
+        image = clone.images.get()
+        self.assertNotEqual(image.image.name, self.menu.sponge.images.get().image.name)
+        self.assertEqual(image.image.read(), b"sponge-bytes")
+        taken = self.client.post(
+            f"/api/menu/semi-products/{self.menu.sponge.pk}/clone/",
+            {"name": "Sponge copy"},
+            format="json",
+        )
+        self.assertEqual(taken.status_code, 400, taken.content)
+        self.assertIn("name", taken.json())

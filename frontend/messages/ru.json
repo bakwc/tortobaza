@@ -757,6 +757,8 @@
     "edit": "Редактировать",
     "print": "Печать",
     "copyLink": "Ссылка",
+    "clone": "Клонировать",
+    "cloneName": "Новое имя",
     "linkCopied": "Скопировано",
     "printIngredients": "Ингредиенты",
     "printWeight": "Вес",

@@ -58,7 +58,11 @@ export function useSemiProducts() {
       api.assignSemiProductCategory(ids, category),
     onSuccess: invalidate,
   });
-  return { ...semiProducts, assignCategory };
+  const clone = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) => api.cloneSemiProduct(id, name),
+    onSuccess: invalidate,
+  });
+  return { ...semiProducts, assignCategory, clone };
 }
 
 export function useModifierGroups() {
@@ -95,7 +99,11 @@ export function useTechCardList() {
       api.assignTechCardCategory(ids, category),
     onSuccess: invalidate,
   });
-  return { list, save, remove, assignCategory };
+  const clone = useMutation({
+    mutationFn: ({ id, name }: { id: number; name: string }) => api.cloneTechCard(id, name),
+    onSuccess: invalidate,
+  });
+  return { list, save, remove, assignCategory, clone };
 }
 
 export function useTechCard(id: number | null) {

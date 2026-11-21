@@ -311,6 +311,13 @@ export function endpoints(fetcher: Fetcher) {
       "/api/menu/semi-products/",
       SemiProductSchema,
     ),
+    async cloneSemiProduct(id: number, name: string): Promise<SemiProduct> {
+      const raw = await fetcher<unknown>(`/api/menu/semi-products/${id}/clone/`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      return parse(SemiProductSchema, raw);
+    },
     assignSemiProductCategory(ids: number[], category: number | null): Promise<void> {
       return fetcher<void>("/api/menu/semi-products/assign-category/", {
         method: "POST",
@@ -328,6 +335,13 @@ export function endpoints(fetcher: Fetcher) {
       TechCardCategorySchema,
     ),
     menuTechCards: resource<TechCard, TechCardBody>(fetcher, "/api/menu/tech-cards/", TechCardSchema),
+    async cloneTechCard(id: number, name: string): Promise<TechCard> {
+      const raw = await fetcher<unknown>(`/api/menu/tech-cards/${id}/clone/`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      return parse(TechCardSchema, raw);
+    },
     async importTechCard(file: File): Promise<TechCardImport> {
       const body = new FormData();
       body.append("file", file);

@@ -17,6 +17,7 @@ import {
   linesToBody,
   type ComponentLineDraft,
 } from "@/components/menu/ComponentLinesEditor";
+import { CloneNameDialog } from "@/components/menu/CloneNameDialog";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { useCan } from "@/hooks/useAuth";
 import {
@@ -193,6 +194,7 @@ export function SemiProductsPanel() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [assignCategory, setAssignCategory] = useState("");
+  const [cloneOpen, setCloneOpen] = useState(false);
   const requestedId = ignoreSemiParam
     ? viewing === null
       ? null
@@ -234,6 +236,10 @@ export function SemiProductsPanel() {
     if (current === null) return;
     setDraft(draftFrom(current));
     setMode("edit");
+  };
+  const openClone = () => {
+    semiProducts.clone.reset();
+    setCloneOpen(true);
   };
   const close = () => {
     setMode(null);
@@ -570,6 +576,7 @@ export function SemiProductsPanel() {
               sections={[]}
               method={current.method}
               onEdit={openEdit}
+              onClone={canEdit ? openClone : null}
               printHref={`/menu/semi-products/${current.id}/print`}
               copyPath={null}
             >
@@ -577,6 +584,30 @@ export function SemiProductsPanel() {
             </RecipeView>
           </DialogContent>
         </Dialog>
+      ) : null}
+
+      {cloneOpen && current !== null ? (
+        <CloneNameDialog
+          name={current.name}
+          pending={semiProducts.clone.isPending}
+          error={semiProducts.clone.error}
+          onOpenChange={(value) => (value ? null : setCloneOpen(false))}
+          onSubmit={(name) =>
+            semiProducts.clone.mutate(
+              { id: current.id, name },
+              {
+                onSuccess: (saved) => {
+                  setCloneOpen(false);
+                  setIgnoreSemiParam(false);
+                  setViewing(saved);
+                  setDraft(null);
+                  setMode("view");
+                  router.replace(`/menu/semi-products?semi=${saved.id}`, { scroll: false });
+                },
+              },
+            )
+          }
+        />
       ) : null}
 
       {draft ? (

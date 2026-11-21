@@ -757,6 +757,8 @@
     "edit": "Edit",
     "print": "Print",
     "copyLink": "Link",
+    "clone": "Clone",
+    "cloneName": "New name",
     "linkCopied": "Copied",
     "printIngredients": "Ingredients",
     "printWeight": "Weight",

@@ -26,6 +26,7 @@ from menu.models import (
     TechCardCategory,
     TechCardImage,
 )
+from menu.clone import CloneNameSerializer, clone_semi_product, clone_tech_card
 from menu.recipes import missing_modifier_compositions, recipe_query_cache, tech_card_cost
 from menu.tech_card_import.recognize import recognize_tech_card
 from menu.serializers import (
@@ -201,6 +202,21 @@ class SemiProductDetailView(MenuDetailView):
         return SemiProduct.objects.select_related("category").prefetch_related("images")
 
 
+class SemiProductCloneView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    def post(self, request, pk: int):
+        source = get_object_or_404(SemiProduct, pk=pk)
+        serializer = CloneNameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = clone_semi_product(source, serializer.validated_data["name"])
+        return Response(
+            SemiProductSerializer(instance, context=serializer_context(request)).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
 class AssignSemiProductCategoryView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated, SectionPermission("menu")]
@@ -285,6 +301,21 @@ class TechCardDetailView(MenuDetailView):
 
     def get_queryset(self):
         return TechCard.objects.select_related("category").prefetch_related("images")
+
+
+class TechCardCloneView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("menu")]
+
+    def post(self, request, pk: int):
+        source = get_object_or_404(TechCard, pk=pk)
+        serializer = CloneNameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = clone_tech_card(source, serializer.validated_data["name"])
+        return Response(
+            TechCardSerializer(instance, context=serializer_context(request)).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AssignTechCardCategoryView(APIView):

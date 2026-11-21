@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
+import { Check, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -140,6 +140,7 @@ export function RecipeView({
   sections,
   method,
   onEdit,
+  onClone,
   printHref,
   copyPath,
   children,
@@ -153,6 +154,7 @@ export function RecipeView({
   sections: { name: string; method: string; lines: CompositionLine[] }[];
   method: string;
   onEdit: () => void;
+  onClone: (() => void) | null;
   printHref: string | null;
   copyPath: string | null;
   children: ReactNode;
@@ -218,6 +220,12 @@ export function RecipeView({
             <Pencil className="mr-1 h-4 w-4" />
             {t("edit")}
           </Button>
+          {onClone !== null ? (
+            <Button type="button" size="sm" variant="outline" onClick={onClone}>
+              <Copy className="mr-1 h-4 w-4" />
+              {t("clone")}
+            </Button>
+          ) : null}
         </div>
       </div>
 
