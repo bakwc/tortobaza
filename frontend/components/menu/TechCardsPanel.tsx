@@ -30,7 +30,7 @@ import {
 } from "@/components/menu/RecipeView";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   ComponentLinesEditor,
@@ -78,37 +78,16 @@ import {
 } from "@/hooks/useStock";
 import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
 import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
+import {
+  clearTechCardDraft,
+  readTechCardDraft,
+  techCardDraftsEqual,
+  writeTechCardDraft,
+  type ModifierComposition,
+  type SectionDraft,
+  type TechCardDraft,
+} from "@/lib/tech-card-draft";
 import { cn } from "@/lib/utils";
-
-type GroupLinkDraft = { group: number; is_required: boolean | null };
-
-type ModifierComposition = { scales_by_weight: boolean; lines: ComponentLineDraft[] };
-
-type SectionDraft = {
-  key: string;
-  id: number | null;
-  name: string;
-  method: string;
-  lines: ComponentLineDraft[];
-};
-
-type TechCardDraft = {
-  name: string;
-  category: number | null;
-  kind: "weighted" | "piece";
-  basis_weight_kg: string;
-  basis_quantity: string;
-  sale_price: string;
-  method: string;
-  shelf_life_days: string;
-  shelf_life_hours: string;
-  storage_temperature: string;
-  is_active: boolean;
-  lines: ComponentLineDraft[];
-  sections: SectionDraft[];
-  groups: GroupLinkDraft[];
-  compositions: Record<number, ModifierComposition>;
-};
 
 function formatCostRange(
   min: string,
@@ -480,6 +459,9 @@ export function TechCardsPanel() {
   const images = useTechCardImages();
   const techCardImport = useTechCardImport();
   const fileRef = useRef<HTMLInputElement>(null);
+  const baselineRef = useRef<TechCardDraft | null>(null);
+  const storageIdRef = useRef<number | null>(null);
+  const persistTimer = useRef<number | null>(null);
   const canSeeCosts = useCan("view_costs");
   const canEdit = useCan("edit_menu");
   const cardParam = searchParams.get("card");
@@ -497,6 +479,9 @@ export function TechCardsPanel() {
   const [assignCategory, setAssignCategory] = useState("");
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restoreDraft, setRestoreDraft] = useState<TechCardDraft | null>(null);
   const requestedId = ignoreCardParam
     ? openedId
     : openedId !== null
@@ -511,6 +496,33 @@ export function TechCardsPanel() {
     if (ignoreCardParam && cardParam === null) setIgnoreCardParam(false);
   }, [ignoreCardParam, cardParam]);
 
+  useEffect(() => {
+    if (mode !== "edit" || draft === null || baselineRef.current === null || restoreOpen) return;
+    const storageId = storageIdRef.current;
+    const baseline = baselineRef.current;
+    persistTimer.current = window.setTimeout(() => {
+      persistTimer.current = null;
+      if (techCardDraftsEqual(draft, baseline)) clearTechCardDraft(storageId);
+      else writeTechCardDraft(storageId, draft);
+    }, 500);
+    return () => {
+      if (persistTimer.current !== null) {
+        window.clearTimeout(persistTimer.current);
+        persistTimer.current = null;
+      }
+    };
+  }, [draft, mode, restoreOpen]);
+
+  useEffect(() => {
+    if (mode !== "edit" || draft === null || baselineRef.current === null) return;
+    if (techCardDraftsEqual(draft, baselineRef.current)) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [draft, mode]);
+
   const openView = (row: TechCardListItem) => {
     techCards.save.reset();
     techCards.remove.reset();
@@ -522,29 +534,53 @@ export function TechCardsPanel() {
     setImportedFrom(null);
     router.replace(`/menu?card=${row.id}`, { scroll: false });
   };
+  const stopPersist = () => {
+    if (persistTimer.current !== null) {
+      window.clearTimeout(persistTimer.current);
+      persistTimer.current = null;
+    }
+  };
+  const beginEdit = (baseline: TechCardDraft, storageId: number | null) => {
+    stopPersist();
+    baselineRef.current = baseline;
+    storageIdRef.current = storageId;
+    setDiscardOpen(false);
+    setDraft(baseline);
+    setMode("edit");
+    const stored = readTechCardDraft(storageId);
+    if (stored !== null && !techCardDraftsEqual(stored, baseline)) {
+      setRestoreDraft(stored);
+      setRestoreOpen(true);
+      return;
+    }
+    setRestoreDraft(null);
+    setRestoreOpen(false);
+  };
   const openNew = () => {
     techCards.save.reset();
     techCards.remove.reset();
     setIgnoreCardParam(true);
     setOpenedId(null);
-    setDraft(draftFrom(null));
-    setMode("edit");
     setGroupToAdd("");
     setImportedFrom(null);
     router.replace("/menu", { scroll: false });
+    beginEdit(draftFrom(null), null);
   };
   const openEdit = () => {
     if (current === null) return;
-    setDraft(withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options));
-    setMode("edit");
     setGroupToAdd("");
     setImportedFrom(null);
+    beginEdit(withDefaultCompositions(draftFrom(current), groups.list.data ?? [], options), current.id);
   };
   const openClone = () => {
     techCards.clone.reset();
     setCloneOpen(true);
   };
   const close = () => {
+    setDiscardOpen(false);
+    setRestoreOpen(false);
+    setRestoreDraft(null);
+    baselineRef.current = null;
     setMode(null);
     setDraft(null);
     setIgnoreCardParam(true);
@@ -553,9 +589,38 @@ export function TechCardsPanel() {
     router.replace("/menu", { scroll: false });
   };
   const cancelEdit = () => {
+    setDiscardOpen(false);
+    setRestoreOpen(false);
+    setRestoreDraft(null);
     setDraft(null);
+    baselineRef.current = null;
     if (current === null) close();
     else setMode("view");
+  };
+  const requestClose = () => {
+    if (restoreOpen) return;
+    if (draft !== null && baselineRef.current !== null && !techCardDraftsEqual(draft, baselineRef.current)) {
+      setDiscardOpen(true);
+      return;
+    }
+    stopPersist();
+    clearTechCardDraft(storageIdRef.current);
+    cancelEdit();
+  };
+  const confirmDiscard = () => {
+    stopPersist();
+    clearTechCardDraft(storageIdRef.current);
+    cancelEdit();
+  };
+  const keepStoredDraft = () => {
+    if (restoreDraft !== null) setDraft(restoreDraft);
+    setImportedFrom(null);
+    setRestoreOpen(false);
+  };
+  const dropStoredDraft = () => {
+    clearTechCardDraft(storageIdRef.current);
+    setRestoreDraft(null);
+    setRestoreOpen(false);
   };
   const openImported = (file: File) => {
     techCardImport.mutate(file, {
@@ -564,11 +629,10 @@ export function TechCardsPanel() {
         techCards.remove.reset();
         setIgnoreCardParam(true);
         setOpenedId(null);
-        setDraft(draftFromImport(result));
         setImportedFrom(result.source_name);
-        setMode("edit");
         setGroupToAdd("");
         router.replace("/menu", { scroll: false });
+        beginEdit(draftFromImport(result), null);
       },
     });
   };
@@ -756,9 +820,15 @@ export function TechCardsPanel() {
       },
       {
         onSuccess: (saved) => {
+          stopPersist();
+          clearTechCardDraft(storageIdRef.current);
           setIgnoreCardParam(false);
           setOpenedId(saved.id);
+          setDiscardOpen(false);
+          setRestoreOpen(false);
+          setRestoreDraft(null);
           setDraft(null);
+          baselineRef.current = null;
           setMode("view");
           router.replace(`/menu?card=${saved.id}`, { scroll: false });
         },
@@ -1165,7 +1235,7 @@ export function TechCardsPanel() {
       {draft ? (
         <EditorDialog
           open
-          onOpenChange={(value) => (value ? null : cancelEdit())}
+          onOpenChange={(value) => (value ? null : requestClose())}
           title={current === null ? t("newTechCard") : draft.name}
           pending={techCards.save.isPending}
           error={
@@ -1176,8 +1246,19 @@ export function TechCardsPanel() {
           }
           submitLabel={canEdit ? t("save") : null}
           onSubmit={submit}
-          onCancel={cancelEdit}
-          onDelete={canEdit && current !== null ? () => techCards.remove.mutate(current.id, { onSuccess: close }) : null}
+          onCancel={requestClose}
+          onDelete={
+            canEdit && current !== null
+              ? () =>
+                  techCards.remove.mutate(current.id, {
+                    onSuccess: () => {
+                      stopPersist();
+                      clearTechCardDraft(current.id);
+                      close();
+                    },
+                  })
+              : null
+          }
           deletePending={techCards.remove.isPending}
           headerAction={null}
           below={null}
@@ -1583,6 +1664,44 @@ export function TechCardsPanel() {
             <p className="text-xs text-[var(--muted-2)]">{t("noGroupsToAdd")}</p>
           ) : null}
         </EditorDialog>
+      ) : null}
+
+      {discardOpen ? (
+        <Dialog open onOpenChange={(value) => (value ? null : setDiscardOpen(false))}>
+          <DialogContent className="w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] p-6">
+            <DialogTitle className="pr-10 text-lg font-semibold text-[var(--ink)]">{t("discardDraftTitle")}</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-[var(--muted-2)]">{t("discardDraftBody")}</DialogDescription>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setDiscardOpen(false)}>
+                {t("stayEditing")}
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmDiscard}
+                className="bg-[var(--danger)] text-white hover:bg-[var(--danger)]/90"
+              >
+                {t("discardDraft")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
+      {restoreOpen ? (
+        <Dialog open onOpenChange={() => undefined}>
+          <DialogContent hideClose className="w-[min(420px,calc(100vw-1.5rem))] max-w-[420px] p-6">
+            <DialogTitle className="text-lg font-semibold text-[var(--ink)]">{t("restoreDraftTitle")}</DialogTitle>
+            <DialogDescription className="mt-2 text-sm text-[var(--muted-2)]">{t("restoreDraftBody")}</DialogDescription>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={dropStoredDraft}>
+                {t("startFresh")}
+              </Button>
+              <Button type="button" onClick={keepStoredDraft}>
+                {t("restoreDraft")}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   );
