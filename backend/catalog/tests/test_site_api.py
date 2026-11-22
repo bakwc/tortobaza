@@ -10,7 +10,8 @@ from rest_framework.test import APIClient
 
 from accounts.permissions import grant
 from cart.models import Cart, CartItem
-from catalog.models import Category, OptionGroup, Product, ProductImage, ProductOptionGroup
+from catalog.models import Category, Option, OptionGroup, Product, ProductImage, ProductOptionGroup
+from menu.models import Modifier, ModifierGroup
 from orders.models import Order, OrderItem
 
 
@@ -257,3 +258,62 @@ class SiteApiTests(TestCase):
         self.assertEqual(created.status_code, 201, created.content)
         group_id = created.json()["id"]
         self.assertEqual(len(created.json()["options"]), 1)
+
+    def test_option_patch_sets_modifiers_and_group_save_keeps_them(self):
+        biscuit_group = ModifierGroup.objects.create(name="Biscuit", selection_type="single")
+        biscuit = Modifier.objects.create(group=biscuit_group, name="Vanilla")
+        filling_group = ModifierGroup.objects.create(name="Filling", selection_type="single")
+        filling = Modifier.objects.create(group=filling_group, name="Raspberry")
+        option = Option.objects.create(
+            group=self.group,
+            name="Pistachio",
+            name_en="Pistachio",
+            name_ka="",
+            name_ru="Фисташка",
+            price_delta=Decimal("0.00"),
+            position=0,
+        )
+        self.client.force_authenticate(user=self.editor)
+        patched = self.client.patch(
+            f"/api/site/options/{option.pk}/",
+            {
+                "name_en": "Pistachio",
+                "name_ka": "",
+                "name_ru": "Фисташка",
+                "price_delta": "0.00",
+                "weight_kg": None,
+                "is_active": True,
+                "modifiers": [biscuit.pk, filling.pk],
+            },
+            format="json",
+        )
+        self.assertEqual(patched.status_code, 200, patched.content)
+        self.assertEqual(set(patched.json()["modifiers"]), {biscuit.pk, filling.pk})
+        saved = self.client.put(
+            f"/api/site/option-groups/{self.group.pk}/",
+            {
+                "slug": self.group.slug,
+                "name_en": self.group.name_en,
+                "name_ka": self.group.name_ka,
+                "name_ru": self.group.name_ru,
+                "selection_type": self.group.selection_type,
+                "is_required_default": self.group.is_required_default,
+                "min_selections": self.group.min_selections,
+                "max_selections": self.group.max_selections,
+                "options": [
+                    {
+                        "id": option.pk,
+                        "name_en": "Pistachio",
+                        "name_ka": "",
+                        "name_ru": "Фисташка",
+                        "price_delta": "0.00",
+                        "weight_kg": None,
+                        "position": 0,
+                        "is_active": True,
+                    }
+                ],
+            },
+            format="json",
+        )
+        self.assertEqual(saved.status_code, 200, saved.content)
+        self.assertEqual(set(option.modifiers.values_list("id", flat=True)), {biscuit.pk, filling.pk})

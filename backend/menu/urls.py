@@ -1,7 +1,6 @@
 from django.urls import path
 
 from menu.views import (
-    CatalogOptionListView,
     AssignIngredientCategoryView,
     AssignSemiProductCategoryView,
     AssignTechCardCategoryView,
@@ -63,5 +62,4 @@ urlpatterns = [
     path("menu/tech-cards/<int:pk>/images/", TechCardImageCreateView.as_view()),
     path("menu/tech-cards/<int:pk>/images/<int:image_pk>/", TechCardImageDeleteView.as_view()),
     path("menu/missing-modifier-lines/", MissingModifierLinesView.as_view()),
-    path("menu/catalog-options/", CatalogOptionListView.as_view()),
 ]

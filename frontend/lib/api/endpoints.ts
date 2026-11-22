@@ -2,6 +2,8 @@ import { ApiError } from "./client";
 import {
   SiteCategoryLandingSchema,
   SiteCategorySchema,
+  SiteModifierChoiceSchema,
+  SiteOptionDetailSchema,
   SiteOptionGroupSchema,
   SiteProductImageSchema,
   SiteProductListItemSchema,
@@ -10,7 +12,10 @@ import {
   SiteTranslationSchema,
   type SiteCategoryBody,
   type SiteCategoryLandingBody,
+  type SiteOptionDetail,
+  type SiteOptionDetailBody,
   type SiteOptionGroupBody,
+  type SiteModifierChoice,
   type SiteProductBody,
   type SiteTranslation,
   type SiteTranslationBody,
@@ -169,7 +174,6 @@ import {
   type PayPalCreateResponse,
   type UpdateCartItemBody,
   type UpdateCrmOrderBody,
-  CatalogOptionSchema,
   IngredientCategorySchema,
   IngredientSchema,
   InventoryCountSchema,
@@ -198,7 +202,6 @@ import {
   WriteOffSchema,
   IdeaSchema,
   WishlistItemSchema,
-  type CatalogOption,
   type ComponentRefBody,
   type Ingredient,
   type IngredientBody,
@@ -518,11 +521,6 @@ export function endpoints(fetcher: Fetcher) {
     async getMissingModifierLines(): Promise<MissingModifierLine[]> {
       const raw = await fetcher<unknown>("/api/menu/missing-modifier-lines/");
       return parse(z.array(MissingModifierLineSchema), raw);
-    },
-
-    async getCatalogOptions(): Promise<CatalogOption[]> {
-      const raw = await fetcher<unknown>("/api/menu/catalog-options/");
-      return parse(z.array(CatalogOptionSchema), raw);
     },
 
     async uploadSupplyReceipt(file: File): Promise<SupplyReceipt> {
@@ -1327,6 +1325,21 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ ids }),
       });
       return parse(z.array(SiteProductImageSchema), raw);
+    },
+    async listSiteOptions(): Promise<SiteOptionDetail[]> {
+      const raw = await fetcher<unknown>("/api/site/options/");
+      return parse(z.array(SiteOptionDetailSchema), raw);
+    },
+    async updateSiteOption(id: number, body: SiteOptionDetailBody): Promise<SiteOptionDetail> {
+      const raw = await fetcher<unknown>(`/api/site/options/${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      return parse(SiteOptionDetailSchema, raw);
+    },
+    async listSiteModifiers(): Promise<SiteModifierChoice[]> {
+      const raw = await fetcher<unknown>("/api/site/modifiers/");
+      return parse(z.array(SiteModifierChoiceSchema), raw);
     },
     async listSiteTechCards(): Promise<import("./site-schemas").SiteTechCardChoice[]> {
       const raw = await fetcher<unknown>("/api/site/tech-cards/");

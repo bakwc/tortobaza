@@ -210,6 +210,12 @@ class Option(models.Model):
     )
     position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
     is_active = models.BooleanField(default=True, verbose_name=_("Is active"))
+    modifiers = models.ManyToManyField(
+        "menu.Modifier",
+        blank=True,
+        related_name="catalog_options",
+        verbose_name=_("Modifiers"),
+    )
 
     class Meta:
         ordering = ["position", "name"]

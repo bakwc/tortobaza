@@ -258,13 +258,6 @@ export function useMissingModifierLines() {
   });
 }
 
-export function useCatalogOptions() {
-  return useQuery({
-    queryKey: ["menu", "catalog-options"],
-    queryFn: () => api.getCatalogOptions(),
-  });
-}
-
 export function useTechCardCost(
   techCardId: number | null,
   weightKg: string | null,

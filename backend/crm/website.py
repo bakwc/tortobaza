@@ -171,12 +171,9 @@ def _build_description(order: Order) -> str:
 
 
 def _create_crm_items(order: Order, crm_order: CrmOrder) -> None:
-    items = list(order.items.select_related("product__tech_card").prefetch_related("options__option"))
-    option_ids = [opt.option_id for item in items for opt in item.options.all() if opt.option_id is not None]
-    modifiers_by_option = {
-        modifier.catalog_option_id: modifier
-        for modifier in Modifier.objects.filter(catalog_option_id__in=option_ids)
-    }
+    items = list(
+        order.items.select_related("product__tech_card").prefetch_related("options__option__modifiers")
+    )
     for position, item in enumerate(items):
         tech_card = item.product.tech_card if item.product is not None else None
         needs_review = tech_card is None
@@ -190,10 +187,12 @@ def _create_crm_items(order: Order, crm_order: CrmOrder) -> None:
             if option.weight_kg is not None:
                 weight_kg = option.weight_kg
                 continue
-            if option.pk not in modifiers_by_option:
+            linked = list(option.modifiers.all())
+            if not linked:
                 needs_review = True
                 continue
-            modifiers.append((modifiers_by_option[option.pk], 1))
+            for modifier in linked:
+                modifiers.append((modifier, 1))
         if tech_card is None:
             modifiers = []
         elif tech_card.kind == TechCard.KIND_WEIGHTED and weight_kg is None:

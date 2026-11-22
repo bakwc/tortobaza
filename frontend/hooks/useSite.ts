@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import type {
   SiteCategoryBody,
   SiteCategoryLandingBody,
+  SiteOptionDetailBody,
   SiteOptionGroupBody,
   SiteProductBody,
   SiteTranslationBody,
@@ -106,6 +107,26 @@ export function useSiteProductDetail(id: number | null) {
     queryKey: ["site", "products", "detail", id],
     queryFn: () => api.getSiteProduct(id as number),
     enabled: id !== null,
+  });
+}
+
+export function useSiteOptions() {
+  const invalidate = useInvalidateSite();
+  const list = useQuery({
+    queryKey: ["site", "options"],
+    queryFn: () => api.listSiteOptions(),
+  });
+  const save = useMutation({
+    mutationFn: ({ id, body }: { id: number; body: SiteOptionDetailBody }) => api.updateSiteOption(id, body),
+    onSuccess: invalidate,
+  });
+  return { list, save };
+}
+
+export function useSiteModifiers() {
+  return useQuery({
+    queryKey: ["site", "modifiers"],
+    queryFn: () => api.listSiteModifiers(),
   });
 }
 

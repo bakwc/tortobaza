@@ -701,7 +701,6 @@ class NestedTechCardTests(TestCase):
                     {
                         "id": self.menu.balloon.pk,
                         "name": "Balloon",
-                        "catalog_option": None,
                         "ingredient": self.menu.flour.pk,
                         "semi_product": self.menu.sponge.pk,
                         "nested_tech_card": None,
@@ -932,7 +931,6 @@ class CategoryModifierGroupTests(TestCase):
                     {
                         "id": self.menu.balloon.pk,
                         "name": "Balloon",
-                        "catalog_option": None,
                         "ingredient": self.menu.paper.pk,
                         "semi_product": None,
                         "nested_tech_card": None,
@@ -968,7 +966,6 @@ class ModifierDefaultTests(TestCase):
         return {
             "id": modifier.pk,
             "name": modifier.name,
-            "catalog_option": None,
             "ingredient": None,
             "semi_product": None,
             "nested_tech_card": None,

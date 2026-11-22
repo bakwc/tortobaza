@@ -7,15 +7,19 @@ import { SectionShell } from "@/components/menu/SectionShell";
 import { Spinner } from "@/components/ui/spinner";
 import { useVisibility, type SiteVisibility } from "@/hooks/useSite";
 
-export type SiteSection = "products" | "categories" | "landings" | "option-groups";
+export type SiteSection = "products" | "categories" | "landings" | "option-groups" | "options";
 
-const TABS: { key: SiteSection; href: string; labelKey: "products" | "categories" | "landings" | "optionGroups" }[] =
-  [
-    { key: "products", href: "/site", labelKey: "products" },
-    { key: "categories", href: "/site/categories", labelKey: "categories" },
-    { key: "landings", href: "/site/landings", labelKey: "landings" },
-    { key: "option-groups", href: "/site/option-groups", labelKey: "optionGroups" },
-  ];
+const TABS: {
+  key: SiteSection;
+  href: string;
+  labelKey: "products" | "categories" | "landings" | "optionGroups" | "options";
+}[] = [
+  { key: "products", href: "/site", labelKey: "products" },
+  { key: "categories", href: "/site/categories", labelKey: "categories" },
+  { key: "landings", href: "/site/landings", labelKey: "landings" },
+  { key: "option-groups", href: "/site/option-groups", labelKey: "optionGroups" },
+  { key: "options", href: "/site/options", labelKey: "options" },
+];
 
 export function SiteShell({ section, children }: { section: SiteSection; children: ReactNode }) {
   return (

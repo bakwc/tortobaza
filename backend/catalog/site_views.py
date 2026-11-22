@@ -23,7 +23,9 @@ from catalog.site_serializers import (
     SiteCategoryLandingSerializer,
     SiteCategorySerializer,
     SiteImageUploadSerializer,
+    SiteModifierChoiceSerializer,
     SiteOptionGroupSerializer,
+    SiteOptionSerializer,
     SiteProductImagePatchSerializer,
     SiteProductImageReorderSerializer,
     SiteProductImageSerializer,
@@ -33,7 +35,7 @@ from catalog.site_serializers import (
     SiteTechCardChoiceSerializer,
     SiteTranslationRequestSerializer,
 )
-from menu.models import TechCard
+from menu.models import Modifier, TechCard
 
 
 def serializer_context(request) -> dict:
@@ -218,6 +220,41 @@ class SiteOptionGroupDetailView(SiteDetailView):
 
     def get_queryset(self):
         return OptionGroup.objects.prefetch_related("options")
+
+
+class SiteOptionListView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
+
+    def get(self, request):
+        options = (
+            Option.objects.select_related("group")
+            .prefetch_related("modifiers")
+            .order_by("group__name", "position", "id")
+        )
+        return Response(SiteOptionSerializer(options, many=True, context=serializer_context(request)).data)
+
+
+class SiteOptionDetailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
+
+    @transaction.atomic
+    def patch(self, request, pk: int):
+        option = get_object_or_404(Option.objects.select_related("group"), pk=pk)
+        serializer = SiteOptionSerializer(option, data=request.data, context=serializer_context(request))
+        serializer.is_valid(raise_exception=True)
+        option = serializer.save()
+        return Response(SiteOptionSerializer(option, context=serializer_context(request)).data)
+
+
+class SiteModifierChoicesView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
+
+    def get(self, request):
+        rows = Modifier.objects.select_related("group").order_by("group__position", "group__name", "position", "id")
+        return Response(SiteModifierChoiceSerializer(rows, many=True).data)
 
 
 class SiteOptionImageView(APIView):

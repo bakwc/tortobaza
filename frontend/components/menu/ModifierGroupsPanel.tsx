@@ -17,7 +17,6 @@ import { SearchSelect } from "@/components/menu/SearchSelect";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
 import {
-  useCatalogOptions,
   useIngredients,
   useModifierGroups,
   useSemiProducts,
@@ -30,7 +29,6 @@ type ModifierDraft = {
   key: string;
   id: number | null;
   name: string;
-  catalog_option: number | null;
   component: string;
   default_modifier: number | null;
   is_active: boolean;
@@ -88,7 +86,6 @@ function draftFrom(row: ModifierGroup | null, position: number): GroupDraft {
       key: newDraftKey(),
       id: modifier.id,
       name: modifier.name,
-      catalog_option: modifier.catalog_option,
       component: modifierComponent(modifier),
       default_modifier: modifier.default_modifier,
       is_active: modifier.is_active,
@@ -102,7 +99,6 @@ export function ModifierGroupsPanel() {
   const canEdit = useCan("edit_menu");
   const groups = useModifierGroups();
   const categories = useTechCardCategories();
-  const catalogOptions = useCatalogOptions();
   const ingredients = useIngredients();
   const semiProducts = useSemiProducts();
   const techCards = useTechCards();
@@ -145,11 +141,6 @@ export function ModifierGroupsPanel() {
       modifiers: draft.modifiers.map((row) => (row.key === key ? { ...row, ...patch } : row)),
     });
   };
-
-  const usedOptions = new Set(
-    (draft?.modifiers ?? []).map((row) => row.catalog_option).filter((value) => value !== null),
-  );
-  const ownIds = new Set((draft?.modifiers ?? []).map((row) => row.id).filter((value) => value !== null));
 
   return (
     <div className="grid gap-6">
@@ -223,7 +214,6 @@ export function ModifierGroupsPanel() {
                   modifiers: draft.modifiers.map((row) => ({
                     id: row.id,
                     name: row.name,
-                    catalog_option: row.catalog_option,
                     ...(row.component === ""
                       ? { ingredient: null, semi_product: null, nested_tech_card: null }
                       : componentRef(row.component)),
@@ -336,7 +326,7 @@ export function ModifierGroupsPanel() {
                 key={row.key}
                 data-field-group={tForms("rowNumber", { number: index + 1 })}
                 data-error-list="modifiers"
-                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
+                className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto]"
               >
                 <Input
                   name="name"
@@ -346,26 +336,6 @@ export function ModifierGroupsPanel() {
                   onChange={(event) => updateModifier(row.key, { name: event.target.value })}
                   className="col-span-2 sm:col-span-1"
                 />
-                <NativeSelect
-                  value={row.catalog_option ?? ""}
-                  onChange={(event) =>
-                    updateModifier(row.key, {
-                      catalog_option: event.target.value === "" ? null : Number(event.target.value),
-                    })
-                  }
-                >
-                  <option value="">{t("noWebsiteOption")}</option>
-                  {(catalogOptions.data ?? []).map((option) => {
-                    const takenElsewhere =
-                      option.modifier !== null && !ownIds.has(option.modifier);
-                    const takenHere = usedOptions.has(option.id) && row.catalog_option !== option.id;
-                    return (
-                      <option key={option.id} value={option.id} disabled={takenElsewhere || takenHere}>
-                        {option.label}
-                      </option>
-                    );
-                  })}
-                </NativeSelect>
                 <SearchSelect
                   options={[{ value: "", label: t("noDefaultComponent") }, ...components]}
                   value={row.component}
@@ -426,7 +396,6 @@ export function ModifierGroupsPanel() {
                         key: newDraftKey(),
                         id: null,
                         name: "",
-                        catalog_option: null,
                         component: "",
                         default_modifier: null,
                         is_active: true,
@@ -440,7 +409,6 @@ export function ModifierGroupsPanel() {
               </Button>
             </div>
           </div>
-          <p className="text-xs text-[var(--muted-2)]">{t("websiteOptionHint")}</p>
           <p className="text-xs text-[var(--muted-2)]">{t("defaultComponentHint")}</p>
         </EditorDialog>
       ) : null}

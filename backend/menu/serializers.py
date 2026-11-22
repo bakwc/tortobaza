@@ -3,7 +3,6 @@ from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
 
-from catalog.models import Option
 from catalog.responsive_urls import detail_image
 from menu.models import (
     UNIT_CHOICES,
@@ -335,7 +334,6 @@ def cycle_errors(instance: SemiProduct) -> list[str]:
 class ModifierInputSerializer(serializers.Serializer):
     id = serializers.IntegerField(allow_null=True)
     name = serializers.CharField(max_length=120)
-    catalog_option = serializers.PrimaryKeyRelatedField(queryset=Option.objects.all(), allow_null=True)
     ingredient = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), allow_null=True)
     semi_product = serializers.PrimaryKeyRelatedField(queryset=SemiProduct.objects.all(), allow_null=True)
     nested_tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
@@ -387,15 +385,13 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
             {
                 "id": modifier.pk,
                 "name": modifier.name,
-                "catalog_option": modifier.catalog_option_id,
-                "catalog_option_label": option_label(modifier.catalog_option),
                 "ingredient": modifier.ingredient_id,
                 "semi_product": modifier.semi_product_id,
                 "nested_tech_card": modifier.nested_tech_card_id,
                 "default_modifier": modifier.default_modifier_id,
                 "is_active": modifier.is_active,
             }
-            for modifier in instance.modifiers.select_related("catalog_option__group")
+            for modifier in instance.modifiers.all()
         ]
         return data
 
@@ -406,9 +402,6 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
         names = [row["name"] for row in attrs["modifiers"]]
         if len(names) != len(set(names)):
             raise serializers.ValidationError("Modifier names must be unique within a group.")
-        options = [row["catalog_option"].pk for row in attrs["modifiers"] if row["catalog_option"] is not None]
-        if len(options) != len(set(options)):
-            raise serializers.ValidationError("A website option can be linked to one modifier only.")
         existing_ids = set()
         if self.instance is not None:
             existing_ids = set(self.instance.modifiers.values_list("id", flat=True))
@@ -422,11 +415,6 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("A modifier cannot default to itself.")
             if self.instance is not None and default.group_id == self.instance.pk:
                 raise serializers.ValidationError("Default modifier must belong to another group.")
-        taken = Modifier.objects.filter(catalog_option_id__in=options)
-        if self.instance is not None:
-            taken = taken.exclude(group=self.instance)
-        if taken.exists():
-            raise serializers.ValidationError("A website option can be linked to one modifier only.")
         if attrs["is_global"] and attrs["categories"]:
             raise serializers.ValidationError("A global group cannot be limited to categories.")
         return attrs
@@ -460,11 +448,9 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError("Modifier is used in tech cards or orders, deactivate it instead.")
         removed.delete()
-        instance.modifiers.update(catalog_option=None)
         for position, row in enumerate(modifiers):
             fields = {
                 "name": row["name"],
-                "catalog_option": row["catalog_option"],
                 "ingredient": row["ingredient"],
                 "semi_product": row["semi_product"],
                 "nested_tech_card": row["nested_tech_card"],
@@ -476,27 +462,6 @@ class ModifierGroupSerializer(serializers.ModelSerializer):
                 Modifier.objects.create(group=instance, **fields)
             else:
                 Modifier.objects.filter(pk=row["id"]).update(**fields)
-
-
-def option_label(option: Option | None) -> str | None:
-    if option is None:
-        return None
-    return f"{option.group.name}: {option.name}"
-
-
-class CatalogOptionSerializer(serializers.ModelSerializer):
-    label = serializers.SerializerMethodField()
-    modifier = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Option
-        fields = ["id", "label", "weight_kg", "modifier"]
-
-    def get_label(self, obj: Option) -> str:
-        return option_label(obj)
-
-    def get_modifier(self, obj: Option) -> int | None:
-        return self.context["modifier_by_option"].get(obj.pk)
 
 
 class TechCardLineInputSerializer(RecipeLineSerializer):

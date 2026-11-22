@@ -259,14 +259,6 @@ class Modifier(models.Model):
         verbose_name=_("Group"),
     )
     name = models.CharField(max_length=120, verbose_name=_("Name"))
-    catalog_option = models.OneToOneField(
-        "catalog.Option",
-        related_name="menu_modifier",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_("Website option"),
-    )
     ingredient = models.ForeignKey(
         Ingredient,
         related_name="default_for_modifiers",

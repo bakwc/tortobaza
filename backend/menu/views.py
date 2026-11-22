@@ -13,11 +13,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.permissions import HasPerm, SectionPermission, can_see_costs
-from catalog.models import Option
 from menu.models import (
     Ingredient,
     IngredientCategory,
-    Modifier,
     ModifierGroup,
     SemiProduct,
     SemiProductCategory,
@@ -31,7 +29,6 @@ from menu.clone import CloneNameSerializer, clone_semi_product, clone_tech_card
 from menu.recipes import missing_modifier_compositions, recipe_query_cache, tech_card_cost
 from menu.tech_card_import.recognize import recognize_tech_card
 from menu.serializers import (
-    CatalogOptionSerializer,
     AssignIngredientCategorySerializer,
     AssignSemiProductCategorySerializer,
     AssignTechCardCategorySerializer,
@@ -495,19 +492,3 @@ class TechCardDraftDetailView(APIView):
         TechCardDraft.objects.filter(client_id=client_id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-class CatalogOptionListView(APIView):
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, SectionPermission("menu", also_view=("orders",))]
-
-    def get(self, request):
-        options = Option.objects.select_related("group").order_by("group__name", "position", "id")
-        modifier_by_option = dict(
-            Modifier.objects.filter(catalog_option__isnull=False).values_list("catalog_option_id", "id")
-        )
-        serializer = CatalogOptionSerializer(
-            options,
-            many=True,
-            context={"modifier_by_option": modifier_by_option},
-        )
-        return Response(serializer.data)

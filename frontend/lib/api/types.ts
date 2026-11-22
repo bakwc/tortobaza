@@ -1586,8 +1586,6 @@ export const SemiProductSchema = z.object({
 export const ModifierSchema = z.object({
   id: z.number(),
   name: z.string(),
-  catalog_option: z.number().nullable(),
-  catalog_option_label: z.string().nullable(),
   ingredient: z.number().nullable(),
   semi_product: z.number().nullable(),
   nested_tech_card: z.number().nullable(),
@@ -1733,13 +1731,6 @@ export const MissingModifierLineSchema = z.object({
   group_name: z.string(),
 });
 
-export const CatalogOptionSchema = z.object({
-  id: z.number(),
-  label: z.string(),
-  weight_kg: z.string().nullable(),
-  modifier: z.number().nullable(),
-});
-
 export type IngredientCategory = z.infer<typeof IngredientCategorySchema>;
 export type Ingredient = z.infer<typeof IngredientSchema>;
 export type RecipeLine = z.infer<typeof RecipeLineSchema>;
@@ -1764,7 +1755,6 @@ export type TechCard = z.infer<typeof TechCardSchema>;
 export type TechCardImportLine = z.infer<typeof TechCardImportLineSchema>;
 export type TechCardImport = z.infer<typeof TechCardImportSchema>;
 export type MissingModifierLine = z.infer<typeof MissingModifierLineSchema>;
-export type CatalogOption = z.infer<typeof CatalogOptionSchema>;
 
 export type ComponentRefBody = {
   ingredient: number | null;
@@ -1817,7 +1807,6 @@ export type ModifierGroupBody = {
   modifiers: {
     id: number | null;
     name: string;
-    catalog_option: number | null;
     ingredient: number | null;
     semi_product: number | null;
     nested_tech_card: number | null;

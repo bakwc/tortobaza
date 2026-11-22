@@ -13,7 +13,7 @@ from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product
 from crm.models import CrmOrder, CrmOrderItem
 from inventory.models import StockMovement
-from menu.models import UNIT_PIECE, TechCardModifierLine
+from menu.models import UNIT_PIECE, Modifier, ModifierGroup, TechCardModifierGroup, TechCardModifierLine
 from menu.tests.fixtures import MenuFixture
 from orders.models import Order
 from orders.services import create_order_from_cart
@@ -93,8 +93,7 @@ class WebsiteOrderItemsTests(TestCase):
             price_delta=Decimal("0.00"),
             position=0,
         )
-        self.menu.raspberry_filling.catalog_option = self.raspberry_option
-        self.menu.raspberry_filling.save()
+        self.raspberry_option.modifiers.add(self.menu.raspberry_filling)
         self.unmatched_option = Option.objects.create(
             group=filling_group,
             name="Pistachio",
@@ -145,6 +144,24 @@ class WebsiteOrderItemsTests(TestCase):
                 self.menu.cream.pk: Decimal("-600"),
                 self.menu.raspberry.pk: Decimal("-200"),
             },
+        )
+
+    def test_option_expands_to_biscuit_and_filling(self, mock_now, mock_sync):
+        mock_now.return_value = _frozen_now()
+        biscuit_group = ModifierGroup.objects.create(
+            name="Biscuit",
+            selection_type=ModifierGroup.SELECTION_SINGLE,
+            is_required=False,
+        )
+        biscuit = Modifier.objects.create(group=biscuit_group, name="Vanilla biscuit")
+        TechCardModifierGroup.objects.create(tech_card=self.menu.cake, group=biscuit_group, position=2)
+        self.raspberry_option.modifiers.set([biscuit, self.menu.raspberry_filling])
+        crm = self._order([self.weight_option, self.raspberry_option])
+        item = crm.items.get()
+        self.assertFalse(item.needs_review)
+        self.assertEqual(
+            set(item.modifiers.values_list("modifier_id", flat=True)),
+            {biscuit.pk, self.menu.raspberry_filling.pk},
         )
 
     def test_unmatched_option_needs_review(self, mock_now, mock_sync):

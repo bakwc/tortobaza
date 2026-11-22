@@ -19,7 +19,7 @@ from catalog.models import (
 )
 from catalog.auto_translate import KIND_FIELDS, LANGUAGES, schedule_translation
 from catalog.responsive_urls import detail_image, list_primary_image
-from menu.models import TechCard
+from menu.models import Modifier, TechCard
 
 
 def public_base_url(context: dict) -> str:
@@ -507,6 +507,55 @@ class SiteTranslationRequestSerializer(serializers.Serializer):
         if len(keys) != len(set(keys)):
             raise serializers.ValidationError("Translation item keys must be unique.")
         return attrs
+
+
+class SiteOptionSerializer(serializers.ModelSerializer):
+    price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
+    weight_kg = serializers.DecimalField(max_digits=6, decimal_places=3, allow_null=True)
+    modifiers = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all(), many=True)
+    group = serializers.IntegerField(source="group_id", read_only=True)
+    group_name_en = serializers.CharField(source="group.name_en", read_only=True)
+    group_name_ka = serializers.CharField(source="group.name_ka", read_only=True)
+    group_name_ru = serializers.CharField(source="group.name_ru", read_only=True)
+
+    class Meta:
+        model = Option
+        fields = [
+            "id",
+            "group",
+            "group_name_en",
+            "group_name_ka",
+            "group_name_ru",
+            "name_en",
+            "name_ka",
+            "name_ru",
+            "price_delta",
+            "weight_kg",
+            "is_active",
+            "modifiers",
+        ]
+        extra_kwargs = {
+            "name_en": {"allow_blank": True},
+            "name_ka": {"allow_blank": True},
+            "name_ru": {"allow_blank": True},
+        }
+
+    def validate(self, attrs):
+        require_filled(attrs, "name", "Name is required in at least one language.")
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        schedule_translation([instance])
+        return instance
+
+
+class SiteModifierChoiceSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(source="group.name", read_only=True)
+
+    class Meta:
+        model = Modifier
+        fields = ["id", "name", "group_name", "is_active"]
 
 
 class SiteTechCardChoiceSerializer(serializers.ModelSerializer):
