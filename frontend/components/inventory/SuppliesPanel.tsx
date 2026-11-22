@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Package, Plus, Trash2 } from "lucide-react";
+import { Package, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -37,7 +37,7 @@ import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
 import { useCan } from "@/hooks/useAuth";
 import { useFinanceAccounts } from "@/hooks/useFinanceTransactions";
 import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
-import type { MenuUnit, Supply, SupplyReceipt } from "@/lib/api/types";
+import type { MenuUnit, Supply, SupplyReceipt, SupplyTransaction } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -148,6 +148,10 @@ function decimal(value: string): string {
   return value.replace(",", ".");
 }
 
+function transactionLabel(row: SupplyTransaction): string {
+  return `${row.date} · ${formatMoney(row.amount)} · ${row.counterparty_name || row.description} · ${row.account_name}`;
+}
+
 function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () => void }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
@@ -166,6 +170,7 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const paymentAmountEdited = useRef(false);
   const [draft, setDraft] = useState<SupplyDraft>(() => draftFrom(supply));
   const [newSupplier, setNewSupplier] = useState("");
+  const [showNewPayment, setShowNewPayment] = useState(false);
   const [creating, setCreating] = useState<{ key: string; name: string; unit: MenuUnit } | null>(null);
 
   const updateLine = (key: string, patch: Partial<SupplyLineDraft>) =>
@@ -188,7 +193,9 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const paymentAmount = paymentAmountEdited.current ? draft.paymentAmount : total.toFixed(2);
   const newPayment =
     canCreatePayment && draft.paymentAccountId !== "" ? Math.abs(Number(decimal(paymentAmount) || "0")) : 0;
-  const linked = (transactions.data ?? []).filter((row) => draft.financial_transactions.includes(row.id));
+  const rows = transactions.data ?? [];
+  const linked = rows.filter((row) => draft.financial_transactions.includes(row.id));
+  const unselected = rows.filter((row) => !draft.financial_transactions.includes(row.id));
   const linkedAmount = linked.reduce((sum, row) => sum + Math.abs(Number(row.amount)), 0) + newPayment;
   const mismatch = (linked.length > 0 || newPayment > 0) && Math.abs(linkedAmount - total) >= 0.01;
 
@@ -290,73 +297,127 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
           </Button>
         </div>
         <ErrorText error={suppliers.save.error} />
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
+        <div className="flex flex-col gap-2 sm:col-span-2">
           <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("bankTransaction")}</span>
-          {(transactions.data ?? []).length === 0 ? (
-            <p className="text-sm text-[var(--muted-2)]">{t("noBankTransaction")}</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {(transactions.data ?? []).map((row) => {
-                const checked = draft.financial_transactions.includes(row.id);
-                return (
-                  <label key={row.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          financial_transactions: event.target.checked
-                            ? [...draft.financial_transactions, row.id]
-                            : draft.financial_transactions.filter((id) => id !== row.id),
-                        })
-                      }
-                      className="h-4 w-4 accent-[var(--brand)]"
-                    />
-                    {row.date} · {formatMoney(row.amount)} · {row.counterparty_name || row.description} · {row.account_name}
-                  </label>
-                );
-              })}
+          {linked.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {linked.map((row) => (
+                <span
+                  key={row.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-3 py-1 text-sm text-violet-900"
+                >
+                  {transactionLabel(row)}
+                  <button
+                    type="button"
+                    aria-label={transactionLabel(row)}
+                    className="rounded-full p-0.5 hover:bg-violet-200"
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        financial_transactions: draft.financial_transactions.filter((id) => id !== row.id),
+                      })
+                    }
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
             </div>
-          )}
-        </div>
-        {canCreatePayment ? (
-          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60 sm:col-span-2">
-              {t("newPayment")}
-            </span>
-            <Field label={t("paymentAccount")}>
-              <NativeSelect
-                value={draft.paymentAccountId}
-                onChange={(event) => setDraft({ ...draft, paymentAccountId: event.target.value })}
-              >
-                <option value="">{t("chooseAccount")}</option>
-                {(accounts.data ?? []).map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name} ({account.currency})
-                  </option>
-                ))}
-              </NativeSelect>
-            </Field>
-            <Field label={t("paymentAmount")}>
-              <Input
-                inputMode="decimal"
-                value={paymentAmount}
-                onChange={(event) => {
-                  paymentAmountEdited.current = true;
-                  setDraft({ ...draft, paymentAmount: event.target.value });
+          ) : null}
+          {unselected.length > 0 ? (
+            <SearchSelect
+              options={unselected.map((row) => ({ value: String(row.id), label: transactionLabel(row) }))}
+              value=""
+              onChange={(value) =>
+                setDraft({
+                  ...draft,
+                  financial_transactions: [...draft.financial_transactions, Number(value)],
+                })
+              }
+              placeholder={t("searchBankTransaction")}
+              required={false}
+              name={null}
+              className=""
+              onCreate={null}
+              createPending={false}
+              keepSelectedOnDigit={false}
+            />
+          ) : rows.length === 0 ? (
+            <p className="text-sm text-[var(--muted-2)]">{t("noBankTransaction")}</p>
+          ) : null}
+          {canCreatePayment ? (
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (showNewPayment) {
+                    paymentAmountEdited.current = false;
+                    setDraft((prev) => ({
+                      ...prev,
+                      paymentAccountId: "",
+                      paymentAmount: "",
+                      paymentDescription: "",
+                    }));
+                    setShowNewPayment(false);
+                    return;
+                  }
+                  setShowNewPayment(true);
                 }}
-              />
-            </Field>
-            <Field label={t("paymentDescription")} className="sm:col-span-2">
-              <Input
-                value={draft.paymentDescription}
-                onChange={(event) => setDraft({ ...draft, paymentDescription: event.target.value })}
-              />
-            </Field>
-            <ErrorText error={accounts.error} />
-          </div>
-        ) : null}
+              >
+                {t("newPayment")}
+              </Button>
+            </div>
+          ) : null}
+          {canCreatePayment && showNewPayment ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={t("paymentAccount")}>
+                <NativeSelect
+                  value={draft.paymentAccountId}
+                  onChange={(event) => {
+                    if (event.target.value === "") {
+                      paymentAmountEdited.current = false;
+                      setDraft({
+                        ...draft,
+                        paymentAccountId: "",
+                        paymentAmount: "",
+                        paymentDescription: "",
+                      });
+                      setShowNewPayment(false);
+                      return;
+                    }
+                    setDraft({ ...draft, paymentAccountId: event.target.value });
+                  }}
+                >
+                  <option value="">{t("chooseAccount")}</option>
+                  {(accounts.data ?? []).map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.currency})
+                    </option>
+                  ))}
+                </NativeSelect>
+              </Field>
+              <Field label={t("paymentAmount")}>
+                <Input
+                  inputMode="decimal"
+                  value={paymentAmount}
+                  onChange={(event) => {
+                    paymentAmountEdited.current = true;
+                    setDraft({ ...draft, paymentAmount: event.target.value });
+                  }}
+                />
+              </Field>
+              <Field label={t("paymentDescription")} className="sm:col-span-2">
+                <Input
+                  value={draft.paymentDescription}
+                  onChange={(event) => setDraft({ ...draft, paymentDescription: event.target.value })}
+                />
+              </Field>
+              <ErrorText error={accounts.error} />
+            </div>
+          ) : null}
+        </div>
         <Field label={t("comment")} className="sm:col-span-2">
           <Textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
         </Field>

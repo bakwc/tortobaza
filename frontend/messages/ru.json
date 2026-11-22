@@ -821,6 +821,7 @@
     "newSupplier": "Новый поставщик",
     "phone": "Телефон",
     "bankTransaction": "Банковская операция",
+    "searchBankTransaction": "Найти операцию",
     "noBankTransaction": "Не привязана",
     "newPayment": "Новая операция",
     "paymentAccount": "Счёт",

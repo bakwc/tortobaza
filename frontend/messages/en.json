@@ -821,6 +821,7 @@
     "newSupplier": "New supplier",
     "phone": "Phone",
     "bankTransaction": "Bank transaction",
+    "searchBankTransaction": "Find a transaction",
     "noBankTransaction": "Not linked",
     "newPayment": "New transaction",
     "paymentAccount": "Account",
