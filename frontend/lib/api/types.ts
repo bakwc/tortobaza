@@ -2462,6 +2462,7 @@ export type SupplyBody = {
   date: string;
   supplier: number | null;
   financial_transactions: number[];
+  new_financial_transaction: { account_id: number; amount: string; description: string } | null;
   comment: string;
   lines: { ingredient: number; quantity: string; total: string }[];
   receipts: number[];

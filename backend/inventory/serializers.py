@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from accounts.models import UserProfile
-from crm.models import FinancialTransaction
+from crm.manual_transactions import PAIR_NONE, create_manual_transaction
+from crm.models import FinancialAccount, FinancialTransaction
 from inventory.finished import finished_signature, stored_weight
 from inventory.models import (
     FinishedGood,
@@ -79,6 +80,17 @@ def transaction_payload(transaction: FinancialTransaction | None) -> dict | None
     }
 
 
+class SupplyFinancialTransactionInputSerializer(serializers.Serializer):
+    account_id = serializers.IntegerField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    description = serializers.CharField(allow_blank=True)
+
+    def validate_account_id(self, value: int) -> int:
+        if not FinancialAccount.objects.filter(pk=value).exists():
+            raise serializers.ValidationError("Unknown account.")
+        return value
+
+
 class SupplySerializer(serializers.ModelSerializer):
     lines = SupplyLineInputSerializer(many=True, write_only=True)
     receipts = serializers.PrimaryKeyRelatedField(queryset=SupplyReceipt.objects.all(), many=True)
@@ -86,16 +98,45 @@ class SupplySerializer(serializers.ModelSerializer):
         queryset=FinancialTransaction.objects.select_related("account"),
         many=True,
     )
+    new_financial_transaction = SupplyFinancialTransactionInputSerializer(
+        write_only=True,
+        allow_null=True,
+        default=None,
+    )
 
     class Meta:
         model = Supply
-        fields = ["id", "date", "supplier", "financial_transactions", "comment", "lines", "receipts", "created_at"]
+        fields = [
+            "id",
+            "date",
+            "supplier",
+            "financial_transactions",
+            "new_financial_transaction",
+            "comment",
+            "lines",
+            "receipts",
+            "created_at",
+        ]
         read_only_fields = ["created_at"]
         extra_kwargs = {
             "supplier": {"required": True},
             "comment": {"required": True},
             "receipts": {"required": True},
         }
+
+    def validate(self, attrs):
+        new_transaction = attrs.get("new_financial_transaction")
+        if new_transaction is None:
+            return attrs
+        if self.instance is not None:
+            raise serializers.ValidationError(
+                {"new_financial_transaction": "A financial transaction can only be created with a new supply."}
+            )
+        if not self.context["request"].user.has_perm("accounts.edit_finance"):
+            raise serializers.ValidationError(
+                {"new_financial_transaction": "You cannot create a financial transaction."}
+            )
+        return attrs
 
     def validate_financial_transactions(self, value: list[FinancialTransaction]) -> list[FinancialTransaction]:
         for transaction in value:
@@ -162,8 +203,11 @@ class SupplySerializer(serializers.ModelSerializer):
         lines = validated_data.pop("lines")
         receipts = validated_data.pop("receipts")
         transactions = validated_data.pop("financial_transactions")
+        new_transaction = validated_data.pop("new_financial_transaction")
         validated_data["created_by"] = self.context["request"].user
         instance = Supply.objects.create(**validated_data)
+        if new_transaction is not None:
+            transactions.append(self._create_payment(instance, new_transaction))
         instance.financial_transactions.set(transactions)
         self._save_lines(instance, lines)
         self._save_receipts(instance, receipts)
@@ -173,6 +217,7 @@ class SupplySerializer(serializers.ModelSerializer):
         lines = validated_data.pop("lines")
         receipts = validated_data.pop("receipts")
         transactions = validated_data.pop("financial_transactions")
+        validated_data.pop("new_financial_transaction")
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -180,6 +225,25 @@ class SupplySerializer(serializers.ModelSerializer):
         self._save_lines(instance, lines)
         self._save_receipts(instance, receipts)
         return instance
+
+    def _create_payment(self, instance: Supply, data: dict) -> FinancialTransaction:
+        supplier = instance.supplier
+        return create_manual_transaction(
+            {
+                "account_id": data["account_id"],
+                "date": instance.date,
+                "amount": -data["amount"],
+                "kind": FinancialTransaction.KIND_EXPENSE,
+                "income_type": "",
+                "expense_type": FinancialTransaction.EXPENSE_PRODUCTS,
+                "counterparty_name": "" if supplier is None else supplier.name,
+                "counterparty_iban": "",
+                "description": data["description"],
+                "transfer_pair": PAIR_NONE,
+                "matched_transaction_id": None,
+                "counterpart": None,
+            }
+        )
 
     def _save_lines(self, instance: Supply, lines: list[dict]) -> None:
         instance.lines.all().delete()

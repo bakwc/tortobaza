@@ -1,6 +1,7 @@
 import random
 import time
 from collections.abc import Callable
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
 import requests
@@ -167,6 +168,39 @@ def update_payment_link(link_id: str, order_id: int, amount_usd: Decimal, return
         )
     )
     _raise_for_status(response)
+
+
+def list_transactions(start: datetime, end: datetime) -> list[dict]:
+    token = access_token()
+    start_utc = start.astimezone(timezone.utc)
+    end_utc = end.astimezone(timezone.utc)
+    page = 1
+    transactions: list[dict] = []
+    while True:
+        response = requests.get(
+            f"{settings.PAYPAL_API_URL}/v1/reporting/transactions",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            params={
+                "start_date": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "end_date": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "transaction_status": "S",
+                "fields": "all",
+                "page_size": 500,
+                "page": page,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if "transaction_details" in payload:
+            transactions.extend(payload["transaction_details"])
+        total_pages = payload["total_pages"]
+        if page >= total_pages:
+            return transactions
+        page += 1
 
 
 def capture_paypal_order(paypal_order_id: str) -> dict:

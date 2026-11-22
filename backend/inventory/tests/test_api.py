@@ -6,7 +6,7 @@ from rest_framework.test import APIClient
 
 from accounts.permissions import grant
 from crm.models import FinancialAccount, FinancialTransaction
-from inventory.models import StockMovement, Supply
+from inventory.models import StockMovement, Supplier, Supply
 from menu.tests.fixtures import MenuFixture
 
 
@@ -78,6 +78,64 @@ class InventoryApiTests(TestCase):
         self.client.force_authenticate(self.admin)
         response = self.client.post("/api/inventory/supplies/", self._supply_payload([transaction.pk]), format="json")
         self.assertEqual(response.status_code, 400)
+
+    def test_supply_creates_product_expense(self):
+        grant(self.admin, "edit_finance")
+        supplier = Supplier.objects.create(name="Молочный")
+        self.client.force_authenticate(self.admin)
+        payload = self._supply_payload([])
+        payload["supplier"] = supplier.pk
+        payload["new_financial_transaction"] = {
+            "account_id": self.account.pk,
+            "amount": "10.00",
+            "description": "мука",
+        }
+        response = self.client.post("/api/inventory/supplies/", payload, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        transaction = FinancialTransaction.objects.get()
+        self.assertEqual(transaction.account_id, self.account.pk)
+        self.assertEqual(transaction.kind, FinancialTransaction.KIND_EXPENSE)
+        self.assertEqual(transaction.expense_type, FinancialTransaction.EXPENSE_PRODUCTS)
+        self.assertEqual(transaction.amount, Decimal("-10.00"))
+        self.assertEqual(transaction.date.isoformat(), "2026-10-01")
+        self.assertEqual(transaction.counterparty_name, "Молочный")
+        self.assertEqual(transaction.description, "мука")
+        supply = Supply.objects.get()
+        self.assertEqual(supply.financial_transactions.get().pk, transaction.pk)
+        self.assertEqual(response.json()["financial_transactions"][0]["id"], transaction.pk)
+
+    def test_supply_rejects_unknown_payment_account(self):
+        grant(self.admin, "edit_finance")
+        self.client.force_authenticate(self.admin)
+        payload = self._supply_payload([])
+        payload["new_financial_transaction"] = {
+            "account_id": self.account.pk + 1,
+            "amount": "10.00",
+            "description": "",
+        }
+        response = self.client.post("/api/inventory/supplies/", payload, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(FinancialTransaction.objects.count(), 0)
+        self.assertEqual(Supply.objects.count(), 0)
+
+    def test_supply_update_rejects_new_payment(self):
+        grant(self.admin, "edit_finance")
+        self.client.force_authenticate(self.admin)
+        created = self.client.post("/api/inventory/supplies/", self._supply_payload([]), format="json")
+        self.assertEqual(created.status_code, 201, created.content)
+        payload = self._supply_payload([])
+        payload["new_financial_transaction"] = {
+            "account_id": self.account.pk,
+            "amount": "10.00",
+            "description": "",
+        }
+        response = self.client.put(
+            f"/api/inventory/supplies/{created.json()['id']}/",
+            payload,
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(FinancialTransaction.objects.count(), 0)
 
     def test_staff_records_production_without_costs(self):
         self.client.force_authenticate(self.staff)

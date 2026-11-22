@@ -35,6 +35,7 @@ import { WaybillIngredientDialog } from "@/components/rsge/WaybillIngredientDial
 import { WaybillPriceChange } from "@/components/rsge/WaybillPriceChange";
 import { formatCrmCompactDate, formatMoney as formatGel } from "@/lib/format";
 import { useCan } from "@/hooks/useAuth";
+import { useFinanceAccounts } from "@/hooks/useFinanceTransactions";
 import { useIngredients, useSuppliers, useSupplies, useSupplyReceiptUpload, useSupplyTransactions } from "@/hooks/useStock";
 import type { MenuUnit, Supply, SupplyReceipt } from "@/lib/api/types";
 import { getTbilisiTodayIsoDate } from "@/lib/format";
@@ -59,6 +60,9 @@ type SupplyDraft = {
   date: string;
   supplier: number | null;
   financial_transactions: number[];
+  paymentAccountId: string;
+  paymentAmount: string;
+  paymentDescription: string;
   comment: string;
   lines: SupplyLineDraft[];
   receipts: ReceiptPreview[];
@@ -83,6 +87,9 @@ function draftFrom(row: Supply | null): SupplyDraft {
       date: getTbilisiTodayIsoDate(),
       supplier: null,
       financial_transactions: [],
+      paymentAccountId: "",
+      paymentAmount: "",
+      paymentDescription: "",
       comment: "",
       lines: [],
       receipts: [],
@@ -93,6 +100,9 @@ function draftFrom(row: Supply | null): SupplyDraft {
     date: row.date,
     supplier: row.supplier,
     financial_transactions: row.financial_transactions.map((transaction) => transaction.id),
+    paymentAccountId: "",
+    paymentAmount: "",
+    paymentDescription: "",
     comment: row.comment,
     lines: row.lines.map((line) => ({
       key: newDraftKey(),
@@ -142,14 +152,18 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
   const canEdit = useCan("view_costs");
+  const canEditFinance = useCan("edit_finance");
   const units = useTranslations("stock.units");
   const supplies = useSupplies();
   const suppliers = useSuppliers();
   const ingredients = useIngredients();
   const transactions = useSupplyTransactions(supply ? supply.id : null);
+  const canCreatePayment = supply === null && canEditFinance;
+  const accounts = useFinanceAccounts(canCreatePayment, "business");
   const receiptUpload = useSupplyReceiptUpload();
   const fileInput = useRef<HTMLInputElement>(null);
   const dateEdited = useRef(supply !== null);
+  const paymentAmountEdited = useRef(false);
   const [draft, setDraft] = useState<SupplyDraft>(() => draftFrom(supply));
   const [newSupplier, setNewSupplier] = useState("");
   const [creating, setCreating] = useState<{ key: string; name: string; unit: MenuUnit } | null>(null);
@@ -171,9 +185,12 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
   };
 
   const total = draft.lines.reduce((sum, line) => sum + Number(decimal(line.total) || "0"), 0);
+  const paymentAmount = paymentAmountEdited.current ? draft.paymentAmount : total.toFixed(2);
+  const newPayment =
+    canCreatePayment && draft.paymentAccountId !== "" ? Math.abs(Number(decimal(paymentAmount) || "0")) : 0;
   const linked = (transactions.data ?? []).filter((row) => draft.financial_transactions.includes(row.id));
-  const linkedAmount = linked.reduce((sum, row) => sum + Math.abs(Number(row.amount)), 0);
-  const mismatch = linked.length > 0 && Math.abs(linkedAmount - total) >= 0.01;
+  const linkedAmount = linked.reduce((sum, row) => sum + Math.abs(Number(row.amount)), 0) + newPayment;
+  const mismatch = (linked.length > 0 || newPayment > 0) && Math.abs(linkedAmount - total) >= 0.01;
 
   return (
     <>
@@ -195,6 +212,14 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
               date: draft.date,
               supplier: draft.supplier,
               financial_transactions: draft.financial_transactions,
+              new_financial_transaction:
+                canCreatePayment && draft.paymentAccountId !== ""
+                  ? {
+                      account_id: Number(draft.paymentAccountId),
+                      amount: decimal(paymentAmount),
+                      description: draft.paymentDescription,
+                    }
+                  : null,
               comment: draft.comment,
               receipts: draft.receipts.map((receipt) => receipt.id),
               lines: draft.lines.map((line) => ({
@@ -295,6 +320,43 @@ function SupplyEditor({ supply, onClose }: { supply: Supply | null; onClose: () 
             </div>
           )}
         </div>
+        {canCreatePayment ? (
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60 sm:col-span-2">
+              {t("newPayment")}
+            </span>
+            <Field label={t("paymentAccount")}>
+              <NativeSelect
+                value={draft.paymentAccountId}
+                onChange={(event) => setDraft({ ...draft, paymentAccountId: event.target.value })}
+              >
+                <option value="">{t("chooseAccount")}</option>
+                {(accounts.data ?? []).map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.currency})
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field label={t("paymentAmount")}>
+              <Input
+                inputMode="decimal"
+                value={paymentAmount}
+                onChange={(event) => {
+                  paymentAmountEdited.current = true;
+                  setDraft({ ...draft, paymentAmount: event.target.value });
+                }}
+              />
+            </Field>
+            <Field label={t("paymentDescription")} className="sm:col-span-2">
+              <Input
+                value={draft.paymentDescription}
+                onChange={(event) => setDraft({ ...draft, paymentDescription: event.target.value })}
+              />
+            </Field>
+            <ErrorText error={accounts.error} />
+          </div>
+        ) : null}
         <Field label={t("comment")} className="sm:col-span-2">
           <Textarea value={draft.comment} onChange={(event) => setDraft({ ...draft, comment: event.target.value })} />
         </Field>
