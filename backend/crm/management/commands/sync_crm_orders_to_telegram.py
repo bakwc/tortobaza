@@ -10,6 +10,7 @@ from crm.card_sms import import_card_sms
 from crm.courier_alerts import notify_courier_departures
 from crm.late_prep_alerts import notify_late_preps
 from crm.cash_transactions import sync_cash_paid_order_transactions
+from crm.paypal_order_links import sync_paypal_order_links
 from crm.paypal_transactions import sync_paypal_transactions
 from crm.flowwow import sync_flowwow_orders
 from crm.flowwow_bog_transfers import sync_flowwow_bog_transfers
@@ -217,6 +218,7 @@ class Command(BaseCommand):
             )
         sync_cash_paid_order_transactions()
         sync_paypal_transactions()
+        sync_paypal_order_links()
         sync_liberty_terminal_order_links()
         sync_liberty_online_order_links()
         sync_flowwow_bog_transfers()
