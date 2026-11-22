@@ -597,7 +597,8 @@
       "taxi": "Taxi",
       "gasoline": "Gasoline",
       "marketing": "Marketing",
-      "training": "Training"
+      "training": "Training",
+      "ceo_compensation": "CEO compensation"
     },
     "accountKinds": {
       "bank": "Bank",

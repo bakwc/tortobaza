@@ -597,7 +597,8 @@
       "taxi": "Такси",
       "gasoline": "Бензин",
       "marketing": "Маркетинг",
-      "training": "Обучение"
+      "training": "Обучение",
+      "ceo_compensation": "Вознаграждение СЕО"
     },
     "accountKinds": {
       "bank": "Банк",

@@ -5,6 +5,7 @@ from django.test import TestCase
 
 from crm.analytics import cashflow
 from crm.models import ExchangeRateSnapshot, FinancialAccount, FinancialTransaction
+from tortobaza.finance_db import use_finance_db
 
 
 def _account(name: str, currency: str) -> FinancialAccount:
@@ -34,6 +35,8 @@ def _tx(
 
 
 class CashflowTests(TestCase):
+    databases = {"default", "personal"}
+
     def test_sections_reconcile(self):
         ExchangeRateSnapshot.objects.create(
             rates_date=date(2026, 10, 1),
@@ -120,6 +123,34 @@ class CashflowTests(TestCase):
         self.assertEqual(report["net"], "51.00")
         self.assertEqual(report["transfers"], "5.00")
         self.assertEqual(report["closing"], "156.00")
+        self.assertEqual(
+            Decimal(report["closing"]),
+            Decimal(report["opening"]) + Decimal(report["net"]) + Decimal(report["transfers"]),
+        )
+
+    def test_ceo_compensation_moves_opening_and_closing(self):
+        ExchangeRateSnapshot.objects.create(
+            rates_date=date(2026, 10, 1),
+            rates={"USD": "2.50"},
+        )
+        with use_finance_db("personal"):
+            gel = _account("BOG darya GEL", "GEL")
+            usd = _account("BOG darya USD", "USD")
+            other = _account("Other", "GEL")
+            _tx(gel, date(2026, 9, 15), "-10.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(gel, date(2026, 10, 5), "-20.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(usd, date(2026, 10, 6), "-4.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(other, date(2026, 10, 7), "-100.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(gel, date(2026, 10, 8), "50.00", FinancialTransaction.KIND_INCOME, FinancialTransaction.INCOME_CASH, "")
+            _tx(gel, date(2026, 10, 9), "-30.00", FinancialTransaction.KIND_TRANSFER, "", "")
+
+        report = cashflow("2026-10")
+
+        self.assertEqual(report["opening"], "-10.00")
+        self.assertEqual(report["operating"]["outflows"], [{"key": "ceo_compensation", "amount": "-30.00"}])
+        self.assertEqual(report["operating"]["total"], "-30.00")
+        self.assertEqual(report["net"], "-30.00")
+        self.assertEqual(report["closing"], "-40.00")
         self.assertEqual(
             Decimal(report["closing"]),
             Decimal(report["opening"]) + Decimal(report["net"]) + Decimal(report["transfers"]),

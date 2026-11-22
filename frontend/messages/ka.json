@@ -597,7 +597,8 @@
       "taxi": "ტაქსი",
       "gasoline": "ბენზინი",
       "marketing": "მარკეტინგი",
-      "training": "სწავლება"
+      "training": "სწავლება",
+      "ceo_compensation": "CEO-ის ანაზღაურება"
     },
     "accountKinds": {
       "bank": "ბანკი",

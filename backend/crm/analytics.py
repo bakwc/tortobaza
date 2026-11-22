@@ -1704,6 +1704,11 @@ _CASHFLOW_INCOME_TYPES = (
     FinancialTransaction.INCOME_TRANSFER,
     _CASHFLOW_UNTYPED,
 )
+_CEO_COMPENSATION_ACCOUNTS = (
+    "BOG darya GEL",
+    "BOG darya USD",
+)
+_CEO_COMPENSATION_KEY = "ceo_compensation"
 _CASHFLOW_OPERATING_EXPENSE_TYPES = (
     FinancialTransaction.EXPENSE_SALARY,
     FinancialTransaction.EXPENSE_RENT,
@@ -1714,6 +1719,7 @@ _CASHFLOW_OPERATING_EXPENSE_TYPES = (
     FinancialTransaction.EXPENSE_GASOLINE,
     FinancialTransaction.EXPENSE_MARKETING,
     FinancialTransaction.EXPENSE_TRAINING,
+    _CEO_COMPENSATION_KEY,
     _CASHFLOW_UNTYPED,
 )
 _CASHFLOW_FINANCING_KINDS = (
@@ -1746,6 +1752,27 @@ def _cashflow_total(amounts: dict[str, Decimal]) -> Decimal:
     for amount in amounts.values():
         total += amount
     return total
+
+
+def _ceo_compensation(start: date, end: date, rates: dict[str, str] | None) -> tuple[Decimal, Decimal]:
+    before = Decimal("0")
+    during = Decimal("0")
+    rows = (
+        FinancialTransaction.objects.using("personal")
+        .filter(
+            account__name__in=_CEO_COMPENSATION_ACCOUNTS,
+            kind=FinancialTransaction.KIND_EXPENSE,
+            date__lte=end,
+        )
+        .select_related("account")
+    )
+    for tx in rows:
+        gel = _cashflow_gel(tx.amount, tx.account.currency, rates)
+        if tx.date < start:
+            before += gel
+        else:
+            during += gel
+    return before, during
 
 
 def cashflow(month: str) -> dict:
@@ -1786,6 +1813,9 @@ def cashflow(month: str) -> dict:
             unclassified[FinancialTransaction.KIND_OTHER] += gel
         else:
             raise ValueError(tx.kind)
+    ceo_before, ceo_during = _ceo_compensation(start, end, rates)
+    opening += ceo_before
+    outflows[_CEO_COMPENSATION_KEY] += ceo_during
     operating_total = _cashflow_total(inflows) + _cashflow_total(outflows)
     investing_total = _cashflow_total(investing)
     financing_total = _cashflow_total(financing)
@@ -1825,6 +1855,7 @@ _PNL_EXPENSE_TYPES = (
     FinancialTransaction.EXPENSE_GASOLINE,
     FinancialTransaction.EXPENSE_MARKETING,
     FinancialTransaction.EXPENSE_TRAINING,
+    _CEO_COMPENSATION_KEY,
     _CASHFLOW_UNTYPED,
 )
 _PNL_COGS_KEYS = (
@@ -1926,6 +1957,7 @@ def pnl(month: str) -> dict:
             unclassified[FinancialTransaction.KIND_OTHER] += gel
         else:
             raise ValueError(tx.kind)
+    outflows[_CEO_COMPENSATION_KEY] += _ceo_compensation(start, end, rates)[1]
     cogs = {
         "unlinked_products": unlinked_products,
         "orders": _pnl_movement_sum(

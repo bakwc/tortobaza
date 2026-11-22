@@ -7,6 +7,7 @@ from crm.analytics import pnl
 from crm.models import FinancialAccount, FinancialTransaction
 from inventory.models import StockMovement, Supply, SupplyLine, SupplyTransaction
 from menu.models import UNIT_GRAM, Ingredient
+from tortobaza.finance_db import use_finance_db
 
 
 def _account() -> FinancialAccount:
@@ -68,6 +69,7 @@ def _paid_supply(
 
 
 class PnlTests(TestCase):
+    databases = {"default", "personal"}
     def test_unlinked_operations_and_skipped_kinds(self):
         account = _account()
         _tx(account, date(2026, 10, 10), "100.00", FinancialTransaction.KIND_INCOME, FinancialTransaction.INCOME_CASH, "")
@@ -192,3 +194,32 @@ class PnlTests(TestCase):
 
         self.assertEqual(report["expenses"]["cogs"], {"lines": [], "total": "0.00"})
         self.assertEqual(report["profit"], "0.00")
+
+    def test_ceo_compensation_stays_in_its_month(self):
+        with use_finance_db("personal"):
+            gel = FinancialAccount.objects.create(
+                name="BOG darya GEL",
+                kind=FinancialAccount.KIND_BANK,
+                currency="GEL",
+            )
+            other = FinancialAccount.objects.create(
+                name="Other",
+                kind=FinancialAccount.KIND_BANK,
+                currency="GEL",
+            )
+            _tx(gel, date(2026, 9, 10), "-7.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(gel, date(2026, 10, 2), "-15.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(gel, date(2026, 11, 2), "-8.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(other, date(2026, 10, 10), "-100.00", FinancialTransaction.KIND_EXPENSE, "", "")
+            _tx(gel, date(2026, 10, 11), "40.00", FinancialTransaction.KIND_INCOME, FinancialTransaction.INCOME_CASH, "")
+
+        september = pnl("2026-09")
+        october = pnl("2026-10")
+        november = pnl("2026-11")
+
+        self.assertEqual(september["expenses"]["lines"], [{"key": "ceo_compensation", "amount": "-7.00"}])
+        self.assertEqual(september["profit"], "-7.00")
+        self.assertEqual(october["expenses"]["lines"], [{"key": "ceo_compensation", "amount": "-15.00"}])
+        self.assertEqual(october["profit"], "-15.00")
+        self.assertEqual(november["expenses"]["lines"], [{"key": "ceo_compensation", "amount": "-8.00"}])
+        self.assertEqual(november["profit"], "-8.00")
