@@ -7,6 +7,8 @@ from statistics import median, quantiles
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.db.models import DecimalField, F, Q, QuerySet, Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from accounts.models import UserProfile, chef_identity
@@ -20,6 +22,7 @@ from crm.models import (
     FinancialTransaction,
 )
 from crm.phone import extract_phones
+from inventory.models import StockMovement, Supply
 from menu.models import Ingredient, ModifierGroup, SemiProduct, TechCard
 from menu.recipes import expand_order_item, item_food_cost, tech_card_group_links
 
@@ -1810,4 +1813,154 @@ def cashflow(month: str) -> dict:
         "net": _money(net),
         "transfers": _money(transfers),
         "closing": _money(opening + net + transfers),
+    }
+
+
+_PNL_EXPENSE_TYPES = (
+    FinancialTransaction.EXPENSE_SALARY,
+    FinancialTransaction.EXPENSE_RENT,
+    FinancialTransaction.EXPENSE_CONSUMABLES,
+    FinancialTransaction.EXPENSE_FEES,
+    FinancialTransaction.EXPENSE_TAXI,
+    FinancialTransaction.EXPENSE_GASOLINE,
+    FinancialTransaction.EXPENSE_MARKETING,
+    FinancialTransaction.EXPENSE_TRAINING,
+    _CASHFLOW_UNTYPED,
+)
+_PNL_COGS_KEYS = (
+    "unlinked_products",
+    "orders",
+    "write_offs",
+    "supply_gap",
+    "inventory",
+)
+_PNL_SKIPPED_KINDS = (
+    FinancialTransaction.KIND_INVESTMENT,
+    FinancialTransaction.KIND_WITHDRAWAL,
+    FinancialTransaction.KIND_TRANSFER,
+)
+
+
+def _pnl_movement_sum(movements: QuerySet[StockMovement]) -> Decimal:
+    total = movements.aggregate(
+        value=Coalesce(
+            Sum(
+                F("quantity") * F("unit_cost"),
+                output_field=DecimalField(max_digits=24, decimal_places=6),
+            ),
+            Value(Decimal("0")),
+            output_field=DecimalField(max_digits=24, decimal_places=6),
+        )
+    )["value"]
+    return total.quantize(_MONEY, rounding=ROUND_HALF_UP)
+
+
+def _pnl_supply_gap(start: date, end: date, rates: dict[str, str] | None) -> Decimal:
+    gap = Decimal("0")
+    supplies = Supply.objects.filter(date__gte=start, date__lte=end).prefetch_related(
+        "lines",
+        "supply_transactions__financial_transaction__account",
+    )
+    for supply in supplies:
+        payments = [link.financial_transaction for link in supply.supply_transactions.all()]
+        if not payments:
+            continue
+        received = Decimal("0")
+        for line in supply.lines.all():
+            received += line.total
+        paid = Decimal("0")
+        for payment in payments:
+            paid += _cashflow_gel(payment.amount, payment.account.currency, rates)
+        gap += received + paid
+    return gap.quantize(_MONEY, rounding=ROUND_HALF_UP)
+
+
+def pnl(month: str) -> dict:
+    start, end = _month_bounds(month)
+    next_start = end + timedelta(days=1)
+    next_cutoff = date(next_start.year, next_start.month, 3)
+    snapshot = ExchangeRateSnapshot.objects.order_by("-fetched_at", "-pk").first()
+    rates = None if snapshot is None else snapshot.rates
+    inflows = {key: Decimal("0") for key in _CASHFLOW_INCOME_TYPES}
+    outflows = {key: Decimal("0") for key in _PNL_EXPENSE_TYPES}
+    unclassified = {key: Decimal("0") for key in _CASHFLOW_UNCLASSIFIED_KEYS}
+    unlinked_products = Decimal("0")
+    rows = (
+        FinancialTransaction.objects.filter(
+            Q(date__gte=start, date__lte=end)
+            | Q(
+                date__gte=next_start,
+                date__lte=next_cutoff,
+                kind=FinancialTransaction.KIND_EXPENSE,
+                expense_type=FinancialTransaction.EXPENSE_SALARY,
+            )
+        )
+        .filter(supply_transaction__isnull=True)
+        .select_related("account")
+    )
+    for tx in rows:
+        if tx.kind in _PNL_SKIPPED_KINDS:
+            continue
+        if tx.kind == FinancialTransaction.KIND_EXPENSE and tx.expense_type == FinancialTransaction.EXPENSE_EQUIPMENT:
+            continue
+        if (
+            tx.kind == FinancialTransaction.KIND_EXPENSE
+            and tx.expense_type == FinancialTransaction.EXPENSE_SALARY
+            and start <= tx.date <= end
+            and tx.date.day <= 3
+        ):
+            continue
+        gel = _cashflow_gel(tx.amount, tx.account.currency, rates)
+        if tx.kind == FinancialTransaction.KIND_INCOME:
+            key = tx.income_type if tx.income_type in inflows else _CASHFLOW_UNTYPED
+            inflows[key] += gel
+        elif tx.kind == FinancialTransaction.KIND_EXPENSE:
+            if tx.expense_type == FinancialTransaction.EXPENSE_PRODUCTS:
+                unlinked_products += gel
+            else:
+                key = tx.expense_type if tx.expense_type in outflows else _CASHFLOW_UNTYPED
+                outflows[key] += gel
+        elif tx.kind == FinancialTransaction.KIND_CORRECTION:
+            unclassified[FinancialTransaction.KIND_CORRECTION] += gel
+        elif tx.kind == FinancialTransaction.KIND_OTHER:
+            unclassified[FinancialTransaction.KIND_OTHER] += gel
+        else:
+            raise ValueError(tx.kind)
+    cogs = {
+        "unlinked_products": unlinked_products,
+        "orders": _pnl_movement_sum(
+            StockMovement.objects.filter(kind=StockMovement.KIND_ORDER, date__gte=start, date__lte=end)
+        ),
+        "write_offs": _pnl_movement_sum(
+            StockMovement.objects.filter(kind=StockMovement.KIND_WRITE_OFF, date__gte=start, date__lte=end)
+        ),
+        "supply_gap": _pnl_supply_gap(start, end, rates),
+        "inventory": _pnl_movement_sum(
+            StockMovement.objects.filter(kind=StockMovement.KIND_INVENTORY).filter(
+                Q(date__gte=date(start.year, start.month, 4), date__lte=end)
+                | Q(date__gte=next_start, date__lte=next_cutoff)
+            )
+        ),
+    }
+    income_total = _cashflow_total(inflows)
+    expense_total = _cashflow_total(outflows) + _cashflow_total(cogs)
+    unclassified_total = _cashflow_total(unclassified)
+    return {
+        "income": {
+            "lines": _cashflow_lines(_CASHFLOW_INCOME_TYPES, inflows),
+            "total": _money(income_total),
+        },
+        "expenses": {
+            "lines": _cashflow_lines(_PNL_EXPENSE_TYPES, outflows),
+            "cogs": {
+                "lines": _cashflow_lines(_PNL_COGS_KEYS, cogs),
+                "total": _money(_cashflow_total(cogs)),
+            },
+            "total": _money(expense_total),
+        },
+        "unclassified": {
+            "lines": _cashflow_lines(_CASHFLOW_UNCLASSIFIED_KEYS, unclassified),
+            "total": _money(unclassified_total),
+        },
+        "profit": _money(income_total + expense_total + unclassified_total),
     }

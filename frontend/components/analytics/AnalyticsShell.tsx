@@ -13,7 +13,7 @@ import { shiftFinanceMonth, useFinancePeriod } from "@/hooks/useFinancePeriod";
 import { Link } from "@/i18n/navigation";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
-export type AnalyticsSection = "overview" | "pace" | "load" | "clients" | "products" | "cogs" | "employees" | "cashflow";
+export type AnalyticsSection = "overview" | "pace" | "load" | "clients" | "products" | "cogs" | "employees" | "cashflow" | "pnl";
 
 const SECTIONS: { section: AnalyticsSection; href: string }[] = [
   { section: "overview", href: "/analytics" },
@@ -24,6 +24,7 @@ const SECTIONS: { section: AnalyticsSection; href: string }[] = [
   { section: "cogs", href: "/analytics/cogs" },
   { section: "employees", href: "/analytics/employees" },
   { section: "cashflow", href: "/analytics/cashflow" },
+  { section: "pnl", href: "/analytics/pnl" },
 ];
 
 export function AnalyticsShell({ section, children }: { section: AnalyticsSection; children: ReactNode }) {
@@ -60,7 +61,8 @@ function AnalyticsShellContent({ section, children }: { section: AnalyticsSectio
     section === "products" ||
     section === "cogs" ||
     section === "employees" ||
-    section === "cashflow";
+    section === "cashflow" ||
+    section === "pnl";
 
   if (!allowed) {
     return (

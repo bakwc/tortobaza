@@ -49,6 +49,7 @@ from crm.analytics import employees as analytics_employees
 from crm.analytics import overview as analytics_overview
 from crm.analytics import production as analytics_production
 from crm.analytics import pace as analytics_pace
+from crm.analytics import pnl as analytics_pnl
 from crm.analytics import products as analytics_products
 from crm.exchange_rates import current_exchange_rates
 from crm.flowwow import log_webhook, process_flowwow_webhook, verify_webhook_signature
@@ -931,6 +932,20 @@ class AnalyticsCashflowView(APIView):
         if month is None:
             month = f"{today.year:04d}-{today.month:02d}"
         return Response(analytics_cashflow(month))
+
+
+class AnalyticsPnlView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("analytics")]
+
+    def get(self, request):
+        query_serializer = AnalyticsMonthQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        today = _tbilisi_now().date()
+        month = query_serializer.validated_data.get("month")
+        if month is None:
+            month = f"{today.year:04d}-{today.month:02d}"
+        return Response(analytics_pnl(month))
 
 
 class AnalyticsEmployeesView(APIView):

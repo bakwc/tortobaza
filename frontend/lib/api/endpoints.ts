@@ -30,6 +30,7 @@ import {
   CrmExpensesDaySchema,
   CrmExpensesMonthSchema,
   AnalyticsCashflowSchema,
+  AnalyticsPnlSchema,
   AnalyticsClientsSchema,
   AnalyticsCogsSchema,
   AnalyticsEmployeesSchema,
@@ -104,6 +105,7 @@ import {
   type AnalyticsLoad,
   type AnalyticsOverview,
   type AnalyticsPace,
+  type AnalyticsPnl,
   type AnalyticsProducts,
   type CrmSalaries,
   type CrmSalaryDetail,
@@ -863,6 +865,13 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { month },
       });
       return parse(AnalyticsCashflowSchema, raw);
+    },
+
+    async getAnalyticsPnl(month: string): Promise<AnalyticsPnl> {
+      const raw = await fetcher<unknown>("/api/crm/analytics/pnl/", {
+        searchParams: { month },
+      });
+      return parse(AnalyticsPnlSchema, raw);
     },
 
     async getAnalyticsCogs(month: string): Promise<AnalyticsCogs> {

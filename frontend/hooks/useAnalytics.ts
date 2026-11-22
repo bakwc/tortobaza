@@ -10,6 +10,7 @@ import type {
   AnalyticsLoad,
   AnalyticsOverview,
   AnalyticsPace,
+  AnalyticsPnl,
   AnalyticsProducts,
 } from "@/lib/api/types";
 
@@ -57,6 +58,14 @@ export function useAnalyticsCashflow(month: string) {
   return useQuery<AnalyticsCashflow>({
     queryKey: ["analytics-cashflow", month] as const,
     queryFn: () => api.getAnalyticsCashflow(month),
+    staleTime: 0,
+  });
+}
+
+export function useAnalyticsPnl(month: string) {
+  return useQuery<AnalyticsPnl>({
+    queryKey: ["analytics-pnl", month] as const,
+    queryFn: () => api.getAnalyticsPnl(month),
     staleTime: 0,
   });
 }

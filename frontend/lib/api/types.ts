@@ -844,6 +844,26 @@ export const AnalyticsCashflowSchema = z.object({
   closing: z.string(),
 });
 
+export const AnalyticsPnlSchema = z.object({
+  income: z.object({
+    lines: z.array(AnalyticsCashflowLineSchema),
+    total: z.string(),
+  }),
+  expenses: z.object({
+    lines: z.array(AnalyticsCashflowLineSchema),
+    cogs: z.object({
+      lines: z.array(AnalyticsCashflowLineSchema),
+      total: z.string(),
+    }),
+    total: z.string(),
+  }),
+  unclassified: z.object({
+    lines: z.array(AnalyticsCashflowLineSchema),
+    total: z.string(),
+  }),
+  profit: z.string(),
+});
+
 export const AnalyticsCogsSchema = z.object({
   month: z.string(),
   start: z.string(),
@@ -1340,6 +1360,7 @@ export type AnalyticsLoad = z.infer<typeof AnalyticsLoadSchema>;
 export type AnalyticsClients = z.infer<typeof AnalyticsClientsSchema>;
 export type AnalyticsProducts = z.infer<typeof AnalyticsProductsSchema>;
 export type AnalyticsCashflow = z.infer<typeof AnalyticsCashflowSchema>;
+export type AnalyticsPnl = z.infer<typeof AnalyticsPnlSchema>;
 export type AnalyticsCogs = z.infer<typeof AnalyticsCogsSchema>;
 export type AnalyticsEmployees = z.infer<typeof AnalyticsEmployeesSchema>;
 export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
