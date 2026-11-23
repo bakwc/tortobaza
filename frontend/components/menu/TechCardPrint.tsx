@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { compositionPrintRows, expandComposition, type PrintRow } from "@/components/menu/expandComposition";
+import { expandRecipe, type ExpandedRecipe, type TechCardLine } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { formatShelfLife } from "@/components/menu/shelfLife";
 import { Button } from "@/components/ui/button";
@@ -45,95 +45,83 @@ function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
   return chapters;
 }
 
-export function PrintCompositionRows({ rows }: { rows: PrintRow[] }) {
+function IngredientCell({ name, lines }: { name: string | null; lines: TechCardLine[] }) {
   const units = useTranslations("stock.units");
   return (
-    <>
-      {rows.map((row) => {
-        const title =
-          row.name === null
-            ? null
-            : row.quantity === null || row.quantityUnit === null
-              ? row.name
-              : `${row.name} — ${formatLineAmount(row.quantity, units(row.quantityUnit))}`;
-        return (
-          <tr key={row.key} className="border-t border-black">
-            <td colSpan={2} className="border-r border-black p-0 align-top">
-              {title !== null ? (
-                <div
-                  className={cn(
-                    "break-inside-avoid py-1 pr-2 text-sm font-bold italic",
-                    row.lines.length > 0 && "border-b border-black",
-                  )}
-                  style={{ paddingLeft: 8 + row.depth * 16 }}
-                >
-                  {title}
-                </div>
-              ) : null}
-              {row.lines.map((line, index) => (
-                <div
-                  key={line.id}
-                  className={cn(
-                    "grid grid-cols-[32fr_14fr] break-inside-avoid",
-                    index < row.lines.length - 1 && "border-b border-black",
-                  )}
-                >
-                  <div
-                    className="min-w-0 border-r border-black py-1 pr-2 text-sm"
-                    style={{ paddingLeft: 8 + row.depth * 16 }}
-                  >
-                    {line.name}
-                  </div>
-                  <div className="px-2 py-1 text-right text-sm tabular-nums">
-                    {formatLineAmount(line.quantity, units(line.quantity_unit))}
-                  </div>
-                </div>
-              ))}
-            </td>
-            <td className="px-2 py-1 align-top text-[13px] leading-5">
-              {row.method.trim() ? <MarkdownView value={row.method} /> : null}
-            </td>
-          </tr>
-        );
-      })}
-    </>
+    <td colSpan={2} className="border-r border-black p-0 align-top">
+      {name !== null ? (
+        <div
+          className={cn(
+            "break-inside-avoid px-2 py-1 text-sm font-bold italic",
+            lines.length > 0 && "border-b border-black",
+          )}
+        >
+          {name}
+        </div>
+      ) : null}
+      {lines.map((line, index) => (
+        <div
+          key={line.id}
+          className={cn(
+            "grid grid-cols-[32fr_14fr] break-inside-avoid",
+            index < lines.length - 1 && "border-b border-black",
+          )}
+        >
+          <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
+          <div className="px-2 py-1 text-right text-sm tabular-nums">
+            {formatLineAmount(line.quantity, units(line.quantity_unit))}
+          </div>
+        </div>
+      ))}
+    </td>
   );
 }
 
 function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
-  const units = useTranslations("stock.units");
   return (
     <tr className="border-t border-black">
-      <td colSpan={2} className="border-r border-black p-0 align-top">
-        {chapter.name !== null ? (
-          <div
-            className={cn(
-              "break-inside-avoid px-2 py-1 text-sm font-bold italic",
-              chapter.lines.length > 0 && "border-b border-black",
-            )}
-          >
-            {chapter.name}
-          </div>
-        ) : null}
-        {chapter.lines.map((line, index) => (
-          <div
-            key={line.id}
-            className={cn(
-              "grid grid-cols-[32fr_14fr] break-inside-avoid",
-              index < chapter.lines.length - 1 && "border-b border-black",
-            )}
-          >
-            <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
-            <div className="px-2 py-1 text-right text-sm tabular-nums">
-              {formatLineAmount(line.quantity, units(line.quantity_unit))}
-            </div>
-          </div>
-        ))}
-      </td>
+      <IngredientCell name={chapter.name} lines={chapter.lines} />
       <td className="px-2 py-1 align-top text-[13px] leading-5">
         {chapter.method.trim() ? <MarkdownView value={chapter.method} /> : null}
       </td>
     </tr>
+  );
+}
+
+export function ExpandedPrintRows({ recipe }: { recipe: ExpandedRecipe }) {
+  const units = useTranslations("stock.units");
+  const rows: { key: string; name: string | null; lines: TechCardLine[] }[] = [];
+  if (recipe.lines.length > 0) rows.push({ key: "base", name: null, lines: recipe.lines });
+  for (const chapter of recipe.chapters) {
+    const name =
+      chapter.quantity === null || chapter.quantityUnit === null
+        ? chapter.name
+        : `${chapter.name} — ${formatLineAmount(chapter.quantity, units(chapter.quantityUnit))}`;
+    rows.push({ key: chapter.key, name, lines: chapter.lines });
+  }
+  if (rows.length === 0) {
+    return (
+      <tr className="border-t border-black">
+        <td colSpan={2} className="border-r border-black" />
+        <td className="px-2 py-1 align-top text-[13px] leading-5">
+          {recipe.method.trim() ? <MarkdownView value={recipe.method} /> : null}
+        </td>
+      </tr>
+    );
+  }
+  return (
+    <>
+      {rows.map((row, index) => (
+        <tr key={row.key} className="border-t border-black">
+          <IngredientCell name={row.name} lines={row.lines} />
+          {index === 0 ? (
+            <td rowSpan={rows.length} className="px-2 py-1 align-top text-[13px] leading-5">
+              {recipe.method.trim() ? <MarkdownView value={recipe.method} /> : null}
+            </td>
+          ) : null}
+        </tr>
+      ))}
+    </>
   );
 }
 
@@ -158,6 +146,7 @@ export function TechCardPrint({
         ? t("basisPieces", { count: card.basis_quantity })
         : "";
   const chapters = printChapters(card, t("method"));
+  const expandedRecipe = expanded ? expandRecipe(card.lines, card.sections, card.method, techCards, semiProducts) : null;
   const storage: string[] = [];
   if (card.shelf_life_seconds !== null) {
     storage.push(
@@ -202,20 +191,10 @@ export function TechCardPrint({
             </tr>
           </thead>
           <tbody>
-            {chapters.map((chapter) =>
-              expanded ? (
-                <PrintCompositionRows
-                  key={chapter.key}
-                  rows={compositionPrintRows(
-                    chapter.name,
-                    chapter.method,
-                    expandComposition(chapter.lines, techCards, semiProducts, chapter.name === null ? 0 : 1),
-                    chapter.key,
-                  )}
-                />
-              ) : (
-                <ChapterBlock key={chapter.key} chapter={chapter} />
-              ),
+            {expandedRecipe !== null ? (
+              <ExpandedPrintRows recipe={expandedRecipe} />
+            ) : (
+              chapters.map((chapter) => <ChapterBlock key={chapter.key} chapter={chapter} />)
             )}
           </tbody>
         </table>

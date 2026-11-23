@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { compositionPrintRows, expandComposition } from "@/components/menu/expandComposition";
+import { expandRecipe } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
-import { PrintCompositionRows } from "@/components/menu/TechCardPrint";
+import { ExpandedPrintRows } from "@/components/menu/TechCardPrint";
 import { Button } from "@/components/ui/button";
 import { formatQuantity } from "@/components/menu/ui";
 import type { SemiProduct } from "@/lib/api/types";
@@ -50,21 +50,17 @@ export function SemiProductPrint({
           </thead>
           <tbody>
             {expanded ? (
-              <PrintCompositionRows
-                rows={compositionPrintRows(
-                  null,
+              <ExpandedPrintRows
+                recipe={expandRecipe(
+                  product.lines.map((line) => ({
+                    ...line,
+                    nested_tech_card: null,
+                    nested_section: null,
+                  })),
+                  [],
                   product.method,
-                  expandComposition(
-                    product.lines.map((line) => ({
-                      ...line,
-                      nested_tech_card: null,
-                      nested_section: null,
-                    })),
-                    [],
-                    semiProducts,
-                    0,
-                  ),
-                  "semi",
+                  [],
+                  semiProducts,
                 )}
               />
             ) : (

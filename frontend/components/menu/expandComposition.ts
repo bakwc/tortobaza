@@ -2,40 +2,36 @@ import type { MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 
 export type TechCardLine = TechCard["lines"][number];
 
-export type LineBlock = {
-  kind: "lines";
+export type ExpandedChapter = {
   key: string;
+  name: string;
+  quantity: string | null;
+  quantityUnit: MenuUnit | null;
   lines: TechCardLine[];
 };
 
-export type ChapterBlock = {
-  kind: "chapter";
-  key: string;
-  title: string;
-  quantity: string | null;
-  quantityUnit: MenuUnit | null;
-  method: string;
-  depth: number;
-  blocks: CompositionBlock[];
-};
-
-export type CompositionBlock = LineBlock | ChapterBlock;
-
-export type PrintRow = {
-  key: string;
-  name: string | null;
-  quantity: string | null;
-  quantityUnit: MenuUnit | null;
-  depth: number;
+export type ExpandedRecipe = {
   lines: TechCardLine[];
+  chapters: ExpandedChapter[];
   method: string;
 };
 
-type Header = {
-  name: string | null;
+type Opened = {
+  token: string;
+  factor: number;
+  lines: TechCardLine[];
+  sections: { id: number; name: string; method: string; lines: TechCardLine[] }[];
   method: string;
-  quantity: string | null;
-  quantityUnit: MenuUnit | null;
+};
+
+type Catalogs = {
+  techCards: Map<number, TechCard>;
+  semiProducts: Map<number, SemiProduct>;
+};
+
+type Split = {
+  leaves: TechCardLine[];
+  nested: TechCardLine[];
 };
 
 function amount(value: string): number {
@@ -95,106 +91,82 @@ function semiLines(semi: SemiProduct): TechCardLine[] {
   }));
 }
 
-function expandLines(
-  lines: TechCardLine[],
-  factor: number,
-  techCards: Map<number, TechCard>,
-  semiProducts: Map<number, SemiProduct>,
-  path: Set<string>,
-  depth: number,
-  keyPrefix: string,
-): CompositionBlock[] {
-  const blocks: CompositionBlock[] = [];
-  let bucket: TechCardLine[] = [];
-  const flush = () => {
-    if (bucket.length === 0) return;
-    blocks.push({ kind: "lines", key: `${keyPrefix}-lines-${bucket[0].id}`, lines: bucket });
-    bucket = [];
-  };
-  for (const raw of lines) {
-    const line = scaleLine(raw, factor);
-    const chapter = chapterFor(line, techCards, semiProducts, path, depth, keyPrefix);
-    if (chapter === null) {
-      bucket.push(line);
-      continue;
-    }
-    flush();
-    blocks.push(chapter);
-  }
-  flush();
-  return blocks;
-}
-
-function chapterFor(
-  line: TechCardLine,
-  techCards: Map<number, TechCard>,
-  semiProducts: Map<number, SemiProduct>,
-  path: Set<string>,
-  depth: number,
-  keyPrefix: string,
-): ChapterBlock | null {
+function open(line: TechCardLine, catalogs: Catalogs, path: Set<string>): Opened | null {
   if (line.nested_tech_card !== null) {
     const token = `tech:${line.nested_tech_card}`;
     if (path.has(token)) return null;
-    const card = techCards.get(line.nested_tech_card);
+    const card = catalogs.techCards.get(line.nested_tech_card);
     if (card === undefined) return null;
     const factor = techCardFactor(line, card);
     if (factor === null) return null;
-    const next = new Set(path);
-    next.add(token);
-    const prefix = `${keyPrefix}/${token}`;
-    return {
-      kind: "chapter",
-      key: `${keyPrefix}-line-${line.id}`,
-      title: line.name,
-      quantity: line.quantity,
-      quantityUnit: line.quantity_unit,
-      method: card.method,
-      depth,
-      blocks: [
-        ...expandLines(card.lines, factor, techCards, semiProducts, next, depth + 1, prefix),
-        ...card.sections.map((section) => ({
-          kind: "chapter" as const,
-          key: `${prefix}-section-${section.id}`,
-          title: section.name,
-          quantity: null,
-          quantityUnit: null,
-          method: section.method,
-          depth: depth + 1,
-          blocks: expandLines(
-            section.lines,
-            factor,
-            techCards,
-            semiProducts,
-            next,
-            depth + 2,
-            `${prefix}/section-${section.id}`,
-          ),
-        })),
-      ],
-    };
+    return { token, factor, lines: card.lines, sections: card.sections, method: card.method };
   }
   if (line.semi_product !== null) {
     const token = `semi:${line.semi_product}`;
     if (path.has(token)) return null;
-    const semi = semiProducts.get(line.semi_product);
+    const semi = catalogs.semiProducts.get(line.semi_product);
     if (semi === undefined) return null;
     const factor = semiFactor(line, semi);
     if (factor === null) return null;
-    const next = new Set(path);
-    next.add(token);
-    return {
-      kind: "chapter",
-      key: `${keyPrefix}-line-${line.id}`,
-      title: line.name,
-      quantity: line.quantity,
-      quantityUnit: line.quantity_unit,
-      method: semi.method,
-      depth,
-      blocks: expandLines(semiLines(semi), factor, techCards, semiProducts, next, depth + 1, `${keyPrefix}/${token}`),
-    };
+    return { token, factor, lines: semiLines(semi), sections: [], method: semi.method };
   }
   return null;
+}
+
+function split(lines: TechCardLine[], factor: number, catalogs: Catalogs, path: Set<string>): Split {
+  const leaves: TechCardLine[] = [];
+  const nested: TechCardLine[] = [];
+  for (const raw of lines) {
+    const line = scaleLine(raw, factor);
+    if (open(line, catalogs, path) === null) leaves.push(line);
+    else nested.push(line);
+  }
+  return { leaves, nested };
+}
+
+function pushMethod(methods: string[], name: string, method: string) {
+  const trimmed = method.trim();
+  if (!trimmed) return;
+  methods.push(`## ${name}\n${trimmed}`);
+}
+
+function expandNode(
+  line: TechCardLine,
+  catalogs: Catalogs,
+  path: Set<string>,
+  keyPrefix: string,
+  chapters: ExpandedChapter[],
+  methods: string[],
+) {
+  const opened = open(line, catalogs, path);
+  if (opened === null) return;
+  const next = new Set(path);
+  next.add(opened.token);
+  const prefix = `${keyPrefix}/${opened.token}`;
+  const parts = split(opened.lines, opened.factor, catalogs, next);
+  chapters.push({
+    key: `${prefix}-line-${line.id}`,
+    name: line.name,
+    quantity: line.quantity,
+    quantityUnit: line.quantity_unit,
+    lines: parts.leaves,
+  });
+  pushMethod(methods, line.name, opened.method);
+  for (const child of parts.nested) expandNode(child, catalogs, next, prefix, chapters, methods);
+  for (const section of opened.sections) {
+    const sectionParts = split(section.lines, opened.factor, catalogs, next);
+    const sectionName = `${line.name} — ${section.name}`;
+    const sectionPrefix = `${prefix}-section-${section.id}`;
+    chapters.push({
+      key: sectionPrefix,
+      name: sectionName,
+      quantity: null,
+      quantityUnit: null,
+      lines: sectionParts.leaves,
+    });
+    pushMethod(methods, sectionName, section.method);
+    for (const child of sectionParts.nested) expandNode(child, catalogs, next, sectionPrefix, chapters, methods);
+  }
 }
 
 function byId<T extends { id: number }>(rows: T[]): Map<number, T> {
@@ -213,103 +185,33 @@ export function hasExpandableLines(lines: TechCardLine[], sections: { lines: Tec
   return false;
 }
 
-export function expandComposition(
+export function expandRecipe(
   lines: TechCardLine[],
+  sections: { name: string; method: string; lines: TechCardLine[] }[],
+  rootMethod: string,
   techCards: TechCard[],
   semiProducts: SemiProduct[],
-  depth: number,
-): CompositionBlock[] {
-  return expandLines(lines, 1, byId(techCards), byId(semiProducts), new Set(), depth, `d${depth}`);
-}
-
-function headerVisible(header: Header): boolean {
-  return header.name !== null || header.method !== "";
-}
-
-function printRows(
-  name: string | null,
-  method: string,
-  quantity: string | null,
-  quantityUnit: MenuUnit | null,
-  blocks: CompositionBlock[],
-  depth: number,
-  keyPrefix: string,
-): PrintRow[] {
-  const rows: PrintRow[] = [];
-  let header: Header | null = { name, method, quantity, quantityUnit };
-  let lines: TechCardLine[] = [];
-  let lineKey = "";
-  const takeHeader = (): Header => {
-    const current = header ?? { name: null, method: "", quantity: null, quantityUnit: null };
-    header = null;
-    return current;
-  };
-  const flushLines = () => {
-    if (lines.length === 0) return;
-    const head = takeHeader();
-    rows.push({
-      key: lineKey,
-      name: head.name,
-      quantity: head.quantity,
-      quantityUnit: head.quantityUnit,
-      depth,
-      lines,
-      method: head.method,
+): ExpandedRecipe {
+  const catalogs: Catalogs = { techCards: byId(techCards), semiProducts: byId(semiProducts) };
+  const path = new Set<string>();
+  const chapters: ExpandedChapter[] = [];
+  const methods: string[] = [];
+  const base = split(lines, 1, catalogs, path);
+  for (const child of base.nested) expandNode(child, catalogs, path, "base", chapters, methods);
+  sections.forEach((section, index) => {
+    const parts = split(section.lines, 1, catalogs, path);
+    const prefix = `section-${index}`;
+    chapters.push({
+      key: prefix,
+      name: section.name,
+      quantity: null,
+      quantityUnit: null,
+      lines: parts.leaves,
     });
-    lines = [];
-  };
-  for (const block of blocks) {
-    if (block.kind === "lines") {
-      if (lines.length === 0) lineKey = `${keyPrefix}-${block.key}`;
-      lines.push(...block.lines);
-      continue;
-    }
-    flushLines();
-    if (header !== null && headerVisible(header)) {
-      const head = takeHeader();
-      rows.push({
-        key: `${keyPrefix}-head-${rows.length}`,
-        name: head.name,
-        quantity: head.quantity,
-        quantityUnit: head.quantityUnit,
-        depth,
-        lines: [],
-        method: head.method,
-      });
-    }
-    rows.push(
-      ...printRows(
-        block.title,
-        block.method,
-        block.quantity,
-        block.quantityUnit,
-        block.blocks,
-        block.depth,
-        `${keyPrefix}-${block.key}`,
-      ),
-    );
-  }
-  flushLines();
-  if (header !== null && headerVisible(header)) {
-    const head = takeHeader();
-    rows.push({
-      key: `${keyPrefix}-tail`,
-      name: head.name,
-      quantity: head.quantity,
-      quantityUnit: head.quantityUnit,
-      depth,
-      lines: [],
-      method: head.method,
-    });
-  }
-  return rows;
-}
-
-export function compositionPrintRows(
-  name: string | null,
-  method: string,
-  blocks: CompositionBlock[],
-  keyPrefix: string,
-): PrintRow[] {
-  return printRows(name, method, null, null, blocks, 0, keyPrefix);
+    pushMethod(methods, section.name, section.method);
+    for (const child of parts.nested) expandNode(child, catalogs, path, prefix, chapters, methods);
+  });
+  const own = rootMethod.trim();
+  if (own) methods.push(own);
+  return { lines: base.leaves, chapters, method: methods.join("\n\n") };
 }
