@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { expandRecipe, type ExpandedChapter, type TechCardLine } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { formatShelfLife } from "@/components/menu/shelfLife";
+import { pieceLineGrams } from "@/components/menu/techCardWeight";
 import { Button } from "@/components/ui/button";
 import { formatLineAmount } from "@/components/menu/ui";
 import type { SemiProduct, TechCard } from "@/lib/api/types";
@@ -37,7 +39,29 @@ function printChapters(card: TechCard, assemblyName: string | null): PrintChapte
   return chapters;
 }
 
-function IngredientCell({ name, lines }: { name: string | null; lines: TechCardLine[] }) {
+function lineAmount(
+  line: TechCardLine,
+  units: (unit: TechCardLine["quantity_unit"]) => string,
+  cards: Map<number, TechCard>,
+  gramsPerUnit: (ingredientId: number) => string | null,
+): string {
+  const amount = formatLineAmount(line.quantity, units(line.quantity_unit));
+  const piece = pieceLineGrams(line.quantity, line.quantity_unit, line.nested_tech_card, cards, gramsPerUnit);
+  if (piece === null) return amount;
+  return `${amount} (${formatLineAmount(String(piece), units("g"))})`;
+}
+
+function IngredientCell({
+  name,
+  lines,
+  cards,
+  gramsPerUnit,
+}: {
+  name: string | null;
+  lines: TechCardLine[];
+  cards: Map<number, TechCard>;
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
   const units = useTranslations("stock.units");
   return (
     <td colSpan={2} className="border-r border-black p-0 align-top">
@@ -61,7 +85,7 @@ function IngredientCell({ name, lines }: { name: string | null; lines: TechCardL
         >
           <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
           <div className="px-2 py-1 text-right text-sm tabular-nums">
-            {formatLineAmount(line.quantity, units(line.quantity_unit))}
+            {lineAmount(line, units, cards, gramsPerUnit)}
           </div>
         </div>
       ))}
@@ -69,10 +93,18 @@ function IngredientCell({ name, lines }: { name: string | null; lines: TechCardL
   );
 }
 
-function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
+function ChapterBlock({
+  chapter,
+  cards,
+  gramsPerUnit,
+}: {
+  chapter: PrintChapter;
+  cards: Map<number, TechCard>;
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
   return (
     <tr className="border-t border-black">
-      <IngredientCell name={chapter.name} lines={chapter.lines} />
+      <IngredientCell name={chapter.name} lines={chapter.lines} cards={cards} gramsPerUnit={gramsPerUnit} />
       <td className="px-2 py-1 align-top text-[13px] leading-5">
         {chapter.method.trim() ? <MarkdownView value={chapter.method} /> : null}
       </td>
@@ -80,13 +112,23 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
   );
 }
 
-export function NestedChapterBlocks({ chapters }: { chapters: ExpandedChapter[] }) {
+export function NestedChapterBlocks({
+  chapters,
+  cards,
+  gramsPerUnit,
+}: {
+  chapters: ExpandedChapter[];
+  cards: Map<number, TechCard>;
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
   const units = useTranslations("stock.units");
   return (
     <>
       {chapters.map((chapter) => (
         <ChapterBlock
           key={chapter.key}
+          cards={cards}
+          gramsPerUnit={gramsPerUnit}
           chapter={{
             key: chapter.key,
             name:
@@ -108,12 +150,14 @@ export function TechCardPrint({
   expanded,
   techCards,
   semiProducts,
+  gramsPerUnit,
 }: {
   card: TechCard;
   showPrintButton: boolean;
   expanded: boolean;
   techCards: TechCard[];
   semiProducts: SemiProduct[];
+  gramsPerUnit: (ingredientId: number) => string | null;
 }) {
   const t = useTranslations("stock");
   const basis =
@@ -122,6 +166,7 @@ export function TechCardPrint({
       : card.basis_quantity !== null
         ? t("basisPieces", { count: card.basis_quantity })
         : "";
+  const cardsById = useMemo(() => new Map(techCards.map((row) => [row.id, row])), [techCards]);
   const nestedChapters = expanded ? expandRecipe(card.lines, card.sections, techCards, semiProducts) : [];
   const assemblyName =
     nestedChapters.length > 0 || (card.sections.length > 0 && card.method.trim() !== "") ? card.name : null;
@@ -170,9 +215,11 @@ export function TechCardPrint({
             </tr>
           </thead>
           <tbody>
-            {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
+            {nestedChapters.length > 0 ? (
+              <NestedChapterBlocks chapters={nestedChapters} cards={cardsById} gramsPerUnit={gramsPerUnit} />
+            ) : null}
             {chapters.map((chapter) => (
-              <ChapterBlock key={chapter.key} chapter={chapter} />
+              <ChapterBlock key={chapter.key} chapter={chapter} cards={cardsById} gramsPerUnit={gramsPerUnit} />
             ))}
           </tbody>
         </table>

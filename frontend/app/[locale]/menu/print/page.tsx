@@ -7,7 +7,7 @@ import { TechCardPrint } from "@/components/menu/TechCardPrint";
 import { QueryState } from "@/components/menu/ui";
 import { Button } from "@/components/ui/button";
 import { useCan } from "@/hooks/useAuth";
-import { useTechCardCategories, useTechCards } from "@/hooks/useStock";
+import { useIngredients, useTechCardCategories, useTechCards } from "@/hooks/useStock";
 import type { TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ function TechCardsPrintBody({ ids }: { ids: number[] }) {
   const canViewMenu = useCan("view_menu");
   const techCards = useTechCards();
   const categories = useTechCardCategories();
+  const ingredients = useIngredients();
 
   if (!canViewMenu) {
     return <p className="py-16 text-center text-sm text-[var(--ink)]">{crm("adminOnly")}</p>;
@@ -49,8 +50,8 @@ function TechCardsPrintBody({ ids }: { ids: number[] }) {
 
   return (
     <QueryState
-      isLoading={techCards.list.isLoading || categories.list.isLoading}
-      isError={techCards.list.isError || categories.list.isError}
+      isLoading={techCards.list.isLoading || categories.list.isLoading || ingredients.list.isLoading}
+      isError={techCards.list.isError || categories.list.isError || ingredients.list.isError}
     >
       {cards.length === 0 ? (
         <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>
@@ -66,7 +67,17 @@ function TechCardsPrintBody({ ids }: { ids: number[] }) {
               key={card.id}
               className={cn(index > 0 && "mt-10 print:mt-0", index < cards.length - 1 && "break-after-page")}
             >
-              <TechCardPrint card={card} showPrintButton={false} expanded={false} techCards={[]} semiProducts={[]} />
+              <TechCardPrint
+                card={card}
+                showPrintButton={false}
+                expanded={false}
+                techCards={techCards.list.data ?? []}
+                semiProducts={[]}
+                gramsPerUnit={(ingredientId) => {
+                  const row = (ingredients.list.data ?? []).find((item) => item.id === ingredientId);
+                  return row === undefined ? null : row.grams_per_unit;
+                }}
+              />
             </div>
           ))}
         </div>

@@ -7,7 +7,7 @@ import { CrmAuthGate } from "@/components/crm/CrmAuthGate";
 import { TechCardPrint } from "@/components/menu/TechCardPrint";
 import { QueryState } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
-import { useTechCards } from "@/hooks/useStock";
+import { useIngredients, useTechCards } from "@/hooks/useStock";
 import { api } from "@/lib/api";
 
 function TechCardPrintBody({ id, expanded }: { id: number; expanded: boolean }) {
@@ -15,6 +15,7 @@ function TechCardPrintBody({ id, expanded }: { id: number; expanded: boolean }) 
   const crm = useTranslations("crm");
   const canViewMenu = useCan("view_menu");
   const techCards = useTechCards();
+  const ingredients = useIngredients();
   const semiProducts = useQuery({
     queryKey: ["menu", "semi-products"],
     queryFn: () => api.menuSemiProducts.list(),
@@ -32,8 +33,8 @@ function TechCardPrintBody({ id, expanded }: { id: number; expanded: boolean }) 
 
   return (
     <QueryState
-      isLoading={techCards.list.isLoading || (expanded && semiProducts.data === undefined)}
-      isError={techCards.list.isError || (expanded && semiProducts.isError)}
+      isLoading={techCards.list.isLoading || ingredients.list.isLoading || (expanded && semiProducts.data === undefined)}
+      isError={techCards.list.isError || ingredients.list.isError || (expanded && semiProducts.isError)}
     >
       {card === null ? (
         <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>
@@ -44,6 +45,10 @@ function TechCardPrintBody({ id, expanded }: { id: number; expanded: boolean }) 
           expanded={expanded}
           techCards={techCards.list.data ?? []}
           semiProducts={semiProducts.data ?? []}
+          gramsPerUnit={(ingredientId) => {
+            const row = (ingredients.list.data ?? []).find((item) => item.id === ingredientId);
+            return row === undefined ? null : row.grams_per_unit;
+          }}
         />
       )}
     </QueryState>

@@ -61,7 +61,9 @@ export function SemiProductPrint({
             </tr>
           </thead>
           <tbody>
-            {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
+            {nestedChapters.length > 0 ? (
+              <NestedChapterBlocks chapters={nestedChapters} cards={new Map()} gramsPerUnit={() => null} />
+            ) : null}
             <tr className="border-t border-black">
                 <td colSpan={2} className="border-r border-black p-0 align-top">
                   {nestedChapters.length > 0 ? (
