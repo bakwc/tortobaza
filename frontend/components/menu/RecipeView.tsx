@@ -116,36 +116,56 @@ function chapterNote(chapter: ExpandedChapter, unitLabel: (unit: TechCardLine["q
 
 function CollapsedComposition({
   compositionTitle,
+  assemblyName,
   lines,
   sections,
   gramsPerUnit,
   cards,
+  method,
 }: {
   compositionTitle: string;
+  assemblyName: string | null;
   lines: TechCardLine[];
   sections: { name: string; method: string; lines: TechCardLine[] }[];
   gramsPerUnit: (ingredientId: number) => string | null;
   cards: Map<number, TechCard>;
+  method: string;
 }) {
-  return (
-    <>
-      {lines.length > 0 || sections.length === 0 ? (
-        <div className="grid gap-2">
-          <RecipeHeading number={null} title={compositionTitle} note="" />
-          <CompositionTable lines={lines} gramsPerUnit={gramsPerUnit} cards={cards} />
+  const sectionsBlock = sections.map((section, index) => (
+    <div key={section.name} className="grid gap-2">
+      <RecipeHeading number={index + 1} title={section.name} note="" />
+      <CompositionTable lines={section.lines} gramsPerUnit={gramsPerUnit} cards={cards} />
+      {section.method.trim() ? (
+        <div className="mt-1">
+          <MarkdownView value={section.method} />
         </div>
       ) : null}
-      {sections.map((section, index) => (
-        <div key={section.name} className="grid gap-2">
-          <RecipeHeading number={index + 1} title={section.name} note="" />
-          <CompositionTable lines={section.lines} gramsPerUnit={gramsPerUnit} cards={cards} />
-          {section.method.trim() ? (
-            <div className="mt-1">
-              <MarkdownView value={section.method} />
-            </div>
-          ) : null}
+    </div>
+  ));
+  const showBase = lines.length > 0 || sections.length === 0 || (assemblyName !== null && method.trim() !== "");
+  const base = showBase ? (
+    <div className="grid gap-2">
+      <RecipeHeading number={null} title={assemblyName ?? compositionTitle} note="" />
+      <CompositionTable lines={lines} gramsPerUnit={gramsPerUnit} cards={cards} />
+      {assemblyName !== null && method.trim() ? (
+        <div className="mt-1">
+          <MarkdownView value={method} />
         </div>
-      ))}
+      ) : null}
+    </div>
+  ) : null;
+  if (assemblyName !== null) {
+    return (
+      <>
+        {sectionsBlock}
+        {base}
+      </>
+    );
+  }
+  return (
+    <>
+      {base}
+      {sectionsBlock}
     </>
   );
 }
@@ -288,6 +308,10 @@ export function RecipeView({
     if (!expanded || techCards.data === undefined) return null;
     return expandRecipe(lines, sections, techCards.data, semiProducts);
   }, [expanded, techCards.data, lines, sections, semiProducts]);
+  const assemblyName =
+    (expandedChapters !== null && expandedChapters.length > 0) || (sections.length > 0 && method.trim() !== "")
+      ? title
+      : null;
   const href = printHref === null ? null : expanded ? `${printHref}?expanded=1` : printHref;
   const image = images.length === 0 ? null : images[Math.min(active, images.length - 1)];
   useEffect(() => {
@@ -393,17 +417,22 @@ export function RecipeView({
           ) : null}
         </QueryState>
       ) : null}
+      {expandedChapters !== null && expandedChapters.length > 0 ? (
+        <hr className="border-t-2 border-[var(--ink)]" />
+      ) : null}
       <CollapsedComposition
         compositionTitle={compositionTitle}
+        assemblyName={assemblyName}
         lines={lines}
         sections={sections}
         gramsPerUnit={gramsPerUnit}
         cards={cardsById}
+        method={method}
       />
 
       {children}
 
-      {method.trim() || sections.length === 0 ? (
+      {assemblyName === null && (method.trim() !== "" || sections.length === 0) ? (
         <div className="grid gap-2">
           <RecipeHeading number={null} title={t("method")} note="" />
           {method.trim() ? (

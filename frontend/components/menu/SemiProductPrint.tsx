@@ -21,6 +21,18 @@ export function SemiProductPrint({
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
   const yieldLine = `${t("yield")}: ${formatQuantity(product.yield_quantity)} ${units(product.unit)}`;
+  const nestedChapters = expanded
+    ? expandRecipe(
+        product.lines.map((line) => ({
+          ...line,
+          nested_tech_card: null,
+          nested_section: null,
+        })),
+        [],
+        [],
+        semiProducts,
+      )
+    : [];
 
   return (
     <div>
@@ -49,22 +61,24 @@ export function SemiProductPrint({
             </tr>
           </thead>
           <tbody>
-            {expanded ? (
-              <NestedChapterBlocks
-                chapters={expandRecipe(
-                  product.lines.map((line) => ({
-                    ...line,
-                    nested_tech_card: null,
-                    nested_section: null,
-                  })),
-                  [],
-                  [],
-                  semiProducts,
-                )}
-              />
+            {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
+            {nestedChapters.length > 0 ? (
+              <tr>
+                <td colSpan={3} className="border-t-4 border-black p-0" />
+              </tr>
             ) : null}
             <tr className="border-t border-black">
                 <td colSpan={2} className="border-r border-black p-0 align-top">
+                  {nestedChapters.length > 0 ? (
+                    <div
+                      className={cn(
+                        "break-inside-avoid px-2 py-1 text-sm font-bold italic",
+                        product.lines.length > 0 && "border-b border-black",
+                      )}
+                    >
+                      {product.name}
+                    </div>
+                  ) : null}
                   {product.lines.map((line, index) => (
                     <div
                       key={line.id}

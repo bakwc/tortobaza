@@ -16,22 +16,11 @@ type PrintChapter = {
   method: string;
 };
 
-function titledMethod(method: string, fallbackName: string): PrintChapter | null {
-  const trimmed = method.trim();
-  if (!trimmed) return null;
-  const match = /^(#{2,3}) (.+)\n([\s\S]*)$/.exec(trimmed);
-  if (match === null) return { key: "card-method", name: fallbackName, lines: [], method: trimmed };
-  return { key: "card-method", name: match[2].trim(), lines: [], method: match[3].trim() };
-}
-
-function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
+function printChapters(card: TechCard, assemblyName: string | null): PrintChapter[] {
   if (card.sections.length === 0) {
-    return [{ key: "base", name: null, lines: card.lines, method: card.method }];
+    return [{ key: "base", name: assemblyName, lines: card.lines, method: card.method }];
   }
   const chapters: PrintChapter[] = [];
-  if (card.lines.length > 0) {
-    chapters.push({ key: "base", name: null, lines: card.lines, method: "" });
-  }
   for (const section of card.sections) {
     chapters.push({
       key: `section-${section.id}`,
@@ -40,8 +29,11 @@ function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
       method: section.method,
     });
   }
-  const tail = titledMethod(card.method, methodLabel);
-  if (tail !== null) chapters.push(tail);
+  if (assemblyName !== null || card.method.trim() !== "") {
+    chapters.push({ key: "base", name: assemblyName, lines: card.lines, method: card.method });
+  } else if (card.lines.length > 0) {
+    chapters.unshift({ key: "base", name: null, lines: card.lines, method: "" });
+  }
   return chapters;
 }
 
@@ -130,8 +122,10 @@ export function TechCardPrint({
       : card.basis_quantity !== null
         ? t("basisPieces", { count: card.basis_quantity })
         : "";
-  const chapters = printChapters(card, t("method"));
   const nestedChapters = expanded ? expandRecipe(card.lines, card.sections, techCards, semiProducts) : [];
+  const assemblyName =
+    nestedChapters.length > 0 || (card.sections.length > 0 && card.method.trim() !== "") ? card.name : null;
+  const chapters = printChapters(card, assemblyName);
   const storage: string[] = [];
   if (card.shelf_life_seconds !== null) {
     storage.push(
@@ -177,6 +171,11 @@ export function TechCardPrint({
           </thead>
           <tbody>
             {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
+            {nestedChapters.length > 0 ? (
+              <tr>
+                <td colSpan={3} className="border-t-4 border-black p-0" />
+              </tr>
+            ) : null}
             {chapters.map((chapter) => (
               <ChapterBlock key={chapter.key} chapter={chapter} />
             ))}
