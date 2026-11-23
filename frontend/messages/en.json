@@ -756,6 +756,8 @@
     "addSection": "Add section",
     "edit": "Edit",
     "print": "Print",
+    "expandComposition": "Expand composition",
+    "collapseComposition": "Collapse composition",
     "copyLink": "Link",
     "clone": "Clone",
     "cloneName": "New name",

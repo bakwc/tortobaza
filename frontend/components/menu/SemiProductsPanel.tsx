@@ -568,6 +568,7 @@ export function SemiProductsPanel() {
           <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
             <RecipeView
+              key={current.id}
               title={current.name}
               badges={[
                 current.category_name ?? "",
@@ -600,6 +601,7 @@ export function SemiProductsPanel() {
               onClone={canEdit ? openClone : null}
               printHref={`/menu/semi-products/${current.id}/print`}
               copyPath={null}
+              semiProducts={semiProducts.list.data ?? []}
             >
               {null}
             </RecipeView>

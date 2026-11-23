@@ -1352,6 +1352,7 @@ export function TechCardsPanel() {
           <DialogContent className="w-[min(900px,calc(100vw-1.5rem))] overflow-y-auto p-6">
             <DialogDescription className="hidden">{current.name}</DialogDescription>
             <RecipeView
+              key={current.id}
               title={current.name}
               badges={[current.category_name ?? "", current.is_active ? "" : t("inactive")].filter(
                 (badge) => badge !== "",
@@ -1424,6 +1425,7 @@ export function TechCardsPanel() {
               onClone={canEdit ? openClone : null}
               printHref={`/menu/${current.id}/print`}
               copyPath={`/menu?card=${current.id}`}
+              semiProducts={semiProducts.list.data ?? []}
             >
               {current.products.length > 0 ? (
                 <p className="text-sm text-[var(--muted-2)]">

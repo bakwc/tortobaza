@@ -1,11 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { compositionPrintRows, expandComposition, type PrintRow } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { formatShelfLife } from "@/components/menu/shelfLife";
 import { Button } from "@/components/ui/button";
 import { formatLineAmount } from "@/components/menu/ui";
-import type { TechCard } from "@/lib/api/types";
+import type { SemiProduct, TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 type PrintChapter = {
@@ -42,6 +43,61 @@ function printChapters(card: TechCard, methodLabel: string): PrintChapter[] {
   const tail = titledMethod(card.method, methodLabel);
   if (tail !== null) chapters.push(tail);
   return chapters;
+}
+
+export function PrintCompositionRows({ rows }: { rows: PrintRow[] }) {
+  const units = useTranslations("stock.units");
+  return (
+    <>
+      {rows.map((row) => {
+        const title =
+          row.name === null
+            ? null
+            : row.quantity === null || row.quantityUnit === null
+              ? row.name
+              : `${row.name} — ${formatLineAmount(row.quantity, units(row.quantityUnit))}`;
+        return (
+          <tr key={row.key} className="border-t border-black">
+            <td colSpan={2} className="border-r border-black p-0 align-top">
+              {title !== null ? (
+                <div
+                  className={cn(
+                    "break-inside-avoid py-1 pr-2 text-sm font-bold italic",
+                    row.lines.length > 0 && "border-b border-black",
+                  )}
+                  style={{ paddingLeft: 8 + row.depth * 16 }}
+                >
+                  {title}
+                </div>
+              ) : null}
+              {row.lines.map((line, index) => (
+                <div
+                  key={line.id}
+                  className={cn(
+                    "grid grid-cols-[32fr_14fr] break-inside-avoid",
+                    index < row.lines.length - 1 && "border-b border-black",
+                  )}
+                >
+                  <div
+                    className="min-w-0 border-r border-black py-1 pr-2 text-sm"
+                    style={{ paddingLeft: 8 + row.depth * 16 }}
+                  >
+                    {line.name}
+                  </div>
+                  <div className="px-2 py-1 text-right text-sm tabular-nums">
+                    {formatLineAmount(line.quantity, units(line.quantity_unit))}
+                  </div>
+                </div>
+              ))}
+            </td>
+            <td className="px-2 py-1 align-top text-[13px] leading-5">
+              {row.method.trim() ? <MarkdownView value={row.method} /> : null}
+            </td>
+          </tr>
+        );
+      })}
+    </>
+  );
 }
 
 function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
@@ -81,7 +137,19 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
   );
 }
 
-export function TechCardPrint({ card, showPrintButton }: { card: TechCard; showPrintButton: boolean }) {
+export function TechCardPrint({
+  card,
+  showPrintButton,
+  expanded,
+  techCards,
+  semiProducts,
+}: {
+  card: TechCard;
+  showPrintButton: boolean;
+  expanded: boolean;
+  techCards: TechCard[];
+  semiProducts: SemiProduct[];
+}) {
   const t = useTranslations("stock");
   const basis =
     card.kind === "weighted" && card.basis_weight_kg !== null
@@ -134,9 +202,21 @@ export function TechCardPrint({ card, showPrintButton }: { card: TechCard; showP
             </tr>
           </thead>
           <tbody>
-            {chapters.map((chapter) => (
-              <ChapterBlock key={chapter.key} chapter={chapter} />
-            ))}
+            {chapters.map((chapter) =>
+              expanded ? (
+                <PrintCompositionRows
+                  key={chapter.key}
+                  rows={compositionPrintRows(
+                    chapter.name,
+                    chapter.method,
+                    expandComposition(chapter.lines, techCards, semiProducts, chapter.name === null ? 0 : 1),
+                    chapter.key,
+                  )}
+                />
+              ) : (
+                <ChapterBlock key={chapter.key} chapter={chapter} />
+              ),
+            )}
           </tbody>
         </table>
       </article>

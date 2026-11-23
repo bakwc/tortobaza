@@ -756,6 +756,8 @@
     "addSection": "თავის დამატება",
     "edit": "რედაქტირება",
     "print": "ბეჭდვა",
+    "expandComposition": "შემადგენლობის გაშლა",
+    "collapseComposition": "შემადგენლობის დაკეცვა",
     "copyLink": "ბმული",
     "clone": "კლონირება",
     "cloneName": "ახალი სახელი",

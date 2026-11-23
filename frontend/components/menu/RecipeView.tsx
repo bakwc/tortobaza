@@ -1,20 +1,22 @@
 "use client";
 
 import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
-import { Check, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
+import { Check, ChevronsUpDown, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
+import {
+  expandComposition,
+  hasExpandableLines,
+  type CompositionBlock,
+  type TechCardLine,
+} from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
-import { formatLineAmount, formatLossLabel, formatMoney, gramTotal } from "@/components/menu/ui";
+import { formatLineAmount, formatLossLabel, formatMoney, gramTotal, QueryState } from "@/components/menu/ui";
 import { getPathname, Link } from "@/i18n/navigation";
-import type { MenuImage, RecipeLine } from "@/lib/api/types";
-
-type CompositionLine = Omit<RecipeLine, "quantity"> & {
-  quantity: string | null;
-  nested_tech_card: number | null;
-  nested_section: number | null;
-};
+import { api } from "@/lib/api";
+import type { MenuImage, SemiProduct, TechCard } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 export type RecipeTableRow = {
@@ -111,11 +113,126 @@ export function RecipeTable({ rows, total }: { rows: RecipeTableRow[]; total: st
   );
 }
 
+function CompositionBlocks({
+  blocks,
+  gramsPerUnit,
+}: {
+  blocks: CompositionBlock[];
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
+  const units = useTranslations("stock.units");
+  return (
+    <div className="grid gap-4">
+      {blocks.map((block) =>
+        block.kind === "lines" ? (
+          <CompositionTable key={block.key} lines={block.lines} gramsPerUnit={gramsPerUnit} />
+        ) : (
+          <div key={block.key} className="grid gap-2" style={{ marginLeft: block.depth * 16 }}>
+            <RecipeHeading
+              number={null}
+              title={block.title}
+              note={
+                block.quantity === null || block.quantityUnit === null
+                  ? ""
+                  : formatLineAmount(block.quantity, units(block.quantityUnit))
+              }
+            />
+            <CompositionBlocks blocks={block.blocks} gramsPerUnit={gramsPerUnit} />
+            {block.method.trim() ? (
+              <div className="mt-1">
+                <MarkdownView value={block.method} />
+              </div>
+            ) : null}
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
+
+function CollapsedComposition({
+  compositionTitle,
+  lines,
+  sections,
+  gramsPerUnit,
+}: {
+  compositionTitle: string;
+  lines: TechCardLine[];
+  sections: { name: string; method: string; lines: TechCardLine[] }[];
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
+  return (
+    <>
+      {lines.length > 0 || sections.length === 0 ? (
+        <div className="grid gap-2">
+          <RecipeHeading number={null} title={compositionTitle} note="" />
+          <CompositionTable lines={lines} gramsPerUnit={gramsPerUnit} />
+        </div>
+      ) : null}
+      {sections.map((section, index) => (
+        <div key={section.name} className="grid gap-2">
+          <RecipeHeading number={index + 1} title={section.name} note="" />
+          <CompositionTable lines={section.lines} gramsPerUnit={gramsPerUnit} />
+          {section.method.trim() ? (
+            <div className="mt-1">
+              <MarkdownView value={section.method} />
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function ExpandedComposition({
+  compositionTitle,
+  lines,
+  sections,
+  techCards,
+  semiProducts,
+  gramsPerUnit,
+}: {
+  compositionTitle: string;
+  lines: TechCardLine[];
+  sections: { name: string; method: string; lines: TechCardLine[] }[];
+  techCards: TechCard[];
+  semiProducts: SemiProduct[];
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
+  return (
+    <>
+      {lines.length > 0 || sections.length === 0 ? (
+        <div className="grid gap-2">
+          <RecipeHeading number={null} title={compositionTitle} note="" />
+          <CompositionBlocks
+            blocks={expandComposition(lines, techCards, semiProducts, 0)}
+            gramsPerUnit={gramsPerUnit}
+          />
+        </div>
+      ) : null}
+      {sections.map((section, index) => (
+        <div key={section.name} className="grid gap-2">
+          <RecipeHeading number={index + 1} title={section.name} note="" />
+          <CompositionBlocks
+            blocks={expandComposition(section.lines, techCards, semiProducts, 1)}
+            gramsPerUnit={gramsPerUnit}
+          />
+          {section.method.trim() ? (
+            <div className="mt-1">
+              <MarkdownView value={section.method} />
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function CompositionTable({
   lines,
   gramsPerUnit,
 }: {
-  lines: CompositionLine[];
+  lines: TechCardLine[];
   gramsPerUnit: (ingredientId: number) => string | null;
 }) {
   const t = useTranslations("stock");
@@ -177,6 +294,7 @@ export function RecipeView({
   onClone,
   printHref,
   copyPath,
+  semiProducts,
   children,
 }: {
   title: string;
@@ -184,20 +302,29 @@ export function RecipeView({
   stats: { label: string; value: string }[];
   images: MenuImage[];
   compositionTitle: string;
-  lines: CompositionLine[];
-  sections: { name: string; method: string; lines: CompositionLine[] }[];
+  lines: TechCardLine[];
+  sections: { name: string; method: string; lines: TechCardLine[] }[];
   gramsPerUnit: (ingredientId: number) => string | null;
   method: string;
   onEdit: () => void;
   onClone: (() => void) | null;
   printHref: string | null;
   copyPath: string | null;
+  semiProducts: SemiProduct[];
   children: ReactNode;
 }) {
   const t = useTranslations("stock");
   const locale = useLocale();
   const [active, setActive] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const techCards = useQuery({
+    queryKey: ["menu", "tech-cards"],
+    queryFn: () => api.menuTechCards.list(),
+    enabled: expanded,
+  });
+  const canExpand = hasExpandableLines(lines, sections);
+  const href = printHref === null ? null : expanded ? `${printHref}?expanded=1` : printHref;
   const image = images.length === 0 ? null : images[Math.min(active, images.length - 1)];
   useEffect(() => {
     if (!copied) return;
@@ -243,9 +370,15 @@ export function RecipeView({
               {copied ? t("linkCopied") : t("copyLink")}
             </Button>
           ) : null}
-          {printHref !== null ? (
+          {canExpand ? (
+            <Button type="button" size="sm" variant="outline" onClick={() => setExpanded((value) => !value)}>
+              <ChevronsUpDown className="mr-1 h-4 w-4" />
+              {expanded ? t("collapseComposition") : t("expandComposition")}
+            </Button>
+          ) : null}
+          {href !== null ? (
             <Button size="sm" variant="outline" asChild>
-              <Link href={printHref} target="_blank" rel="noreferrer">
+              <Link href={href} target="_blank" rel="noreferrer">
                 <Printer className="mr-1 h-4 w-4" />
                 {t("print")}
               </Link>
@@ -289,24 +422,25 @@ export function RecipeView({
         </div>
       ) : null}
 
-      {lines.length > 0 || sections.length === 0 ? (
-        <div className="grid gap-2">
-          <RecipeHeading number={null} title={compositionTitle} note="" />
-          <CompositionTable lines={lines} gramsPerUnit={gramsPerUnit} />
-        </div>
-      ) : null}
-
-      {sections.map((section, index) => (
-        <div key={section.name} className="grid gap-2">
-          <RecipeHeading number={index + 1} title={section.name} note="" />
-          <CompositionTable lines={section.lines} gramsPerUnit={gramsPerUnit} />
-          {section.method.trim() ? (
-            <div className="mt-1">
-              <MarkdownView value={section.method} />
-            </div>
-          ) : null}
-        </div>
-      ))}
+      {expanded ? (
+        <QueryState isLoading={techCards.data === undefined} isError={techCards.isError}>
+          <ExpandedComposition
+            compositionTitle={compositionTitle}
+            lines={lines}
+            sections={sections}
+            techCards={techCards.data ?? []}
+            semiProducts={semiProducts}
+            gramsPerUnit={gramsPerUnit}
+          />
+        </QueryState>
+      ) : (
+        <CollapsedComposition
+          compositionTitle={compositionTitle}
+          lines={lines}
+          sections={sections}
+          gramsPerUnit={gramsPerUnit}
+        />
+      )}
 
       {children}
 

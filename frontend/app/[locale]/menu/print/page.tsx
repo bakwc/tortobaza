@@ -66,7 +66,7 @@ function TechCardsPrintBody({ ids }: { ids: number[] }) {
               key={card.id}
               className={cn(index > 0 && "mt-10 print:mt-0", index < cards.length - 1 && "break-after-page")}
             >
-              <TechCardPrint card={card} showPrintButton={false} />
+              <TechCardPrint card={card} showPrintButton={false} expanded={false} techCards={[]} semiProducts={[]} />
             </div>
           ))}
         </div>

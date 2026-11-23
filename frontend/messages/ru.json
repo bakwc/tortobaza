@@ -756,6 +756,8 @@
     "addSection": "Добавить главу",
     "edit": "Редактировать",
     "print": "Печать",
+    "expandComposition": "Развернуть состав",
+    "collapseComposition": "Свернуть состав",
     "copyLink": "Ссылка",
     "clone": "Клонировать",
     "cloneName": "Новое имя",

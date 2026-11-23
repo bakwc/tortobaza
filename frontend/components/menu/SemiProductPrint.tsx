@@ -1,13 +1,23 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { compositionPrintRows, expandComposition } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
+import { PrintCompositionRows } from "@/components/menu/TechCardPrint";
 import { Button } from "@/components/ui/button";
 import { formatQuantity } from "@/components/menu/ui";
 import type { SemiProduct } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-export function SemiProductPrint({ product }: { product: SemiProduct }) {
+export function SemiProductPrint({
+  product,
+  expanded,
+  semiProducts,
+}: {
+  product: SemiProduct;
+  expanded: boolean;
+  semiProducts: SemiProduct[];
+}) {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
   const yieldLine = `${t("yield")}: ${formatQuantity(product.yield_quantity)} ${units(product.unit)}`;
@@ -39,27 +49,47 @@ export function SemiProductPrint({ product }: { product: SemiProduct }) {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-t border-black">
-              <td colSpan={2} className="border-r border-black p-0 align-top">
-                {product.lines.map((line, index) => (
-                  <div
-                    key={line.id}
-                    className={cn(
-                      "grid grid-cols-[32fr_14fr] break-inside-avoid",
-                      index < product.lines.length - 1 && "border-b border-black",
-                    )}
-                  >
-                    <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
-                    <div className="px-2 py-1 text-right text-sm tabular-nums">
-                      {formatQuantity(line.quantity)} {units(line.quantity_unit)}
+            {expanded ? (
+              <PrintCompositionRows
+                rows={compositionPrintRows(
+                  null,
+                  product.method,
+                  expandComposition(
+                    product.lines.map((line) => ({
+                      ...line,
+                      nested_tech_card: null,
+                      nested_section: null,
+                    })),
+                    [],
+                    semiProducts,
+                    0,
+                  ),
+                  "semi",
+                )}
+              />
+            ) : (
+              <tr className="border-t border-black">
+                <td colSpan={2} className="border-r border-black p-0 align-top">
+                  {product.lines.map((line, index) => (
+                    <div
+                      key={line.id}
+                      className={cn(
+                        "grid grid-cols-[32fr_14fr] break-inside-avoid",
+                        index < product.lines.length - 1 && "border-b border-black",
+                      )}
+                    >
+                      <div className="min-w-0 border-r border-black px-2 py-1 text-sm">{line.name}</div>
+                      <div className="px-2 py-1 text-right text-sm tabular-nums">
+                        {formatQuantity(line.quantity)} {units(line.quantity_unit)}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </td>
-              <td className="px-2 py-1 align-top text-[13px] leading-5">
-                {product.method.trim() ? <MarkdownView value={product.method} /> : null}
-              </td>
-            </tr>
+                  ))}
+                </td>
+                <td className="px-2 py-1 align-top text-[13px] leading-5">
+                  {product.method.trim() ? <MarkdownView value={product.method} /> : null}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </article>
