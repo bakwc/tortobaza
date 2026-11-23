@@ -226,6 +226,7 @@ export function WriteOffsPanel() {
             keepSelectedOnDigit={false}
             quantityRequired={true}
             showTotalWeight={false}
+            pieceGrams={null}
           />
         </EditorDialog>
       ) : null}

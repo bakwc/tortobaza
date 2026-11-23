@@ -28,6 +28,7 @@ Needs = dict[Component, Decimal]
 
 _ONE = Decimal("1")
 _CENT = Decimal("0.01")
+_GRAM = Decimal("0.001")
 
 _query_cache: ContextVar[dict | None] = ContextVar("menu_recipe_query_cache", default=None)
 
@@ -110,8 +111,21 @@ def _section_lines(section: TechCardSection):
 
 
 def line_gram_quantity(line: TechCardLine) -> Decimal:
+    return _line_gram_quantity(line, frozenset())
+
+
+def _line_gram_quantity(line: TechCardLine, path: frozenset[int]) -> Decimal:
     if line.quantity is None:
         return Decimal("0")
+    if (
+        line.nested_tech_card_id is not None
+        and line.nested_tech_card.kind == TechCard.KIND_PIECE
+        and line.quantity_unit == UNIT_PIECE
+    ):
+        if line.nested_tech_card_id in path or not line.nested_tech_card.basis_quantity:
+            return Decimal("0")
+        net = _tech_card_net_grams(line.nested_tech_card, path)
+        return (line.quantity * net / Decimal(line.nested_tech_card.basis_quantity)).quantize(_GRAM)
     if line.quantity_unit == UNIT_GRAM:
         return line.quantity
     grams_per_unit = line.ingredient.grams_per_unit if line.ingredient_id is not None else None
@@ -124,10 +138,28 @@ def line_gram_quantity(line: TechCardLine) -> Decimal:
     return Decimal("0")
 
 
-def section_gram_quantity(section: TechCardSection) -> Decimal:
+def _tech_card_net_grams(card: TechCard, path: frozenset[int]) -> Decimal:
+    if card.pk in path:
+        return Decimal("0")
+    nested = path | {card.pk}
     total = Decimal("0")
-    for line in section.lines.select_related("ingredient"):
-        total += line_gram_quantity(line)
+    for line in _tech_card_lines(card):
+        if line.section_id is not None or line.nested_section_id is not None:
+            continue
+        total += _line_gram_quantity(line, nested)
+    for section in card.sections.all():
+        total += _section_gram_quantity(section, nested)
+    return total
+
+
+def section_gram_quantity(section: TechCardSection) -> Decimal:
+    return _section_gram_quantity(section, frozenset())
+
+
+def _section_gram_quantity(section: TechCardSection, path: frozenset[int]) -> Decimal:
+    total = Decimal("0")
+    for line in _section_lines(section):
+        total += _line_gram_quantity(line, path)
     return total
 
 

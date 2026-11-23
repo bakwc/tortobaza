@@ -783,6 +783,7 @@ export function SemiProductsPanel() {
             keepSelectedOnDigit={true}
             quantityRequired={true}
             showTotalWeight={true}
+            pieceGrams={null}
           />
         </EditorDialog>
       ) : null}

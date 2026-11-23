@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -37,6 +37,7 @@ import {
   ComponentLinesEditor,
   QuantityUnitControl,
   componentOptions,
+  componentRef,
   componentValue,
   defaultQuantityUnit,
   draftFromLine,
@@ -50,6 +51,7 @@ import {
   type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
 import { formatShelfLife, shelfLifeDraft, shelfLifeSeconds } from "@/components/menu/shelfLife";
+import { pieceLineGrams } from "@/components/menu/techCardWeight";
 import { CloneNameDialog } from "@/components/menu/CloneNameDialog";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import {
@@ -82,6 +84,7 @@ import {
   useTechCardImport,
   useTechCardList,
 } from "@/hooks/useStock";
+import { api } from "@/lib/api";
 import type { IngredientBody, MenuUnit, ModifierGroup, TechCard, TechCardDraftRecord, TechCardImport, TechCardImportLine, TechCardListItem } from "@/lib/api/types";
 import { compareNameMatch, nameMatches } from "@/lib/nameMatch";
 import {
@@ -140,26 +143,62 @@ function weighedLines(lines: ComponentLineDraft[], options: ComponentOption[]) {
   }));
 }
 
-function sectionGrams(section: SectionDraft, options: ComponentOption[]): string {
-  return String(gramTotal(weighedLines(section.lines, options)));
+function ingredientGrams(ingredientId: number, options: ComponentOption[]): string | null {
+  const option = options.find((row) => row.value === `ingredient:${ingredientId}`);
+  return option === undefined ? null : option.grams_per_unit;
 }
 
-function baseLines(draft: TechCardDraft, options: ComponentOption[]): ComponentLineDraft[] {
+function draftPieceGrams(
+  line: ComponentLineDraft,
+  options: ComponentOption[],
+  cards: Map<number, TechCard>,
+): number | null {
+  return pieceLineGrams(
+    line.quantity,
+    line.quantity_unit,
+    componentRef(line.component).nested_tech_card,
+    cards,
+    (ingredientId) => ingredientGrams(ingredientId, options),
+  );
+}
+
+function weighedTotal(
+  lines: ComponentLineDraft[],
+  options: ComponentOption[],
+  cards: Map<number, TechCard>,
+): number {
+  let pieces = 0;
+  for (const line of lines) {
+    const piece = draftPieceGrams(line, options, cards);
+    if (piece !== null) pieces += piece;
+  }
+  return gramTotal(weighedLines(lines, options)) + pieces;
+}
+
+function sectionGrams(section: SectionDraft, options: ComponentOption[], cards: Map<number, TechCard>): string {
+  return String(Math.round(weighedTotal(section.lines, options, cards) * 1000) / 1000);
+}
+
+function baseLines(
+  draft: TechCardDraft,
+  options: ComponentOption[],
+  cards: Map<number, TechCard>,
+): ComponentLineDraft[] {
   return draft.lines.map((line) => {
     if (!isSectionComponent(line.component)) return line;
     const key = line.component.slice("section:".length);
     const section = draft.sections.find((row) => row.key === key);
     return {
       ...line,
-      quantity: section === undefined ? "0" : sectionGrams(section, options),
+      quantity: section === undefined ? "0" : sectionGrams(section, options, cards),
       quantity_unit: "g",
       loss_quantity: "",
     };
   });
 }
 
-function savedBaseLines(draft: TechCardDraft, options: ComponentOption[]) {
-  return baseLines(draft, options).map((line) => {
+function savedBaseLines(draft: TechCardDraft, options: ComponentOption[], cards: Map<number, TechCard>) {
+  return baseLines(draft, options, cards).map((line) => {
     const key = isSectionComponent(line.component) ? line.component.slice("section:".length) : null;
     const section = key === null ? undefined : draft.sections.find((row) => row.key === key);
     const body = savedLines([line])[0];
@@ -344,10 +383,18 @@ function parseRequired(value: string): boolean | null {
   return value === "yes";
 }
 
-function draftGramTotal(draft: TechCardDraft, options: ComponentOption[]): number {
-  let total = gramTotal(weighedLines(draft.lines.filter((line) => !isSectionComponent(line.component)), options));
+function draftGramTotal(
+  draft: TechCardDraft,
+  options: ComponentOption[],
+  cards: Map<number, TechCard>,
+): number {
+  let total = weighedTotal(
+    draft.lines.filter((line) => !isSectionComponent(line.component)),
+    options,
+    cards,
+  );
   for (const section of draft.sections) {
-    total += gramTotal(weighedLines(section.lines, options));
+    total += weighedTotal(section.lines, options, cards);
   }
   return Math.round(total * 1000) / 1000;
 }
@@ -571,6 +618,20 @@ export function TechCardsPanel() {
         : null;
   const card = useTechCard(requestedId);
   const current = card.data ?? null;
+  const draftWantsCards =
+    draft !== null &&
+    [...draft.lines, ...draft.sections.flatMap((section) => section.lines)].some((line) =>
+      line.component.startsWith("tech_card:"),
+    );
+  const compositionCards = useQuery({
+    queryKey: ["menu", "tech-cards"],
+    queryFn: () => api.menuTechCards.list(),
+    enabled: draftWantsCards,
+  });
+  const cardsById = useMemo(
+    () => new Map((compositionCards.data ?? []).map((row) => [row.id, row])),
+    [compositionCards.data],
+  );
 
   useEffect(() => {
     if (ignoreCardParam && cardParam === null) setIgnoreCardParam(false);
@@ -1034,7 +1095,7 @@ export function TechCardsPanel() {
           shelf_life_seconds: shelfLifeSeconds(draft.shelf_life_days, draft.shelf_life_hours),
           storage_temperature: draft.storage_temperature.trim() === "" ? null : draft.storage_temperature.trim(),
           is_active: draft.is_active,
-          lines: savedBaseLines(draft, options),
+          lines: savedBaseLines(draft, options, cardsById),
           sections: draft.sections.map((section) => ({
             name: section.name,
             method: section.method,
@@ -1620,7 +1681,7 @@ export function TechCardsPanel() {
                     className="min-w-0 flex-1"
                   />
                   <span className="shrink-0 text-sm tabular-nums text-[var(--muted-2)]">
-                    {t("basisKg", { weight: formatQuantity(String(draftGramTotal(draft, options) / 1000)) })}
+                    {t("basisKg", { weight: formatQuantity(String(draftGramTotal(draft, options, cardsById) / 1000)) })}
                   </span>
                   <Button
                     type="button"
@@ -1630,7 +1691,7 @@ export function TechCardsPanel() {
                     onClick={() =>
                       setDraft({
                         ...draft,
-                        basis_weight_kg: formatQuantity(String(draftGramTotal(draft, options) / 1000)),
+                        basis_weight_kg: formatQuantity(String(draftGramTotal(draft, options, cardsById) / 1000)),
                       })
                     }
                   >
@@ -1723,7 +1784,7 @@ export function TechCardsPanel() {
               : t("baseCompositionPerPiece", { count: draft.basis_quantity })}
           </CardTitle>
           <ComponentLinesEditor
-            lines={baseLines(draft, options)}
+            lines={baseLines(draft, options, cardsById)}
             onChange={(lines) => setDraft({ ...draft, lines })}
             options={[...sectionOptions(draft.sections, t("section")), ...options]}
             extraColumn="loss"
@@ -1736,6 +1797,7 @@ export function TechCardsPanel() {
             keepSelectedOnDigit={true}
             quantityRequired={false}
             showTotalWeight={true}
+            pieceGrams={(line) => draftPieceGrams(line, options, cardsById)}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1796,6 +1858,7 @@ export function TechCardsPanel() {
                 keepSelectedOnDigit={true}
                 quantityRequired={false}
                 showTotalWeight={true}
+                pieceGrams={(line) => draftPieceGrams(line, options, cardsById)}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>

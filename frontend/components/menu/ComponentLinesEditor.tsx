@@ -198,6 +198,7 @@ export function ComponentLinesEditor({
   keepSelectedOnDigit,
   quantityRequired,
   showTotalWeight,
+  pieceGrams,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -212,6 +213,7 @@ export function ComponentLinesEditor({
   keepSelectedOnDigit: boolean;
   quantityRequired: boolean;
   showTotalWeight: boolean;
+  pieceGrams: ((line: ComponentLineDraft) => number | null) | null;
 }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
@@ -226,6 +228,7 @@ export function ComponentLinesEditor({
         const price = linePrice === null ? null : linePrice(line);
         const locked = isSectionComponent(line.component);
         const lossPercent = extraColumn === "loss" ? lossPercentText(line.quantity, line.loss_quantity) : null;
+        const piece = pieceGrams === null ? null : pieceGrams(line);
         return (
           <div
             key={line.key}
@@ -257,23 +260,30 @@ export function ComponentLinesEditor({
               createPending={suggestionPending}
               keepSelectedOnDigit={keepSelectedOnDigit}
             />
-            <div className="relative">
-              <Input
-                name="quantity"
-                required={quantityRequired && !locked}
-                readOnly={locked}
-                inputMode="decimal"
-                placeholder={quantityLabel}
-                value={line.quantity}
-                onChange={(event) => update(line.key, { quantity: event.target.value })}
-                className="pr-16"
-              />
-              <QuantityUnitControl
-                option={option}
-                value={line.quantity_unit}
-                chooseQuantityUnit={chooseQuantityUnit}
-                onChange={(quantity_unit) => update(line.key, { quantity_unit })}
-              />
+            <div>
+              <div className="relative">
+                <Input
+                  name="quantity"
+                  required={quantityRequired && !locked}
+                  readOnly={locked}
+                  inputMode="decimal"
+                  placeholder={quantityLabel}
+                  value={line.quantity}
+                  onChange={(event) => update(line.key, { quantity: event.target.value })}
+                  className="pr-16"
+                />
+                <QuantityUnitControl
+                  option={option}
+                  value={line.quantity_unit}
+                  chooseQuantityUnit={chooseQuantityUnit}
+                  onChange={(quantity_unit) => update(line.key, { quantity_unit })}
+                />
+              </div>
+              {piece !== null ? (
+                <p className="mt-1 text-right text-xs tabular-nums text-[var(--muted-2)]">
+                  ({formatLineAmount(String(piece), units("g"))})
+                </p>
+              ) : null}
             </div>
             {extraColumn === "loss" ? (
               <div className="flex items-center gap-2">
@@ -350,16 +360,24 @@ export function ComponentLinesEditor({
           {t("total")}{" "}
           {formatLineAmount(
             String(
-              gramTotal(
-                lines.map((line) => {
-                  const option = options.find((row) => row.value === line.component);
-                  return {
-                    quantity: line.quantity,
-                    quantity_unit: line.quantity_unit,
-                    grams_per_unit: option === undefined ? null : option.grams_per_unit,
-                  };
-                }),
-              ),
+              Math.round(
+                (gramTotal(
+                  lines.map((line) => {
+                    const option = options.find((row) => row.value === line.component);
+                    return {
+                      quantity: line.quantity,
+                      quantity_unit: line.quantity_unit,
+                      grams_per_unit: option === undefined ? null : option.grams_per_unit,
+                    };
+                  }),
+                ) +
+                  lines.reduce((sum, line) => {
+                    if (pieceGrams === null) return sum;
+                    const piece = pieceGrams(line);
+                    return piece === null ? sum : sum + piece;
+                  }, 0)) *
+                  1000,
+              ) / 1000,
             ),
             units("g"),
           )}

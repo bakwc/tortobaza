@@ -198,7 +198,7 @@ def tech_card_line_payload(line, cost: Decimal | None) -> dict:
             "semi_product": None,
             "name": line.nested_section.name,
             "unit": UNIT_GRAM,
-            "quantity": str(line.quantity),
+            "quantity": str(section_gram_quantity(line.nested_section)),
             "loss_quantity": str(line.loss_quantity),
             "quantity_unit": line.quantity_unit,
         }

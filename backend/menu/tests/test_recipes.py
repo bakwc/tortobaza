@@ -1163,6 +1163,62 @@ class OwnSectionBaseLineTests(TestCase):
         self.assertEqual(needs[self.menu.paper], Decimal("2"))
         self.assertEqual(needs[egg], Decimal("3"))
 
+    def test_chapter_grams_include_nested_piece_net_weight(self):
+        inner = TechCard.objects.create(name="Inner", kind=TechCard.KIND_PIECE, basis_quantity=1)
+        TechCardLine.objects.create(
+            tech_card=inner,
+            ingredient=self.menu.sugar,
+            quantity=Decimal("50"),
+            quantity_unit=UNIT_GRAM,
+            loss_quantity=Decimal("5"),
+        )
+        outer = TechCard.objects.create(name="Outer", kind=TechCard.KIND_PIECE, basis_quantity=2)
+        TechCardLine.objects.create(
+            tech_card=outer,
+            ingredient=self.menu.flour,
+            quantity=Decimal("100"),
+            quantity_unit=UNIT_GRAM,
+            loss_quantity=Decimal("10"),
+        )
+        TechCardLine.objects.create(
+            tech_card=outer,
+            nested_tech_card=inner,
+            quantity=Decimal("1"),
+            quantity_unit=UNIT_PIECE,
+        )
+        response = self.client.post(
+            "/api/menu/tech-cards/",
+            self._payload(
+                [self._section_base_line("Глава_1")],
+                [
+                    {
+                        "name": "Глава_1",
+                        "method": "",
+                        "lines": [
+                            self._line(self.menu.flour, "100", UNIT_GRAM),
+                            {
+                                "ingredient": None,
+                                "semi_product": None,
+                                "nested_tech_card": outer.pk,
+                                "quantity": "2",
+                                "quantity_unit": UNIT_PIECE,
+                                "loss_quantity": "0",
+                            },
+                        ],
+                    }
+                ],
+            ),
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Decimal(response.json()["lines"][0]["quantity"]), Decimal("250"))
+        stored = TechCard.objects.get(pk=response.json()["id"]).lines.get(nested_section__isnull=False)
+        stored.quantity = Decimal("1")
+        stored.save(update_fields=["quantity"])
+        fetched = self.client.get(f"/api/menu/tech-cards/{response.json()['id']}/")
+        self.assertEqual(fetched.status_code, 200, fetched.content)
+        self.assertEqual(Decimal(fetched.json()["lines"][0]["quantity"]), Decimal("250"))
+
 
 class CloneApiTests(TestCase):
     def setUp(self):
