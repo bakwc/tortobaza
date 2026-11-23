@@ -171,11 +171,6 @@ export function TechCardPrint({
           </thead>
           <tbody>
             {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
-            {nestedChapters.length > 0 ? (
-              <tr>
-                <td colSpan={3} className="border-t-4 border-black p-0" />
-              </tr>
-            ) : null}
             {chapters.map((chapter) => (
               <ChapterBlock key={chapter.key} chapter={chapter} />
             ))}

@@ -417,9 +417,6 @@ export function RecipeView({
           ) : null}
         </QueryState>
       ) : null}
-      {expandedChapters !== null && expandedChapters.length > 0 ? (
-        <hr className="border-t-2 border-[var(--ink)]" />
-      ) : null}
       <CollapsedComposition
         compositionTitle={compositionTitle}
         assemblyName={assemblyName}

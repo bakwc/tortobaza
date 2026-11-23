@@ -62,11 +62,6 @@ export function SemiProductPrint({
           </thead>
           <tbody>
             {nestedChapters.length > 0 ? <NestedChapterBlocks chapters={nestedChapters} /> : null}
-            {nestedChapters.length > 0 ? (
-              <tr>
-                <td colSpan={3} className="border-t-4 border-black p-0" />
-              </tr>
-            ) : null}
             <tr className="border-t border-black">
                 <td colSpan={2} className="border-r border-black p-0 align-top">
                   {nestedChapters.length > 0 ? (
