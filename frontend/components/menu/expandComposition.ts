@@ -8,11 +8,6 @@ export type ExpandedChapter = {
   quantity: string | null;
   quantityUnit: MenuUnit | null;
   lines: TechCardLine[];
-};
-
-export type ExpandedRecipe = {
-  lines: TechCardLine[];
-  chapters: ExpandedChapter[];
   method: string;
 };
 
@@ -27,11 +22,6 @@ type Opened = {
 type Catalogs = {
   techCards: Map<number, TechCard>;
   semiProducts: Map<number, SemiProduct>;
-};
-
-type Split = {
-  leaves: TechCardLine[];
-  nested: TechCardLine[];
 };
 
 function amount(value: string): number {
@@ -113,21 +103,8 @@ function open(line: TechCardLine, catalogs: Catalogs, path: Set<string>): Opened
   return null;
 }
 
-function split(lines: TechCardLine[], factor: number, catalogs: Catalogs, path: Set<string>): Split {
-  const leaves: TechCardLine[] = [];
-  const nested: TechCardLine[] = [];
-  for (const raw of lines) {
-    const line = scaleLine(raw, factor);
-    if (open(line, catalogs, path) === null) leaves.push(line);
-    else nested.push(line);
-  }
-  return { leaves, nested };
-}
-
-function pushMethod(methods: string[], name: string, method: string) {
-  const trimmed = method.trim();
-  if (!trimmed) return;
-  methods.push(`## ${name}\n${trimmed}`);
+function byId<T extends { id: number }>(rows: T[]): Map<number, T> {
+  return new Map(rows.map((row) => [row.id, row]));
 }
 
 function expandNode(
@@ -136,41 +113,39 @@ function expandNode(
   path: Set<string>,
   keyPrefix: string,
   chapters: ExpandedChapter[],
-  methods: string[],
 ) {
   const opened = open(line, catalogs, path);
   if (opened === null) return;
   const next = new Set(path);
   next.add(opened.token);
   const prefix = `${keyPrefix}/${opened.token}`;
-  const parts = split(opened.lines, opened.factor, catalogs, next);
+  const scaledBase = opened.lines.map((row) => scaleLine(row, opened.factor));
+  for (const child of scaledBase) {
+    if (open(child, catalogs, next) !== null) expandNode(child, catalogs, next, prefix, chapters);
+  }
+  for (const section of opened.sections) {
+    const scaledSection = section.lines.map((row) => scaleLine(row, opened.factor));
+    const sectionPrefix = `${prefix}-section-${section.id}`;
+    for (const child of scaledSection) {
+      if (open(child, catalogs, next) !== null) expandNode(child, catalogs, next, sectionPrefix, chapters);
+    }
+    chapters.push({
+      key: sectionPrefix,
+      name: `${line.name} — ${section.name}`,
+      quantity: null,
+      quantityUnit: null,
+      lines: scaledSection,
+      method: section.method,
+    });
+  }
   chapters.push({
     key: `${prefix}-line-${line.id}`,
     name: line.name,
     quantity: line.quantity,
     quantityUnit: line.quantity_unit,
-    lines: parts.leaves,
+    lines: scaledBase,
+    method: opened.method,
   });
-  pushMethod(methods, line.name, opened.method);
-  for (const child of parts.nested) expandNode(child, catalogs, next, prefix, chapters, methods);
-  for (const section of opened.sections) {
-    const sectionParts = split(section.lines, opened.factor, catalogs, next);
-    const sectionName = `${line.name} — ${section.name}`;
-    const sectionPrefix = `${prefix}-section-${section.id}`;
-    chapters.push({
-      key: sectionPrefix,
-      name: sectionName,
-      quantity: null,
-      quantityUnit: null,
-      lines: sectionParts.leaves,
-    });
-    pushMethod(methods, sectionName, section.method);
-    for (const child of sectionParts.nested) expandNode(child, catalogs, next, sectionPrefix, chapters, methods);
-  }
-}
-
-function byId<T extends { id: number }>(rows: T[]): Map<number, T> {
-  return new Map(rows.map((row) => [row.id, row]));
 }
 
 export function hasExpandableLines(lines: TechCardLine[], sections: { lines: TechCardLine[] }[]): boolean {
@@ -187,31 +162,19 @@ export function hasExpandableLines(lines: TechCardLine[], sections: { lines: Tec
 
 export function expandRecipe(
   lines: TechCardLine[],
-  sections: { name: string; method: string; lines: TechCardLine[] }[],
-  rootMethod: string,
+  sections: { lines: TechCardLine[] }[],
   techCards: TechCard[],
   semiProducts: SemiProduct[],
-): ExpandedRecipe {
+): ExpandedChapter[] {
   const catalogs: Catalogs = { techCards: byId(techCards), semiProducts: byId(semiProducts) };
   const path = new Set<string>();
   const chapters: ExpandedChapter[] = [];
-  const methods: string[] = [];
-  const base = split(lines, 1, catalogs, path);
-  for (const child of base.nested) expandNode(child, catalogs, path, "base", chapters, methods);
-  sections.forEach((section, index) => {
-    const parts = split(section.lines, 1, catalogs, path);
-    const prefix = `section-${index}`;
-    chapters.push({
-      key: prefix,
-      name: section.name,
-      quantity: null,
-      quantityUnit: null,
-      lines: parts.leaves,
-    });
-    pushMethod(methods, section.name, section.method);
-    for (const child of parts.nested) expandNode(child, catalogs, path, prefix, chapters, methods);
-  });
-  const own = rootMethod.trim();
-  if (own) methods.push(own);
-  return { lines: base.leaves, chapters, method: methods.join("\n\n") };
+  const visit = (rows: TechCardLine[], prefix: string) => {
+    for (const line of rows) {
+      if (open(line, catalogs, path) !== null) expandNode(line, catalogs, path, prefix, chapters);
+    }
+  };
+  visit(lines, "base");
+  sections.forEach((section, index) => visit(section.lines, `section-${index}`));
+  return chapters;
 }

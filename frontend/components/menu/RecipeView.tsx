@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import { Check, ChevronsUpDown, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react";
-import { expandRecipe, hasExpandableLines, type ExpandedRecipe, type TechCardLine } from "@/components/menu/expandComposition";
+import { expandRecipe, hasExpandableLines, type ExpandedChapter, type TechCardLine } from "@/components/menu/expandComposition";
 import { hasNestedTechCard, pieceLineGrams } from "@/components/menu/techCardWeight";
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export function RecipeTable({ rows, total }: { rows: RecipeTableRow[]; total: st
   );
 }
 
-function chapterNote(chapter: ExpandedRecipe["chapters"][number], unitLabel: (unit: TechCardLine["quantity_unit"]) => string): string {
+function chapterNote(chapter: ExpandedChapter, unitLabel: (unit: TechCardLine["quantity_unit"]) => string): string {
   if (chapter.quantity === null || chapter.quantityUnit === null) return "";
   return formatLineAmount(chapter.quantity, unitLabel(chapter.quantityUnit));
 }
@@ -150,30 +150,27 @@ function CollapsedComposition({
   );
 }
 
-function ExpandedComposition({
-  compositionTitle,
-  recipe,
+function ExpandedChapters({
+  chapters,
   gramsPerUnit,
   cards,
 }: {
-  compositionTitle: string;
-  recipe: ExpandedRecipe;
+  chapters: ExpandedChapter[];
   gramsPerUnit: (ingredientId: number) => string | null;
   cards: Map<number, TechCard>;
 }) {
   const units = useTranslations("stock.units");
   return (
     <>
-      {recipe.lines.length > 0 ? (
-        <div className="grid gap-2">
-          <RecipeHeading number={null} title={compositionTitle} note="" />
-          <CompositionTable lines={recipe.lines} gramsPerUnit={gramsPerUnit} cards={cards} />
-        </div>
-      ) : null}
-      {recipe.chapters.map((chapter, index) => (
+      {chapters.map((chapter, index) => (
         <div key={chapter.key} className="grid gap-2">
           <RecipeHeading number={index + 1} title={chapter.name} note={chapterNote(chapter, units)} />
           <CompositionTable lines={chapter.lines} gramsPerUnit={gramsPerUnit} cards={cards} />
+          {chapter.method.trim() ? (
+            <div className="mt-1">
+              <MarkdownView value={chapter.method} />
+            </div>
+          ) : null}
         </div>
       ))}
     </>
@@ -287,10 +284,10 @@ export function RecipeView({
     [techCards.data],
   );
   const canExpand = hasExpandableLines(lines, sections);
-  const expandedRecipe = useMemo(() => {
+  const expandedChapters = useMemo(() => {
     if (!expanded || techCards.data === undefined) return null;
-    return expandRecipe(lines, sections, method, techCards.data, semiProducts);
-  }, [expanded, techCards.data, lines, sections, method, semiProducts]);
+    return expandRecipe(lines, sections, techCards.data, semiProducts);
+  }, [expanded, techCards.data, lines, sections, semiProducts]);
   const href = printHref === null ? null : expanded ? `${printHref}?expanded=1` : printHref;
   const image = images.length === 0 ? null : images[Math.min(active, images.length - 1)];
   useEffect(() => {
@@ -391,39 +388,22 @@ export function RecipeView({
 
       {expanded ? (
         <QueryState isLoading={techCards.data === undefined} isError={techCards.isError}>
-          {expandedRecipe !== null ? (
-            <ExpandedComposition
-              compositionTitle={compositionTitle}
-              recipe={expandedRecipe}
-              gramsPerUnit={gramsPerUnit}
-              cards={cardsById}
-            />
+          {expandedChapters !== null ? (
+            <ExpandedChapters chapters={expandedChapters} gramsPerUnit={gramsPerUnit} cards={cardsById} />
           ) : null}
         </QueryState>
-      ) : (
-        <CollapsedComposition
-          compositionTitle={compositionTitle}
-          lines={lines}
-          sections={sections}
-          gramsPerUnit={gramsPerUnit}
-          cards={cardsById}
-        />
-      )}
+      ) : null}
+      <CollapsedComposition
+        compositionTitle={compositionTitle}
+        lines={lines}
+        sections={sections}
+        gramsPerUnit={gramsPerUnit}
+        cards={cardsById}
+      />
 
       {children}
 
-      {expanded ? (
-        expandedRecipe !== null ? (
-          <div className="grid gap-2">
-            <RecipeHeading number={null} title={t("method")} note="" />
-            {expandedRecipe.method.trim() ? (
-              <MarkdownView value={expandedRecipe.method} />
-            ) : (
-              <p className="text-sm text-[var(--muted-2)]">{t("noMethod")}</p>
-            )}
-          </div>
-        ) : null
-      ) : method.trim() || sections.length === 0 ? (
+      {method.trim() || sections.length === 0 ? (
         <div className="grid gap-2">
           <RecipeHeading number={null} title={t("method")} note="" />
           {method.trim() ? (

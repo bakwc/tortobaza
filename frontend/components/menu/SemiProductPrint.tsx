@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { expandRecipe } from "@/components/menu/expandComposition";
 import { MarkdownView } from "@/components/menu/MarkdownView";
-import { ExpandedPrintRows } from "@/components/menu/TechCardPrint";
+import { NestedChapterBlocks } from "@/components/menu/TechCardPrint";
 import { Button } from "@/components/ui/button";
 import { formatQuantity } from "@/components/menu/ui";
 import type { SemiProduct } from "@/lib/api/types";
@@ -50,21 +50,20 @@ export function SemiProductPrint({
           </thead>
           <tbody>
             {expanded ? (
-              <ExpandedPrintRows
-                recipe={expandRecipe(
+              <NestedChapterBlocks
+                chapters={expandRecipe(
                   product.lines.map((line) => ({
                     ...line,
                     nested_tech_card: null,
                     nested_section: null,
                   })),
                   [],
-                  product.method,
                   [],
                   semiProducts,
                 )}
               />
-            ) : (
-              <tr className="border-t border-black">
+            ) : null}
+            <tr className="border-t border-black">
                 <td colSpan={2} className="border-r border-black p-0 align-top">
                   {product.lines.map((line, index) => (
                     <div
@@ -85,7 +84,6 @@ export function SemiProductPrint({
                   {product.method.trim() ? <MarkdownView value={product.method} /> : null}
                 </td>
               </tr>
-            )}
           </tbody>
         </table>
       </article>
