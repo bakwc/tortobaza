@@ -212,7 +212,7 @@ export function RecipeView({
           ) : null}
           {printHref !== null ? (
             <Button size="sm" variant="outline" asChild>
-              <Link href={printHref}>
+              <Link href={printHref} target="_blank" rel="noreferrer">
                 <Printer className="mr-1 h-4 w-4" />
                 {t("print")}
               </Link>
