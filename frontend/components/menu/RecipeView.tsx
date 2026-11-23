@@ -6,7 +6,7 @@ import { Check, Copy, Link2, Pencil, Printer, TriangleAlert } from "lucide-react
 import { MarkdownView } from "@/components/menu/MarkdownView";
 import { Button } from "@/components/ui/button";
 import { DialogTitle } from "@/components/ui/dialog";
-import { formatLineAmount, formatLossLabel, formatMoney } from "@/components/menu/ui";
+import { formatLineAmount, formatLossLabel, formatMoney, gramTotal } from "@/components/menu/ui";
 import { getPathname, Link } from "@/i18n/navigation";
 import type { MenuImage, RecipeLine } from "@/lib/api/types";
 
@@ -44,7 +44,7 @@ export function RecipeHeading({ number, title, note }: { number: number | null; 
   );
 }
 
-export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
+export function RecipeTable({ rows, total }: { rows: RecipeTableRow[]; total: string | null }) {
   const t = useTranslations("stock");
   const showCost = rows.some((row) => row.cost !== null);
   const showLoss = rows.some((row) => row.loss !== "");
@@ -94,16 +94,47 @@ export function RecipeTable({ rows }: { rows: RecipeTableRow[] }) {
             </tr>
           ))}
         </tbody>
+        {total !== null ? (
+          <tfoot>
+            <tr className="border-t border-[var(--line)]">
+              <td className="py-2 pr-3 font-medium text-[var(--ink)]">{t("total")}</td>
+              <td className="whitespace-nowrap py-2 pr-3 text-right font-medium tabular-nums text-[var(--ink)]">
+                {total}
+              </td>
+              {showLoss ? <td /> : null}
+              {showCost ? <td /> : null}
+            </tr>
+          </tfoot>
+        ) : null}
       </table>
     </div>
   );
 }
 
-export function CompositionTable({ lines }: { lines: CompositionLine[] }) {
+export function CompositionTable({
+  lines,
+  gramsPerUnit,
+}: {
+  lines: CompositionLine[];
+  gramsPerUnit: (ingredientId: number) => string | null;
+}) {
   const t = useTranslations("stock");
   const units = useTranslations("stock.units");
+  const total = formatLineAmount(
+    String(
+      gramTotal(
+        lines.map((line) => ({
+          quantity: line.quantity,
+          quantity_unit: line.quantity_unit,
+          grams_per_unit: line.ingredient === null ? null : gramsPerUnit(line.ingredient),
+        })),
+      ),
+    ),
+    units("g"),
+  );
   return (
     <RecipeTable
+      total={total}
       rows={lines.map((line) => {
         return {
           key: String(line.id),
@@ -140,6 +171,7 @@ export function RecipeView({
   compositionTitle,
   lines,
   sections,
+  gramsPerUnit,
   method,
   onEdit,
   onClone,
@@ -154,6 +186,7 @@ export function RecipeView({
   compositionTitle: string;
   lines: CompositionLine[];
   sections: { name: string; method: string; lines: CompositionLine[] }[];
+  gramsPerUnit: (ingredientId: number) => string | null;
   method: string;
   onEdit: () => void;
   onClone: (() => void) | null;
@@ -259,14 +292,14 @@ export function RecipeView({
       {lines.length > 0 || sections.length === 0 ? (
         <div className="grid gap-2">
           <RecipeHeading number={null} title={compositionTitle} note="" />
-          <CompositionTable lines={lines} />
+          <CompositionTable lines={lines} gramsPerUnit={gramsPerUnit} />
         </div>
       ) : null}
 
       {sections.map((section, index) => (
         <div key={section.name} className="grid gap-2">
           <RecipeHeading number={index + 1} title={section.name} note="" />
-          <CompositionTable lines={section.lines} />
+          <CompositionTable lines={section.lines} gramsPerUnit={gramsPerUnit} />
           {section.method.trim() ? (
             <div className="mt-1">
               <MarkdownView value={section.method} />

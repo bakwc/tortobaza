@@ -16,6 +16,7 @@ import {
   draftFromLine,
   linesToBody,
   type ComponentLineDraft,
+  type ComponentOption,
 } from "@/components/menu/ComponentLinesEditor";
 import { CloneNameDialog } from "@/components/menu/CloneNameDialog";
 import { EditorDialog } from "@/components/menu/EditorDialog";
@@ -29,8 +30,10 @@ import {
   GroupSelect,
   NativeSelect,
   QueryState,
+  formatLineAmount,
   formatQuantity,
   formatUnitCost,
+  gramTotal,
 } from "@/components/menu/ui";
 import { useIngredients, useSemiProductCategories, useSemiProductImages, useSemiProducts } from "@/hooks/useStock";
 import { useRouter } from "@/i18n/navigation";
@@ -42,6 +45,19 @@ const UNITS: MenuUnit[] = ["g", "ml", "pcs"];
 
 function costPerYieldUnit(cost: string, yieldQuantity: string): string {
   return (Number(cost) / Number(yieldQuantity)).toFixed(6);
+}
+
+function semiGramTotal(lines: ComponentLineDraft[], options: ComponentOption[]): number {
+  return gramTotal(
+    lines.map((line) => {
+      const option = options.find((row) => row.value === line.component);
+      return {
+        quantity: line.quantity,
+        quantity_unit: line.quantity_unit,
+        grams_per_unit: option === undefined ? null : option.grams_per_unit,
+      };
+    }),
+  );
 }
 
 type SemiDraft = {
@@ -574,6 +590,11 @@ export function SemiProductsPanel() {
               compositionTitle={t("composition")}
               lines={current.lines.map((line) => ({ ...line, nested_tech_card: null, nested_section: null }))}
               sections={[]}
+              gramsPerUnit={(ingredientId) => {
+                const row = (ingredients.list.data ?? []).find((item) => item.id === ingredientId);
+                if (row === undefined) return null;
+                return row.grams_per_unit;
+              }}
               method={current.method}
               onEdit={openEdit}
               onClone={canEdit ? openClone : null}
@@ -676,12 +697,36 @@ export function SemiProductsPanel() {
               </NativeSelect>
             </Field>
             <Field label={t("yield")}>
-              <Input
-                required
-                inputMode="decimal"
-                value={draft.yield_quantity}
-                onChange={(event) => setDraft({ ...draft, yield_quantity: event.target.value })}
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  required
+                  inputMode="decimal"
+                  value={draft.yield_quantity}
+                  onChange={(event) => setDraft({ ...draft, yield_quantity: event.target.value })}
+                  className="min-w-0 flex-1"
+                />
+                {draft.unit === "g" ? (
+                  <>
+                    <span className="shrink-0 text-sm tabular-nums text-[var(--muted-2)]">
+                      {formatLineAmount(String(semiGramTotal(draft.lines, options)), units("g"))}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={t("applyWeight")}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          yield_quantity: formatQuantity(String(semiGramTotal(draft.lines, options))),
+                        })
+                      }
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             </Field>
             <Field label={t("unit")}>
               <NativeSelect
@@ -735,6 +780,7 @@ export function SemiProductsPanel() {
             suggestionPending={ingredients.save.isPending}
             keepSelectedOnDigit={true}
             quantityRequired={true}
+            showTotalWeight={true}
           />
         </EditorDialog>
       ) : null}

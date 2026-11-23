@@ -10,6 +10,8 @@ from django.utils.translation import gettext as _
 
 from menu.models import (
     UNIT_GRAM,
+    UNIT_MILLILITER,
+    UNIT_PIECE,
     Ingredient,
     Modifier,
     ModifierGroup,
@@ -107,11 +109,25 @@ def _section_lines(section: TechCardSection):
     )
 
 
+def line_gram_quantity(line: TechCardLine) -> Decimal:
+    if line.quantity is None:
+        return Decimal("0")
+    if line.quantity_unit == UNIT_GRAM:
+        return line.quantity
+    grams_per_unit = line.ingredient.grams_per_unit if line.ingredient_id is not None else None
+    if line.quantity_unit == UNIT_MILLILITER:
+        if grams_per_unit is None:
+            return line.quantity
+        return line.quantity * grams_per_unit
+    if line.quantity_unit == UNIT_PIECE and grams_per_unit is not None:
+        return line.quantity * grams_per_unit
+    return Decimal("0")
+
+
 def section_gram_quantity(section: TechCardSection) -> Decimal:
     total = Decimal("0")
-    for line in section.lines.all():
-        if line.quantity is not None and line.quantity_unit == UNIT_GRAM:
-            total += line.quantity
+    for line in section.lines.select_related("ingredient"):
+        total += line_gram_quantity(line)
     return total
 
 

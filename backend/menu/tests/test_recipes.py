@@ -1134,12 +1134,19 @@ class OwnSectionBaseLineTests(TestCase):
         self.assertEqual(response.status_code, 400, response.content)
         self.assertIn("Unknown section", response.content.decode())
 
-    def test_milliliters_and_pieces_do_not_change_the_shown_grams(self):
+    def test_shown_grams_include_milliliters_and_weighed_pieces(self):
+        egg = Ingredient.objects.create(
+            name="Egg",
+            unit=UNIT_PIECE,
+            grams_per_unit=Decimal("50"),
+            avg_cost=Decimal("0.2"),
+        )
         section = self._chapter()
         section["lines"].extend(
             [
                 self._line(self.menu.cream, "50", UNIT_MILLILITER),
                 self._line(self.menu.paper, "2", UNIT_PIECE),
+                self._line(egg, "3", UNIT_PIECE),
             ]
         )
         response = self.client.post(
@@ -1149,11 +1156,12 @@ class OwnSectionBaseLineTests(TestCase):
         )
         self.assertEqual(response.status_code, 201, response.content)
         body = response.json()
-        self.assertEqual(Decimal(body["lines"][0]["quantity"]), Decimal("300"))
+        self.assertEqual(Decimal(body["lines"][0]["quantity"]), Decimal("500"))
         card = TechCard.objects.get(pk=body["id"])
         needs = expand_order_item(card, Decimal("1"), 1, [], [])
         self.assertEqual(needs[self.menu.cream], Decimal("50"))
         self.assertEqual(needs[self.menu.paper], Decimal("2"))
+        self.assertEqual(needs[egg], Decimal("3"))
 
 
 class CloneApiTests(TestCase):

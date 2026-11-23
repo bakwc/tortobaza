@@ -738,6 +738,7 @@
     "kindWeighted": "На вес",
     "kindPiece": "На штуку",
     "basisWeight": "Вес, на который рассчитан состав, кг",
+    "applyWeight": "Подставить рассчитанный вес",
     "basisKg": "{weight} кг",
     "basisQuantity": "На сколько штук рассчитан состав",
     "basisPieces": "{count} шт",

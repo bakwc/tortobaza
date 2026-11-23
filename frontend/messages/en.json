@@ -738,6 +738,7 @@
     "kindWeighted": "By weight",
     "kindPiece": "Per piece",
     "basisWeight": "Weight this composition is written for, kg",
+    "applyWeight": "Apply calculated weight",
     "basisQuantity": "Pieces this composition is written for",
     "basisKg": "{weight} kg",
     "basisPieces": "{count} pcs",

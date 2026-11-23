@@ -738,6 +738,7 @@
     "kindWeighted": "წონაზე",
     "kindPiece": "ცალზე",
     "basisWeight": "წონა, რომელზეც შემადგენლობაა დათვლილი, კგ",
+    "applyWeight": "გამოთვლილი წონის ჩასმა",
     "basisQuantity": "რამდენ ცალზეა გათვლილი შემადგენლობა",
     "basisKg": "{weight} კგ",
     "basisPieces": "{count} ცალი",

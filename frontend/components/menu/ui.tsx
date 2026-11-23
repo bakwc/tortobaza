@@ -182,6 +182,31 @@ export function formatLineAmount(quantity: string | null, unit: string): string 
   return `${formatQuantity(quantity)} ${unit}`;
 }
 
+export function lineGrams(quantity: string | null, quantityUnit: string, gramsPerUnit: string | null): number {
+  if (quantity === null || quantity.trim() === "") return 0;
+  const amount = Number(quantity.replace(",", "."));
+  if (!Number.isFinite(amount)) return 0;
+  if (quantityUnit === "g") return amount;
+  if (quantityUnit === "ml") {
+    if (gramsPerUnit === null || gramsPerUnit.trim() === "") return amount;
+    return amount * Number(gramsPerUnit.replace(",", "."));
+  }
+  if (quantityUnit === "pcs" && gramsPerUnit !== null && gramsPerUnit.trim() !== "") {
+    return amount * Number(gramsPerUnit.replace(",", "."));
+  }
+  return 0;
+}
+
+export function gramTotal(
+  lines: { quantity: string | null; quantity_unit: string; grams_per_unit: string | null }[],
+): number {
+  let total = 0;
+  for (const line of lines) {
+    total += lineGrams(line.quantity, line.quantity_unit, line.grams_per_unit);
+  }
+  return Math.round(total * 1000) / 1000;
+}
+
 export function formatMoney(value: string): string {
   return `${Number(value).toFixed(2)} ₾`;
 }

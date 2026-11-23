@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchSelect } from "@/components/menu/SearchSelect";
-import { lossPercentText } from "@/components/menu/ui";
+import { formatLineAmount, gramTotal, lossPercentText } from "@/components/menu/ui";
 import type { ComponentRefBody, Ingredient, MenuUnit, SemiProduct, TechCard } from "@/lib/api/types";
 
 export type LineSuggestion = {
@@ -197,6 +197,7 @@ export function ComponentLinesEditor({
   suggestionPending,
   keepSelectedOnDigit,
   quantityRequired,
+  showTotalWeight,
 }: {
   lines: ComponentLineDraft[];
   onChange: (lines: ComponentLineDraft[]) => void;
@@ -210,6 +211,7 @@ export function ComponentLinesEditor({
   suggestionPending: boolean;
   keepSelectedOnDigit: boolean;
   quantityRequired: boolean;
+  showTotalWeight: boolean;
 }) {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
@@ -343,6 +345,26 @@ export function ComponentLinesEditor({
           </div>
         );
       })}
+      {showTotalWeight && lines.length > 0 ? (
+        <p className="text-right text-sm font-medium tabular-nums text-[var(--ink)]">
+          {t("total")}{" "}
+          {formatLineAmount(
+            String(
+              gramTotal(
+                lines.map((line) => {
+                  const option = options.find((row) => row.value === line.component);
+                  return {
+                    quantity: line.quantity,
+                    quantity_unit: line.quantity_unit,
+                    grams_per_unit: option === undefined ? null : option.grams_per_unit,
+                  };
+                }),
+              ),
+            ),
+            units("g"),
+          )}
+        </p>
+      ) : null}
       <div>
         <Button type="button" variant="outline" size="sm" onClick={() => onChange([...lines, emptyLine()])}>
           <Plus className="mr-1 h-4 w-4" />

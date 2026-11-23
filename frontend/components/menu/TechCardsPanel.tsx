@@ -64,6 +64,8 @@ import {
   formatLineAmount,
   formatLossLabel,
   formatMoney,
+  formatQuantity,
+  gramTotal,
   lossPercentText,
 } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
@@ -124,33 +126,40 @@ function savedLines(lines: ComponentLineDraft[]) {
   }));
 }
 
-function sectionGrams(section: SectionDraft): string {
-  let total = 0;
-  for (const line of section.lines) {
-    if (line.quantity_unit !== "g") continue;
-    const value = Number(line.quantity.replace(",", "."));
-    if (!Number.isFinite(value)) continue;
-    total += value;
-  }
-  return String(Math.round(total * 1000) / 1000);
+function gramsPerUnit(component: string, options: ComponentOption[]): string | null {
+  const option = options.find((row) => row.value === component);
+  if (option === undefined) return null;
+  return option.grams_per_unit;
 }
 
-function baseLines(draft: TechCardDraft): ComponentLineDraft[] {
+function weighedLines(lines: ComponentLineDraft[], options: ComponentOption[]) {
+  return lines.map((line) => ({
+    quantity: line.quantity,
+    quantity_unit: line.quantity_unit,
+    grams_per_unit: gramsPerUnit(line.component, options),
+  }));
+}
+
+function sectionGrams(section: SectionDraft, options: ComponentOption[]): string {
+  return String(gramTotal(weighedLines(section.lines, options)));
+}
+
+function baseLines(draft: TechCardDraft, options: ComponentOption[]): ComponentLineDraft[] {
   return draft.lines.map((line) => {
     if (!isSectionComponent(line.component)) return line;
     const key = line.component.slice("section:".length);
     const section = draft.sections.find((row) => row.key === key);
     return {
       ...line,
-      quantity: section === undefined ? "0" : sectionGrams(section),
+      quantity: section === undefined ? "0" : sectionGrams(section, options),
       quantity_unit: "g",
       loss_quantity: "",
     };
   });
 }
 
-function savedBaseLines(draft: TechCardDraft) {
-  return baseLines(draft).map((line) => {
+function savedBaseLines(draft: TechCardDraft, options: ComponentOption[]) {
+  return baseLines(draft, options).map((line) => {
     const key = isSectionComponent(line.component) ? line.component.slice("section:".length) : null;
     const section = key === null ? undefined : draft.sections.find((row) => row.key === key);
     const body = savedLines([line])[0];
@@ -333,6 +342,14 @@ function requiredValue(value: boolean | null): string {
 function parseRequired(value: string): boolean | null {
   if (value === "default") return null;
   return value === "yes";
+}
+
+function draftGramTotal(draft: TechCardDraft, options: ComponentOption[]): number {
+  let total = gramTotal(weighedLines(draft.lines.filter((line) => !isSectionComponent(line.component)), options));
+  for (const section of draft.sections) {
+    total += gramTotal(weighedLines(section.lines, options));
+  }
+  return Math.round(total * 1000) / 1000;
 }
 
 function componentsTotal(row: TechCard): number {
@@ -1017,7 +1034,7 @@ export function TechCardsPanel() {
           shelf_life_seconds: shelfLifeSeconds(draft.shelf_life_days, draft.shelf_life_hours),
           storage_temperature: draft.storage_temperature.trim() === "" ? null : draft.storage_temperature.trim(),
           is_active: draft.is_active,
-          lines: savedBaseLines(draft),
+          lines: savedBaseLines(draft, options),
           sections: draft.sections.map((section) => ({
             name: section.name,
             method: section.method,
@@ -1397,6 +1414,11 @@ export function TechCardsPanel() {
               }
               lines={current.lines}
               sections={current.sections}
+              gramsPerUnit={(ingredientId) => {
+                const row = (ingredients.list.data ?? []).find((item) => item.id === ingredientId);
+                if (row === undefined) return null;
+                return row.grams_per_unit;
+              }}
               method={current.method}
               onEdit={openEdit}
               onClone={canEdit ? openClone : null}
@@ -1426,6 +1448,7 @@ export function TechCardsPanel() {
                         </span>
                       </p>
                       <RecipeTable
+                        total={null}
                         rows={link.modifiers.flatMap((modifier): RecipeTableRow[] => {
                           const composition = current.modifier_lines.filter(
                             (line) => line.modifier === modifier.id,
@@ -1586,12 +1609,32 @@ export function TechCardsPanel() {
             </Field>
             {draft.kind === "weighted" ? (
               <Field label={t("basisWeight")} className="sm:col-span-3">
-                <Input
-                  required
-                  inputMode="decimal"
-                  value={draft.basis_weight_kg}
-                  onChange={(event) => setDraft({ ...draft, basis_weight_kg: event.target.value })}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    required
+                    inputMode="decimal"
+                    value={draft.basis_weight_kg}
+                    onChange={(event) => setDraft({ ...draft, basis_weight_kg: event.target.value })}
+                    className="min-w-0 flex-1"
+                  />
+                  <span className="shrink-0 text-sm tabular-nums text-[var(--muted-2)]">
+                    {t("basisKg", { weight: formatQuantity(String(draftGramTotal(draft, options) / 1000)) })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={t("applyWeight")}
+                    onClick={() =>
+                      setDraft({
+                        ...draft,
+                        basis_weight_kg: formatQuantity(String(draftGramTotal(draft, options) / 1000)),
+                      })
+                    }
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
               </Field>
             ) : (
               <Field label={t("basisQuantity")} className="sm:col-span-3">
@@ -1678,7 +1721,7 @@ export function TechCardsPanel() {
               : t("baseCompositionPerPiece", { count: draft.basis_quantity })}
           </CardTitle>
           <ComponentLinesEditor
-            lines={baseLines(draft)}
+            lines={baseLines(draft, options)}
             onChange={(lines) => setDraft({ ...draft, lines })}
             options={[...sectionOptions(draft.sections, t("section")), ...options]}
             extraColumn="loss"
@@ -1690,6 +1733,7 @@ export function TechCardsPanel() {
             suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
             keepSelectedOnDigit={true}
             quantityRequired={false}
+            showTotalWeight={true}
           />
 
           <CardTitle>{t("sections")}</CardTitle>
@@ -1749,6 +1793,7 @@ export function TechCardsPanel() {
                 suggestionPending={ingredients.save.isPending || semiProducts.save.isPending}
                 keepSelectedOnDigit={true}
                 quantityRequired={false}
+                showTotalWeight={true}
               />
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium uppercase tracking-wide text-[var(--ink)]/60">{t("method")}</span>
