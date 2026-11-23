@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   BookOpen,
   Check,
@@ -67,7 +67,7 @@ import {
   lossPercentText,
 } from "@/components/menu/ui";
 import { useCan } from "@/hooks/useAuth";
-import { useRouter } from "@/i18n/navigation";
+import { getPathname, useRouter } from "@/i18n/navigation";
 import {
   useIngredients,
   useMissingModifierLines,
@@ -506,6 +506,7 @@ export function TechCardsPanel() {
   const t = useTranslations("stock");
   const tForms = useTranslations("forms");
   const units = useTranslations("stock.units");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const techCards = useTechCardList();
@@ -923,6 +924,10 @@ export function TechCardsPanel() {
       { onSuccess: () => setSelected([]) },
     );
   };
+  const printSelected = () => {
+    const path = getPathname({ locale, href: `/menu/print?ids=${selected.join(",")}` });
+    window.open(path, "_blank", "noreferrer");
+  };
 
   const options = [
     ...componentOptions(
@@ -1314,6 +1319,9 @@ export function TechCardsPanel() {
             {assignError ? (
               <p className="text-sm font-medium text-[var(--danger)]">{t("chooseCategory")}</p>
             ) : null}
+            <Button type="button" variant="outline" onClick={printSelected}>
+              {t("print")}
+            </Button>
             <Button type="button" disabled={techCards.assignCategory.isPending} onClick={assignSelected}>
               {t("assignCategory")}
             </Button>

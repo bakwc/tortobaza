@@ -81,7 +81,7 @@ function ChapterBlock({ chapter }: { chapter: PrintChapter }) {
   );
 }
 
-export function TechCardPrint({ card }: { card: TechCard }) {
+export function TechCardPrint({ card, showPrintButton }: { card: TechCard; showPrintButton: boolean }) {
   const t = useTranslations("stock");
   const basis =
     card.kind === "weighted" && card.basis_weight_kg !== null
@@ -109,11 +109,13 @@ export function TechCardPrint({ card }: { card: TechCard }) {
       <article className="bg-white text-black [--ink:#111111]">
         <div className="flex items-start justify-between gap-4">
           <img src="/logo_print.png" alt="Sweet & Chill" className="h-16 w-auto" />
-          <div className="print:hidden">
-            <Button type="button" onClick={() => window.print()}>
-              {t("print")}
-            </Button>
-          </div>
+          {showPrintButton ? (
+            <div className="print:hidden">
+              <Button type="button" onClick={() => window.print()}>
+                {t("print")}
+              </Button>
+            </div>
+          ) : null}
         </div>
         <h1 className="mt-4 text-center text-xl font-bold uppercase tracking-wide">{card.name}</h1>
         {basis ? <p className="mt-1 text-center text-sm">{basis}</p> : null}

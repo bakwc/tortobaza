@@ -25,7 +25,11 @@ function TechCardPrintBody({ id }: { id: number }) {
 
   return (
     <QueryState isLoading={techCards.list.isLoading} isError={techCards.list.isError}>
-      {card === null ? <p className="text-sm text-[var(--danger)]">{t("loadError")}</p> : <TechCardPrint card={card} />}
+      {card === null ? (
+        <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>
+      ) : (
+        <TechCardPrint card={card} showPrintButton />
+      )}
     </QueryState>
   );
 }
