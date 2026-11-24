@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
@@ -218,7 +218,7 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 1, 1), contact="555666666", cake_price=Decimal("200.00"))
         _order(date=date(2026, 2, 1), contact="555777777", cake_price=Decimal("80.00"))
         _order(date=date(2026, 10, 1), contact="555888888", cake_price=Decimal("30.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 2)
         self.assertEqual(report["clients"], 7)
         self.assertEqual(report["repeat_clients"], 2)
@@ -242,7 +242,7 @@ class AnalyticsClientTests(TestCase):
     def test_phone_label_does_not_merge_different_phones(self):
         _order(date=date(2026, 9, 6), contact="Номер телефона: +995 593 514 288", cake_price=Decimal("10.00"))
         _order(date=date(2026, 11, 5), contact="Номер телефона 557213780", cake_price=Decimal("20.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 2)
         self.assertEqual(report["repeat_clients"], 0)
@@ -250,7 +250,7 @@ class AnalyticsClientTests(TestCase):
     def test_same_nickname_without_phone_is_one_client(self):
         _order(date=date(2026, 6, 1), contact="-", nickname="oxxrana", cake_price=Decimal("10.00"))
         _order(date=date(2026, 7, 1), contact="-", nickname="Oxxrana", cake_price=Decimal("20.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 1)
         self.assertEqual(report["repeat_clients"], 1)
@@ -262,7 +262,7 @@ class AnalyticsClientTests(TestCase):
     def test_nickname_joins_single_phone(self):
         _order(date=date(2026, 6, 1), contact="555111111", nickname="jastdexter", cake_price=Decimal("10.00"))
         _order(date=date(2026, 7, 1), contact="-", nickname="jastdexter", cake_price=Decimal("15.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 1)
         row = report["top_orders"][0]
@@ -274,7 +274,7 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 6, 1), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 2), contact="-", nickname="Флао", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 3), contact="-", nickname="Аля", cake_price=Decimal("10.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 3)
         self.assertEqual(report["clients"], 0)
 
@@ -283,7 +283,7 @@ class AnalyticsClientTests(TestCase):
         _order(date=date(2026, 6, 2), contact="555222222", nickname="sofia", cake_price=Decimal("10.00"))
         _order(date=date(2026, 6, 3), contact="-", nickname="sofia", cake_price=Decimal("12.00"))
         _order(date=date(2026, 6, 4), contact="-", nickname="Sofia", cake_price=Decimal("13.00"))
-        report = clients()
+        report = clients(date(2026, 11, 25))
         self.assertEqual(report["unknown_orders"], 0)
         self.assertEqual(report["clients"], 3)
         self.assertEqual(len(report["top_orders"]), 1)
@@ -291,6 +291,43 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(row["phones"], [])
         self.assertEqual(row["orders"], 2)
         self.assertEqual(row["revenue"], "25.00")
+
+    def test_retention_counts_each_client_once_inside_the_window(self):
+        first = date(2026, 1, 1)
+        _order(date=first, contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=20), contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=80), contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=date(2026, 1, 15), contact="555222222", cake_price=Decimal("10.00"))
+        february = date(2026, 2, 1)
+        _order(date=february, contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=february + timedelta(days=10), contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=february + timedelta(days=40), contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=february + timedelta(days=70), contact="555333333", cake_price=Decimal("10.00"))
+        report = clients(date(2026, 5, 2))
+        january = next(row for row in report["cohorts"] if row["month"] == "2026-01")
+        february_row = next(row for row in report["cohorts"] if row["month"] == "2026-02")
+        self.assertEqual(january["clients"], 2)
+        self.assertEqual(
+            [(cell["offset"], cell["observed"], cell["count"], cell["share"]) for cell in january["cells"]],
+            [
+                (30, True, 1, "0.5"),
+                (60, True, 1, "0.5"),
+                (90, True, 1, "0.5"),
+                (180, False, None, None),
+                (365, False, None, None),
+            ],
+        )
+        self.assertEqual(february_row["clients"], 1)
+        self.assertEqual(
+            [(cell["offset"], cell["observed"], cell["count"], cell["share"]) for cell in february_row["cells"]],
+            [
+                (30, True, 1, "1"),
+                (60, True, 1, "1"),
+                (90, True, 1, "1"),
+                (180, False, None, None),
+                (365, False, None, None),
+            ],
+        )
 
 
 class AnalyticsApiTests(TestCase):

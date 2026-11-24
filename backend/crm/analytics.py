@@ -66,6 +66,7 @@ _MONEY = Decimal("0.01")
 _KILO = Decimal("0.001")
 _THOUSAND = Decimal("1000")
 _NO_TECH_CARD = "no_tech_card"
+_RETENTION_DAYS = (30, 60, 90, 180, 365)
 
 
 class Customer:
@@ -223,7 +224,7 @@ def production(month: str, today: date) -> dict:
     }
 
 
-def clients() -> dict:
+def clients(today: date) -> dict:
     orders = _live_orders()
     customers, unknown = _link_customers(orders)
     known_orders = len(orders) - unknown
@@ -245,7 +246,7 @@ def clients() -> dict:
         "known_revenue": _money(known_revenue),
         "repeat_revenue": _money(repeat_revenue),
         "months": _movement(customers, months),
-        "cohorts": _cohorts(customers, months),
+        "cohorts": _cohorts(customers, today),
         "gaps": _gaps(customers),
         "frequency": _frequency(customers),
         "top_revenue": [_customer_row(customer) for customer in _top_revenue(customers)],
@@ -800,39 +801,30 @@ def _movement(customers: dict[str, Customer], months: list[str]) -> list[dict]:
     ]
 
 
-def _month_index(month: str) -> int:
-    year_str, month_str = month.split("-")
-    return int(year_str) * 12 + int(month_str)
+def _retained(customer: Customer, days: int) -> bool:
+    first = customer.orders[0].date
+    for order in customer.orders[1:]:
+        gap = (order.date - first).days
+        if 0 <= gap <= days:
+            return True
+    return False
 
 
-def _cohorts(customers: dict[str, Customer], months: list[str]) -> list[dict]:
+def _cohorts(customers: dict[str, Customer], today: date) -> list[dict]:
     groups: dict[str, list[Customer]] = defaultdict(list)
     for customer in customers.values():
         first = customer.orders[0].date
         groups[f"{first.year:04d}-{first.month:02d}"].append(customer)
-    cohort_months = sorted(groups)
-    if not cohort_months or not months:
-        return []
-    max_index = _month_index(months[-1])
-    offsets = list(range(max_index - _month_index(cohort_months[0]) + 1))
     rows = []
-    for month in cohort_months:
+    for month in sorted(groups):
         members = groups[month]
-        first_index = _month_index(month)
-        latest = []
-        for customer in members:
-            last_offset = 0
-            for order in customer.orders:
-                order_month = f"{order.date.year:04d}-{order.date.month:02d}"
-                last_offset = max(last_offset, _month_index(order_month) - first_index)
-            latest.append(last_offset)
+        age = min((today - customer.orders[0].date).days for customer in members)
         cells = []
-        for offset in offsets:
-            observed = first_index + offset <= max_index
-            if not observed:
+        for offset in _RETENTION_DAYS:
+            if age < offset:
                 cells.append({"offset": offset, "count": None, "share": None, "observed": False})
                 continue
-            count = sum(1 for value in latest if value >= offset)
+            count = sum(1 for customer in members if _retained(customer, offset))
             cells.append(
                 {
                     "offset": offset,

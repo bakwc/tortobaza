@@ -889,7 +889,7 @@ class AnalyticsClientsView(APIView):
     permission_classes = [IsAuthenticated, SectionPermission("analytics")]
 
     def get(self, request):
-        return Response(analytics_clients())
+        return Response(analytics_clients(_tbilisi_now().date()))
 
 
 class AnalyticsProductsView(APIView):
