@@ -7,6 +7,7 @@ from tortobaza.finance_db import use_finance_db
 
 _FINANCE_API_PREFIXES = (
     "/api/crm/finance/accounts/",
+    "/api/crm/finance/order-links/",
     "/api/crm/finance/transactions/",
 )
 _FINANCE_SCOPES = {

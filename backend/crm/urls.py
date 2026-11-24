@@ -43,6 +43,7 @@ from crm.views import (
     CrmOrderMapView,
     ExchangeRatesView,
     FinanceAccountsView,
+    FinanceOrderLinksView,
     FinanceTransactionDetailView,
     FinanceTransactionSearchView,
     FinanceTransactionsView,
@@ -129,6 +130,11 @@ urlpatterns = [
         "crm/finance/transactions/",
         FinanceTransactionsView.as_view(),
         name="crm-finance-transactions",
+    ),
+    path(
+        "crm/finance/order-links/",
+        FinanceOrderLinksView.as_view(),
+        name="crm-finance-order-links",
     ),
     path(
         "crm/finance/exchange-rates/",

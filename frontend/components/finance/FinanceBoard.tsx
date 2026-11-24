@@ -21,13 +21,14 @@ import type { FinanceScope } from "@/lib/api/endpoints";
 import type { FinanceTransaction } from "@/lib/api/types";
 import { formatCrmMonth, getTbilisiTodayIsoDate } from "@/lib/format";
 
-export type FinanceSection = "operations" | "income" | "expenses" | "accounts";
+export type FinanceSection = "operations" | "income" | "expenses" | "accounts" | "orderLinks";
 
 const SECTIONS: { section: FinanceSection; href: string; label: FinanceSection }[] = [
   { section: "operations", href: "/finance", label: "operations" },
   { section: "income", href: "/finance/income", label: "income" },
   { section: "expenses", href: "/finance/expenses", label: "expenses" },
   { section: "accounts", href: "/finance/accounts", label: "accounts" },
+  { section: "orderLinks", href: "/finance/order-links", label: "orderLinks" },
 ];
 
 const SCOPES: FinanceScope[] = ["business", "personal"];
@@ -44,6 +45,30 @@ function sectionHref(
   return `${href}?${params.toString()}`;
 }
 
+export function FinanceShell({
+  section,
+  children,
+}: {
+  section: FinanceSection;
+  children: (period: FinancePeriod) => ReactNode;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+      <FinanceAuthGate>
+        <Suspense
+          fallback={
+            <div className="flex min-h-[40vh] items-center justify-center">
+              <Spinner className="h-6 w-6 text-[var(--brand)]" />
+            </div>
+          }
+        >
+          <FinanceShellContent section={section}>{children}</FinanceShellContent>
+        </Suspense>
+      </FinanceAuthGate>
+    </div>
+  );
+}
+
 export function FinanceBoard({
   section,
   children,
@@ -56,32 +81,22 @@ export function FinanceBoard({
   ) => ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
-      <FinanceAuthGate>
-        <Suspense
-          fallback={
-            <div className="flex min-h-[40vh] items-center justify-center">
-              <Spinner className="h-6 w-6 text-[var(--brand)]" />
-            </div>
-          }
-        >
-          <FinanceBoardContent section={section}>{children}</FinanceBoardContent>
-        </Suspense>
-      </FinanceAuthGate>
-    </div>
+    <FinanceShell section={section}>
+      {(period) => (
+        <FinanceBoardData period={period}>
+          {(transactions, rates) => children(transactions, period, rates)}
+        </FinanceBoardData>
+      )}
+    </FinanceShell>
   );
 }
 
-function FinanceBoardContent({
+function FinanceShellContent({
   section,
   children,
 }: {
   section: FinanceSection;
-  children: (
-    transactions: FinanceTransaction[],
-    period: FinancePeriod,
-    rates: Record<string, string>,
-  ) => ReactNode;
+  children: (period: FinancePeriod) => ReactNode;
 }) {
   const t = useTranslations("finance");
   const locale = useLocale();
@@ -89,8 +104,6 @@ function FinanceBoardContent({
   const period = useFinancePeriod();
   const { scope, setScope } = useFinanceScope();
   const currentQuery = searchParams.toString();
-  const query = useFinanceTransactions(period, scope);
-  const ratesQuery = useExchangeRates();
   const today = getTbilisiTodayIsoDate();
   const isCurrentMonth = period.month === today.slice(0, 7);
 
@@ -172,15 +185,32 @@ function FinanceBoardContent({
         </div>
       </div>
 
-      {query.isError || ratesQuery.isError ? (
-        <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>
-      ) : !query.data || !ratesQuery.data ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Spinner className="h-6 w-6 text-[var(--brand)]" />
-        </div>
-      ) : (
-        children(query.data.transactions, period, ratesQuery.data.rates)
-      )}
+      {children(period)}
     </div>
   );
+}
+
+function FinanceBoardData({
+  period,
+  children,
+}: {
+  period: FinancePeriod;
+  children: (transactions: FinanceTransaction[], rates: Record<string, string>) => ReactNode;
+}) {
+  const t = useTranslations("finance");
+  const { scope } = useFinanceScope();
+  const query = useFinanceTransactions(period, scope);
+  const ratesQuery = useExchangeRates();
+
+  if (query.isError || ratesQuery.isError) {
+    return <p className="text-sm text-[var(--danger)]">{t("loadError")}</p>;
+  }
+  if (!query.data || !ratesQuery.data) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Spinner className="h-6 w-6 text-[var(--brand)]" />
+      </div>
+    );
+  }
+  return children(query.data.transactions, ratesQuery.data.rates);
 }

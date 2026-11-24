@@ -51,6 +51,7 @@ import {
   SectionPermissionSchema,
   ExchangeRatesSchema,
   FinanceAccountSchema,
+  FinanceOrderLinksResponseSchema,
   FinanceTransactionSchema,
   FinanceTransactionSearchResultSchema,
   FinanceTransactionsResponseSchema,
@@ -123,6 +124,7 @@ import {
   type SectionPermissionOption,
   type ExchangeRates,
   type FinanceAccount,
+  type FinanceOrderLinksResponse,
   type FinanceTransaction,
   type FinanceTransactionSearchResult,
   type FinanceTransactionWriteBody,
@@ -915,6 +917,16 @@ export function endpoints(fetcher: Fetcher) {
         searchParams: { start, end, scope },
       });
       return parse(FinanceTransactionsResponseSchema, raw);
+    },
+
+    async getFinanceOrderLinks(
+      month: string,
+      scope: FinanceScope,
+    ): Promise<FinanceOrderLinksResponse> {
+      const raw = await fetcher<unknown>("/api/crm/finance/order-links/", {
+        searchParams: { month, scope },
+      });
+      return parse(FinanceOrderLinksResponseSchema, raw);
     },
 
     async getFinanceAccounts(scope: FinanceScope): Promise<FinanceAccount[]> {

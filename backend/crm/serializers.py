@@ -1118,6 +1118,46 @@ class FinanceTransactionsResponseSerializer(serializers.Serializer):
     transactions = FinanceTransactionSerializer(many=True)
 
 
+class FinanceOrderLinksQuerySerializer(serializers.Serializer):
+    month = serializers.RegexField(regex=r"^\d{4}-(0[1-9]|1[0-2])$")
+
+
+class FinanceOrderLinkTransactionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    account_name = serializers.CharField()
+    income_type = serializers.CharField()
+
+
+class FinanceOrderLinkSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    date = serializers.DateField()
+    time_start = serializers.TimeField(allow_null=True)
+    time_end = serializers.TimeField(allow_null=True)
+    when_ready = serializers.BooleanField()
+    contact = serializers.CharField()
+    cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    prepayment = serializers.DecimalField(max_digits=10, decimal_places=2)
+    is_paid = serializers.BooleanField()
+    payment_type = serializers.CharField()
+    payment_date = serializers.DateField(allow_null=True)
+    transactions = FinanceOrderLinkTransactionSerializer(many=True)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        user = _request_user(self.context)
+        if user is None or not can_see_order_contacts(user, instance.fulfillment_type):
+            data["contact"] = ""
+        return data
+
+
+class FinanceOrderLinksResponseSerializer(serializers.Serializer):
+    month = serializers.CharField()
+    orders = FinanceOrderLinkSerializer(many=True)
+
+
 class FinanceTransactionSearchQuerySerializer(serializers.Serializer):
     q = serializers.CharField(allow_blank=True)
 

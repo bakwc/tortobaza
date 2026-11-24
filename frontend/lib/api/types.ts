@@ -1185,6 +1185,46 @@ export const FinanceTransactionsResponseSchema = z.object({
   transactions: z.array(FinanceTransactionSchema),
 });
 
+export const FinanceOrderLinkTransactionSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  amount: z.string(),
+  account_name: z.string(),
+  income_type: z.string(),
+});
+
+export const FinanceOrderLinkSchema = z.object({
+  id: z.number(),
+  date: z.string(),
+  time_start: z.string().nullable(),
+  time_end: z.string().nullable(),
+  when_ready: z.boolean(),
+  contact: z.string(),
+  cake_price: z.string(),
+  delivery_price: z.string(),
+  prepayment: z.string(),
+  is_paid: z.boolean(),
+  payment_type: z.enum([
+    "unknown",
+    "cash",
+    "terminal",
+    "tbc",
+    "bog",
+    "tbank",
+    "flowwow",
+    "crypto",
+    "paypal",
+    "online",
+  ]),
+  payment_date: z.string().nullable(),
+  transactions: z.array(FinanceOrderLinkTransactionSchema),
+});
+
+export const FinanceOrderLinksResponseSchema = z.object({
+  month: z.string(),
+  orders: z.array(FinanceOrderLinkSchema),
+});
+
 export const FinanceAccountSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -1367,6 +1407,8 @@ export type AnalyticsProductKind = z.infer<typeof AnalyticsProductKindSchema>;
 export type AnalyticsCustomer = z.infer<typeof AnalyticsCustomerSchema>;
 export type FinanceTransaction = z.infer<typeof FinanceTransactionSchema>;
 export type FinanceTransactionsResponse = z.infer<typeof FinanceTransactionsResponseSchema>;
+export type FinanceOrderLink = z.infer<typeof FinanceOrderLinkSchema>;
+export type FinanceOrderLinksResponse = z.infer<typeof FinanceOrderLinksResponseSchema>;
 export type FinanceAccount = z.infer<typeof FinanceAccountSchema>;
 export type FinanceTransactionSearchResult = z.infer<typeof FinanceTransactionSearchResultSchema>;
 

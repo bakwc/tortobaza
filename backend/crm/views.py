@@ -96,6 +96,8 @@ from crm.serializers import (
     FinanceTransactionAccountDetailSerializer,
     FinanceTransactionSearchQuerySerializer,
     FinanceTransactionSearchSerializer,
+    FinanceOrderLinksQuerySerializer,
+    FinanceOrderLinksResponseSerializer,
     FinanceTransactionSerializer,
     FinanceTransactionsQuerySerializer,
     FinanceTransactionsResponseSerializer,
@@ -747,6 +749,80 @@ class CrmSalaryDetailView(APIView):
                     "total_hours": result["total_hours"],
                     "total_money": result["total_money"],
                 }
+            ).data
+        )
+
+
+class FinanceOrderLinkRow:
+    def __init__(self, order: CrmOrder, transactions: list[dict]):
+        self.id = order.id
+        self.date = order.date
+        self.time_start = order.time_start
+        self.time_end = order.time_end
+        self.when_ready = order.when_ready
+        self.contact = order.contact
+        self.cake_price = order.cake_price
+        self.delivery_price = order.delivery_price
+        self.prepayment = order.prepayment
+        self.is_paid = order.is_paid
+        self.payment_type = order.payment_type
+        self.payment_date = order.payment_date
+        self.fulfillment_type = order.fulfillment_type
+        self.transactions = transactions
+
+
+class FinanceOrderLinksView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("finance")]
+
+    def get(self, request):
+        query_serializer = FinanceOrderLinksQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        month = query_serializer.validated_data["month"]
+        year_str, month_str = month.split("-")
+        year = int(year_str)
+        month_num = int(month_str)
+        start_date = date(year, month_num, 1)
+        end_date = date(year, month_num, monthrange(year, month_num)[1])
+        orders = list(
+            CrmOrder.objects.filter(deleted=False, date__gte=start_date, date__lte=end_date)
+        )
+        order_ids = [order.pk for order in orders]
+        through = FinancialTransaction.crm_orders.through
+        pairs = through.objects.filter(crmorder_id__in=order_ids).values_list(
+            "crmorder_id",
+            "financialtransaction_id",
+        )
+        tx_ids = {tx_id for _order_id, tx_id in pairs}
+        transactions = {
+            tx.pk: tx
+            for tx in FinancialTransaction.objects.select_related("account").filter(pk__in=tx_ids)
+        }
+        by_order: dict[int, list[FinancialTransaction]] = {order.pk: [] for order in orders}
+        for order_id, tx_id in pairs:
+            by_order[order_id].append(transactions[tx_id])
+        rows = []
+        for order in orders:
+            linked = sorted(by_order[order.pk], key=lambda tx: (tx.date, tx.pk))
+            rows.append(
+                FinanceOrderLinkRow(
+                    order,
+                    [
+                        {
+                            "id": tx.pk,
+                            "date": tx.date,
+                            "amount": tx.amount,
+                            "account_name": tx.account.name,
+                            "income_type": tx.income_type,
+                        }
+                        for tx in linked
+                    ],
+                )
+            )
+        return Response(
+            FinanceOrderLinksResponseSerializer(
+                {"month": month, "orders": rows},
+                context={"request": request},
             ).data
         )
 

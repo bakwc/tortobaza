@@ -5,11 +5,20 @@ import type { FinanceScope } from "@/lib/api/endpoints";
 import { api } from "@/lib/api";
 import type {
   FinanceAccount,
+  FinanceOrderLinksResponse,
   FinanceTransactionSearchResult,
   FinanceTransactionWriteBody,
   FinanceTransactionsResponse,
 } from "@/lib/api/types";
 import type { FinancePeriod } from "@/hooks/useFinancePeriod";
+
+export function useFinanceOrderLinks(month: string, scope: FinanceScope) {
+  return useQuery<FinanceOrderLinksResponse>({
+    queryKey: ["finance-order-links", scope, month] as const,
+    queryFn: () => api.getFinanceOrderLinks(month, scope),
+    staleTime: 0,
+  });
+}
 
 export function useFinanceTransactions(period: FinancePeriod, scope: FinanceScope) {
   return useQuery<FinanceTransactionsResponse>({
