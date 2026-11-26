@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.permissions import grant
+from accounts.permissions import ORDER_STATUS_CODES, grant
 from crm.flowwow import _upsert_crm_order
 from crm.models import CrmOrder, CrmOrderEvent
 from crm.tests.test_flowwow_orders import _flowwow_order, _image_response
@@ -22,7 +22,7 @@ class CrmOrderHistoryTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
-        grant(self.user, "view_orders")
+        grant(self.user, "view_orders", *ORDER_STATUS_CODES)
         grant(self.admin, "edit_orders")
 
     def _order_payload(self):

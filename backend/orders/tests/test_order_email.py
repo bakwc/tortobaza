@@ -8,7 +8,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from accounts.permissions import grant
+from accounts.permissions import ORDER_STATUS_CODES, grant
 from cart.models import Cart, CartItem
 from catalog.models import Category, Product
 from crm.models import CrmOrder
@@ -119,7 +119,7 @@ class OrderEmailTests(TestCase):
         order = create_order_from_cart(self.cart, self._payload(), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
         user = User.objects.create_user(username="worker", password="password")
-        grant(user, "view_orders")
+        grant(user, "view_orders", *ORDER_STATUS_CODES)
         self.client.force_authenticate(user=user)
         with self.captureOnCommitCallbacks(execute=True):
             first = self.client.patch(

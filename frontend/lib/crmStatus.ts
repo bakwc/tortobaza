@@ -117,6 +117,17 @@ const TONES: Record<CrmOrderStatus, CrmOrderStatusTone> = {
   },
 };
 
+export function canSetCrmOrderStatus(
+  permissions: readonly string[],
+  canEditOrders: boolean,
+  fulfillmentType: "delivery" | "pickup",
+  status: CrmOrderStatus,
+): boolean {
+  if (canEditOrders) return true;
+  const party = fulfillmentType === "pickup" ? "pickup" : "delivery";
+  return permissions.includes(`set_order_${party}_status_${status}`);
+}
+
 export function crmOrderSelectableStatuses(
   status: CrmOrderStatus,
 ): readonly CrmOrderStatus[] {

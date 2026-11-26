@@ -47,7 +47,7 @@ import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
 import { CrmReadyPhotosDialog } from "@/components/crm/CrmReadyPhotosDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
-import { useCan, useCanSeeOrderAddress, useCanSeeOrderContacts } from "@/hooks/useAuth";
+import { useCan, useCanSeeOrderAddress, useCanSeeOrderContacts, useCurrentUser } from "@/hooks/useAuth";
 import {
   useCrmExpenses,
   useCrmOrders,
@@ -62,6 +62,7 @@ import {
   CRM_ORDER_NEXT_STATUS,
   CRM_ORDER_NEXT_STEP_MESSAGE_KEYS,
   CRM_ORDER_STATUS_MESSAGE_KEYS,
+  canSetCrmOrderStatus,
   crmOrderCookingIsPast,
   crmOrderDeliveryIsPast,
   crmOrderSelectableStatuses,
@@ -358,15 +359,23 @@ function CrmOrderStatusMenu({
   isPatching,
   onSetStatus,
   onTogglePaid,
+  canSetStatus,
 }: {
   order: CrmOrder;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
   onTogglePaid: () => void;
+  canSetStatus: (status: CrmOrderStatus) => boolean;
 }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
   const [open, setOpen] = useState(false);
+  const selectable = crmOrderSelectableStatuses(order.status).filter(
+    (status) => status === order.status || canSetStatus(status),
+  );
+  if (!canEditOrders && !selectable.some((status) => status !== order.status)) {
+    return null;
+  }
 
   return (
     <div className="relative">
@@ -384,7 +393,7 @@ function CrmOrderStatusMenu({
       </Button>
       {open ? (
         <div className="absolute bottom-full right-0 z-20 mb-2 min-w-[220px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
-          {crmOrderSelectableStatuses(order.status).map((status) => (
+          {selectable.map((status) => (
             <button
               key={status}
               type="button"
@@ -462,6 +471,10 @@ function CrmOrderCard({
 }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
+  const currentUser = useCurrentUser();
+  const permissions = currentUser.data?.permissions ?? [];
+  const canSetStatus = (status: CrmOrderStatus) =>
+    canSetCrmOrderStatus(permissions, canEditOrders, order.fulfillment_type, status);
   const canViewDeliveryTime = useCan(
     order.fulfillment_type === "pickup" ? "view_order_pickup_time" : "view_order_delivery_time",
   );
@@ -1384,7 +1397,7 @@ function CrmOrderCard({
               {isPatching ? <Spinner className="h-4 w-4 text-[var(--brand)]" /> : null}
             </div>
             <div className="flex items-stretch justify-end gap-2 sm:gap-3">
-              {nextStatus && NextStepIcon ? (
+              {nextStatus && NextStepIcon && canSetStatus(nextStatus) ? (
                 <Button
                   type="button"
                   size="lg"
@@ -1413,6 +1426,7 @@ function CrmOrderCard({
                 isPatching={isPatching}
                 onSetStatus={requestStatus}
                 onTogglePaid={handlePaidClick}
+                canSetStatus={canSetStatus}
               />
             </div>
           </div>

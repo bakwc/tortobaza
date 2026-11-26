@@ -3,6 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.models import chef_identity
 from accounts.permissions import (
@@ -10,6 +11,7 @@ from accounts.permissions import (
     can_see_order_address,
     can_see_order_contacts,
     can_see_order_price,
+    can_set_order_status,
     can_view,
     redact_order_field_changes,
 )
@@ -670,6 +672,20 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
+        if self.instance is not None:
+            status = attrs.get("status")
+            if status is not None and status != self.instance.status:
+                target = status
+            elif attrs.get("take_in_work") and self.instance.status == CrmOrder.STATUS_NEW:
+                target = CrmOrder.STATUS_IN_WORK
+            else:
+                target = None
+            if target is not None and not can_set_order_status(
+                self.context["request"].user,
+                self.instance.fulfillment_type,
+                target,
+            ):
+                raise PermissionDenied()
         ensure_ready_photos(self.instance, attrs)
         return attrs
 

@@ -12,7 +12,7 @@ from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
-from accounts.permissions import ORDER_PARTY_CODES, grant
+from accounts.permissions import ORDER_PARTY_CODES, ORDER_STATUS_CODES, grant
 from crm.models import CrmOrder, CrmOrderImage, CrmOrderReadyImage, ResolvedGoogleAddress, ResolvedTelegramPhone
 
 _TB = ZoneInfo("Asia/Tbilisi")
@@ -23,7 +23,7 @@ class CrmOrdersApiTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(username="worker", password="password")
         self.admin = User.objects.create_user(username="admin", password="password", is_staff=True)
-        grant(self.user, "view_orders", *ORDER_PARTY_CODES)
+        grant(self.user, "view_orders", *ORDER_PARTY_CODES, *ORDER_STATUS_CODES)
         grant(self.admin, "edit_orders")
 
     def test_unauthenticated_access_denied(self):
@@ -842,7 +842,7 @@ class CrmOrdersApiTests(TestCase):
     def test_patch_status_delivered_replaces_existing_delivered_by(self):
         UserProfile.objects.create(user=self.user, telegram_username="courier_one")
         other = User.objects.create_user(username="other", password="password")
-        grant(other, "view_orders")
+        grant(other, "view_orders", *ORDER_STATUS_CODES)
         UserProfile.objects.create(
             user=other,
             telegram_username="courier_two",

@@ -149,6 +149,28 @@ ORDER_PARTY_CODES = (
     "view_order_pickup_price",
 )
 
+_ORDER_STATUS_VALUES = (
+    "unconfirmed",
+    "new",
+    "in_work",
+    "ready",
+    "client_approved",
+    "in_delivery",
+    "delivered",
+)
+
+ORDER_STATUS_CODES = tuple(
+    f"set_order_{party}_status_{status}"
+    for party in ("delivery", "pickup")
+    for status in _ORDER_STATUS_VALUES
+)
+
+
+def can_set_order_status(user, fulfillment_type: str, status: str) -> bool:
+    if can_edit(user, "orders"):
+        return True
+    return user.has_perm(f"accounts.set_order_{_order_party(fulfillment_type)}_status_{status}")
+
 
 def grant(user, *codenames: str) -> None:
     group, _created = Group.objects.get_or_create(name=f"test-{user.pk}")

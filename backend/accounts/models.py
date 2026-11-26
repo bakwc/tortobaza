@@ -59,7 +59,7 @@ class SectionAccess(models.Model):
         managed = False
         default_permissions = ()
         permissions = [
-            ("view_orders", _("Orders: view and change status")),
+            ("view_orders", _("Orders: view")),
             ("edit_orders", _("Orders: create, edit, delete")),
             ("view_menu", _("Menu: view")),
             ("edit_menu", _("Menu: edit")),
@@ -97,6 +97,20 @@ class SectionAccess(models.Model):
             ("view_order_pickup_price", _("Orders: view pickup price")),
             ("view_order_payment_link", _("Orders: view payment link")),
             ("edit_order_payment_link", _("Orders: create payment link")),
+            ("set_order_delivery_status_unconfirmed", _("Orders: set delivery status to unconfirmed")),
+            ("set_order_delivery_status_new", _("Orders: set delivery status to new")),
+            ("set_order_delivery_status_in_work", _("Orders: set delivery status to in work")),
+            ("set_order_delivery_status_ready", _("Orders: set delivery status to ready")),
+            ("set_order_delivery_status_client_approved", _("Orders: set delivery status to client approved")),
+            ("set_order_delivery_status_in_delivery", _("Orders: set delivery status to in delivery")),
+            ("set_order_delivery_status_delivered", _("Orders: set delivery status to delivered")),
+            ("set_order_pickup_status_unconfirmed", _("Orders: set pickup status to unconfirmed")),
+            ("set_order_pickup_status_new", _("Orders: set pickup status to new")),
+            ("set_order_pickup_status_in_work", _("Orders: set pickup status to in work")),
+            ("set_order_pickup_status_ready", _("Orders: set pickup status to ready")),
+            ("set_order_pickup_status_client_approved", _("Orders: set pickup status to client approved")),
+            ("set_order_pickup_status_in_delivery", _("Orders: set pickup status to in delivery")),
+            ("set_order_pickup_status_delivered", _("Orders: set pickup status to delivered")),
         ]
 
     def __str__(self) -> str:

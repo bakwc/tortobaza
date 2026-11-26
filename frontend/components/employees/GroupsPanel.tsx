@@ -32,8 +32,27 @@ const ORDER_INFO_SECTION: Record<string, string> = {
   view_order_pickup_price: "order_info_pickup",
 };
 
+const ORDER_STATUS_VALUES = [
+  "unconfirmed",
+  "new",
+  "in_work",
+  "ready",
+  "client_approved",
+  "in_delivery",
+  "delivered",
+] as const;
+
+const ORDER_STATUS_SECTION: Record<string, string> = Object.fromEntries(
+  (["delivery", "pickup"] as const).flatMap((party) =>
+    ORDER_STATUS_VALUES.map((status) => [
+      `set_order_${party}_status_${status}`,
+      `order_status_${party}`,
+    ]),
+  ),
+);
+
 function sectionKey(code: string): string {
-  const info = ORDER_INFO_SECTION[code];
+  const info = ORDER_INFO_SECTION[code] ?? ORDER_STATUS_SECTION[code];
   if (info !== undefined) return info;
   return code.replace(/^(view|edit_own|edit)_/, "");
 }

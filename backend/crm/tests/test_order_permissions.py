@@ -31,16 +31,89 @@ class OrderSectionPermissionTests(TestCase):
             status=CrmOrder.STATUS_NEW,
         )
 
-    def test_viewer_reads_and_changes_status(self):
+    def test_viewer_reads_but_cannot_change_status(self):
         self.client.force_authenticate(user=self.viewer)
         read = self.client.get(f"/api/crm/orders/{self.order.id}/")
         self.assertEqual(read.status_code, 200)
+        same = self.client.patch(
+            f"/api/crm/orders/{self.order.id}/",
+            {"status": CrmOrder.STATUS_NEW},
+            format="json",
+        )
+        self.assertEqual(same.status_code, 200)
+        patched = self.client.patch(
+            f"/api/crm/orders/{self.order.id}/",
+            {"status": CrmOrder.STATUS_IN_WORK},
+            format="json",
+        )
+        self.assertEqual(patched.status_code, 403)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, CrmOrder.STATUS_NEW)
+
+    def test_pickup_delivered_permission_does_not_deliver_delivery(self):
+        grant(self.viewer, "set_order_pickup_status_delivered")
+        self.viewer = User.objects.get(pk=self.viewer.pk)
+        pickup = CrmOrder.objects.create(
+            date=date(2026, 8, 26),
+            time_start=time(12, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="2kg",
+            filling="Vanilla",
+            cake_price=Decimal("120.00"),
+            prepayment=Decimal("30.00"),
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+            status=CrmOrder.STATUS_READY,
+        )
+        self.client.force_authenticate(user=self.viewer)
+        denied = self.client.patch(
+            f"/api/crm/orders/{self.order.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, 403)
+        allowed = self.client.patch(
+            f"/api/crm/orders/{pickup.id}/",
+            {"status": CrmOrder.STATUS_DELIVERED},
+            format="json",
+        )
+        self.assertEqual(allowed.status_code, 200)
+        self.order.refresh_from_db()
+        pickup.refresh_from_db()
+        self.assertEqual(self.order.status, CrmOrder.STATUS_NEW)
+        self.assertEqual(pickup.status, CrmOrder.STATUS_DELIVERED)
+
+    def test_editor_changes_status_without_status_permissions(self):
+        self.client.force_authenticate(user=self.editor)
         patched = self.client.patch(
             f"/api/crm/orders/{self.order.id}/",
             {"status": CrmOrder.STATUS_IN_WORK},
             format="json",
         )
         self.assertEqual(patched.status_code, 200)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, CrmOrder.STATUS_IN_WORK)
+
+    def test_take_in_work_requires_in_work_permission(self):
+        self.client.force_authenticate(user=self.viewer)
+        denied = self.client.patch(
+            f"/api/crm/orders/{self.order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(denied.status_code, 403)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, CrmOrder.STATUS_NEW)
+        grant(self.viewer, "set_order_delivery_status_in_work")
+        self.viewer = User.objects.get(pk=self.viewer.pk)
+        self.client.force_authenticate(user=self.viewer)
+        allowed = self.client.patch(
+            f"/api/crm/orders/{self.order.id}/",
+            {"take_in_work": True},
+            format="json",
+        )
+        self.assertEqual(allowed.status_code, 200)
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, CrmOrder.STATUS_IN_WORK)
 
