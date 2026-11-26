@@ -9,7 +9,12 @@ from django.utils import timezone
 
 from accounts.models import UserProfile, chef_identity
 from crm.models import CrmOrder
-from crm.telegram import _telegram_json, crm_order_prep_datetime, sync_crm_order_to_telegram
+from crm.telegram import (
+    _telegram_json,
+    crm_order_prep_datetime,
+    sync_crm_order_to_telegram,
+    sync_ready_photos_to_telegram,
+)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _DONE = (
@@ -32,6 +37,7 @@ def schedule_crm_order_telegram_sync(order_id: int) -> None:
 
 def sync_order_telegram_and_late_prep(order_id: int) -> None:
     sync_crm_order_to_telegram(order_id)
+    sync_ready_photos_to_telegram(order_id)
     refresh_order_late_prep(order_id, timezone.now())
 
 

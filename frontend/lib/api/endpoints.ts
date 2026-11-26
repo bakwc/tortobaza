@@ -1085,10 +1085,10 @@ export function endpoints(fetcher: Fetcher) {
       return parse(CrmMapOrdersResponseSchema, raw);
     },
 
-    async patchCrmOrder(id: number, body: UpdateCrmOrderBody): Promise<CrmOrder> {
+    async patchCrmOrder(id: number, body: UpdateCrmOrderBody | FormData): Promise<CrmOrder> {
       const raw = await fetcher<unknown>(`/api/crm/orders/${id}/`, {
         method: "PATCH",
-        body: JSON.stringify(body),
+        body: body instanceof FormData ? body : JSON.stringify(body),
       });
       return parse(CrmOrderSchema, raw);
     },

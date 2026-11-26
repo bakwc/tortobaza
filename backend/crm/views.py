@@ -116,7 +116,7 @@ from tortobaza.finance_db import current_finance_db
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
-_ORDER_STATUS_FIELDS = {"status", "take_in_work"}
+_ORDER_STATUS_FIELDS = {"status", "take_in_work", "ready_images"}
 
 
 class CrmOrderWritePermission(BasePermission):
@@ -137,6 +137,7 @@ def live_orders():
 def with_order_relations(orders):
     return orders.prefetch_related(
         "images",
+        "ready_images",
         "items__tech_card__modifier_lines__nested_tech_card",
         "items__modifiers__modifier",
         "items__lines__ingredient",

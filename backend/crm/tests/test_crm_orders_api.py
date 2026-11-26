@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from accounts.permissions import ORDER_PARTY_CODES, grant
-from crm.models import CrmOrder, CrmOrderImage, ResolvedGoogleAddress, ResolvedTelegramPhone
+from crm.models import CrmOrder, CrmOrderImage, CrmOrderReadyImage, ResolvedGoogleAddress, ResolvedTelegramPhone
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -516,6 +516,70 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(order.status, CrmOrder.STATUS_DELIVERED)
         self.assertFalse(order.is_paid)
         self.assertEqual(order.weight, "2kg")
+
+    def _ready_order(self) -> CrmOrder:
+        return CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(11, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_DELIVERY,
+            weight="2kg",
+            filling="Mango",
+            cake_price=Decimal("100.00"),
+            prepayment=Decimal("0.00"),
+            status=CrmOrder.STATUS_IN_WORK,
+            is_paid=False,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+
+    def test_patch_ready_without_photo_is_rejected(self):
+        order = self._ready_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
+
+    def test_patch_ready_with_photo(self):
+        order = self._ready_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY, "ready_images": [self._jpeg("ready.jpg")]},
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_READY)
+        self.assertEqual(CrmOrderReadyImage.objects.filter(order=order).count(), 1)
+        self.assertEqual(len(response.json()["ready_images"]), 1)
+
+    def test_patch_later_status_without_photo(self):
+        order = self._ready_order()
+        self.client.force_authenticate(user=self.user)
+        for status in (CrmOrder.STATUS_CLIENT_APPROVED, CrmOrder.STATUS_IN_DELIVERY):
+            response = self.client.patch(
+                f"/api/crm/orders/{order.id}/",
+                {"status": status},
+                format="json",
+            )
+            self.assertEqual(response.status_code, 200, response.content)
+            order.refresh_from_db()
+            self.assertEqual(order.status, status)
+
+    def test_create_ready_without_photo_is_rejected(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            "/api/crm/orders/",
+            self._order_payload(status=CrmOrder.STATUS_READY),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(CrmOrder.objects.exists())
 
     def test_regular_user_can_take_in_work_with_telegram_nick(self):
         UserProfile.objects.create(user=self.user, telegram_username="chef_anna")

@@ -250,6 +250,7 @@ class CrmOrder(models.Model):
         verbose_name=_("Late prep message id"),
     )
     late_prep_closed = models.BooleanField(default=False, verbose_name=_("Late prep closed"))
+    ready_photos_posted = models.BooleanField(default=False, verbose_name=_("Ready photos posted"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 
@@ -432,6 +433,25 @@ class CrmOrderImage(models.Model):
 
     def __str__(self) -> str:
         return f"Image #{self.pk} for CrmOrder #{self.order_id}"
+
+
+class CrmOrderReadyImage(models.Model):
+    order = models.ForeignKey(
+        CrmOrder,
+        related_name="ready_images",
+        on_delete=models.CASCADE,
+        verbose_name=_("Order"),
+    )
+    image = models.ImageField(upload_to="crm_order_ready/", verbose_name=_("Image"))
+    position = models.PositiveIntegerField(default=0, verbose_name=_("Position"))
+
+    class Meta:
+        ordering = ["position", "id"]
+        verbose_name = _("CRM order ready image")
+        verbose_name_plural = _("CRM order ready images")
+
+    def __str__(self) -> str:
+        return f"Ready image #{self.pk} for CrmOrder #{self.order_id}"
 
 
 class CrmOrderItem(models.Model):

@@ -455,6 +455,7 @@ export const CrmOrderSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   images: z.array(CrmOrderImageSchema),
+  ready_images: z.array(CrmOrderImageSchema),
   items: z.array(CrmOrderItemSchema),
   food_cost: z.string().optional(),
 });

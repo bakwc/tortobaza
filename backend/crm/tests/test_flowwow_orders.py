@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 
 from accounts.permissions import grant
 from crm.flowwow import _filling, _weight
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, CrmOrderReadyImage
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _NOW = datetime(2026, 9, 19, 15, 0, tzinfo=_TB)
@@ -677,6 +677,7 @@ class FlowwowCourierLeftSyncTests(TestCase):
     @patch("crm.flowwow.requests.post")
     def test_patch_other_status_does_not_post(self, mock_post):
         order = _flowwow_crm_order()
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg_file("ready.jpg"), position=0)
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",

@@ -17,7 +17,7 @@ from django.db import OperationalError, transaction
 from django.utils import timezone
 
 from accounts.models import UserProfile, chef_identity
-from crm.models import CrmOrder, CrmOrderImage
+from crm.models import CrmOrder, CrmOrderImage, CrmOrderReadyImage
 from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
 
@@ -511,7 +511,7 @@ def _telegram_multipart(method: str, fields: dict[str, str], files: list[tuple[s
     return data
 
 
-def _read_image(img: CrmOrderImage) -> tuple[str, bytes]:
+def _read_image(img: CrmOrderImage | CrmOrderReadyImage) -> tuple[str, bytes]:
     img.image.open("rb")
     content = img.image.read()
     img.image.close()
@@ -575,6 +575,84 @@ def _post_photos(order: CrmOrder, chat_id: str) -> list[dict]:
         for img, item in zip(chunk, result["result"], strict=True):
             posted.append({"message_id": item["message_id"], "image_id": img.id})
     return posted
+
+
+def _ready_photo_caption(order: CrmOrder) -> str:
+    lines = [f"#{order.pk} · {order.date.strftime('%d.%m.%Y')}"]
+    items = list(order.items.all())
+    if items:
+        for item in items:
+            name = item.name.strip()
+            if not name and item.tech_card_id is not None:
+                name = item.tech_card.name
+            title = name
+            if item.quantity > 1:
+                title = f"{item.quantity} × {title}"
+            weight = _weight_kg_text(item.weight_kg)
+            if weight is not None:
+                title = f"{title} · {weight} кг"
+            lines.append(title)
+    else:
+        parts = [part for part in [order.filling.strip(), order.weight.strip()] if part]
+        if parts:
+            lines.append(" · ".join(parts))
+    return "\n".join(lines)
+
+
+def _post_ready_photos(
+    images: list[CrmOrderReadyImage],
+    chat_id: str,
+    caption: str,
+) -> None:
+    for i in range(0, len(images), 10):
+        chunk = images[i : i + 10]
+        chunk_caption = caption if i == 0 else ""
+        if len(chunk) == 1:
+            img = chunk[0]
+            name, content = _read_image(img)
+            fields = {"chat_id": chat_id}
+            if chunk_caption:
+                fields["caption"] = chunk_caption
+            _telegram_multipart("sendPhoto", fields, [("photo", name, content)])
+            continue
+        files = []
+        media = []
+        for idx, img in enumerate(chunk):
+            name, content = _read_image(img)
+            attach = f"file{idx}"
+            files.append((attach, name, content))
+            item = {"type": "photo", "media": f"attach://{attach}"}
+            if idx == 0 and chunk_caption:
+                item["caption"] = chunk_caption
+            media.append(item)
+        _telegram_multipart(
+            "sendMediaGroup",
+            {"chat_id": chat_id, "media": json.dumps(media)},
+            files,
+        )
+
+
+def sync_ready_photos_to_telegram(order_id: int) -> None:
+    token = settings.TELEGRAM_BOT_TOKEN
+    chat_id = settings.TELEGRAM_READY_CAKES_CHAT_ID
+    if not token or not chat_id:
+        return
+    with transaction.atomic():
+        order = (
+            CrmOrder.objects.select_for_update()
+            .prefetch_related("ready_images", "items__tech_card")
+            .get(pk=order_id)
+        )
+        if order.ready_photos_posted:
+            return
+        images = list(order.ready_images.all())
+        if not images:
+            return
+        list(order.items.all())
+        caption = _ready_photo_caption(order)
+    _post_ready_photos(images, chat_id, caption)
+    order.ready_photos_posted = True
+    order.save(update_fields=["ready_photos_posted", "updated_at"])
 
 
 def _delete_media(chat_id: str, media: list) -> None:

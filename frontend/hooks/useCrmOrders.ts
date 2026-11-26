@@ -171,7 +171,7 @@ export function useCrmOrderEvents(orderId: number, enabled: boolean) {
 export function usePatchCrmOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, body }: { id: number; body: UpdateCrmOrderBody }) =>
+    mutationFn: ({ id, body }: { id: number; body: UpdateCrmOrderBody | FormData }) =>
       api.patchCrmOrder(id, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-orders"] });

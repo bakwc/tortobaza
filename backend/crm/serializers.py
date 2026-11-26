@@ -24,6 +24,7 @@ from crm.models import (
     CrmOrderEvent,
     CrmOrderImage,
     CrmOrderItem,
+    CrmOrderReadyImage,
     CrmOrderItemLine,
     CrmOrderItemModifier,
     FinancialAccount,
@@ -117,6 +118,37 @@ class CrmOrderImageSerializer(serializers.ModelSerializer):
     def get_image(self, obj: CrmOrderImage) -> dict[str, str]:
         public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
         return detail_image(obj.image.name, public_base_url)
+
+
+class CrmOrderReadyImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CrmOrderReadyImage
+        fields = ["id", "image", "position"]
+
+    def get_image(self, obj: CrmOrderReadyImage) -> dict[str, str]:
+        public_base_url = self.context["request"].build_absolute_uri("/").rstrip("/")
+        return detail_image(obj.image.name, public_base_url)
+
+
+def ensure_ready_photos(instance: CrmOrder | None, attrs: dict) -> None:
+    status = attrs.get("status")
+    if status != CrmOrder.STATUS_READY:
+        return
+    if instance is not None and instance.status == CrmOrder.STATUS_READY:
+        return
+    uploaded = attrs.get("ready_images", [])
+    existing = 0 if instance is None else instance.ready_images.count()
+    if existing + len(uploaded) == 0:
+        raise serializers.ValidationError({"status": "Ready status requires a photo."})
+
+
+def save_ready_images(order: CrmOrder, images: list) -> None:
+    position = order.ready_images.count()
+    for image in images:
+        CrmOrderReadyImage.objects.create(order=order, image=image, position=position)
+        position += 1
 
 
 def _surcharge(amount: Decimal) -> str | None:
@@ -347,6 +379,7 @@ def replace_crm_order_items(order: CrmOrder, items: list[dict]) -> None:
 
 class CrmOrderSerializer(serializers.ModelSerializer):
     images = CrmOrderImageSerializer(many=True, read_only=True)
+    ready_images = CrmOrderReadyImageSerializer(many=True, read_only=True)
     items = CrmOrderItemSerializer(many=True, read_only=True)
     cake_price = serializers.DecimalField(max_digits=10, decimal_places=2)
     delivery_price = serializers.DecimalField(max_digits=10, decimal_places=2)
@@ -404,6 +437,7 @@ class CrmOrderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "images",
+            "ready_images",
             "items",
         ]
 
@@ -612,10 +646,15 @@ class CrmOrderClientSerializer(serializers.ModelSerializer):
 
 class CrmOrderUpdateSerializer(serializers.ModelSerializer):
     take_in_work = serializers.BooleanField(write_only=True, required=False)
+    ready_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
 
     class Meta:
         model = CrmOrder
-        fields = ["status", "is_paid", "take_in_work", "payment_type"]
+        fields = ["status", "is_paid", "take_in_work", "payment_type", "ready_images"]
 
     def validate(self, attrs):
         if self.instance is not None and self.instance.status == CrmOrder.STATUS_UNCONFIRMED:
@@ -631,12 +670,14 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
+        ensure_ready_photos(self.instance, attrs)
         return attrs
 
     def update(self, instance, validated_data):
         before = snapshot_crm_order(instance)
         previous_status = instance.status
         take_in_work = validated_data.pop("take_in_work", None)
+        ready_images = validated_data.pop("ready_images", [])
         status = validated_data.pop("status", None)
         if take_in_work:
             instance.taken_by = self.context["request"].user
@@ -665,6 +706,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
+        save_ready_images(instance, ready_images)
         record_crm_order_event(
             instance,
             CrmOrderEvent.ACTION_UPDATED,
@@ -681,6 +723,11 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
     time_end = serializers.TimeField(allow_null=True, required=False)
     payment_date = serializers.DateField(allow_null=True, required=False)
     images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False,
+    )
+    ready_images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
         required=False,
@@ -716,6 +763,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
             "payment_type",
             "payment_date",
             "images",
+            "ready_images",
             "delete_image_ids",
             "items",
         ]
@@ -744,15 +792,18 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
+        ensure_ready_photos(self.instance, attrs)
         return attrs
 
     def create(self, validated_data):
         images = validated_data.pop("images", [])
+        ready_images = validated_data.pop("ready_images", [])
         validated_data.pop("delete_image_ids", None)
         items = validated_data.pop("items", None)
         validated_data["created_by"] = self.context["request"].user
         order = CrmOrder.objects.create(**validated_data)
         self._apply_images(order, images, [])
+        save_ready_images(order, ready_images)
         if items is not None:
             replace_crm_order_items(order, items)
         record_crm_order_event(
@@ -771,6 +822,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         previous_delivery_price = instance.delivery_price
         previous_prepayment = instance.prepayment
         images = validated_data.pop("images", [])
+        ready_images = validated_data.pop("ready_images", [])
         delete_image_ids = validated_data.pop("delete_image_ids", [])
         items = validated_data.pop("items", None)
         for attr, value in validated_data.items():
@@ -791,6 +843,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
         sync_flowwow_order_status_from_crm(instance, previous_status)
         instance.save()
         self._apply_images(instance, images, delete_image_ids)
+        save_ready_images(instance, ready_images)
         if items is not None:
             replace_crm_order_items(instance, items)
         record_crm_order_event(

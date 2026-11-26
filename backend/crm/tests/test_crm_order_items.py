@@ -1,3 +1,4 @@
+import io
 import json
 from datetime import date, datetime, time
 from decimal import Decimal
@@ -5,13 +6,15 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from PIL import Image
 from rest_framework.test import APIClient
 
 from accounts.permissions import grant
 from cart.models import Cart, CartItem, CartItemOption
 from catalog.models import Category, Option, OptionGroup, Product
-from crm.models import CrmOrder, CrmOrderItem
+from crm.models import CrmOrder, CrmOrderItem, CrmOrderReadyImage
 from inventory.models import StockMovement
 from menu.models import UNIT_PIECE, Modifier, ModifierGroup, TechCardModifierGroup, TechCardModifierLine
 from menu.tests.fixtures import MenuFixture
@@ -250,8 +253,18 @@ class CrmOrderItemsApiTests(TestCase):
     def _put(self, payload: dict):
         return self.client.put(f"/api/crm/orders/{self.order.pk}/", payload, format="multipart")
 
+    def _attach_ready_photo(self) -> None:
+        buf = io.BytesIO()
+        Image.new("RGB", (40, 40), color="pink").save(buf, format="JPEG")
+        CrmOrderReadyImage.objects.create(
+            order=self.order,
+            image=SimpleUploadedFile("ready.jpg", buf.getvalue(), content_type="image/jpeg"),
+            position=0,
+        )
+
     def test_order_without_items_works_as_before(self):
         self.client.force_authenticate(self.admin)
+        self._attach_ready_photo()
         response = self._put(self._payload(CrmOrder.STATUS_READY, None))
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.json()["items"], [])
@@ -259,6 +272,7 @@ class CrmOrderItemsApiTests(TestCase):
 
     def test_put_with_items_and_ready_status_writes_off(self):
         self.client.force_authenticate(self.admin)
+        self._attach_ready_photo()
         response = self._put(self._payload(CrmOrder.STATUS_READY, [self._cake_item("2")]))
         self.assertEqual(response.status_code, 200, response.content)
         item = CrmOrderItem.objects.get(order=self.order)
@@ -393,6 +407,7 @@ class CrmOrderItemsApiTests(TestCase):
         self.menu.bento.sale_price = Decimal("10.00")
         self.menu.bento.save(update_fields=["sale_price"])
         self.client.force_authenticate(self.admin)
+        self._attach_ready_photo()
         response = self._put(
             self._payload(
                 CrmOrder.STATUS_READY,

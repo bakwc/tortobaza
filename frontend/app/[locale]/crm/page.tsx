@@ -44,6 +44,7 @@ import { CrmOrderTimeSlot } from "@/components/crm/CrmOrderTimeSlot";
 import { CrmOverflowMenu } from "@/components/crm/CrmOverflowMenu";
 import { CrmPaymentLinkField } from "@/components/crm/CrmPaymentLinkField";
 import { CrmPaymentTypeDialog } from "@/components/crm/CrmPaymentTypeDialog";
+import { CrmReadyPhotosDialog } from "@/components/crm/CrmReadyPhotosDialog";
 import { MondayDatePicker } from "@/components/crm/MondayDatePicker";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useCan, useCanSeeOrderAddress, useCanSeeOrderContacts } from "@/hooks/useAuth";
@@ -301,6 +302,14 @@ function CrmBoard() {
                   body: { status },
                 })
               }
+              onUploadReadyPhotos={(files) => {
+                const body = new FormData();
+                body.append("status", "ready");
+                for (const file of files) {
+                  body.append("ready_images", file);
+                }
+                patchMutation.mutate({ id: order.id, body });
+              }}
               onSetPaid={(isPaid, paymentType) =>
                 patchMutation.mutate({
                   id: order.id,
@@ -439,6 +448,7 @@ function CrmOrderCard({
   focused,
   isPatching,
   onSetStatus,
+  onUploadReadyPhotos,
   onSetPaid,
   onTakeInWork,
 }: {
@@ -446,6 +456,7 @@ function CrmOrderCard({
   focused: boolean;
   isPatching: boolean;
   onSetStatus: (status: CrmOrderStatus) => void;
+  onUploadReadyPhotos: (files: File[]) => void;
   onSetPaid: (isPaid: boolean, paymentType: CrmOrderPaymentType) => void;
   onTakeInWork: () => void;
 }) {
@@ -466,6 +477,9 @@ function CrmOrderCard({
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
+  const [readyUploadOpen, setReadyUploadOpen] = useState(false);
+  const [readyPreviewOpen, setReadyPreviewOpen] = useState(false);
+  const [readyPreviewIndex, setReadyPreviewIndex] = useState(0);
   const [isClientOrdersOpen, setIsClientOrdersOpen] = useState(false);
   const deleteMutation = useDeleteCrmOrder();
   const resolveYandex = useResolveYandexAddress();
@@ -499,7 +513,23 @@ function CrmOrderCard({
     }
   }, [order.status]);
 
+  useEffect(() => {
+    if (order.status === "ready") {
+      setReadyUploadOpen(false);
+    }
+  }, [order.status]);
+
   const images = order.images;
+  const readyImages = order.ready_images;
+  const readyPreview = readyImages[readyPreviewIndex] ?? readyImages[0];
+
+  const requestStatus = (status: CrmOrderStatus) => {
+    if (status === "ready") {
+      setReadyUploadOpen(true);
+      return;
+    }
+    onSetStatus(status);
+  };
   const activeImage = images[activeImageIndex] ?? images[0];
   const addressUrl = extractAddressUrl(order.delivery_address);
   const routeDistance =
@@ -629,6 +659,29 @@ function CrmOrderCard({
             >
               {t(CRM_ORDER_STATUS_MESSAGE_KEYS[order.status])}
             </span>
+            {readyImages[0] ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setReadyPreviewIndex(0);
+                  setReadyPreviewOpen(true);
+                }}
+                className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md border-2 border-white shadow-sm"
+              >
+                <img
+                  src={readyImages[0].image.src}
+                  srcSet={readyImages[0].image.srcset}
+                  sizes="32px"
+                  alt={t("readyPhotosAlt", { id: order.id })}
+                  className="h-full w-full object-cover"
+                />
+                {readyImages.length > 1 ? (
+                  <span className="absolute bottom-0 right-0 rounded-tl bg-black/70 px-1 text-[9px] font-semibold leading-tight text-white">
+                    {readyImages.length}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -666,6 +719,29 @@ function CrmOrderCard({
                 <span className="text-xs lg:text-sm">{t("noImage")}</span>
               </div>
             )}
+            {readyImages[0] ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setReadyPreviewIndex(0);
+                  setReadyPreviewOpen(true);
+                }}
+                className="absolute bottom-2 left-2 z-10 h-14 w-14 overflow-hidden rounded-lg border-2 border-white shadow-md"
+              >
+                <img
+                  src={readyImages[0].image.src}
+                  srcSet={readyImages[0].image.srcset}
+                  sizes="56px"
+                  alt={t("readyPhotosAlt", { id: order.id })}
+                  className="h-full w-full object-cover"
+                />
+                {readyImages.length > 1 ? (
+                  <span className="absolute bottom-0 right-0 rounded-tl bg-black/70 px-1 text-[10px] font-semibold leading-tight text-white">
+                    {readyImages.length}
+                  </span>
+                ) : null}
+              </button>
+            ) : null}
           </div>
 
           {images.length > 1 ? (
@@ -1316,7 +1392,7 @@ function CrmOrderCard({
                     if (nextStatus === "in_work") {
                       onTakeInWork();
                     } else {
-                      onSetStatus(nextStatus);
+                      requestStatus(nextStatus);
                     }
                   }}
                   disabled={isPatching}
@@ -1335,7 +1411,7 @@ function CrmOrderCard({
               <CrmOrderStatusMenu
                 order={order}
                 isPatching={isPatching}
-                onSetStatus={onSetStatus}
+                onSetStatus={requestStatus}
                 onTogglePaid={handlePaidClick}
               />
             </div>
@@ -1343,6 +1419,62 @@ function CrmOrderCard({
         </div>
       </div>
       )}
+      <CrmReadyPhotosDialog
+        open={readyUploadOpen}
+        onOpenChange={setReadyUploadOpen}
+        existing={readyImages.map((img) => ({
+          id: img.id,
+          src: img.image.src,
+          srcset: img.image.srcset,
+        }))}
+        isPending={isPatching}
+        onConfirm={onUploadReadyPhotos}
+      />
+      {readyPreview ? (
+        <Dialog open={readyPreviewOpen} onOpenChange={setReadyPreviewOpen}>
+          <DialogContent className="max-w-4xl p-4 md:p-6">
+            <VisuallyHidden.Root asChild>
+              <DialogTitle>{t("readyPhotosAlt", { id: order.id })}</DialogTitle>
+            </VisuallyHidden.Root>
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative flex max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-2xl bg-[var(--cream)] p-2">
+                <img
+                  src={readyPreview.image.src}
+                  srcSet={readyPreview.image.srcset}
+                  sizes="(max-width: 1024px) 95vw, 80vw"
+                  alt={t("readyPhotosAlt", { id: order.id })}
+                  className="max-h-[72vh] w-auto max-w-full object-contain"
+                />
+              </div>
+              {readyImages.length > 1 ? (
+                <div className="flex flex-wrap justify-center gap-2">
+                  {readyImages.map((img, idx) => (
+                    <button
+                      type="button"
+                      key={img.id}
+                      onClick={() => setReadyPreviewIndex(idx)}
+                      className={cn(
+                        "relative h-16 w-16 overflow-hidden rounded-xl border-2 bg-[var(--cream)] transition-all",
+                        readyPreviewIndex === idx
+                          ? "border-[var(--brand)] ring-2 ring-[var(--brand)]/30"
+                          : "border-[var(--line)] opacity-70 hover:opacity-100",
+                      )}
+                    >
+                      <img
+                        src={img.image.src}
+                        srcSet={img.image.srcset}
+                        sizes="64px"
+                        alt={t("readyPhotosAlt", { id: order.id })}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
       {isPaymentOpen && order.payment_type !== null ? (
         <CrmPaymentTypeDialog
           open={isPaymentOpen}

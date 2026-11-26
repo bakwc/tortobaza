@@ -24,6 +24,7 @@ from crm.models import (
     CrmOrder,
     CrmOrderImage,
     CrmOrderItem,
+    CrmOrderReadyImage,
     CrmOrderItemLine,
     CrmOrderItemModifier,
     DeliveryRouteResolveFailure,
@@ -41,6 +42,7 @@ from crm.telegram import (
     crm_order_telegram_hash,
     crm_order_telegram_items,
     sync_crm_order_to_telegram,
+    sync_ready_photos_to_telegram,
 )
 from menu.models import Ingredient, Modifier, ModifierGroup
 
@@ -153,7 +155,13 @@ class CrmTelegramTests(TestCase):
         body = req.data
         chat_match = re.search(rb'name="chat_id"\r\n\r\n([^\r]+)', body)
         chat_id = chat_match.group(1).decode() if chat_match else ""
-        self.calls.append({"method": method, "payload": None, "chat_id": chat_id})
+        caption_field = re.search(rb'name="caption"\r\n\r\n([^\r]*)', body)
+        caption = caption_field.group(1).decode() if caption_field else ""
+        if not caption:
+            media_field = re.search(rb'name="media"\r\n\r\n(.+?)\r\n', body)
+            if media_field:
+                caption = json.loads(media_field.group(1).decode())[0].get("caption", "")
+        self.calls.append({"method": method, "payload": None, "chat_id": chat_id, "caption": caption})
         if method == "sendMediaGroup":
             n = body.count(b'filename="')
             ids = [self._next_message_id() for _ in range(n)]
@@ -1333,3 +1341,48 @@ class CrmTelegramTests(TestCase):
         self.assertFalse(DeliveryRouteResolveFailure.objects.filter(order=order).exists())
         order.refresh_from_db()
         self.assertEqual(order.delivery_distance_meters, 4200)
+
+    def test_ready_photos_skip_when_chat_missing(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg("ready.jpg"), position=0)
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls, [])
+        order.refresh_from_db()
+        self.assertFalse(order.ready_photos_posted)
+
+    @override_settings(TELEGRAM_READY_CAKES_CHAT_ID="ready-chat")
+    def test_ready_photos_post_once_with_caption(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        CrmOrderItem.objects.create(order=order, name="Медовик", quantity=1, weight_kg=Decimal("1.500"), position=0)
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg("ready.jpg"), position=0)
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["method"], "sendPhoto")
+        self.assertEqual(self.calls[0]["chat_id"], "ready-chat")
+        self.assertIn(f"#{order.id}", self.calls[0]["caption"])
+        self.assertIn("Медовик", self.calls[0]["caption"])
+        self.assertIn("1.5 кг", self.calls[0]["caption"])
+        order.refresh_from_db()
+        self.assertTrue(order.ready_photos_posted)
+        self.calls.clear()
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls, [])
+
+    @override_settings(TELEGRAM_READY_CAKES_CHAT_ID="ready-chat")
+    def test_ready_photos_group_and_fallback_caption(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg("a.jpg"), position=0)
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg("b.jpg"), position=1)
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls[0]["method"], "sendMediaGroup")
+        self.assertEqual(self.calls[0]["chat_id"], "ready-chat")
+        self.assertIn("Vanilla", self.calls[0]["caption"])
+        self.assertIn("2kg", self.calls[0]["caption"])
+
+    @override_settings(TELEGRAM_READY_CAKES_CHAT_ID="ready-chat")
+    def test_ready_photos_without_images_does_not_post(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls, [])
+        order.refresh_from_db()
+        self.assertFalse(order.ready_photos_posted)
