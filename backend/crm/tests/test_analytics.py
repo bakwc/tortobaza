@@ -370,6 +370,57 @@ class AnalyticsClientTests(TestCase):
             ],
         )
 
+    def test_same_day_orders_are_not_repeats(self):
+        day = date(2026, 6, 1)
+        _order(date=day, contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=day, contact="555111111", cake_price=Decimal("15.00"))
+        report = clients(date(2026, 11, 25))
+        self.assertEqual(report["clients"], 1)
+        self.assertEqual(report["repeat_clients"], 0)
+        self.assertEqual(report["repeat_revenue"], "0.00")
+        june = next(row for row in report["months"] if row["month"] == "2026-06")
+        self.assertEqual(june["new_orders"], 2)
+        self.assertEqual(june["new_revenue"], "25.00")
+        self.assertEqual(june["return_orders"], 0)
+        self.assertEqual(june["return_revenue"], "0.00")
+        self.assertEqual(report["frequency"]["once"]["clients"], 1)
+        self.assertEqual(report["frequency"]["once"]["revenue"], "25.00")
+        self.assertEqual(report["frequency"]["twice"]["clients"], 0)
+        self.assertEqual(report["frequency"]["more"]["clients"], 0)
+        self.assertIsNone(report["gaps"]["median"])
+        self.assertEqual(report["tenure"]["bins"][0]["count"], 0)
+        self.assertEqual(report["top_orders"], [])
+        self.assertEqual(report["top_revenue"], [])
+        cohort = report["cohorts"][0]
+        self.assertEqual(cohort["clients"], 1)
+        cell = next(cell for cell in cohort["cells"] if cell["offset"] == 30)
+        self.assertTrue(cell["observed"])
+        self.assertEqual(cell["count"], 0)
+
+    def test_later_day_stays_a_repeat_after_same_day_orders(self):
+        day = date(2026, 6, 1)
+        later = day + timedelta(days=10)
+        _order(date=day, contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=day, contact="555111111", cake_price=Decimal("15.00"))
+        _order(date=later, contact="555111111", cake_price=Decimal("20.00"))
+        _order(date=later, contact="555111111", cake_price=Decimal("5.00"))
+        report = clients(date(2026, 11, 25))
+        self.assertEqual(report["repeat_clients"], 1)
+        self.assertEqual(report["repeat_revenue"], "50.00")
+        june = next(row for row in report["months"] if row["month"] == "2026-06")
+        self.assertEqual(june["new_orders"], 2)
+        self.assertEqual(june["new_revenue"], "25.00")
+        self.assertEqual(june["return_orders"], 2)
+        self.assertEqual(june["return_revenue"], "25.00")
+        self.assertEqual(report["frequency"]["more"]["clients"], 1)
+        self.assertEqual(report["frequency"]["more"]["revenue"], "50.00")
+        self.assertEqual(report["gaps"]["median"], "10")
+        self.assertEqual(report["top_orders"][0]["orders"], 4)
+        self.assertEqual(report["top_revenue"][0]["revenue"], "50.00")
+        cohort = report["cohorts"][0]
+        cell = next(cell for cell in cohort["cells"] if cell["offset"] == 30)
+        self.assertEqual(cell["count"], 1)
+
 
 class AnalyticsApiTests(TestCase):
     def setUp(self):
@@ -473,6 +524,18 @@ class AnalyticsPaceTests(TestCase):
         self.assertEqual(november["days"][0]["repeat_orders"], 0)
         self.assertEqual(november["days"][29]["revenue"], "5.00")
         self.assertEqual(november["days"][29]["orders"], 1)
+
+    def test_same_day_order_is_not_a_repeat_order(self):
+        client = "555111111"
+        _order(date=date(2026, 1, 1), contact=client, cake_price=Decimal("10.00"))
+        _order(date=date(2026, 1, 1), contact=client, cake_price=Decimal("8.00"))
+        _order(date=date(2026, 1, 3), contact=client, cake_price=Decimal("4.00"))
+        report = pace("2026-01", date(2026, 1, 3))
+        january = report["months"][0]
+        self.assertEqual(january["days"][0]["orders"], 2)
+        self.assertEqual(january["days"][0]["repeat_orders"], 0)
+        self.assertEqual(january["days"][2]["orders"], 3)
+        self.assertEqual(january["days"][2]["repeat_orders"], 1)
 
     def test_created_orders_count_month_orders_booked_by_day(self):
         fifth = _order(date=date(2026, 1, 5), cake_price=Decimal("10.00"))

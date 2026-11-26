@@ -132,7 +132,12 @@ def overview(today: date) -> dict:
 def pace(month: str, today: date) -> dict:
     orders = _live_orders()
     customers, _unknown = _link_customers(orders)
-    repeat_ids = {order.id for customer in customers.values() for order in customer.orders[1:]}
+    repeat_ids = {
+        order.id
+        for customer in customers.values()
+        for order in customer.orders
+        if order.date > customer.orders[0].date
+    }
     previous = _previous_month(month)
     before = _previous_month(previous)
     current_month = _month_key(today)
@@ -220,14 +225,11 @@ def clients(today: date) -> dict:
     orders = _live_orders()
     customers, unknown = _link_customers(orders)
     known_orders = len(orders) - unknown
-    repeat = [customer for customer in customers.values() if len(customer.orders) >= 2]
+    repeat = _repeat(customers)
     known_revenue = Decimal("0")
-    repeat_revenue = Decimal("0")
     for customer in customers.values():
-        amount = _revenue(customer.orders)
-        known_revenue += amount
-        if len(customer.orders) >= 2:
-            repeat_revenue += amount
+        known_revenue += _revenue(customer.orders)
+    repeat_revenue = _group_revenue(repeat)
     months = _month_span(orders)
     return {
         "orders": len(orders),
@@ -730,8 +732,13 @@ def _customer_row(customer: Customer) -> dict:
     }
 
 
+def _is_repeat(customer: Customer) -> bool:
+    orders = customer.orders
+    return len(orders) >= 2 and orders[-1].date > orders[0].date
+
+
 def _repeat(customers: dict[str, Customer]) -> list[Customer]:
-    return [customer for customer in customers.values() if len(customer.orders) >= 2]
+    return [customer for customer in customers.values() if _is_repeat(customer)]
 
 
 def _top_revenue(customers: dict[str, Customer]) -> list[Customer]:
@@ -773,10 +780,11 @@ def _movement(customers: dict[str, Customer], months: list[str]) -> list[dict]:
     new_revenue: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     return_revenue: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for customer in customers.values():
-        for index, order in enumerate(customer.orders):
+        first = customer.orders[0].date
+        for order in customer.orders:
             month = f"{order.date.year:04d}-{order.date.month:02d}"
             amount = _order_revenue(order)
-            if index == 0:
+            if order.date == first:
                 new_orders[month] += 1
                 new_revenue[month] += amount
             else:
@@ -798,7 +806,7 @@ def _retained(customer: Customer, days: int) -> bool:
     first = customer.orders[0].date
     for order in customer.orders[1:]:
         gap = (order.date - first).days
-        if 0 <= gap <= days:
+        if 0 < gap <= days:
             return True
     return False
 
@@ -842,11 +850,19 @@ def _span_bins(values: list[int], at_most: bool) -> list[dict]:
     return bins
 
 
+def _return_gap(customer: Customer) -> int | None:
+    first = customer.orders[0].date
+    for order in customer.orders[1:]:
+        if order.date > first:
+            return (order.date - first).days
+    return None
+
+
 def _gaps(customers: dict[str, Customer]) -> dict:
     gaps = [
-        (customer.orders[1].date - customer.orders[0].date).days
+        gap
         for customer in customers.values()
-        if len(customer.orders) >= 2
+        if (gap := _return_gap(customer)) is not None
     ]
     return {
         "median": None if not gaps else _num(Decimal(str(median(gaps)))),
@@ -857,16 +873,23 @@ def _gaps(customers: dict[str, Customer]) -> dict:
 def _tenure(customers: dict[str, Customer]) -> dict:
     spans = [
         (customer.orders[-1].date - customer.orders[0].date).days
-        for customer in customers.values()
-        if len(customer.orders) >= 2
+        for customer in _repeat(customers)
     ]
     return {"bins": _span_bins(spans, False)}
 
 
 def _frequency(customers: dict[str, Customer]) -> dict:
-    once = [customer for customer in customers.values() if len(customer.orders) == 1]
-    twice = [customer for customer in customers.values() if len(customer.orders) == 2]
-    more = [customer for customer in customers.values() if len(customer.orders) >= 3]
+    once = [customer for customer in customers.values() if not _is_repeat(customer)]
+    twice = [
+        customer
+        for customer in customers.values()
+        if _is_repeat(customer) and len(customer.orders) == 2
+    ]
+    more = [
+        customer
+        for customer in customers.values()
+        if _is_repeat(customer) and len(customer.orders) >= 3
+    ]
     return {
         "once": {"clients": len(once), "revenue": _money(_group_revenue(once))},
         "twice": {"clients": len(twice), "revenue": _money(_group_revenue(twice))},
