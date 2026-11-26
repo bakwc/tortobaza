@@ -11,12 +11,14 @@ export function CrmReadyPhotosDialog({
   open,
   onOpenChange,
   existing,
+  required,
   isPending,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existing: { id: number; src: string; srcset: string }[];
+  required: boolean;
   isPending: boolean;
   onConfirm: (files: File[]) => void;
 }) {
@@ -29,7 +31,8 @@ export function CrmReadyPhotosDialog({
     }
   }, [open]);
 
-  const canConfirm = (existing.length > 0 || files.length > 0) && !isPending;
+  const hasPhotos = existing.length > 0 || files.length > 0;
+  const canConfirm = !isPending && (!required || hasPhotos);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

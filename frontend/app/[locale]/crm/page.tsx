@@ -538,7 +538,7 @@ function CrmOrderCard({
   const readyPreview = readyImages[readyPreviewIndex] ?? readyImages[0];
 
   const requestStatus = (status: CrmOrderStatus) => {
-    if (status === "ready" && requiresReadyPhoto) {
+    if (status === "ready") {
       setReadyUploadOpen(true);
       return;
     }
@@ -1442,6 +1442,7 @@ function CrmOrderCard({
           src: img.image.src,
           srcset: img.image.srcset,
         }))}
+        required={requiresReadyPhoto}
         isPending={isPatching}
         onConfirm={onUploadReadyPhotos}
       />
