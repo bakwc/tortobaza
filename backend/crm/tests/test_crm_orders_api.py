@@ -533,8 +533,48 @@ class CrmOrdersApiTests(TestCase):
         )
 
     def test_patch_ready_without_photo_is_rejected(self):
+        grant(self.user, "require_ready_photo")
         order = self._ready_order()
         self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_IN_WORK)
+
+    def test_patch_ready_without_photo_when_not_required(self):
+        order = self._ready_order()
+        self.client.force_authenticate(user=self.user)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_READY)
+
+    def test_superuser_patch_ready_without_photo(self):
+        root = User.objects.create_superuser(username="root", password="password")
+        order = self._ready_order()
+        self.client.force_authenticate(user=root)
+        response = self.client.patch(
+            f"/api/crm/orders/{order.id}/",
+            {"status": CrmOrder.STATUS_READY},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        order.refresh_from_db()
+        self.assertEqual(order.status, CrmOrder.STATUS_READY)
+
+    def test_superuser_in_group_patch_ready_without_photo_is_rejected(self):
+        root = User.objects.create_superuser(username="root", password="password")
+        grant(root, "require_ready_photo")
+        order = self._ready_order()
+        self.client.force_authenticate(user=root)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
             {"status": CrmOrder.STATUS_READY},
@@ -572,6 +612,7 @@ class CrmOrdersApiTests(TestCase):
             self.assertEqual(order.status, status)
 
     def test_create_ready_without_photo_is_rejected(self):
+        grant(self.admin, "require_ready_photo")
         self.client.force_authenticate(user=self.admin)
         response = self.client.post(
             "/api/crm/orders/",
@@ -580,6 +621,17 @@ class CrmOrdersApiTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
         self.assertFalse(CrmOrder.objects.exists())
+
+    def test_create_ready_without_photo_when_not_required(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            "/api/crm/orders/",
+            self._order_payload(status=CrmOrder.STATUS_READY),
+            format="multipart",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        order = CrmOrder.objects.get()
+        self.assertEqual(order.status, CrmOrder.STATUS_READY)
 
     def test_regular_user_can_take_in_work_with_telegram_nick(self):
         UserProfile.objects.create(user=self.user, telegram_username="chef_anna")

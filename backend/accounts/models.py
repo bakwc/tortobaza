@@ -61,6 +61,7 @@ class SectionAccess(models.Model):
         permissions = [
             ("view_orders", _("Orders: view")),
             ("edit_orders", _("Orders: create, edit, delete")),
+            ("require_ready_photo", _("Orders: require a photo when marking ready")),
             ("view_menu", _("Menu: view")),
             ("edit_menu", _("Menu: edit")),
             ("view_inventory", _("Inventory: view")),

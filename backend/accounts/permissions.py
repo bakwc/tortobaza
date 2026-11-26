@@ -14,6 +14,27 @@ def section_codenames() -> set[str]:
     return {code for code, _name in SectionAccess._meta.permissions}
 
 
+EXPLICIT_SECTION_CODES = {"require_ready_photo"}
+
+
+def has_explicit_section_perm(user, codename: str) -> bool:
+    if user.user_permissions.filter(
+        content_type__app_label="accounts",
+        content_type__model="sectionaccess",
+        codename=codename,
+    ).exists():
+        return True
+    return user.groups.filter(
+        permissions__content_type__app_label="accounts",
+        permissions__content_type__model="sectionaccess",
+        permissions__codename=codename,
+    ).exists()
+
+
+def requires_ready_photo(user) -> bool:
+    return has_explicit_section_perm(user, "require_ready_photo")
+
+
 def user_section_codes(user) -> list[str]:
     prefix = "accounts."
     known = section_codenames()
@@ -24,6 +45,12 @@ def user_section_codes(user) -> list[str]:
         code = perm[len(prefix):]
         if code in known:
             codes.append(code)
+    if user.is_superuser:
+        codes = [
+            code
+            for code in codes
+            if code not in EXPLICIT_SECTION_CODES or has_explicit_section_perm(user, code)
+        ]
     return sorted(codes)
 
 

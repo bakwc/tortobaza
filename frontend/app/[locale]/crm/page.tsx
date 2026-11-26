@@ -471,6 +471,7 @@ function CrmOrderCard({
 }) {
   const t = useTranslations("crm");
   const canEditOrders = useCan("edit_orders");
+  const requiresReadyPhoto = useCan("require_ready_photo");
   const currentUser = useCurrentUser();
   const permissions = currentUser.data?.permissions ?? [];
   const canSetStatus = (status: CrmOrderStatus) =>
@@ -537,7 +538,7 @@ function CrmOrderCard({
   const readyPreview = readyImages[readyPreviewIndex] ?? readyImages[0];
 
   const requestStatus = (status: CrmOrderStatus) => {
-    if (status === "ready") {
+    if (status === "ready" && requiresReadyPhoto) {
       setReadyUploadOpen(true);
       return;
     }

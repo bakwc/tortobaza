@@ -1382,6 +1382,7 @@
     "section_order_status_pickup": "სტატუსები — თვითგატანა",
     "perm_view_orders": "ნახვა",
     "perm_edit_orders": "შექმნა, რედაქტირება, წაშლა",
+    "perm_require_ready_photo": "ფოტო აუცილებელია სტატუსზე მზადაა",
     "perm_view_menu": "ნახვა",
     "perm_edit_menu": "რედაქტირება",
     "perm_view_inventory": "ნახვა",

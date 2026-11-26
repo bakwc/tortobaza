@@ -46,6 +46,20 @@ class AuthApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["permissions"], ["edit_menu", "view_orders"])
 
+    def test_me_omits_require_ready_photo_for_superuser_until_granted(self):
+        root = User.objects.create_superuser(username="root", password="password")
+        self.client.force_authenticate(user=root)
+        response = self.client.get("/api/auth/me/")
+        self.assertEqual(response.status_code, 200)
+        permissions = response.json()["permissions"]
+        self.assertIn("view_orders", permissions)
+        self.assertNotIn("require_ready_photo", permissions)
+        grant(root, "require_ready_photo")
+        root = User.objects.get(pk=root.pk)
+        self.client.force_authenticate(user=root)
+        response = self.client.get("/api/auth/me/")
+        self.assertIn("require_ready_photo", response.json()["permissions"])
+
     def test_login_denied_when_can_login_false(self):
         UserProfile.objects.create(user=self.worker, can_login=False)
         response = self.client.post(

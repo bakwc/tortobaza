@@ -14,6 +14,7 @@ from accounts.permissions import (
     can_set_order_status,
     can_view,
     redact_order_field_changes,
+    requires_ready_photo,
 )
 from catalog.responsive_urls import detail_image
 from crm.flowwow import sync_flowwow_order_status_from_crm
@@ -134,11 +135,13 @@ class CrmOrderReadyImageSerializer(serializers.ModelSerializer):
         return detail_image(obj.image.name, public_base_url)
 
 
-def ensure_ready_photos(instance: CrmOrder | None, attrs: dict) -> None:
+def ensure_ready_photos(instance: CrmOrder | None, attrs: dict, user) -> None:
     status = attrs.get("status")
     if status != CrmOrder.STATUS_READY:
         return
     if instance is not None and instance.status == CrmOrder.STATUS_READY:
+        return
+    if not requires_ready_photo(user):
         return
     uploaded = attrs.get("ready_images", [])
     existing = 0 if instance is None else instance.ready_images.count()
@@ -686,7 +689,7 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 target,
             ):
                 raise PermissionDenied()
-        ensure_ready_photos(self.instance, attrs)
+        ensure_ready_photos(self.instance, attrs, self.context["request"].user)
         return attrs
 
     def update(self, instance, validated_data):
@@ -808,7 +811,7 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
-        ensure_ready_photos(self.instance, attrs)
+        ensure_ready_photos(self.instance, attrs, self.context["request"].user)
         return attrs
 
     def create(self, validated_data):

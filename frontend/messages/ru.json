@@ -1382,6 +1382,7 @@
     "section_order_status_pickup": "Статусы — самовывоз",
     "perm_view_orders": "Просмотр",
     "perm_edit_orders": "Создание, правка, удаление",
+    "perm_require_ready_photo": "Обязательное фото при статусе Готов",
     "perm_view_menu": "Просмотр",
     "perm_edit_menu": "Редактирование",
     "perm_view_inventory": "Просмотр",

@@ -1382,6 +1382,7 @@
     "section_order_status_pickup": "Statuses — pickup",
     "perm_view_orders": "View",
     "perm_edit_orders": "Create, edit, delete",
+    "perm_require_ready_photo": "Require a photo for Ready",
     "perm_view_menu": "View",
     "perm_edit_menu": "Edit",
     "perm_view_inventory": "View",

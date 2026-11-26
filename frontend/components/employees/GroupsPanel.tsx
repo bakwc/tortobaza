@@ -52,6 +52,7 @@ const ORDER_STATUS_SECTION: Record<string, string> = Object.fromEntries(
 );
 
 function sectionKey(code: string): string {
+  if (code === "require_ready_photo") return "orders";
   const info = ORDER_INFO_SECTION[code] ?? ORDER_STATUS_SECTION[code];
   if (info !== undefined) return info;
   return code.replace(/^(view|edit_own|edit)_/, "");
