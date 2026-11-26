@@ -38,6 +38,8 @@ def _safe_source_path(relative_path: str) -> Path:
         root = media_root / "category_landings"
     elif relative_path.startswith("crm_orders/"):
         root = media_root / "crm_orders"
+    elif relative_path.startswith("crm_order_ready/"):
+        root = media_root / "crm_order_ready"
     elif relative_path.startswith("tech_cards/"):
         root = media_root / "tech_cards"
     elif relative_path.startswith("semi_products/"):

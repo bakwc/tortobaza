@@ -934,6 +934,24 @@ class CrmOrdersApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "image/webp")
 
+    def test_scaled_ready_image(self):
+        order = CrmOrder.objects.create(
+            date=date(2026, 8, 25),
+            time_start=time(10, 0),
+            contact="Customer",
+            fulfillment_type=CrmOrder.FULFILLMENT_PICKUP,
+            weight="1kg",
+            filling="Vanilla",
+            cake_price=Decimal("50.00"),
+            prepayment=Decimal("50.00"),
+            is_paid=True,
+            payment_type=CrmOrder.PAYMENT_CASH,
+        )
+        ready = CrmOrderReadyImage.objects.create(order=order, image=self._jpeg("ready.jpg"), position=0)
+        response = self.client.get(f"/api/img/{ready.image.name}?w=1600")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/webp")
+
     def _jpeg(self, name: str) -> SimpleUploadedFile:
         buf = io.BytesIO()
         im = Image.new("RGB", (40, 40), color="pink")
