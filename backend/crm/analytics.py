@@ -43,15 +43,7 @@ _LABEL_WORDS = {
 _DISTINCTIVE_LENGTH = 10
 _NICKNAME_LENGTH = 4
 _TOP_LIMIT = 20
-_GAP_BINS = (
-    (0, 0, "0"),
-    (1, 7, "1–7"),
-    (8, 14, "8–14"),
-    (15, 30, "15–30"),
-    (31, 60, "31–60"),
-    (61, 90, "61–90"),
-    (91, 100000, "91+"),
-)
+_SPAN_DAYS = (1, 7, 14, 30, 60, 90, 180, 365)
 _UNIT_RE = re.compile(
     r"(\d+(?:[.,]\d+)?)\s*"
     r"(килограммов|килограмма|килограмм|кг|kgs|kg|"
@@ -248,6 +240,7 @@ def clients(today: date) -> dict:
         "months": _movement(customers, months),
         "cohorts": _cohorts(customers, today),
         "gaps": _gaps(customers),
+        "tenure": _tenure(customers),
         "frequency": _frequency(customers),
         "top_revenue": [_customer_row(customer) for customer in _top_revenue(customers)],
         "top_orders": [_customer_row(customer) for customer in _top_orders(customers)],
@@ -837,19 +830,37 @@ def _cohorts(customers: dict[str, Customer], today: date) -> list[dict]:
     return rows
 
 
+def _span_bins(values: list[int], at_most: bool) -> list[dict]:
+    total = Decimal(len(values))
+    bins = []
+    for days in _SPAN_DAYS:
+        if at_most:
+            count = sum(1 for value in values if value <= days)
+        else:
+            count = sum(1 for value in values if value >= days)
+        bins.append({"days": days, "count": count, "share": _share(Decimal(count), total)})
+    return bins
+
+
 def _gaps(customers: dict[str, Customer]) -> dict:
     gaps = [
         (customer.orders[1].date - customer.orders[0].date).days
         for customer in customers.values()
         if len(customer.orders) >= 2
     ]
-    bins = []
-    for low, high, label in _GAP_BINS:
-        bins.append({"label": label, "count": sum(1 for gap in gaps if low <= gap <= high)})
     return {
         "median": None if not gaps else _num(Decimal(str(median(gaps)))),
-        "bins": bins,
+        "bins": _span_bins(gaps, True),
     }
+
+
+def _tenure(customers: dict[str, Customer]) -> dict:
+    spans = [
+        (customer.orders[-1].date - customer.orders[0].date).days
+        for customer in customers.values()
+        if len(customer.orders) >= 2
+    ]
+    return {"bins": _span_bins(spans, False)}
 
 
 def _frequency(customers: dict[str, Customer]) -> dict:

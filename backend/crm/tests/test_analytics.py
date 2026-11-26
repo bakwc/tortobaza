@@ -329,6 +329,47 @@ class AnalyticsClientTests(TestCase):
             ],
         )
 
+    def test_repeat_spans_are_cumulative(self):
+        first = date(2026, 1, 1)
+        _order(date=first, contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=1), contact="555111111", cake_price=Decimal("10.00"))
+        _order(date=first, contact="555222222", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=10), contact="555222222", cake_price=Decimal("10.00"))
+        _order(date=first, contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=20), contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=first + timedelta(days=400), contact="555333333", cake_price=Decimal("10.00"))
+        _order(date=first, contact="555444444", cake_price=Decimal("10.00"))
+        report = clients(date(2027, 3, 1))
+        self.assertEqual(report["repeat_clients"], 3)
+        self.assertEqual(report["clients"], 4)
+        self.assertEqual(report["gaps"]["median"], "10")
+        self.assertEqual(
+            [(row["days"], row["count"], row["share"]) for row in report["gaps"]["bins"]],
+            [
+                (1, 1, "0.333"),
+                (7, 1, "0.333"),
+                (14, 2, "0.667"),
+                (30, 3, "1"),
+                (60, 3, "1"),
+                (90, 3, "1"),
+                (180, 3, "1"),
+                (365, 3, "1"),
+            ],
+        )
+        self.assertEqual(
+            [(row["days"], row["count"], row["share"]) for row in report["tenure"]["bins"]],
+            [
+                (1, 3, "1"),
+                (7, 2, "0.667"),
+                (14, 1, "0.333"),
+                (30, 1, "0.333"),
+                (60, 1, "0.333"),
+                (90, 1, "0.333"),
+                (180, 1, "0.333"),
+                (365, 1, "0.333"),
+            ],
+        )
+
 
 class AnalyticsApiTests(TestCase):
     def setUp(self):

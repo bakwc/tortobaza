@@ -792,6 +792,12 @@ export const AnalyticsCohortCellSchema = z.object({
   observed: z.boolean(),
 });
 
+export const AnalyticsSpanBinSchema = z.object({
+  days: z.number(),
+  count: z.number(),
+  share: z.string().nullable(),
+});
+
 export const AnalyticsCustomerSchema = z.object({
   name: z.string(),
   phones: z.array(z.string()),
@@ -1085,7 +1091,10 @@ export const AnalyticsClientsSchema = z.object({
   ),
   gaps: z.object({
     median: z.string().nullable(),
-    bins: z.array(z.object({ label: z.string(), count: z.number() })),
+    bins: z.array(AnalyticsSpanBinSchema),
+  }),
+  tenure: z.object({
+    bins: z.array(AnalyticsSpanBinSchema),
   }),
   frequency: z.object({
     once: AnalyticsFrequencyBucketSchema,

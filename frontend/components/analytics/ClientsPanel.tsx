@@ -7,7 +7,7 @@ import { CrmClientOrdersDialog } from "@/components/crm/CrmClientOrdersDialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useAnalyticsClients } from "@/hooks/useAnalytics";
 import { formatAmount, formatMoney } from "@/lib/format";
-import type { AnalyticsCustomer } from "@/lib/api/types";
+import type { AnalyticsClients, AnalyticsCustomer } from "@/lib/api/types";
 import {
   AXIS_TICK,
   COLOR_NEW,
@@ -22,9 +22,30 @@ import {
   monthLabel,
 } from "@/components/analytics/widgets";
 
+const SPAN_KEY = {
+  1: "span1",
+  7: "span7",
+  14: "span14",
+  30: "span30",
+  60: "span60",
+  90: "span90",
+  180: "span180",
+  365: "span365",
+} as const;
+
+type SpanDays = keyof typeof SPAN_KEY;
+
 function returnShare(part: number, total: number): number | null {
   if (part === 0 || total === 0) return null;
   return Math.round((part / total) * 100);
+}
+
+function spanRows(bins: AnalyticsClients["gaps"]["bins"], label: (days: SpanDays) => string) {
+  return bins.map((bin) => ({
+    label: label(bin.days as SpanDays),
+    share: Math.round(Number(bin.share) * 100),
+    count: bin.count,
+  }));
 }
 
 export function ClientsPanel() {
@@ -60,7 +81,6 @@ export function ClientsPanel() {
       returnShare: returnShare(returnRevenue, newRevenue + returnRevenue),
     };
   });
-  const gaps = report.gaps.bins.map((bin) => ({ label: bin.label, count: bin.count }));
   const frequency = [
     { label: t("once"), clients: report.frequency.once.clients },
     { label: t("twice"), clients: report.frequency.twice.clients },
@@ -164,20 +184,31 @@ export function ClientsPanel() {
         )}
       </Section>
       <Section title={t("gap")}>
-        <Note>
-          {report.gaps.median === null
-            ? t("gapEmpty")
-            : t("gapMedian", { days: formatAmount(report.gaps.median) })}
-        </Note>
-        <ChartFrame>
-          <BarChart data={gaps} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e8ddcd" vertical={false} />
-            <XAxis dataKey="label" tick={AXIS_TICK} />
-            <YAxis tick={AXIS_TICK} width={36} allowDecimals={false} />
-            <Tooltip contentStyle={TOOLTIP_STYLE} />
-            <Bar dataKey="count" name={t("clientsTitle")} fill={COLOR_REVENUE} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ChartFrame>
+        {report.gaps.median === null ? (
+          <Note>{t("gapEmpty")}</Note>
+        ) : (
+          <>
+            <Note>{t("gapNote")}</Note>
+            <Note>{t("gapMedian", { days: formatAmount(report.gaps.median) })}</Note>
+            <SpanChart
+              rows={spanRows(report.gaps.bins, (days) => t(SPAN_KEY[days]))}
+              color={COLOR_REVENUE}
+            />
+          </>
+        )}
+      </Section>
+      <Section title={t("tenure")}>
+        {report.gaps.median === null ? (
+          <Note>{t("gapEmpty")}</Note>
+        ) : (
+          <>
+            <Note>{t("tenureNote")}</Note>
+            <SpanChart
+              rows={spanRows(report.tenure.bins, (days) => t(SPAN_KEY[days]))}
+              color={COLOR_ORDERS}
+            />
+          </>
+        )}
       </Section>
       <Section title={t("frequency")}>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -214,6 +245,38 @@ export function ClientsPanel() {
         <CustomerTable rows={report.top_orders} />
       </Section>
     </div>
+  );
+}
+
+function SpanChart({
+  rows,
+  color,
+}: {
+  rows: { label: string; share: number; count: number }[];
+  color: string;
+}) {
+  const t = useTranslations("analytics");
+  return (
+    <ChartFrame>
+      <BarChart data={rows} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid stroke="#e8ddcd" vertical={false} />
+        <XAxis dataKey="label" tick={AXIS_TICK} />
+        <YAxis tick={AXIS_TICK} width={48} domain={[0, 100]} tickFormatter={(value: number) => `${value}%`} />
+        <Tooltip
+          contentStyle={TOOLTIP_STYLE}
+          formatter={(value, _name, item) => [`${value}% · ${item.payload.count}`, t("clientsTitle")]}
+        />
+        <Bar dataKey="share" name={t("clientsTitle")} fill={color} radius={[4, 4, 0, 0]}>
+          <LabelList
+            dataKey="share"
+            position="top"
+            fill="#666666"
+            fontSize={12}
+            formatter={(value) => (typeof value === "number" ? `${value}%` : "")}
+          />
+        </Bar>
+      </BarChart>
+    </ChartFrame>
   );
 }
 
