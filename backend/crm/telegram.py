@@ -4,14 +4,12 @@ import json
 import logging
 import math
 import time as time_module
-import urllib.error
-import urllib.request
-import uuid
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import requests
 from django.conf import settings
 from django.db import OperationalError, transaction
 from django.utils import timezone
@@ -22,6 +20,12 @@ from crm.phone import contact_links
 from crm.yandex_maps import cached_yandex_maps_url
 
 logger = logging.getLogger(__name__)
+
+_CONNECT_TIMEOUT = 3
+_JSON_READ_TIMEOUT = 5
+_MEDIA_READ_TIMEOUT = 15
+_LAST_READ_TIMEOUT = 30
+_MAX_ATTEMPTS = 3
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -445,70 +449,79 @@ def _channel_message_link(chat_id: str, message_id: int) -> str:
     return f"https://t.me/c/{internal}/{message_id}"
 
 
-def _urlopen_with_retry(req: urllib.request.Request):
-    for attempt in range(3):
+def _telegram_post(
+    method: str,
+    read_timeout: int,
+    json_body: dict | None,
+    data: dict | None,
+    files: list[tuple[str, tuple[str, bytes]]] | None,
+) -> requests.Response:
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/{method}"
+    read_timed_out = False
+    for attempt in range(1, _MAX_ATTEMPTS + 1):
+        current_read = _LAST_READ_TIMEOUT if read_timed_out or attempt == _MAX_ATTEMPTS else read_timeout
+        started = time_module.perf_counter()
         try:
-            return urllib.request.urlopen(req, timeout=60)
-        except urllib.error.HTTPError:
-            raise
-        except (TimeoutError, urllib.error.URLError):
-            if attempt == 2:
+            response = requests.post(
+                url,
+                json=json_body,
+                data=data,
+                files=files,
+                timeout=(_CONNECT_TIMEOUT, current_read),
+            )
+        except requests.ConnectTimeout as exc:
+            logger.warning(
+                "telegram %s attempt=%s elapsed=%.2fs error=%s",
+                method,
+                attempt,
+                time_module.perf_counter() - started,
+                exc,
+            )
+            if attempt == _MAX_ATTEMPTS:
                 raise
+            continue
+        except requests.ReadTimeout as exc:
+            logger.warning(
+                "telegram %s attempt=%s elapsed=%.2fs error=%s",
+                method,
+                attempt,
+                time_module.perf_counter() - started,
+                exc,
+            )
+            if read_timed_out or attempt == _MAX_ATTEMPTS:
+                raise
+            read_timed_out = True
+            continue
+        logger.info(
+            "telegram %s attempt=%s elapsed=%.2fs status=%s",
+            method,
+            attempt,
+            time_module.perf_counter() - started,
+            response.status_code,
+        )
+        return response
+    raise RuntimeError(method)
+
+
+def _telegram_data(method: str, response: requests.Response) -> dict:
+    if method == "editMessageText" and response.status_code == 400:
+        data = response.json()
+        if "message is not modified" in data["description"]:
+            return data
+    response.raise_for_status()
+    data = response.json()
+    if not data["ok"]:
+        raise RuntimeError(data)
+    return data
 
 
 def _telegram_json(method: str, payload: dict) -> dict:
-    token = settings.TELEGRAM_BOT_TOKEN
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/{method}",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with _urlopen_with_retry(req) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        if method != "editMessageText" or exc.code != 400:
-            raise
-        data = json.loads(exc.read().decode("utf-8"))
-        if "message is not modified" not in data["description"]:
-            raise
-        return data
-    if not data["ok"]:
-        raise RuntimeError(data)
-    return data
+    return _telegram_data(method, _telegram_post(method, _JSON_READ_TIMEOUT, payload, None, None))
 
 
 def _telegram_multipart(method: str, fields: dict[str, str], files: list[tuple[str, str, bytes]]) -> dict:
-    token = settings.TELEGRAM_BOT_TOKEN
-    boundary = uuid.uuid4().hex
-    body = bytearray()
-    for name, value in fields.items():
-        body.extend(f"--{boundary}\r\n".encode())
-        body.extend(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode())
-        body.extend(str(value).encode("utf-8"))
-        body.extend(b"\r\n")
-    for field_name, filename, content in files:
-        body.extend(f"--{boundary}\r\n".encode())
-        body.extend(
-            f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'.encode()
-        )
-        body.extend(b"Content-Type: application/octet-stream\r\n\r\n")
-        body.extend(content)
-        body.extend(b"\r\n")
-    body.extend(f"--{boundary}--\r\n".encode())
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/{method}",
-        data=bytes(body),
-        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
-        method="POST",
-    )
-    with _urlopen_with_retry(req) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-    if not data["ok"]:
-        raise RuntimeError(data)
-    return data
+    prepared = [(field_name, (filename, content)) for field_name, filename, content in files]
+    return _telegram_data(method, _telegram_post(method, _MEDIA_READ_TIMEOUT, None, fields, prepared))
 
 
 def _read_image(img: CrmOrderImage | CrmOrderReadyImage) -> tuple[str, bytes]:
@@ -559,14 +572,14 @@ def _post_photos(order: CrmOrder, chat_id: str) -> list[dict]:
             fields = {"chat_id": chat_id, "media": json.dumps(media)}
         try:
             result = _telegram_multipart(method, fields, files)
-        except urllib.error.HTTPError as exc:
-            if exc.code != 400:
+        except requests.HTTPError as exc:
+            if exc.response.status_code != 400:
                 raise
             logger.warning(
                 "telegram photo skipped order_id=%s files=%s: %s",
                 order.pk,
                 [img.image.name for img in chunk],
-                exc.read().decode(),
+                exc.response.text,
             )
             continue
         if len(chunk) == 1:

@@ -69,6 +69,7 @@ import {
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
 import { formatAed, formatAmount, getTbilisiTodayIsoDate, sortCrmBoardOrders } from "@/lib/format";
+import { resizeImageForUpload } from "@/lib/resizeImage";
 import { cn } from "@/lib/utils";
 
 function formatItemWeight(value: string): string {
@@ -304,12 +305,17 @@ function CrmBoard() {
                 })
               }
               onUploadReadyPhotos={(files) => {
-                const body = new FormData();
-                body.append("status", "ready");
-                for (const file of files) {
-                  body.append("ready_images", file);
-                }
-                patchMutation.mutate({ id: order.id, body });
+                void (async () => {
+                  const resized = await Promise.all(
+                    files.map((file) => resizeImageForUpload(file, 2560)),
+                  );
+                  const body = new FormData();
+                  body.append("status", "ready");
+                  for (const file of resized) {
+                    body.append("ready_images", file);
+                  }
+                  patchMutation.mutate({ id: order.id, body });
+                })();
               }}
               onSetPaid={(isPaid, paymentType) =>
                 patchMutation.mutate({

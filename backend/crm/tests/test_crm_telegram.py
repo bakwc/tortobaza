@@ -1,13 +1,12 @@
 import hashlib
 import io
 import json
-import re
-import urllib.error
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
+import requests
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -35,6 +34,7 @@ from crm.models import (
 )
 from crm.telegram import (
     _persist_telegram_state,
+    _telegram_post,
     build_crm_order_telegram_html,
     build_crm_order_telegram_payload,
     crm_order_in_telegram_window,
@@ -49,18 +49,18 @@ from menu.models import Ingredient, Modifier, ModifierGroup
 _TB = ZoneInfo("Asia/Tbilisi")
 
 
-class FakeHttpResponse:
-    def __init__(self, payload: dict):
-        self._payload = json.dumps(payload).encode("utf-8")
+class FakeResponse:
+    def __init__(self, payload: dict, status_code: int = 200):
+        self.status_code = status_code
+        self._payload = payload
+        self.text = json.dumps(payload)
 
-    def read(self):
+    def json(self) -> dict:
         return self._payload
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise requests.HTTPError(response=self)
 
 
 def _jpeg(name: str) -> SimpleUploadedFile:
@@ -80,8 +80,8 @@ class CrmTelegramTests(TestCase):
         self.calls = []
         self._next_id = 100
         self.urlopen_patcher = patch(
-            "crm.telegram.urllib.request.urlopen",
-            side_effect=self._urlopen,
+            "crm.telegram.requests.post",
+            side_effect=self._post,
         )
         self.urlopen_patcher.start()
         self.addCleanup(self.urlopen_patcher.stop)
@@ -116,9 +116,7 @@ class CrmTelegramTests(TestCase):
         google_response.url = "https://yandex.com/maps/?text=Rustaveli"
         google_response.raise_for_status = MagicMock()
         self.google_get.return_value = google_response
-        self.routes_post_patcher = patch("crm.google_routes.requests.post")
-        self.routes_post = self.routes_post_patcher.start()
-        self.addCleanup(self.routes_post_patcher.stop)
+        self.routes_post = MagicMock()
         route_response = MagicMock()
         route_response.raise_for_status = MagicMock()
         route_response.json.return_value = [
@@ -138,36 +136,35 @@ class CrmTelegramTests(TestCase):
         self._next_id += 1
         return self._next_id
 
-    def _urlopen(self, req, timeout=None):
-        url = req.full_url
+    def _post(self, url, **kwargs):
+        if "api.telegram.org" not in url:
+            return self.routes_post(url, **kwargs)
+        json_body = kwargs.get("json")
+        data = kwargs.get("data")
+        files = kwargs.get("files")
+        timeout = kwargs.get("timeout")
         method = url.rsplit("/", 1)[-1]
-        content_type = req.headers.get("Content-type") or req.headers.get("Content-Type") or ""
-        if content_type.startswith("application/json"):
-            payload = json.loads(req.data.decode("utf-8"))
-            chat_id = str(payload["chat_id"])
-            self.calls.append({"method": method, "payload": payload, "chat_id": chat_id})
+        if json_body is not None:
+            chat_id = str(json_body["chat_id"])
+            self.calls.append({"method": method, "payload": json_body, "chat_id": chat_id, "timeout": timeout})
             if method == "deleteMessage":
-                return FakeHttpResponse({"ok": True, "result": True})
+                return FakeResponse({"ok": True, "result": True})
             if method == "sendMediaGroup":
                 raise AssertionError("sendMediaGroup must be multipart")
             mid = self._next_message_id()
-            return FakeHttpResponse({"ok": True, "result": {"message_id": mid}})
-        body = req.data
-        chat_match = re.search(rb'name="chat_id"\r\n\r\n([^\r]+)', body)
-        chat_id = chat_match.group(1).decode() if chat_match else ""
-        caption_field = re.search(rb'name="caption"\r\n\r\n([^\r]*)', body)
-        caption = caption_field.group(1).decode() if caption_field else ""
-        if not caption:
-            media_field = re.search(rb'name="media"\r\n\r\n(.+?)\r\n', body)
-            if media_field:
-                caption = json.loads(media_field.group(1).decode())[0].get("caption", "")
-        self.calls.append({"method": method, "payload": None, "chat_id": chat_id, "caption": caption})
+            return FakeResponse({"ok": True, "result": {"message_id": mid}})
+        chat_id = data["chat_id"]
+        caption = data.get("caption", "")
+        if not caption and data.get("media"):
+            caption = json.loads(data["media"])[0].get("caption", "")
+        self.calls.append(
+            {"method": method, "payload": None, "chat_id": chat_id, "caption": caption, "timeout": timeout}
+        )
         if method == "sendMediaGroup":
-            n = body.count(b'filename="')
-            ids = [self._next_message_id() for _ in range(n)]
-            return FakeHttpResponse({"ok": True, "result": [{"message_id": i} for i in ids]})
+            ids = [self._next_message_id() for _ in files]
+            return FakeResponse({"ok": True, "result": [{"message_id": i} for i in ids]})
         mid = self._next_message_id()
-        return FakeHttpResponse({"ok": True, "result": {"message_id": mid}})
+        return FakeResponse({"ok": True, "result": {"message_id": mid}})
 
     def _slot(self, delta: timedelta):
         point = timezone.now().astimezone(_TB) + delta
@@ -772,28 +769,22 @@ class CrmTelegramTests(TestCase):
         order.telegram_payload_hash = "0" * 64
         order.save(update_fields=["telegram_payload_hash", "updated_at"])
         self.calls.clear()
-        original = self._urlopen
+        original = self._post
 
-        def boom(req, timeout=None):
-            method = req.full_url.rsplit("/", 1)[-1]
+        def boom(url, json=None, data=None, files=None, timeout=None):
+            method = url.rsplit("/", 1)[-1]
             if method == "editMessageText":
-                payload = json.dumps(
+                return FakeResponse(
                     {
                         "ok": False,
                         "error_code": 400,
                         "description": "Bad Request: message is not modified",
-                    }
-                ).encode("utf-8")
-                raise urllib.error.HTTPError(
-                    req.full_url,
-                    400,
-                    "Bad Request",
-                    {},
-                    io.BytesIO(payload),
+                    },
+                    status_code=400,
                 )
-            return original(req, timeout)
+            return original(url, json=json, data=data, files=files, timeout=timeout)
 
-        with patch("crm.telegram.urllib.request.urlopen", side_effect=boom):
+        with patch("crm.telegram.requests.post", side_effect=boom):
             sync_crm_order_to_telegram(order.pk)
         order.refresh_from_db()
         self.assertEqual(order.telegram_payload_hash, crm_order_telegram_hash(order))
@@ -1342,6 +1333,29 @@ class CrmTelegramTests(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.delivery_distance_meters, 4200)
 
+    def test_connect_timeout_retries_then_raises(self):
+        with patch("crm.telegram.requests.post", side_effect=requests.ConnectTimeout()) as posted:
+            with self.assertRaises(requests.ConnectTimeout):
+                _telegram_post("sendMessage", 5, {"chat_id": "1", "text": "hi"}, None, None)
+        self.assertEqual(posted.call_count, 3)
+        self.assertEqual(posted.call_args_list[0].kwargs["timeout"], (3, 5))
+        self.assertEqual(posted.call_args_list[1].kwargs["timeout"], (3, 5))
+        self.assertEqual(posted.call_args_list[2].kwargs["timeout"], (3, 30))
+
+    def test_read_timeout_retries_once_with_long_read(self):
+        with patch("crm.telegram.requests.post", side_effect=requests.ReadTimeout()) as posted:
+            with self.assertRaises(requests.ReadTimeout):
+                _telegram_post(
+                    "sendPhoto",
+                    15,
+                    None,
+                    {"chat_id": "1"},
+                    [("photo", ("a.jpg", b"x"))],
+                )
+        self.assertEqual(posted.call_count, 2)
+        self.assertEqual(posted.call_args_list[0].kwargs["timeout"], (3, 15))
+        self.assertEqual(posted.call_args_list[1].kwargs["timeout"], (3, 30))
+
     def test_ready_photos_skip_when_chat_missing(self):
         order = self._create_order(delta=timedelta(hours=2))
         CrmOrderReadyImage.objects.create(order=order, image=_jpeg("ready.jpg"), position=0)
@@ -1359,6 +1373,7 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.calls[0]["method"], "sendPhoto")
         self.assertEqual(self.calls[0]["chat_id"], "ready-chat")
+        self.assertEqual(self.calls[0]["timeout"], (3, 15))
         self.assertIn(f"#{order.id}", self.calls[0]["caption"])
         self.assertIn("Медовик", self.calls[0]["caption"])
         self.assertIn("1.5 кг", self.calls[0]["caption"])

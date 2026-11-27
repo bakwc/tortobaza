@@ -25,19 +25,25 @@ _DONE = (
 )
 
 
+def _start_order_telegram_sync(order_id: int) -> None:
+    threading.Thread(
+        target=sync_ready_photos_to_telegram,
+        args=(order_id,),
+        daemon=True,
+    ).start()
+    threading.Thread(
+        target=sync_order_telegram_and_late_prep,
+        args=(order_id,),
+        daemon=True,
+    ).start()
+
+
 def schedule_crm_order_telegram_sync(order_id: int) -> None:
-    transaction.on_commit(
-        lambda: threading.Thread(
-            target=sync_order_telegram_and_late_prep,
-            args=(order_id,),
-            daemon=True,
-        ).start()
-    )
+    transaction.on_commit(lambda: _start_order_telegram_sync(order_id))
 
 
 def sync_order_telegram_and_late_prep(order_id: int) -> None:
     sync_crm_order_to_telegram(order_id)
-    sync_ready_photos_to_telegram(order_id)
     refresh_order_late_prep(order_id, timezone.now())
 
 
