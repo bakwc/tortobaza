@@ -38,6 +38,7 @@ import {
   type CrmItemDraft,
 } from "@/lib/crmItems";
 import { formatAed } from "@/lib/format";
+import { resizeImageForUpload } from "@/lib/resizeImage";
 import {
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
@@ -301,28 +302,31 @@ export function CrmOrderForm(
         return;
       }
     }
-    const body = buildCrmOrderFormData(
-      fields,
-      newFiles,
-      deleteImageIds,
-      items.map((item) => crmItemBody(item, cards)),
-    );
-    if (props.mode === "create") {
-      createMutation.mutate(body, {
-        onSuccess: (order) => {
-          router.push(`/crm?date=${order.date}`);
+    void (async () => {
+      const resized = await Promise.all(newFiles.map((file) => resizeImageForUpload(file, 2560)));
+      const body = buildCrmOrderFormData(
+        fields,
+        resized,
+        deleteImageIds,
+        items.map((item) => crmItemBody(item, cards)),
+      );
+      if (props.mode === "create") {
+        createMutation.mutate(body, {
+          onSuccess: (order) => {
+            router.push(`/crm?date=${order.date}`);
+          },
+        });
+        return;
+      }
+      updateMutation.mutate(
+        { id: props.order.id, body },
+        {
+          onSuccess: (order) => {
+            router.push(`/crm?date=${order.date}`);
+          },
         },
-      });
-      return;
-    }
-    updateMutation.mutate(
-      { id: props.order.id, body },
-      {
-        onSuccess: (order) => {
-          router.push(`/crm?date=${order.date}`);
-        },
-      },
-    );
+      );
+    })();
   };
 
   const paymentOptions: { value: CrmOrderPaymentType; label: string }[] = [
