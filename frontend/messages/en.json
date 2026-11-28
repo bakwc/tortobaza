@@ -1591,6 +1591,7 @@
     "maxSelections": "Maximum",
     "options": "Options",
     "modifiers": "Modifiers",
+    "addModifier": "Add modifier",
     "addOption": "Add option",
     "newOption": "New option",
     "priceDelta": "Price delta",

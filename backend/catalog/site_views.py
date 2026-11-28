@@ -25,7 +25,6 @@ from catalog.site_serializers import (
     SiteImageUploadSerializer,
     SiteModifierChoiceSerializer,
     SiteOptionGroupSerializer,
-    SiteOptionSerializer,
     SiteProductImagePatchSerializer,
     SiteProductImageReorderSerializer,
     SiteProductImageSerializer,
@@ -212,40 +211,14 @@ class SiteOptionGroupListView(SiteListView):
     serializer_class = SiteOptionGroupSerializer
 
     def get_queryset(self):
-        return OptionGroup.objects.prefetch_related("options")
+        return OptionGroup.objects.prefetch_related("options__modifiers")
 
 
 class SiteOptionGroupDetailView(SiteDetailView):
     serializer_class = SiteOptionGroupSerializer
 
     def get_queryset(self):
-        return OptionGroup.objects.prefetch_related("options")
-
-
-class SiteOptionListView(APIView):
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
-
-    def get(self, request):
-        options = (
-            Option.objects.select_related("group")
-            .prefetch_related("modifiers")
-            .order_by("group__name", "position", "id")
-        )
-        return Response(SiteOptionSerializer(options, many=True, context=serializer_context(request)).data)
-
-
-class SiteOptionDetailView(APIView):
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated, SectionPermission("catalog")]
-
-    @transaction.atomic
-    def patch(self, request, pk: int):
-        option = get_object_or_404(Option.objects.select_related("group"), pk=pk)
-        serializer = SiteOptionSerializer(option, data=request.data, context=serializer_context(request))
-        serializer.is_valid(raise_exception=True)
-        option = serializer.save()
-        return Response(SiteOptionSerializer(option, context=serializer_context(request)).data)
+        return OptionGroup.objects.prefetch_related("options__modifiers")
 
 
 class SiteModifierChoicesView(APIView):

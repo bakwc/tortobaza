@@ -3,7 +3,6 @@ import {
   SiteCategoryLandingSchema,
   SiteCategorySchema,
   SiteModifierChoiceSchema,
-  SiteOptionDetailSchema,
   SiteOptionGroupSchema,
   SiteProductImageSchema,
   SiteProductListItemSchema,
@@ -12,8 +11,6 @@ import {
   SiteTranslationSchema,
   type SiteCategoryBody,
   type SiteCategoryLandingBody,
-  type SiteOptionDetail,
-  type SiteOptionDetailBody,
   type SiteOptionGroupBody,
   type SiteModifierChoice,
   type SiteProductBody,
@@ -1375,17 +1372,6 @@ export function endpoints(fetcher: Fetcher) {
         body: JSON.stringify({ ids }),
       });
       return parse(z.array(SiteProductImageSchema), raw);
-    },
-    async listSiteOptions(): Promise<SiteOptionDetail[]> {
-      const raw = await fetcher<unknown>("/api/site/options/");
-      return parse(z.array(SiteOptionDetailSchema), raw);
-    },
-    async updateSiteOption(id: number, body: SiteOptionDetailBody): Promise<SiteOptionDetail> {
-      const raw = await fetcher<unknown>(`/api/site/options/${id}/`, {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      });
-      return parse(SiteOptionDetailSchema, raw);
     },
     async listSiteModifiers(): Promise<SiteModifierChoice[]> {
       const raw = await fetcher<unknown>("/api/site/modifiers/");

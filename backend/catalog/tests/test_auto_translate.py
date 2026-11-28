@@ -235,6 +235,7 @@ class AutoTranslateTests(TestCase):
                             "tech_card": None,
                             "position": 0,
                             "is_active": True,
+                            "modifiers": [],
                         }
                     ],
                 },
@@ -423,6 +424,7 @@ class AutoTranslateTests(TestCase):
                         "tech_card": None,
                         "position": 0,
                         "is_active": True,
+                        "modifiers": [],
                     }
                 ],
             },

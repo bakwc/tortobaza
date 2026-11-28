@@ -23,6 +23,7 @@ import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
 import {
   matchesVisibility,
+  useSiteModifiers,
   useSiteOptionGroups,
   useSiteOptionImageDelete,
   useSiteOptionImageUpload,
@@ -31,7 +32,7 @@ import {
   useVisibility,
 } from "@/hooks/useSite";
 import { defaultCenterCrop, type CropValues } from "@/lib/site/crop";
-import type { SiteOptionGroup, SiteTranslationBody } from "@/lib/api/site-schemas";
+import type { SiteModifierChoice, SiteOptionGroup, SiteTranslationBody } from "@/lib/api/site-schemas";
 import { newDraftKey } from "@/components/menu/ComponentLinesEditor";
 
 type OptionDraft = {
@@ -45,6 +46,7 @@ type OptionDraft = {
   tech_card: number | null;
   position: number;
   is_active: boolean;
+  modifiers: number[];
   crop_left: number | null;
   crop_top: number | null;
   crop_size: number | null;
@@ -102,6 +104,7 @@ function draftFrom(row: SiteOptionGroup | null): GroupDraft {
       tech_card: option.tech_card,
       position: option.position,
       is_active: option.is_active,
+      modifiers: option.modifiers,
       crop_left: option.crop_left,
       crop_top: option.crop_top,
       crop_size: option.crop_size,
@@ -110,6 +113,18 @@ function draftFrom(row: SiteOptionGroup | null): GroupDraft {
       image_height: option.image?.height ?? null,
     })),
   };
+}
+
+function modifierName(row: SiteModifierChoice, inactive: string): string {
+  return row.is_active ? row.name : `${row.name} (${inactive})`;
+}
+
+function addableModifiers(rows: SiteModifierChoice[], selected: number[]): SiteModifierChoice[] {
+  const chosen = new Set(selected);
+  const blockedGroups = new Set(
+    rows.filter((row) => chosen.has(row.id) && row.group_selection_type === "single").map((row) => row.group_name),
+  );
+  return rows.filter((row) => !chosen.has(row.id) && !blockedGroups.has(row.group_name));
 }
 
 function cropFromOption(option: OptionDraft): CropValues {
@@ -126,6 +141,7 @@ export function OptionGroupsPanel() {
   const canEdit = useCan("edit_catalog");
   const visibility = useVisibility();
   const groups = useSiteOptionGroups();
+  const modifiers = useSiteModifiers();
   const techCards = useSiteTechCards();
   const techCardOptions = [
     { value: "", label: t("noTechCard") },
@@ -246,6 +262,7 @@ export function OptionGroupsPanel() {
                     tech_card: row.tech_card,
                     position: row.position,
                     is_active: row.is_active,
+                    modifiers: row.modifiers,
                     crop_left: row.crop_left,
                     crop_top: row.crop_top,
                     crop_size: row.crop_size,
@@ -400,6 +417,7 @@ export function OptionGroupsPanel() {
                           tech_card: null,
                           position: draft.options.length,
                           is_active: true,
+                          modifiers: [],
                           crop_left: null,
                           crop_top: null,
                           crop_size: null,
@@ -542,6 +560,69 @@ export function OptionGroupsPanel() {
                       keepSelectedOnDigit={false}
                     />
                   </Field>
+                </div>
+                <div className="grid gap-2">
+                  <p className="text-sm font-medium text-[var(--ink)]">{t("modifiers")}</p>
+                  <QueryState isLoading={modifiers.isLoading} isError={modifiers.isError}>
+                    {row.modifiers.map((id) => {
+                      const modifier = (modifiers.data ?? []).find((item) => item.id === id);
+                      if (modifier === undefined) return null;
+                      return (
+                        <div key={id} className="flex items-center justify-between gap-2 text-sm">
+                          <span>
+                            {modifier.group_name} · {modifierName(modifier, t("inactive"))}
+                          </span>
+                          {canEdit ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setDraft({
+                                  ...draft,
+                                  options: draft.options.map((item) =>
+                                    item.key === row.key
+                                      ? { ...item, modifiers: item.modifiers.filter((modifierId) => modifierId !== id) }
+                                      : item,
+                                  ),
+                                })
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    {canEdit ? (
+                      <SearchSelect
+                        options={addableModifiers(modifiers.data ?? [], row.modifiers).map((item) => ({
+                          value: String(item.id),
+                          label: `${item.group_name}: ${modifierName(item, t("inactive"))}`,
+                        }))}
+                        value=""
+                        onChange={(value) => {
+                          if (value === "") return;
+                          const modifierId = Number(value);
+                          setDraft({
+                            ...draft,
+                            options: draft.options.map((item) =>
+                              item.key === row.key
+                                ? { ...item, modifiers: [...item.modifiers, modifierId] }
+                                : item,
+                            ),
+                          });
+                        }}
+                        placeholder={t("addModifier")}
+                        required={false}
+                        name={null}
+                        className="max-w-sm"
+                        onCreate={null}
+                        createPending={false}
+                        keepSelectedOnDigit={false}
+                      />
+                    ) : null}
+                  </QueryState>
                 </div>
                 {canEdit ? (
                   <div className="flex flex-wrap gap-2">

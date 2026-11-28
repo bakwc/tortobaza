@@ -251,6 +251,7 @@ class SiteApiTests(TestCase):
                         "tech_card": None,
                         "position": 0,
                         "is_active": True,
+                        "modifiers": [],
                     }
                 ],
             },
@@ -260,11 +261,13 @@ class SiteApiTests(TestCase):
         group_id = created.json()["id"]
         self.assertEqual(len(created.json()["options"]), 1)
 
-    def test_option_patch_sets_modifiers_and_group_save_keeps_them(self):
+    def test_option_group_save_sets_modifiers(self):
         biscuit_group = ModifierGroup.objects.create(name="Biscuit", selection_type="single")
         biscuit = Modifier.objects.create(group=biscuit_group, name="Vanilla")
         filling_group = ModifierGroup.objects.create(name="Filling", selection_type="single")
         filling = Modifier.objects.create(group=filling_group, name="Raspberry")
+        decor_group = ModifierGroup.objects.create(name="Decor", selection_type="single")
+        decor = Modifier.objects.create(group=decor_group, name="Photo")
         option = Option.objects.create(
             group=self.group,
             name="Pistachio",
@@ -275,48 +278,41 @@ class SiteApiTests(TestCase):
             position=0,
         )
         self.client.force_authenticate(user=self.editor)
-        patched = self.client.patch(
-            f"/api/site/options/{option.pk}/",
-            {
-                "name_en": "Pistachio",
-                "name_ka": "",
-                "name_ru": "Фисташка",
-                "price_delta": "0.00",
-                "weight_kg": None,
-                "is_active": True,
-                "modifiers": [biscuit.pk, filling.pk],
-                "tech_card": None,
-            },
-            format="json",
-        )
-        self.assertEqual(patched.status_code, 200, patched.content)
-        self.assertEqual(set(patched.json()["modifiers"]), {biscuit.pk, filling.pk})
-        saved = self.client.put(
-            f"/api/site/option-groups/{self.group.pk}/",
-            {
-                "slug": self.group.slug,
-                "name_en": self.group.name_en,
-                "name_ka": self.group.name_ka,
-                "name_ru": self.group.name_ru,
-                "selection_type": self.group.selection_type,
-                "is_required_default": self.group.is_required_default,
-                "min_selections": self.group.min_selections,
-                "max_selections": self.group.max_selections,
-                "options": [
-                    {
-                        "id": option.pk,
-                        "name_en": "Pistachio",
-                        "name_ka": "",
-                        "name_ru": "Фисташка",
-                        "price_delta": "0.00",
-                        "weight_kg": None,
-                        "tech_card": None,
-                        "position": 0,
-                        "is_active": True,
-                    }
-                ],
-            },
-            format="json",
-        )
+
+        def save(modifiers: list[int]):
+            return self.client.put(
+                f"/api/site/option-groups/{self.group.pk}/",
+                {
+                    "slug": self.group.slug,
+                    "name_en": self.group.name_en,
+                    "name_ka": self.group.name_ka,
+                    "name_ru": self.group.name_ru,
+                    "selection_type": self.group.selection_type,
+                    "is_required_default": self.group.is_required_default,
+                    "min_selections": self.group.min_selections,
+                    "max_selections": self.group.max_selections,
+                    "options": [
+                        {
+                            "id": option.pk,
+                            "name_en": "Pistachio",
+                            "name_ka": "",
+                            "name_ru": "Фисташка",
+                            "price_delta": "0.00",
+                            "weight_kg": None,
+                            "tech_card": None,
+                            "position": 0,
+                            "is_active": True,
+                            "modifiers": modifiers,
+                        }
+                    ],
+                },
+                format="json",
+            )
+
+        saved = save([biscuit.pk, filling.pk])
         self.assertEqual(saved.status_code, 200, saved.content)
+        self.assertEqual(set(saved.json()["options"][0]["modifiers"]), {biscuit.pk, filling.pk})
         self.assertEqual(set(option.modifiers.values_list("id", flat=True)), {biscuit.pk, filling.pk})
+        replaced = save([decor.pk])
+        self.assertEqual(replaced.status_code, 200, replaced.content)
+        self.assertEqual(set(option.modifiers.values_list("id", flat=True)), {decor.pk})

@@ -95,29 +95,15 @@ export const SiteOptionSchema = z.object({
   crop_left: z.number().nullable(),
   crop_top: z.number().nullable(),
   crop_size: z.number().nullable(),
-  image: SiteCroppedImageSchema.nullable(),
-});
-
-export const SiteOptionDetailSchema = z.object({
-  id: z.number(),
-  group: z.number(),
-  group_name_en: blankString,
-  group_name_ka: blankString,
-  group_name_ru: blankString,
-  name_en: blankString,
-  name_ka: blankString,
-  name_ru: blankString,
-  price_delta: z.string(),
-  weight_kg: z.string().nullable(),
-  is_active: z.boolean(),
   modifiers: z.array(z.number()),
-  tech_card: z.number().nullable(),
+  image: SiteCroppedImageSchema.nullable(),
 });
 
 export const SiteModifierChoiceSchema = z.object({
   id: z.number(),
   name: z.string(),
   group_name: z.string(),
+  group_selection_type: z.enum(["single", "multi"]),
   is_active: z.boolean(),
 });
 
@@ -231,7 +217,6 @@ export type SiteCategory = z.infer<typeof SiteCategorySchema>;
 export type SiteCategoryLanding = z.infer<typeof SiteCategoryLandingSchema>;
 export type SiteOptionGroup = z.infer<typeof SiteOptionGroupSchema>;
 export type SiteOption = z.infer<typeof SiteOptionSchema>;
-export type SiteOptionDetail = z.infer<typeof SiteOptionDetailSchema>;
 export type SiteModifierChoice = z.infer<typeof SiteModifierChoiceSchema>;
 export type SiteProductListItem = z.infer<typeof SiteProductListItemSchema>;
 export type SiteProduct = z.infer<typeof SiteProductSchema>;
@@ -244,10 +229,6 @@ export type SiteCategoryBody = Omit<SiteCategory, "id" | "image" | "updated_at">
 export type SiteCategoryLandingBody = Omit<
   SiteCategoryLanding,
   "id" | "source_name" | "image" | "updated_at"
->;
-export type SiteOptionDetailBody = Omit<
-  SiteOptionDetail,
-  "id" | "group" | "group_name_en" | "group_name_ka" | "group_name_ru"
 >;
 export type SiteOptionGroupBody = Omit<SiteOptionGroup, "id" | "options"> & {
   options: Array<

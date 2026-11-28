@@ -200,6 +200,22 @@ class SiteOptionInputSerializer(serializers.Serializer):
     crop_left = serializers.FloatField(required=False, allow_null=True)
     crop_top = serializers.FloatField(required=False, allow_null=True)
     crop_size = serializers.FloatField(required=False, allow_null=True)
+    modifiers = serializers.PrimaryKeyRelatedField(
+        queryset=Modifier.objects.select_related("group"), many=True
+    )
+
+    def validate(self, attrs):
+        seen_groups: set[int] = set()
+        for modifier in attrs["modifiers"]:
+            group = modifier.group
+            if group.selection_type != ModifierGroup.SELECTION_SINGLE:
+                continue
+            if group.pk in seen_groups:
+                raise serializers.ValidationError(
+                    f"Only one modifier can be selected in group {group.name}."
+                )
+            seen_groups.add(group.pk)
+        return attrs
 
 
 class SiteOptionGroupSerializer(serializers.ModelSerializer):
@@ -238,6 +254,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
                 "crop_left": option.crop_left,
                 "crop_top": option.crop_top,
                 "crop_size": option.crop_size,
+                "modifiers": [modifier.pk for modifier in option.modifiers.all()],
                 "image": None,
             }
             if option.image.name:
@@ -273,8 +290,9 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
         options = validated_data.pop("options")
         instance = OptionGroup.objects.create(**validated_data)
         self._save_options(instance, options)
-        schedule_translation([instance, *instance.options.all()])
-        return instance
+        saved = OptionGroup.objects.prefetch_related("options__modifiers").get(pk=instance.pk)
+        schedule_translation([saved, *saved.options.all()])
+        return saved
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -283,14 +301,16 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         self._save_options(instance, options)
-        schedule_translation([instance, *instance.options.all()])
-        return instance
+        saved = OptionGroup.objects.prefetch_related("options__modifiers").get(pk=instance.pk)
+        schedule_translation([saved, *saved.options.all()])
+        return saved
 
     def _save_options(self, instance: OptionGroup, options: list[dict]) -> None:
         kept = {row["id"] for row in options if row.get("id") is not None}
         instance.options.exclude(pk__in=kept).delete()
         for row in options:
             option_id = row.get("id")
+            modifiers = row["modifiers"]
             payload = {
                 "name_en": row["name_en"],
                 "name_ka": row["name_ka"],
@@ -305,9 +325,11 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
                 "crop_size": row.get("crop_size"),
             }
             if option_id is None:
-                Option.objects.create(group=instance, **payload)
+                option = Option.objects.create(group=instance, **payload)
             else:
                 Option.objects.filter(pk=option_id, group=instance).update(**payload)
+                option = Option.objects.get(pk=option_id, group=instance)
+            option.modifiers.set(modifiers)
 
 
 class SiteProductImageSerializer(serializers.ModelSerializer):
@@ -513,67 +535,13 @@ class SiteTranslationRequestSerializer(serializers.Serializer):
         return attrs
 
 
-class SiteOptionSerializer(serializers.ModelSerializer):
-    price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
-    weight_kg = serializers.DecimalField(max_digits=6, decimal_places=3, allow_null=True)
-    modifiers = serializers.PrimaryKeyRelatedField(
-        queryset=Modifier.objects.select_related("group"), many=True
-    )
-    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
-    group = serializers.IntegerField(source="group_id", read_only=True)
-    group_name_en = serializers.CharField(source="group.name_en", read_only=True)
-    group_name_ka = serializers.CharField(source="group.name_ka", read_only=True)
-    group_name_ru = serializers.CharField(source="group.name_ru", read_only=True)
-
-    class Meta:
-        model = Option
-        fields = [
-            "id",
-            "group",
-            "group_name_en",
-            "group_name_ka",
-            "group_name_ru",
-            "name_en",
-            "name_ka",
-            "name_ru",
-            "price_delta",
-            "weight_kg",
-            "is_active",
-            "modifiers",
-            "tech_card",
-        ]
-        extra_kwargs = {
-            "name_en": {"allow_blank": True},
-            "name_ka": {"allow_blank": True},
-            "name_ru": {"allow_blank": True},
-        }
-
-    def validate(self, attrs):
-        require_filled(attrs, "name", "Name is required in at least one language.")
-        seen_groups: set[int] = set()
-        for modifier in attrs["modifiers"]:
-            group = modifier.group
-            if group.selection_type != ModifierGroup.SELECTION_SINGLE:
-                continue
-            if group.pk in seen_groups:
-                raise serializers.ValidationError(
-                    f"Only one modifier can be selected in group {group.name}."
-                )
-            seen_groups.add(group.pk)
-        return attrs
-
-    def update(self, instance, validated_data):
-        instance = super().update(instance, validated_data)
-        schedule_translation([instance])
-        return instance
-
-
 class SiteModifierChoiceSerializer(serializers.ModelSerializer):
     group_name = serializers.CharField(source="group.name", read_only=True)
+    group_selection_type = serializers.CharField(source="group.selection_type", read_only=True)
 
     class Meta:
         model = Modifier
-        fields = ["id", "name", "group_name", "is_active"]
+        fields = ["id", "name", "group_name", "group_selection_type", "is_active"]
 
 
 class SiteTechCardChoiceSerializer(serializers.ModelSerializer):
