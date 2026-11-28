@@ -351,6 +351,7 @@
     "collapseOrder": "Свернуть заказ",
     "expandOrder": "Развернуть заказ",
     "nextStepNew": "Подтвердить",
+    "itemsRequiredToConfirm": "Чтобы подтвердить заказ, укажите позиции и снимите отметку «нужна проверка».",
     "nextStepReady": "Готов",
     "nextStepClientApproved": "Клиент одобрил",
     "nextStepInDelivery": "В доставку",

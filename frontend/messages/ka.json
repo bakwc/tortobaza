@@ -351,6 +351,7 @@
     "collapseOrder": "შეკვეთის ჩაკეცვა",
     "expandOrder": "შეკვეთის გაშლა",
     "nextStepNew": "დადასტურება",
+    "itemsRequiredToConfirm": "შეკვეთის დასადასტურებლად მიუთითეთ პოზიციები და მოხსენით შემოწმების ნიშანი.",
     "nextStepReady": "მზადაა",
     "nextStepClientApproved": "კლიენტმა დაამტკიცა",
     "nextStepInDelivery": "მიწოდებაში",

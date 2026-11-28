@@ -65,6 +65,7 @@ import {
   canSetCrmOrderStatus,
   crmOrderCookingIsPast,
   crmOrderDeliveryIsPast,
+  crmOrderNeedsConfirmedItems,
   crmOrderSelectableStatuses,
   crmOrderStatusTone,
 } from "@/lib/crmStatus";
@@ -379,6 +380,8 @@ function CrmOrderStatusMenu({
   const selectable = crmOrderSelectableStatuses(order.status).filter(
     (status) => status === order.status || canSetStatus(status),
   );
+  const confirmBlocked =
+    order.status === "unconfirmed" && crmOrderNeedsConfirmedItems(order.items);
   if (!canEditOrders && !selectable.some((status) => status !== order.status)) {
     return null;
   }
@@ -399,11 +402,14 @@ function CrmOrderStatusMenu({
       </Button>
       {open ? (
         <div className="absolute bottom-full right-0 z-20 mb-2 min-w-[220px] rounded-2xl border border-[var(--line)] bg-white py-1 shadow-lg">
+          {confirmBlocked ? (
+            <p className="px-4 py-2 text-xs text-amber-800">{t("itemsRequiredToConfirm")}</p>
+          ) : null}
           {selectable.map((status) => (
             <button
               key={status}
               type="button"
-              disabled={status === order.status}
+              disabled={status === order.status || (confirmBlocked && status === "new")}
               onClick={() => {
                 setOpen(false);
                 onSetStatus(status);
@@ -569,6 +575,10 @@ function CrmOrderCard({
 
   const nextStatus = CRM_ORDER_NEXT_STATUS[order.status];
   const NextStepIcon = nextStatus ? NEXT_STEP_ICONS[nextStatus] : null;
+  const confirmBlocked =
+    order.status === "unconfirmed" &&
+    nextStatus === "new" &&
+    crmOrderNeedsConfirmedItems(order.items);
 
   const handlePaidClick = () => {
     if (!canEditOrders) return;
@@ -1404,6 +1414,9 @@ function CrmOrderCard({
               {isPatching ? <Spinner className="h-4 w-4 text-[var(--brand)]" /> : null}
             </div>
             <div className="flex items-stretch justify-end gap-2 sm:gap-3">
+              {confirmBlocked ? (
+                <p className="text-xs text-amber-800">{t("itemsRequiredToConfirm")}</p>
+              ) : null}
               {nextStatus && NextStepIcon && canSetStatus(nextStatus) ? (
                 <Button
                   type="button"
@@ -1415,7 +1428,7 @@ function CrmOrderCard({
                       requestStatus(nextStatus);
                     }
                   }}
-                  disabled={isPatching}
+                  disabled={isPatching || confirmBlocked}
                   className="h-11 flex-1 px-2 font-semibold whitespace-normal leading-tight lg:h-14 lg:px-8 lg:whitespace-nowrap"
                 >
                   {isPatching ? (

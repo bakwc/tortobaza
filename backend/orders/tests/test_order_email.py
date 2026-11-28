@@ -118,6 +118,7 @@ class OrderEmailTests(TestCase):
         mock_now.return_value = self._frozen_now()
         order = create_order_from_cart(self.cart, self._payload(), Order.ENV_PROD)
         crm = CrmOrder.objects.get(website_order=order)
+        crm.items.update(needs_review=False)
         user = User.objects.create_user(username="worker", password="password")
         grant(user, "view_orders", *ORDER_STATUS_CODES)
         self.client.force_authenticate(user=user)

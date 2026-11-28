@@ -14,7 +14,14 @@ from rest_framework.test import APIClient
 
 from accounts.permissions import ORDER_STATUS_CODES, grant
 from crm.flowwow import _filling, _weight
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage, CrmOrderReadyImage
+from crm.models import (
+    CrmOrder,
+    CrmOrderEvent,
+    CrmOrderImage,
+    CrmOrderItem,
+    CrmOrderReadyImage,
+    FinancialAccount,
+)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 _NOW = datetime(2026, 9, 19, 15, 0, tzinfo=_TB)
@@ -109,6 +116,9 @@ class FlowwowOrderSyncTests(TestCase):
         self.list_calls: list[dict] = []
         self.image_calls: list[str] = []
         self.items: list[dict] = []
+        catalog_patcher = patch("crm.flowwow.sync_flowwow_catalog")
+        catalog_patcher.start()
+        self.addCleanup(catalog_patcher.stop)
 
     def _get(self, url, params=None, headers=None, timeout=None):
         if url == "https://apis.flowwow.com/apiseller/orders/list":
@@ -577,9 +587,13 @@ class FlowwowProductFieldsTests(TestCase):
 
 
 class FlowwowSyncCommandTests(TestCase):
+    def setUp(self):
+        FinancialAccount.objects.create(name="PayPal", kind=FinancialAccount.KIND_BANK, currency="USD")
+
     @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_catalog_if_stale", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")
     def test_existing_timer_command_imports_flowwow_orders(self, mock_sync):
         call_command("sync_crm_orders_to_telegram")
@@ -870,6 +884,7 @@ class FlowwowCourierLeftSyncTests(TestCase):
     @patch("crm.flowwow.requests.post", return_value=_ok_post_response())
     def test_patch_unconfirmed_to_new_posts_accept(self, mock_post):
         order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED)
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
@@ -898,6 +913,7 @@ class FlowwowCourierLeftSyncTests(TestCase):
     @patch("crm.flowwow.requests.post")
     def test_patch_unconfirmed_to_new_without_flowwow_id_does_not_post(self, mock_post):
         order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED, flowwow_order_id=None)
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
@@ -912,6 +928,7 @@ class FlowwowCourierLeftSyncTests(TestCase):
     @patch("crm.flowwow.requests.post", return_value=_error_post_response(400))
     def test_accept_http_400_saves_new(self, mock_post):
         order = _flowwow_crm_order(status=CrmOrder.STATUS_UNCONFIRMED)
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",

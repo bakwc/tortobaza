@@ -1,3 +1,4 @@
+import logging
 from datetime import time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -13,6 +14,7 @@ from crm.cash_transactions import sync_cash_paid_order_transactions
 from crm.paypal_order_links import sync_paypal_order_links
 from crm.paypal_transactions import sync_paypal_transactions
 from crm.flowwow import sync_flowwow_orders
+from crm.flowwow_catalog import sync_flowwow_catalog_if_stale
 from crm.flowwow_bog_transfers import sync_flowwow_bog_transfers
 from crm.flowwow_order_links import sync_flowwow_order_links
 from crm.internal_transfers import sync_internal_transfers
@@ -50,6 +52,8 @@ from rsge.sync import sync_invoices, sync_waybills
 from rsge.translate import translate_invoices, translate_waybills
 from tortobaza.db_backup import backup_database
 
+logger = logging.getLogger(__name__)
+
 _TB = ZoneInfo("Asia/Tbilisi")
 
 YANDEX_ADDRESS_RESOLVE_MAX_FAILURES = 3
@@ -61,6 +65,10 @@ TELEGRAM_PHONE_CHECKS_PER_SYNC = 5
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
+        try:
+            sync_flowwow_catalog_if_stale()
+        except Exception:
+            logger.exception("flowwow catalog sync failed")
         sync_flowwow_orders()
         now = timezone.now().astimezone(_TB)
         start = (now - timedelta(days=7)).date()

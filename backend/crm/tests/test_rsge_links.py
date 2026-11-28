@@ -592,6 +592,7 @@ class SyncRsgeDocumentLinksTests(TestCase):
     @patch("crm.management.commands.sync_crm_orders_to_telegram.translate_waybills", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_catalog_if_stale", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_crm_order_to_telegram")
     def test_command_links_waybill(self, _telegram, _flowwow):

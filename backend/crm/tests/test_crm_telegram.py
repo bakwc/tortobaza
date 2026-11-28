@@ -96,6 +96,12 @@ class CrmTelegramTests(TestCase):
         )
         self.flowwow_sync_patcher.start()
         self.addCleanup(self.flowwow_sync_patcher.stop)
+        self.flowwow_catalog_patcher = patch(
+            "crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_catalog_if_stale",
+            lambda: None,
+        )
+        self.flowwow_catalog_patcher.start()
+        self.addCleanup(self.flowwow_catalog_patcher.stop)
         self.waybill_sync_patcher = patch(
             "crm.management.commands.sync_crm_orders_to_telegram.sync_waybills",
             lambda: None,

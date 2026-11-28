@@ -580,6 +580,90 @@ class FlowwowWebhookEvent(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
 
+class FlowwowProduct(models.Model):
+    product_id = models.BigIntegerField(unique=True, verbose_name=_("Product id"))
+    offer_id = models.CharField(max_length=255, blank=True, verbose_name=_("Offer id"))
+    name = models.CharField(max_length=500, verbose_name=_("Name"))
+    type = models.PositiveIntegerField(verbose_name=_("Type"))
+    category_id = models.IntegerField(verbose_name=_("Category id"))
+    sub_category_id = models.IntegerField(verbose_name=_("Subcategory id"))
+    volume_grams = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Volume, grams"),
+    )
+    fillings = models.JSONField(default=list, verbose_name=_("Fillings"))
+    is_active = models.BooleanField(verbose_name=_("Is active"))
+    is_archived = models.BooleanField(verbose_name=_("Is archived"))
+    synced_at = models.DateTimeField(verbose_name=_("Synced at"))
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="flowwow_products",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
+    )
+    modifiers = models.ManyToManyField(
+        "menu.Modifier",
+        blank=True,
+        related_name="flowwow_products",
+        verbose_name=_("Modifiers"),
+    )
+
+    class Meta:
+        ordering = ["name", "product_id"]
+        verbose_name = _("Flowwow product")
+        verbose_name_plural = _("Flowwow products")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class FlowwowSubcategoryTechCard(models.Model):
+    sub_category_id = models.IntegerField(verbose_name=_("Subcategory id"))
+    volume_grams = models.PositiveIntegerField(verbose_name=_("Volume, grams"))
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="flowwow_subcategory_rules",
+        on_delete=models.PROTECT,
+        verbose_name=_("Tech card"),
+    )
+
+    class Meta:
+        ordering = ["sub_category_id", "volume_grams"]
+        verbose_name = _("Flowwow subcategory tech card")
+        verbose_name_plural = _("Flowwow subcategory tech cards")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sub_category_id", "volume_grams"],
+                name="uniq_crm_flowwow_subcategory_volume",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.sub_category_id} / {self.volume_grams} g"
+
+
+class FlowwowFilling(models.Model):
+    title = models.CharField(max_length=255, unique=True, verbose_name=_("Title"))
+    modifiers = models.ManyToManyField(
+        "menu.Modifier",
+        blank=True,
+        related_name="flowwow_fillings",
+        verbose_name=_("Modifiers"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+
+    class Meta:
+        ordering = ["title"]
+        verbose_name = _("Flowwow filling")
+        verbose_name_plural = _("Flowwow fillings")
+
+    def __str__(self) -> str:
+        return self.title
+
+
 class FinancialAccount(models.Model):
     KIND_BANK = "bank"
     KIND_CASH = "cash"

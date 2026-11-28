@@ -356,6 +356,22 @@ class CrmOrderItemCostSerializer(serializers.Serializer):
         return attrs
 
 
+_ITEMS_REQUIRED = "Set order items without review before confirming."
+
+
+def confirmation_blocked_by_saved_items(order: CrmOrder) -> bool:
+    rows = list(order.items.all())
+    if not rows:
+        return True
+    return any(row.needs_review for row in rows)
+
+
+def _confirmation_blocked_by_item_payload(items: list[dict]) -> bool:
+    if not items:
+        return True
+    return any(item["needs_review"] for item in items)
+
+
 def replace_crm_order_items(order: CrmOrder, items: list[dict]) -> None:
     order.items.all().delete()
     for position, item in enumerate(items):
@@ -675,6 +691,11 @@ class CrmOrderUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
+            if (
+                attrs.get("status") == CrmOrder.STATUS_NEW
+                and confirmation_blocked_by_saved_items(self.instance)
+            ):
+                raise serializers.ValidationError(_ITEMS_REQUIRED)
         if self.instance is not None:
             status = attrs.get("status")
             if status is not None and status != self.instance.status:
@@ -811,6 +832,13 @@ class CrmOrderWriteSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Unconfirmed orders can only be moved to new."
                 )
+            if attrs.get("status", self.instance.status) == CrmOrder.STATUS_NEW:
+                if "items" in attrs:
+                    blocked = _confirmation_blocked_by_item_payload(attrs["items"])
+                else:
+                    blocked = confirmation_blocked_by_saved_items(self.instance)
+                if blocked:
+                    raise serializers.ValidationError(_ITEMS_REQUIRED)
         ensure_ready_photos(self.instance, attrs, self.context["request"].user)
         return attrs
 

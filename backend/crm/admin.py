@@ -24,6 +24,9 @@ from crm.models import (
     FinancialTransaction,
     FinancialTransactionRule,
     FinancialTransactionRuleCondition,
+    FlowwowFilling,
+    FlowwowProduct,
+    FlowwowSubcategoryTechCard,
     ResolvedTelegramPhone,
     LeadVertical,
     SocialKeyword,
@@ -36,6 +39,7 @@ from crm.models import (
     WhatsAppGetNewQr,
     WhatsAppNumberCheck,
 )
+from crm.serializers import confirmation_blocked_by_saved_items
 from crm.transaction_rules import categorize_uncategorized_expenses
 from crm.late_prep_alerts import schedule_crm_order_telegram_sync
 from crm.telegram_channels import refresh_keyword_matches
@@ -44,6 +48,28 @@ from crm.website import sync_website_order_status_from_crm
 from orders.email import schedule_order_confirmed_email
 from crm.whatsapp import check_number, get_new_qr
 from inventory.services import sync_order_write_off
+
+
+class AssignedFilter(admin.SimpleListFilter):
+    def lookups(self, request, model_admin):
+        return (("yes", _("Yes")), ("no", _("No")))
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(**{f"{self.parameter_name}__isnull": False}).distinct()
+        if self.value() == "no":
+            return queryset.filter(**{f"{self.parameter_name}__isnull": True})
+        return queryset
+
+
+class TechCardAssignedFilter(AssignedFilter):
+    title = _("Tech card")
+    parameter_name = "tech_card"
+
+
+class ModifiersAssignedFilter(AssignedFilter):
+    title = _("Modifiers")
+    parameter_name = "modifiers"
 
 
 class WhatsAppNumberCheckForm(forms.Form):
@@ -73,6 +99,25 @@ class CrmSettingsAdmin(admin.ModelAdmin):
         return redirect(reverse("admin:crm_crmsettings_change", args=[obj.pk]))
 
 
+class CrmOrderAdminForm(forms.ModelForm):
+    class Meta:
+        model = CrmOrder
+        fields = "__all__"
+
+    def clean(self):
+        cleaned = super().clean()
+        if (
+            self.instance.pk
+            and self.instance.status == CrmOrder.STATUS_UNCONFIRMED
+            and cleaned.get("status") == CrmOrder.STATUS_NEW
+            and confirmation_blocked_by_saved_items(self.instance)
+        ):
+            raise ValidationError(
+                _("Set order items without review before confirming."),
+            )
+        return cleaned
+
+
 class CrmOrderImageInline(admin.TabularInline):
     model = CrmOrderImage
     extra = 1
@@ -81,6 +126,7 @@ class CrmOrderImageInline(admin.TabularInline):
 
 @admin.register(CrmOrder)
 class CrmOrderAdmin(admin.ModelAdmin):
+    form = CrmOrderAdminForm
     list_display = [
         "id",
         "date",
@@ -230,6 +276,53 @@ class CrmOrderAdmin(admin.ModelAdmin):
                 form.instance,
                 request.crm_order_event_before["status"],
             )
+
+
+@admin.register(FlowwowProduct)
+class FlowwowProductAdmin(admin.ModelAdmin):
+    list_display = [
+        "product_id",
+        "name",
+        "sub_category_id",
+        "volume_grams",
+        "type",
+        "is_active",
+        "tech_card",
+    ]
+    list_filter = ["sub_category_id", "type", "is_active", TechCardAssignedFilter]
+    search_fields = ["name"]
+    filter_horizontal = ["modifiers"]
+    readonly_fields = [
+        "product_id",
+        "offer_id",
+        "name",
+        "type",
+        "category_id",
+        "sub_category_id",
+        "volume_grams",
+        "fillings",
+        "is_active",
+        "is_archived",
+        "synced_at",
+    ]
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(FlowwowSubcategoryTechCard)
+class FlowwowSubcategoryTechCardAdmin(admin.ModelAdmin):
+    list_display = ["sub_category_id", "volume_grams", "tech_card"]
+    list_filter = ["sub_category_id"]
+    autocomplete_fields = ["tech_card"]
+
+
+@admin.register(FlowwowFilling)
+class FlowwowFillingAdmin(admin.ModelAdmin):
+    list_display = ["title", "created_at"]
+    search_fields = ["title"]
+    list_filter = [ModifiersAssignedFilter]
+    filter_horizontal = ["modifiers"]
 
 
 @admin.register(WhatsAppNumberCheck)

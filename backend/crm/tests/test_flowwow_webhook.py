@@ -50,6 +50,9 @@ class FlowwowWebhookTests(TestCase):
         schedule_patcher = patch("crm.flowwow.schedule_crm_order_telegram_sync")
         self.mock_schedule = schedule_patcher.start()
         self.addCleanup(schedule_patcher.stop)
+        catalog_patcher = patch("crm.flowwow.sync_flowwow_catalog")
+        catalog_patcher.start()
+        self.addCleanup(catalog_patcher.stop)
 
     def _get(self, url, params=None, headers=None, timeout=None):
         if url == _VIEW_URL:

@@ -42,6 +42,7 @@ import { resizeImageForUpload } from "@/lib/resizeImage";
 import {
   CRM_ORDER_STATUS_MESSAGE_KEYS,
   CRM_ORDER_STATUSES,
+  crmOrderNeedsConfirmedItems,
   crmOrderSelectableStatuses,
 } from "@/lib/crmStatus";
 import {
@@ -283,6 +284,18 @@ export function CrmOrderForm(
     const priceMessages = missingPrice.map(
       (index) => `${t("items.itemNumber", { number: index + 1 })}: ${t("items.noSalePrice")}`,
     );
+    if (
+      props.mode === "edit" &&
+      props.order.status === "unconfirmed" &&
+      fields.status === "new" &&
+      crmOrderNeedsConfirmedItems(items)
+    ) {
+      setValidationShown(true);
+      setMessages([t("itemsRequiredToConfirm")]);
+      setServerMessages([]);
+      setPriceErrorIndexes([]);
+      return;
+    }
     setValidationShown(true);
     setMessages([...next, ...priceMessages]);
     setServerMessages([]);

@@ -12,12 +12,26 @@ from zoneinfo import ZoneInfo
 import requests
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.db import transaction
+from django.db.models import Prefetch
 from django.utils import timezone
 
+from crm.flowwow_catalog import sync_flowwow_catalog
 from crm.history import record_crm_order_event, snapshot_crm_order
-from crm.models import CrmOrder, CrmOrderEvent, CrmOrderImage
+from crm.models import (
+    CrmOrder,
+    CrmOrderEvent,
+    CrmOrderImage,
+    CrmOrderItem,
+    CrmOrderItemModifier,
+    FlowwowFilling,
+    FlowwowProduct,
+    FlowwowSubcategoryTechCard,
+)
 from crm.late_prep_alerts import schedule_crm_order_telegram_sync
 from inventory.services import sync_order_write_off
+from menu.models import Modifier, TechCard
+from menu.recipes import order_item_errors
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +66,8 @@ _SYNCED_TEXT_FIELDS = (
     ("description", "flowwow_synced_description"),
     ("internal_description", "flowwow_synced_internal_description"),
 )
+_GRAMS_PER_KG = Decimal("1000")
+_WEIGHT_Q = Decimal("0.001")
 _WEIGHT_RE = re.compile(
     r"(?<!\w)\d+(?:[.,]\d+)?\s*"
     r"(?:килограмм(?:а|ов)?|кг|грамм(?:а|ов)?|гр|г|kilograms?|kgs?|kg|grams?|gr|g)"
@@ -303,11 +319,19 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
             crm_order.status = mapped_status
             update_fields.append("status")
         crm_order.save(update_fields=update_fields)
-        sync_order_write_off(crm_order)
         action = CrmOrderEvent.ACTION_UPDATED
         logger.info("flowwow order id=%s updated crm_id=%s", item["id"], crm_order.pk)
         print(f"flowwow order id={item['id']} updated crm_id={crm_order.pk}", flush=True)
     _sync_images(crm_order, item)
+    try:
+        _sync_items(crm_order, item)
+    except Exception:
+        logger.exception(
+            "flowwow items failed order_id=%s crm_id=%s",
+            item["id"],
+            crm_order.pk,
+        )
+    sync_order_write_off(crm_order)
     record_crm_order_event(
         crm_order,
         action,
@@ -316,6 +340,151 @@ def _upsert_crm_order(item: dict) -> CrmOrder:
         before,
     )
     return crm_order
+
+
+def _sync_items(crm_order: CrmOrder, item: dict) -> None:
+    with transaction.atomic():
+        _replace_items(crm_order, item)
+
+
+def _replace_items(crm_order: CrmOrder, item: dict) -> None:
+    products = item["products"]
+    catalog = _catalog_for(products)
+    crm_order.items.all().delete()
+    created: list[CrmOrderItem] = []
+    for position, product in enumerate(products):
+        if product["type"] == _PRODUCT_TYPE_ADDITIONAL:
+            continue
+        created.append(_create_item(crm_order, product, catalog.get(product["productId"]), position))
+    if not created or created[0].tech_card_id is None:
+        return
+    for modifier in _extra_modifiers(products, catalog):
+        CrmOrderItemModifier.objects.create(item=created[0], modifier=modifier, quantity=1)
+    first = created[0]
+    pairs = [(row.modifier, row.quantity) for row in first.modifiers.select_related("modifier__group")]
+    if order_item_errors(first.tech_card, first.weight_kg, pairs):
+        first.needs_review = True
+        first.save(update_fields=["needs_review"])
+
+
+def _catalog_for(products: list[dict]) -> dict[int, FlowwowProduct]:
+    ids = [product["productId"] for product in products]
+    found = _load_catalog(ids)
+    missing = [
+        product["productId"]
+        for product in products
+        if product["type"] != _PRODUCT_TYPE_ADDITIONAL and product["productId"] not in found
+    ]
+    if missing:
+        sync_flowwow_catalog()
+        found = _load_catalog(ids)
+    return found
+
+
+def _load_catalog(ids: list[int]) -> dict[int, FlowwowProduct]:
+    rows = FlowwowProduct.objects.filter(product_id__in=ids).select_related("tech_card").prefetch_related(
+        Prefetch("modifiers", queryset=Modifier.objects.select_related("group")),
+    )
+    return {row.product_id: row for row in rows}
+
+
+def _create_item(
+    crm_order: CrmOrder,
+    product: dict,
+    catalog_row: FlowwowProduct | None,
+    position: int,
+) -> CrmOrderItem:
+    tech_card, volume_grams = _item_tech_card(catalog_row)
+    filling_modifiers, filling_review = _filling_modifiers(product)
+    modifiers: list[tuple[Modifier, int]] = []
+    if tech_card is not None and catalog_row is not None:
+        for modifier in catalog_row.modifiers.all():
+            modifiers.append((modifier, 1))
+        for modifier in filling_modifiers:
+            modifiers.append((modifier, 1))
+    weight_kg = _item_weight(tech_card, volume_grams)
+    needs_review = tech_card is None or filling_review
+    if order_item_errors(tech_card, weight_kg, modifiers):
+        needs_review = True
+    crm_item = CrmOrderItem.objects.create(
+        order=crm_order,
+        tech_card=tech_card,
+        name=product["name"],
+        quantity=product["count"],
+        weight_kg=weight_kg,
+        price=Decimal(product["price"]) * product["count"],
+        needs_review=needs_review,
+        position=position,
+    )
+    for modifier, quantity in modifiers:
+        CrmOrderItemModifier.objects.create(item=crm_item, modifier=modifier, quantity=quantity)
+    return crm_item
+
+
+def _item_tech_card(catalog_row: FlowwowProduct | None) -> tuple[TechCard | None, int | None]:
+    if catalog_row is None:
+        return None, None
+    volume_grams = catalog_row.volume_grams
+    if catalog_row.tech_card_id is not None:
+        return catalog_row.tech_card, volume_grams
+    if volume_grams is None:
+        return None, None
+    rule = (
+        FlowwowSubcategoryTechCard.objects.filter(
+            sub_category_id=catalog_row.sub_category_id,
+            volume_grams=volume_grams,
+        )
+        .select_related("tech_card")
+        .first()
+    )
+    if rule is None:
+        return None, volume_grams
+    return rule.tech_card, volume_grams
+
+
+def _item_weight(tech_card: TechCard | None, volume_grams: int | None) -> Decimal | None:
+    if tech_card is None or tech_card.kind != TechCard.KIND_WEIGHTED or volume_grams is None:
+        return None
+    return (Decimal(volume_grams) / _GRAMS_PER_KG).quantize(_WEIGHT_Q)
+
+
+def _filling_modifiers(product: dict) -> tuple[list[Modifier], bool]:
+    titles = _filling_titles(product)
+    if not titles:
+        return [], True
+    modifiers: list[Modifier] = []
+    needs_review = False
+    for title in titles:
+        filling, _created = FlowwowFilling.objects.get_or_create(title=title)
+        linked = list(filling.modifiers.select_related("group"))
+        if not linked:
+            needs_review = True
+            continue
+        modifiers.extend(linked)
+    return modifiers, needs_review
+
+
+def _filling_titles(product: dict) -> list[str]:
+    values: list[str] = []
+    for prop in product.get("selectedProperties") or []:
+        title = prop["propertyTitle"].strip().casefold()
+        if prop["propertyId"] == _FILLING_PROPERTY_ID or title in _FILLING_PROPERTY_TITLES:
+            value = prop["valueTitle"].strip().casefold()
+            if value and value not in values:
+                values.append(value)
+    return values
+
+
+def _extra_modifiers(products: list[dict], catalog: dict[int, FlowwowProduct]) -> list[Modifier]:
+    modifiers: list[Modifier] = []
+    for product in products:
+        if product["type"] != _PRODUCT_TYPE_ADDITIONAL:
+            continue
+        row = catalog.get(product["productId"])
+        if row is None:
+            continue
+        modifiers.extend(row.modifiers.all())
+    return modifiers
 
 
 def _crm_fields(item: dict) -> dict:

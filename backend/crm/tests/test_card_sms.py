@@ -604,6 +604,7 @@ class CardSmsTests(TestCase):
 
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_invoices", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_waybills", lambda: None)
+    @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_catalog_if_stale", lambda: None)
     @patch("crm.management.commands.sync_crm_orders_to_telegram.sync_flowwow_orders")
     @patch("crm.management.commands.sync_crm_orders_to_telegram.import_card_sms")
     def test_sync_command_imports_card_sms(self, mock_import, _flowwow):

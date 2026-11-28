@@ -351,6 +351,7 @@
     "collapseOrder": "Collapse order",
     "expandOrder": "Expand order",
     "nextStepNew": "Confirm",
+    "itemsRequiredToConfirm": "Add order items and clear the review mark before confirming.",
     "nextStepReady": "Ready",
     "nextStepClientApproved": "Client approved",
     "nextStepInDelivery": "To delivery",

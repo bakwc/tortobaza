@@ -137,6 +137,12 @@ export function crmOrderSelectableStatuses(
   return CRM_ORDER_STATUSES;
 }
 
+export function crmOrderNeedsConfirmedItems(
+  items: readonly { needs_review: boolean }[],
+): boolean {
+  return items.length === 0 || items.some((item) => item.needs_review);
+}
+
 export function crmOrderCookingIsPast(status: CrmOrderStatus): boolean {
   return (
     status === "ready" ||

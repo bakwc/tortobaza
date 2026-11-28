@@ -13,7 +13,14 @@ from rest_framework.test import APIClient
 
 from accounts.models import UserProfile
 from accounts.permissions import ORDER_PARTY_CODES, ORDER_STATUS_CODES, grant
-from crm.models import CrmOrder, CrmOrderImage, CrmOrderReadyImage, ResolvedGoogleAddress, ResolvedTelegramPhone
+from crm.models import (
+    CrmOrder,
+    CrmOrderImage,
+    CrmOrderItem,
+    CrmOrderReadyImage,
+    ResolvedGoogleAddress,
+    ResolvedTelegramPhone,
+)
 
 _TB = ZoneInfo("Asia/Tbilisi")
 
@@ -1164,6 +1171,7 @@ class CrmOrdersApiTests(TestCase):
             is_paid=False,
             payment_type=CrmOrder.PAYMENT_CASH,
         )
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
@@ -1190,6 +1198,7 @@ class CrmOrdersApiTests(TestCase):
             payment_type=CrmOrder.PAYMENT_CASH,
             created_by=self.admin,
         )
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.user)
         response = self.client.patch(
             f"/api/crm/orders/{order.id}/",
@@ -1215,6 +1224,7 @@ class CrmOrdersApiTests(TestCase):
             is_paid=False,
             payment_type=CrmOrder.PAYMENT_CASH,
         )
+        CrmOrderItem.objects.create(order=order, name="Cake")
         self.client.force_authenticate(user=self.admin)
         response = self.client.put(
             f"/api/crm/orders/{order.id}/",
