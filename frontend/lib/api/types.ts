@@ -796,6 +796,7 @@ export const AnalyticsSpanBinSchema = z.object({
   days: z.number().nullable(),
   count: z.number(),
   share: z.string().nullable(),
+  cumulative: z.string().nullable(),
 });
 
 export const AnalyticsCustomerSchema = z.object({
@@ -811,11 +812,6 @@ export const AnalyticsCustomerSchema = z.object({
 export const AnalyticsFrequencyBucketSchema = z.object({
   clients: z.number(),
   revenue: z.string(),
-});
-
-export const AnalyticsStatusBucketSchema = z.object({
-  clients: z.number(),
-  share: z.string().nullable(),
 });
 
 export const AnalyticsProductMetricsSchema = z.object({
@@ -1098,10 +1094,8 @@ export const AnalyticsClientsSchema = z.object({
     median: z.string().nullable(),
     bins: z.array(AnalyticsSpanBinSchema),
   }),
-  statuses: z.object({
-    active: AnalyticsStatusBucketSchema,
-    sleeping: AnalyticsStatusBucketSchema,
-    lost: AnalyticsStatusBucketSchema,
+  tenure: z.object({
+    bins: z.array(AnalyticsSpanBinSchema),
   }),
   frequency: z.object({
     once: AnalyticsFrequencyBucketSchema,

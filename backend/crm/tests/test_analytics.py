@@ -329,7 +329,7 @@ class AnalyticsClientTests(TestCase):
             ],
         )
 
-    def test_repeat_gaps_and_statuses(self):
+    def test_repeat_spans_are_distributed(self):
         first = date(2026, 1, 1)
         _order(date=first, contact="555111111", cake_price=Decimal("10.00"))
         _order(date=first + timedelta(days=1), contact="555111111", cake_price=Decimal("10.00"))
@@ -346,25 +346,36 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(report["clients"], 5)
         self.assertEqual(report["gaps"]["median"], "15")
         self.assertEqual(
-            [(row["days"], row["count"], row["share"]) for row in report["gaps"]["bins"]],
             [
-                (7, 1, "0.25"),
-                (14, 1, "0.25"),
-                (30, 1, "0.25"),
-                (60, 0, "0"),
-                (90, 0, "0"),
-                (180, 0, "0"),
-                (365, 0, "0"),
-                (None, 1, "0.25"),
+                (row["days"], row["count"], row["share"], row["cumulative"])
+                for row in report["gaps"]["bins"]
+            ],
+            [
+                (7, 1, "0.25", "0.25"),
+                (14, 1, "0.25", "0.5"),
+                (30, 1, "0.25", "0.75"),
+                (60, 0, "0", "0.75"),
+                (90, 0, "0", "0.75"),
+                (180, 0, "0", "0.75"),
+                (365, 0, "0", "0.75"),
+                (None, 1, "0.25", "1"),
             ],
         )
         self.assertEqual(
-            report["statuses"],
-            {
-                "active": {"clients": 1, "share": "0.25"},
-                "sleeping": {"clients": 1, "share": "0.25"},
-                "lost": {"clients": 2, "share": "0.5"},
-            },
+            [
+                (row["days"], row["count"], row["share"], row["cumulative"])
+                for row in report["tenure"]["bins"]
+            ],
+            [
+                (7, 1, "0.25", "0.25"),
+                (14, 1, "0.25", "0.5"),
+                (30, 0, "0", "0.5"),
+                (60, 0, "0", "0.5"),
+                (90, 0, "0", "0.5"),
+                (180, 0, "0", "0.5"),
+                (365, 0, "0", "0.5"),
+                (None, 2, "0.5", "1"),
+            ],
         )
 
     def test_same_day_orders_are_not_repeats(self):
@@ -385,7 +396,8 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(report["frequency"]["twice"]["clients"], 0)
         self.assertEqual(report["frequency"]["more"]["clients"], 0)
         self.assertIsNone(report["gaps"]["median"])
-        self.assertEqual(report["statuses"]["active"], {"clients": 0, "share": None})
+        self.assertEqual(report["gaps"]["bins"], [])
+        self.assertEqual(report["tenure"]["bins"], [])
         self.assertEqual(report["top_orders"], [])
         self.assertEqual(report["top_revenue"], [])
         cohort = report["cohorts"][0]
@@ -412,6 +424,13 @@ class AnalyticsClientTests(TestCase):
         self.assertEqual(report["frequency"]["more"]["clients"], 1)
         self.assertEqual(report["frequency"]["more"]["revenue"], "50.00")
         self.assertEqual(report["gaps"]["median"], "10")
+        self.assertEqual(
+            [
+                (row["days"], row["count"], row["share"], row["cumulative"])
+                for row in report["gaps"]["bins"]
+            ],
+            [(7, 0, "0", "0"), (14, 1, "1", "1")],
+        )
         self.assertEqual(report["top_orders"][0]["orders"], 4)
         self.assertEqual(report["top_revenue"][0]["revenue"], "50.00")
         cohort = report["cohorts"][0]

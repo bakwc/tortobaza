@@ -47,9 +47,12 @@ function spanRows(bins: AnalyticsClients["gaps"]["bins"], label: (days: number |
   return bins.map((bin) => ({
     label: label(bin.days),
     share: Math.round(Number(bin.share) * 100),
+    cumulative: Math.round(Number(bin.cumulative) * 100),
     count: bin.count,
   }));
 }
+
+type SpanRow = ReturnType<typeof spanRows>[number];
 
 export function ClientsPanel() {
   const t = useTranslations("analytics");
@@ -96,8 +99,6 @@ export function ClientsPanel() {
           share: Math.round((Number(report.repeat_revenue) / Number(report.known_revenue)) * 100),
         });
   const header = report.cohorts[0];
-  const statusHint = (share: string | null) =>
-    share === null ? null : t("statusShare", { share: Math.round(Number(share) * 100) });
 
   return (
     <div className="grid gap-6">
@@ -202,29 +203,16 @@ export function ClientsPanel() {
           </>
         )}
       </Section>
-      <Section title={t("statuses")}>
-        {report.repeat_clients === 0 ? (
+      <Section title={t("tenure")}>
+        {report.gaps.median === null ? (
           <Note>{t("gapEmpty")}</Note>
         ) : (
           <>
-            <Note>{t("statusesNote")}</Note>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Metric
-                label={t("statusActive")}
-                value={formatAmount(report.statuses.active.clients)}
-                hint={statusHint(report.statuses.active.share)}
-              />
-              <Metric
-                label={t("statusSleeping")}
-                value={formatAmount(report.statuses.sleeping.clients)}
-                hint={statusHint(report.statuses.sleeping.share)}
-              />
-              <Metric
-                label={t("statusLost")}
-                value={formatAmount(report.statuses.lost.clients)}
-                hint={statusHint(report.statuses.lost.share)}
-              />
-            </div>
+            <Note>{t("tenureNote")}</Note>
+            <SpanChart
+              rows={spanRows(report.tenure.bins, (days) => t(spanKey(days)))}
+              color={COLOR_ORDERS}
+            />
           </>
         )}
       </Section>
@@ -270,7 +258,7 @@ function SpanChart({
   rows,
   color,
 }: {
-  rows: { label: string; share: number; count: number }[];
+  rows: SpanRow[];
   color: string;
 }) {
   const t = useTranslations("analytics");
@@ -287,14 +275,30 @@ function SpanChart({
         <Bar dataKey="share" name={t("clientsTitle")} fill={color} radius={[4, 4, 0, 0]}>
           <LabelList
             dataKey="share"
-            position="top"
-            fill="#666666"
-            fontSize={12}
-            formatter={(value) => (typeof value === "number" ? `${value}%` : "")}
+            content={(props) => <SpanLabel x={props.x} y={props.y} width={props.width} row={rows[Number(props.index)]} />}
           />
         </Bar>
       </BarChart>
     </ChartFrame>
+  );
+}
+
+function SpanLabel({
+  x,
+  y,
+  width,
+  row,
+}: {
+  x?: number | string;
+  y?: number | string;
+  width?: number | string;
+  row: SpanRow;
+}) {
+  return (
+    <text x={Number(x) + Number(width) / 2} y={Number(y) - 8} fill="#666666" fontSize={12} textAnchor="middle">
+      {`${row.share}%`}
+      <tspan fontSize={10} dx={3}>{`(${row.cumulative}%)`}</tspan>
+    </text>
   );
 }
 
