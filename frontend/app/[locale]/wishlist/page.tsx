@@ -1,5 +1,5 @@
-import { WishlistPanel } from "@/components/wishlist/WishlistPanel";
+import { TasksPanel } from "@/components/wishlist/TasksPanel";
 
 export default function WishlistPage() {
-  return <WishlistPanel />;
+  return <TasksPanel />;
 }
