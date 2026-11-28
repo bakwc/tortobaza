@@ -793,6 +793,7 @@ export const AnalyticsCohortCellSchema = z.object({
 });
 
 export const AnalyticsSpanBinSchema = z.object({
+  from: z.number(),
   days: z.number().nullable(),
   count: z.number(),
   share: z.string().nullable(),

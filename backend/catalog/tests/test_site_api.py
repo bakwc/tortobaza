@@ -248,6 +248,7 @@ class SiteApiTests(TestCase):
                         "name_ru": "Малый",
                         "price_delta": "0.00",
                         "weight_kg": None,
+                        "tech_card": None,
                         "position": 0,
                         "is_active": True,
                     }
@@ -309,6 +310,7 @@ class SiteApiTests(TestCase):
                         "name_ru": "Фисташка",
                         "price_delta": "0.00",
                         "weight_kg": None,
+                        "tech_card": None,
                         "position": 0,
                         "is_active": True,
                     }

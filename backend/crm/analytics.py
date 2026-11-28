@@ -838,20 +838,22 @@ def _cohorts(customers: dict[str, Customer], today: date) -> list[dict]:
     return rows
 
 
-def _span_bins(values: list[int]) -> list[dict]:
+def _span_bins(values: list[int], remaining: bool) -> list[dict]:
     total = Decimal(len(values))
     bins = []
     lower = 0
     running = 0
     for days in (*_SPAN_DAYS, None):
         count = sum(1 for value in values if value > lower and (days is None or value <= days))
+        cumulative = total - running if remaining else Decimal(running + count)
         running += count
         bins.append(
             {
+                "from": lower,
                 "days": days,
                 "count": count,
                 "share": _share(Decimal(count), total),
-                "cumulative": _share(Decimal(running), total),
+                "cumulative": _share(cumulative, total),
             }
         )
         lower = days
@@ -876,7 +878,7 @@ def _gaps(customers: dict[str, Customer]) -> dict:
     ]
     return {
         "median": None if not gaps else _num(Decimal(str(median(gaps)))),
-        "bins": _span_bins(gaps),
+        "bins": _span_bins(gaps, False),
     }
 
 
@@ -885,7 +887,7 @@ def _tenure(customers: dict[str, Customer]) -> dict:
         (customer.orders[-1].date - customer.orders[0].date).days
         for customer in _repeat(customers)
     ]
-    return {"bins": _span_bins(spans)}
+    return {"bins": _span_bins(spans, True)}
 
 
 def _frequency(customers: dict[str, Customer]) -> dict:

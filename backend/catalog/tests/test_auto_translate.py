@@ -232,6 +232,7 @@ class AutoTranslateTests(TestCase):
                             "name_ru": "Малый",
                             "price_delta": "0.00",
                             "weight_kg": None,
+                            "tech_card": None,
                             "position": 0,
                             "is_active": True,
                         }
@@ -419,6 +420,7 @@ class AutoTranslateTests(TestCase):
                         "name_ka": "",
                         "name_ru": "",
                         "price_delta": "0.00",
+                        "tech_card": None,
                         "position": 0,
                         "is_active": True,
                     }

@@ -25,6 +25,7 @@ import {
   useSiteOptionGroups,
   useSiteOptionImageDelete,
   useSiteOptionImageUpload,
+  useSiteTechCards,
   useSiteTranslation,
   useVisibility,
 } from "@/hooks/useSite";
@@ -40,6 +41,7 @@ type OptionDraft = {
   name_ru: string;
   price_delta: string;
   weight_kg: string;
+  tech_card: number | null;
   position: number;
   is_active: boolean;
   crop_left: number | null;
@@ -96,6 +98,7 @@ function draftFrom(row: SiteOptionGroup | null): GroupDraft {
       name_ru: option.name_ru,
       price_delta: option.price_delta,
       weight_kg: option.weight_kg ?? "",
+      tech_card: option.tech_card,
       position: option.position,
       is_active: option.is_active,
       crop_left: option.crop_left,
@@ -122,6 +125,7 @@ export function OptionGroupsPanel() {
   const canEdit = useCan("edit_catalog");
   const visibility = useVisibility();
   const groups = useSiteOptionGroups();
+  const techCards = useSiteTechCards();
   const visibleGroups = (groups.list.data ?? []).flatMap((row) => {
     const options = row.options.filter((option) => matchesVisibility(option.is_active, visibility));
     if (visibility !== "all" && options.length === 0) return [];
@@ -235,6 +239,7 @@ export function OptionGroupsPanel() {
                     name_ru: row.name_ru,
                     price_delta: row.price_delta,
                     weight_kg: row.weight_kg === "" ? null : row.weight_kg,
+                    tech_card: row.tech_card,
                     position: row.position,
                     is_active: row.is_active,
                     crop_left: row.crop_left,
@@ -388,6 +393,7 @@ export function OptionGroupsPanel() {
                           name_ru: "",
                           price_delta: "0",
                           weight_kg: "",
+                          tech_card: null,
                           position: draft.options.length,
                           is_active: true,
                           crop_left: null,
@@ -419,7 +425,7 @@ export function OptionGroupsPanel() {
                 <button type="button" className="text-left font-medium" onClick={() => setActiveOptionKey(row.key)}>
                   {row.name_ru || row.name_en || t("newOption")}
                 </button>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Field label={t("name")}>
                     <Input
                       required={!hasAnyValue(row, "name")}
@@ -465,6 +471,31 @@ export function OptionGroupsPanel() {
                         })
                       }
                     />
+                  </Field>
+                  <Field label={t("techCard")}>
+                    <NativeSelect
+                      value={row.tech_card ?? ""}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          options: draft.options.map((item) =>
+                            item.key === row.key
+                              ? {
+                                  ...item,
+                                  tech_card: event.target.value === "" ? null : Number(event.target.value),
+                                }
+                              : item,
+                          ),
+                        })
+                      }
+                    >
+                      <option value="">{t("noTechCard")}</option>
+                      {(techCards.data ?? []).map((card) => (
+                        <option key={card.id} value={card.id}>
+                          {card.name}
+                        </option>
+                      ))}
+                    </NativeSelect>
                   </Field>
                 </div>
                 {canEdit ? (

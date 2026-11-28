@@ -194,6 +194,7 @@ class SiteOptionInputSerializer(serializers.Serializer):
     weight_kg = serializers.DecimalField(
         max_digits=6, decimal_places=3, required=False, allow_null=True
     )
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     position = serializers.IntegerField(min_value=0)
     is_active = serializers.BooleanField()
     crop_left = serializers.FloatField(required=False, allow_null=True)
@@ -231,6 +232,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
                 "name_ru": option.name_ru,
                 "price_delta": str(option.price_delta),
                 "weight_kg": str(option.weight_kg) if option.weight_kg is not None else None,
+                "tech_card": option.tech_card_id,
                 "position": option.position,
                 "is_active": option.is_active,
                 "crop_left": option.crop_left,
@@ -295,6 +297,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
                 "name_ru": row["name_ru"],
                 "price_delta": row["price_delta"],
                 "weight_kg": row.get("weight_kg"),
+                "tech_card": row["tech_card"],
                 "position": row["position"],
                 "is_active": row["is_active"],
                 "crop_left": row.get("crop_left"),

@@ -89,6 +89,7 @@ export const SiteOptionSchema = z.object({
   name_ru: blankString,
   price_delta: z.string(),
   weight_kg: z.string().nullable(),
+  tech_card: z.number().nullable(),
   position: z.number(),
   is_active: z.boolean(),
   crop_left: z.number().nullable(),

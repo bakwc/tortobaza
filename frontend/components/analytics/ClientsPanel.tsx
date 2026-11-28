@@ -34,6 +34,29 @@ const SPAN_KEY = {
 
 type SpanDays = keyof typeof SPAN_KEY;
 
+const GAP_PERIOD_KEY = {
+  7: "gapWithin7",
+  14: "gapWithin14",
+  30: "gapWithin30",
+  60: "gapWithin60",
+  90: "gapWithin90",
+  180: "gapWithin180",
+  365: "gapWithin365",
+} as const;
+
+const TENURE_PERIOD_KEY = {
+  0: "tenureFrom0",
+  7: "tenureFrom7",
+  14: "tenureFrom14",
+  30: "tenureFrom30",
+  60: "tenureFrom60",
+  90: "tenureFrom90",
+  180: "tenureFrom180",
+  365: "tenureFrom365",
+} as const;
+
+type SpanBin = AnalyticsClients["gaps"]["bins"][number];
+
 function returnShare(part: number, total: number): number | null {
   if (part === 0 || total === 0) return null;
   return Math.round((part / total) * 100);
@@ -43,13 +66,30 @@ function spanKey(days: number | null) {
   return days === null ? "spanOver" : SPAN_KEY[days as SpanDays];
 }
 
-function spanRows(bins: AnalyticsClients["gaps"]["bins"], label: (days: number | null) => string) {
-  return bins.map((bin) => ({
-    label: label(bin.days),
-    share: Math.round(Number(bin.share) * 100),
-    cumulative: Math.round(Number(bin.cumulative) * 100),
-    count: bin.count,
-  }));
+function gapPeriodKey(bin: SpanBin) {
+  return bin.days === null ? "gapWithinAll" : GAP_PERIOD_KEY[bin.days as keyof typeof GAP_PERIOD_KEY];
+}
+
+function tenurePeriodKey(bin: SpanBin) {
+  return TENURE_PERIOD_KEY[bin.from as keyof typeof TENURE_PERIOD_KEY];
+}
+
+function spanRows(
+  bins: SpanBin[],
+  label: (bin: SpanBin) => string,
+  caption: (cumulative: number) => string,
+  period: (bin: SpanBin) => string,
+) {
+  return bins.map((bin) => {
+    const cumulative = Math.round(Number(bin.cumulative) * 100);
+    return {
+      label: label(bin),
+      share: Math.round(Number(bin.share) * 100),
+      caption: caption(cumulative),
+      period: period(bin),
+      count: bin.count,
+    };
+  });
 }
 
 type SpanRow = ReturnType<typeof spanRows>[number];
@@ -197,7 +237,12 @@ export function ClientsPanel() {
             <Note>{t("gapNote")}</Note>
             <Note>{t("gapMedian", { days: formatAmount(report.gaps.median) })}</Note>
             <SpanChart
-              rows={spanRows(report.gaps.bins, (days) => t(spanKey(days)))}
+              rows={spanRows(
+                report.gaps.bins,
+                (bin) => t(spanKey(bin.days)),
+                (share) => t("gapCumulative", { share }),
+                (bin) => t(gapPeriodKey(bin)),
+              )}
               color={COLOR_REVENUE}
             />
           </>
@@ -210,7 +255,12 @@ export function ClientsPanel() {
           <>
             <Note>{t("tenureNote")}</Note>
             <SpanChart
-              rows={spanRows(report.tenure.bins, (days) => t(spanKey(days)))}
+              rows={spanRows(
+                report.tenure.bins,
+                (bin) => t(spanKey(bin.days)),
+                (share) => t("tenureCumulative", { share }),
+                (bin) => t(tenurePeriodKey(bin)),
+              )}
               color={COLOR_ORDERS}
             />
           </>
@@ -264,7 +314,7 @@ function SpanChart({
   const t = useTranslations("analytics");
   return (
     <ChartFrame>
-      <BarChart data={rows} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+      <BarChart data={rows} margin={{ top: 52, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid stroke="#e8ddcd" vertical={false} />
         <XAxis dataKey="label" tick={AXIS_TICK} />
         <YAxis tick={AXIS_TICK} width={48} domain={[0, 100]} tickFormatter={(value: number) => `${value}%`} />
@@ -295,9 +345,14 @@ function SpanLabel({
   row: SpanRow;
 }) {
   return (
-    <text x={Number(x) + Number(width) / 2} y={Number(y) - 8} fill="#666666" fontSize={12} textAnchor="middle">
-      {`${row.share}%`}
-      <tspan fontSize={10} dx={3}>{`(${row.cumulative}%)`}</tspan>
+    <text x={Number(x) + Number(width) / 2} y={Number(y) - 34} fill="#666666" fontSize={12} textAnchor="middle">
+      <tspan x={Number(x) + Number(width) / 2}>{`${row.share}%`}</tspan>
+      <tspan x={Number(x) + Number(width) / 2} dy={13} fontSize={10}>
+        {row.caption}
+      </tspan>
+      <tspan x={Number(x) + Number(width) / 2} dy={12} fontSize={10}>
+        {row.period}
+      </tspan>
     </text>
   );
 }
