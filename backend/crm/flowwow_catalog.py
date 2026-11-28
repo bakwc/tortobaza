@@ -5,11 +5,12 @@ import requests
 from django.conf import settings
 from django.utils import timezone
 
-from crm.models import FlowwowProduct
+from crm.models import FlowwowProduct, FlowwowSubcategory
 
 logger = logging.getLogger(__name__)
 
 _PRODUCTS_URL = "https://apis.flowwow.com/apiseller/products"
+_CATEGORIES_URL = "https://apis.flowwow.com/apiseller/categories/tree"
 _PAGE_LIMIT = 1000
 _VOLUME_MEASURE_GRAMS = 2
 _CATALOG_MAX_AGE = timedelta(hours=24)
@@ -20,6 +21,7 @@ def sync_flowwow_catalog() -> None:
     synced_at = timezone.now()
     for raw in rows:
         _upsert_product(raw, synced_at)
+    _sync_subcategories()
 
 
 def sync_flowwow_catalog_if_stale() -> None:
@@ -84,6 +86,31 @@ def _upsert_product(raw: dict, synced_at) -> None:
             "synced_at": synced_at,
         },
     )
+
+
+def _sync_subcategories() -> None:
+    shop_id = int(settings.FLOWWOW_SHOP_ID.strip('"'))
+    token = settings.FLOWWOW_API_TOKEN.strip('"')
+    response = requests.post(
+        _CATEGORIES_URL,
+        params={"shopId": shop_id},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "*/*",
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    for category in response.json()["data"]:
+        for subcategory in category["subCategories"]:
+            FlowwowSubcategory.objects.update_or_create(
+                sub_category_id=subcategory["subCategoryId"],
+                defaults={
+                    "category_id": category["categoryId"],
+                    "category_name": category["name"],
+                    "name": subcategory["name"],
+                },
+            )
 
 
 def _volume_grams(product_id: int, volume: dict | None) -> int | None:

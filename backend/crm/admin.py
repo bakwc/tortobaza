@@ -26,6 +26,7 @@ from crm.models import (
     FinancialTransactionRuleCondition,
     FlowwowFilling,
     FlowwowProduct,
+    FlowwowSubcategory,
     FlowwowSubcategoryTechCard,
     ResolvedTelegramPhone,
     LeadVertical,
@@ -70,6 +71,103 @@ class TechCardAssignedFilter(AssignedFilter):
 class ModifiersAssignedFilter(AssignedFilter):
     title = _("Modifiers")
     parameter_name = "modifiers"
+
+
+def filling_title_choices(instance: FlowwowFilling) -> list[tuple[str, str]]:
+    labels: dict[str, str] = {}
+    for fillings in FlowwowProduct.objects.values_list("fillings", flat=True):
+        for raw in fillings:
+            text = raw.strip()
+            title = text.casefold()
+            if title and title not in labels:
+                labels[title] = text
+    for title in FlowwowFilling.objects.filter(modifiers=None).values_list("title", flat=True):
+        labels.setdefault(title, title)
+    mapped = set(FlowwowFilling.objects.exclude(modifiers=None).values_list("title", flat=True))
+    if instance.pk:
+        mapped.discard(instance.title)
+        labels.setdefault(instance.title, instance.title)
+    choices = [(title, labels[title]) for title in labels if title not in mapped]
+    choices.sort(key=lambda item: item[1])
+    return choices
+
+
+def subcategory_pair_choices(instance: FlowwowSubcategoryTechCard) -> list[tuple[str, str]]:
+    taken = set(FlowwowSubcategoryTechCard.objects.values_list("sub_category_id", "volume_grams"))
+    if instance.pk:
+        taken.discard((instance.sub_category_id, instance.volume_grams))
+    names = {row.sub_category_id: row for row in FlowwowSubcategory.objects.all()}
+    choices: list[tuple[str, str]] = []
+    seen: set[tuple[int, int]] = set()
+    rows = (
+        FlowwowProduct.objects.exclude(volume_grams=None)
+        .values_list("sub_category_id", "volume_grams")
+        .distinct()
+    )
+    for sub_category_id, volume_grams in rows:
+        _append_subcategory_pair(choices, seen, names, taken, sub_category_id, volume_grams)
+    if instance.pk:
+        _append_subcategory_pair(
+            choices,
+            seen,
+            names,
+            taken,
+            instance.sub_category_id,
+            instance.volume_grams,
+        )
+    choices.sort(key=lambda item: item[1])
+    return choices
+
+
+def _append_subcategory_pair(
+    choices: list[tuple[str, str]],
+    seen: set[tuple[int, int]],
+    names: dict[int, FlowwowSubcategory],
+    taken: set[tuple[int, int]],
+    sub_category_id: int,
+    volume_grams: int,
+) -> None:
+    key = (sub_category_id, volume_grams)
+    if key in seen or key in taken or sub_category_id not in names:
+        return
+    subcategory = names[sub_category_id]
+    seen.add(key)
+    label = f"{subcategory.category_name} / {subcategory.name} — {volume_grams} g"
+    choices.append((f"{sub_category_id}:{volume_grams}", label))
+
+
+class FlowwowFillingAdminForm(forms.ModelForm):
+    title = forms.ChoiceField(label=_("Title"))
+
+    class Meta:
+        model = FlowwowFilling
+        fields = ["title", "modifiers"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["title"].choices = filling_title_choices(self.instance)
+
+
+class FlowwowSubcategoryTechCardAdminForm(forms.ModelForm):
+    pair = forms.ChoiceField(label=_("Subcategory"))
+
+    class Meta:
+        model = FlowwowSubcategoryTechCard
+        fields = ["tech_card"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["pair"].choices = subcategory_pair_choices(self.instance)
+        if self.instance.pk:
+            self.fields["pair"].initial = (
+                f"{self.instance.sub_category_id}:{self.instance.volume_grams}"
+            )
+
+    def save(self, commit=True):
+        sub_category_id, volume_grams = self.cleaned_data["pair"].split(":")
+        self.instance.sub_category_id = int(sub_category_id)
+        self.instance.volume_grams = int(volume_grams)
+        return super().save(commit)
 
 
 class WhatsAppNumberCheckForm(forms.Form):
@@ -312,13 +410,19 @@ class FlowwowProductAdmin(admin.ModelAdmin):
 
 @admin.register(FlowwowSubcategoryTechCard)
 class FlowwowSubcategoryTechCardAdmin(admin.ModelAdmin):
-    list_display = ["sub_category_id", "volume_grams", "tech_card"]
+    form = FlowwowSubcategoryTechCardAdminForm
+    list_display = ["subcategory_name", "volume_grams", "tech_card"]
     list_filter = ["sub_category_id"]
     autocomplete_fields = ["tech_card"]
+
+    @admin.display(description=_("Subcategory"))
+    def subcategory_name(self, obj: FlowwowSubcategoryTechCard) -> str:
+        return str(FlowwowSubcategory.objects.get(sub_category_id=obj.sub_category_id))
 
 
 @admin.register(FlowwowFilling)
 class FlowwowFillingAdmin(admin.ModelAdmin):
+    form = FlowwowFillingAdminForm
     list_display = ["title", "created_at"]
     search_fields = ["title"]
     list_filter = [ModifiersAssignedFilter]

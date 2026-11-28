@@ -620,6 +620,21 @@ class FlowwowProduct(models.Model):
         return self.name
 
 
+class FlowwowSubcategory(models.Model):
+    sub_category_id = models.IntegerField(unique=True, verbose_name=_("Subcategory id"))
+    category_id = models.IntegerField(verbose_name=_("Category id"))
+    category_name = models.CharField(max_length=255, verbose_name=_("Category"))
+    name = models.CharField(max_length=255, verbose_name=_("Name"))
+
+    class Meta:
+        ordering = ["category_name", "name", "sub_category_id"]
+        verbose_name = _("Flowwow subcategory")
+        verbose_name_plural = _("Flowwow subcategories")
+
+    def __str__(self) -> str:
+        return f"{self.category_name} / {self.name}"
+
+
 class FlowwowSubcategoryTechCard(models.Model):
     sub_category_id = models.IntegerField(verbose_name=_("Subcategory id"))
     volume_grams = models.PositiveIntegerField(verbose_name=_("Volume, grams"))
