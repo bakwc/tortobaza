@@ -144,6 +144,7 @@ export function OptionGroupsPanel() {
   const [draft, setDraft] = useState<GroupDraft | null>(null);
   const [activeOptionKey, setActiveOptionKey] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<{ id: number; key: string } | null>(null);
 
   const open = (row: SiteOptionGroup | null) => {
     groups.save.reset();
@@ -158,8 +159,6 @@ export function OptionGroupsPanel() {
     setDraft(null);
     setActiveOptionKey(null);
   };
-
-  const activeOption = draft?.options.find((row) => row.key === activeOptionKey) ?? null;
 
   return (
     <div className="grid gap-6">
@@ -418,6 +417,49 @@ export function OptionGroupsPanel() {
                 </Button>
               ) : null}
             </div>
+            {canEdit ? (
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  const target = uploadTargetRef.current;
+                  if (file && target) {
+                    uploadOptionImage.mutate(
+                      { id: target.id, file },
+                      {
+                        onSuccess: (saved) => {
+                          const savedOption = saved.options.find((item) => item.id === target.id);
+                          if (!savedOption?.image) return;
+                          setDraft((current) => {
+                            if (!current) return current;
+                            return {
+                              ...current,
+                              options: current.options.map((item) =>
+                                item.key === target.key
+                                  ? {
+                                      ...item,
+                                      image_src: savedOption.image?.original.src ?? null,
+                                      image_width: savedOption.image?.width ?? null,
+                                      image_height: savedOption.image?.height ?? null,
+                                      crop_left: savedOption.crop_left,
+                                      crop_top: savedOption.crop_top,
+                                      crop_size: savedOption.crop_size,
+                                    }
+                                  : item,
+                              ),
+                            };
+                          });
+                        },
+                      },
+                    );
+                  }
+                  event.target.value = "";
+                }}
+              />
+            ) : null}
             {draft.options.map((row, index) => (
               <div
                 key={row.key}
@@ -508,52 +550,14 @@ export function OptionGroupsPanel() {
                     </Button>
                     {row.id !== null ? (
                       <>
-                        <input
-                          ref={fileRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            if (file && row.id !== null) {
-                              uploadOptionImage.mutate(
-                                { id: row.id, file },
-                                {
-                                  onSuccess: (saved) => {
-                                    const savedOption = saved.options.find((item) => item.id === row.id);
-                                    if (!savedOption?.image) return;
-                                    setDraft((current) => {
-                                      if (!current) return current;
-                                      return {
-                                        ...current,
-                                        options: current.options.map((item) =>
-                                          item.key === row.key
-                                            ? {
-                                                ...item,
-                                                image_src: savedOption.image?.original.src ?? null,
-                                                image_width: savedOption.image?.width ?? null,
-                                                image_height: savedOption.image?.height ?? null,
-                                                crop_left: savedOption.crop_left,
-                                                crop_top: savedOption.crop_top,
-                                                crop_size: savedOption.crop_size,
-                                              }
-                                            : item,
-                                        ),
-                                      };
-                                    });
-                                  },
-                                },
-                              );
-                            }
-                            event.target.value = "";
-                          }}
-                        />
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           onClick={() => {
+                            if (row.id === null) return;
                             setActiveOptionKey(row.key);
+                            uploadTargetRef.current = { id: row.id, key: row.key };
                             fileRef.current?.click();
                           }}
                         >
@@ -607,43 +611,53 @@ export function OptionGroupsPanel() {
                     </Button>
                   </div>
                 ) : null}
+                {row.image_src && row.image_width && row.image_height ? (
+                  activeOptionKey === row.key ? (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {canEdit ? (
+                        <ImageCropEditor
+                          src={row.image_src}
+                          width={row.image_width}
+                          height={row.image_height}
+                          crop={cropFromOption(row)}
+                          onChange={(crop) =>
+                            setDraft({
+                              ...draft,
+                              options: draft.options.map((item) =>
+                                item.key === row.key
+                                  ? {
+                                      ...item,
+                                      crop_left: crop.crop_left,
+                                      crop_top: crop.crop_top,
+                                      crop_size: crop.crop_size,
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      ) : null}
+                      <OptionImagePreview
+                        src={row.image_src}
+                        width={row.image_width}
+                        height={row.image_height}
+                        crop={cropFromOption(row)}
+                        label={row.name_ru || row.name_en}
+                      />
+                    </div>
+                  ) : (
+                    <OptionImagePreview
+                      src={row.image_src}
+                      width={row.image_width}
+                      height={row.image_height}
+                      crop={cropFromOption(row)}
+                      label={row.name_ru || row.name_en}
+                    />
+                  )
+                ) : null}
               </div>
             ))}
           </div>
-          {activeOption?.image_src && activeOption.image_width && activeOption.image_height ? (
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              {canEdit ? (
-                <ImageCropEditor
-                  src={activeOption.image_src}
-                  width={activeOption.image_width}
-                  height={activeOption.image_height}
-                  crop={cropFromOption(activeOption)}
-                  onChange={(crop) =>
-                    setDraft({
-                      ...draft,
-                      options: draft.options.map((item) =>
-                        item.key === activeOption.key
-                          ? {
-                              ...item,
-                              crop_left: crop.crop_left,
-                              crop_top: crop.crop_top,
-                              crop_size: crop.crop_size,
-                            }
-                          : item,
-                      ),
-                    })
-                  }
-                />
-              ) : null}
-              <OptionImagePreview
-                src={activeOption.image_src}
-                width={activeOption.image_width}
-                height={activeOption.image_height}
-                crop={cropFromOption(activeOption)}
-                label={activeOption.name_ru || activeOption.name_en}
-              />
-            </div>
-          ) : null}
         </EditorDialog>
       ) : null}
     </div>
