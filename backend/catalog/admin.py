@@ -16,12 +16,21 @@ from catalog.models import (
 class OptionInline(admin.TabularInline):
     model = Option
     extra = 1
-    fields = ["name", "image", "price_delta", "weight_kg", "position", "is_active"]
+    fields = ["name", "image", "price_delta", "weight_kg", "tech_card", "position", "is_active"]
+    autocomplete_fields = ["tech_card"]
 
 
 @admin.register(OptionGroup)
 class OptionGroupAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "selection_type", "min_selections", "max_selections", "is_required_default"]
+    list_display = [
+        "name",
+        "slug",
+        "selection_type",
+        "min_selections",
+        "max_selections",
+        "is_required_default",
+        "affects_production",
+    ]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     inlines = [OptionInline]

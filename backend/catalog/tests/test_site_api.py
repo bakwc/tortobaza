@@ -284,6 +284,7 @@ class SiteApiTests(TestCase):
                 "weight_kg": None,
                 "is_active": True,
                 "modifiers": [biscuit.pk, filling.pk],
+                "tech_card": None,
             },
             format="json",
         )

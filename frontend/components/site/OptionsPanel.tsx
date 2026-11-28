@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
-import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
+import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import {
   LocaleTabs,
   TranslateFieldsButton,
@@ -16,7 +16,14 @@ import {
 } from "@/components/site/LocaleTabs";
 import { VisibilitySelect } from "@/components/site/VisibilitySelect";
 import { useCan } from "@/hooks/useAuth";
-import { matchesVisibility, useSiteModifiers, useSiteOptions, useSiteTranslation, useVisibility } from "@/hooks/useSite";
+import {
+  matchesVisibility,
+  useSiteModifiers,
+  useSiteOptions,
+  useSiteTechCards,
+  useSiteTranslation,
+  useVisibility,
+} from "@/hooks/useSite";
 import type { SiteModifierChoice, SiteOptionDetail, SiteTranslationBody } from "@/lib/api/site-schemas";
 
 type OptionDraft = {
@@ -28,6 +35,7 @@ type OptionDraft = {
   weight_kg: string;
   is_active: boolean;
   modifiers: number[];
+  tech_card: number | null;
 };
 
 function draftFrom(row: SiteOptionDetail): OptionDraft {
@@ -40,6 +48,7 @@ function draftFrom(row: SiteOptionDetail): OptionDraft {
     weight_kg: row.weight_kg ?? "",
     is_active: row.is_active,
     modifiers: row.modifiers,
+    tech_card: row.tech_card,
   };
 }
 
@@ -59,6 +68,7 @@ export function OptionsPanel() {
   const visibility = useVisibility();
   const options = useSiteOptions();
   const modifiers = useSiteModifiers();
+  const techCards = useSiteTechCards();
   const translate = useSiteTranslation();
   const [locale, setLocale] = useState<SiteLocale>("ru");
   const [draft, setDraft] = useState<OptionDraft | null>(null);
@@ -134,6 +144,7 @@ export function OptionsPanel() {
                   weight_kg: draft.weight_kg === "" ? null : draft.weight_kg,
                   is_active: draft.is_active,
                   modifiers: draft.modifiers,
+                  tech_card: draft.tech_card,
                 },
               },
               { onSuccess: close },
@@ -193,6 +204,21 @@ export function OptionsPanel() {
                 value={draft.weight_kg}
                 onChange={(event) => setDraft({ ...draft, weight_kg: event.target.value })}
               />
+            </Field>
+            <Field label={t("techCard")}>
+              <NativeSelect
+                value={draft.tech_card ?? ""}
+                onChange={(event) =>
+                  setDraft({ ...draft, tech_card: event.target.value === "" ? null : Number(event.target.value) })
+                }
+              >
+                <option value="">{t("noTechCard")}</option>
+                {(techCards.data ?? []).map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                  </option>
+                ))}
+              </NativeSelect>
             </Field>
             <div className="flex items-end pb-3">
               <CheckboxField

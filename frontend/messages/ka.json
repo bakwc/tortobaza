@@ -1573,6 +1573,7 @@
     "selectionSingle": "ერთი",
     "selectionMulti": "რამდენიმე",
     "requiredByDefault": "ნაგულისხმევად სავალდებულო",
+    "affectsProduction": "გავლენას ახდენს წარმოებაზე",
     "minSelections": "მინიმუმ",
     "maxSelections": "მаксимум",
     "options": "ოფციები",

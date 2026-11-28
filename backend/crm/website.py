@@ -172,29 +172,42 @@ def _build_description(order: Order) -> str:
 
 def _create_crm_items(order: Order, crm_order: CrmOrder) -> None:
     items = list(
-        order.items.select_related("product__tech_card").prefetch_related("options__option__modifiers")
+        order.items.select_related("product__tech_card").prefetch_related(
+            "options__option__group",
+            "options__option__tech_card",
+            "options__option__modifiers",
+        )
     )
     for position, item in enumerate(items):
         tech_card = item.product.tech_card if item.product is not None else None
-        needs_review = tech_card is None
+        needs_review = False
         weight_kg = None
+        option_tech_cards: dict[int, TechCard] = {}
         modifiers: list[tuple[Modifier, int]] = []
         for opt in item.options.all():
             option = opt.option
             if option is None:
                 needs_review = True
                 continue
+            if not option.group.affects_production:
+                continue
+            if option.tech_card is not None:
+                option_tech_cards[option.tech_card.pk] = option.tech_card
             if option.weight_kg is not None:
                 weight_kg = option.weight_kg
-                continue
             linked = list(option.modifiers.all())
-            if not linked:
+            if not linked and option.tech_card is None and option.weight_kg is None:
                 needs_review = True
                 continue
             for modifier in linked:
                 modifiers.append((modifier, 1))
+        if len(option_tech_cards) > 1:
+            tech_card = None
+        elif option_tech_cards:
+            tech_card = next(iter(option_tech_cards.values()))
         if tech_card is None:
             modifiers = []
+            needs_review = True
         elif tech_card.kind == TechCard.KIND_WEIGHTED and weight_kg is None:
             tech_card = None
             modifiers = []

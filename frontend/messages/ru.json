@@ -1572,6 +1572,7 @@
     "selectionSingle": "Один",
     "selectionMulti": "Несколько",
     "requiredByDefault": "Обязательная по умолчанию",
+    "affectsProduction": "Влияет на производство",
     "minSelections": "Минимум",
     "maxSelections": "Максимум",
     "options": "Опции",

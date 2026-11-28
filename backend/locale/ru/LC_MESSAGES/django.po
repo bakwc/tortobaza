@@ -232,6 +232,9 @@ msgstr "Тип выбора"
 msgid "Required by default"
 msgstr "Обязательно по умолчанию"
 
+msgid "Affects production"
+msgstr "Влияет на производство"
+
 msgid "Minimum selections"
 msgstr "Минимум вариантов"
 

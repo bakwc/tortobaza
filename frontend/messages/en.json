@@ -1572,6 +1572,7 @@
     "selectionSingle": "Single",
     "selectionMulti": "Multiple",
     "requiredByDefault": "Required by default",
+    "affectsProduction": "Affects production",
     "minSelections": "Minimum",
     "maxSelections": "Maximum",
     "options": "Options",

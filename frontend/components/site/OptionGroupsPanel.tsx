@@ -57,6 +57,7 @@ type GroupDraft = {
   name_ru: string;
   selection_type: "single" | "multi";
   is_required_default: boolean;
+  affects_production: boolean;
   min_selections: string;
   max_selections: string;
   options: OptionDraft[];
@@ -71,6 +72,7 @@ function draftFrom(row: SiteOptionGroup | null): GroupDraft {
       name_ru: "",
       selection_type: "single",
       is_required_default: true,
+      affects_production: true,
       min_selections: "0",
       max_selections: "1",
       options: [],
@@ -83,6 +85,7 @@ function draftFrom(row: SiteOptionGroup | null): GroupDraft {
     name_ru: row.name_ru,
     selection_type: row.selection_type,
     is_required_default: row.is_required_default,
+    affects_production: row.affects_production,
     min_selections: String(row.min_selections),
     max_selections: row.max_selections === null ? "" : String(row.max_selections),
     options: row.options.map((option) => ({
@@ -222,6 +225,7 @@ export function OptionGroupsPanel() {
                   name_ru: draft.name_ru,
                   selection_type: draft.selection_type,
                   is_required_default: draft.is_required_default,
+                  affects_production: draft.affects_production,
                   min_selections: Number(draft.min_selections || "0"),
                   max_selections: draft.max_selections === "" ? null : Number(draft.max_selections),
                   options: draft.options.map((row) => ({
@@ -344,6 +348,11 @@ export function OptionGroupsPanel() {
               label={t("requiredByDefault")}
               checked={draft.is_required_default}
               onChange={(checked) => setDraft({ ...draft, is_required_default: checked })}
+            />
+            <CheckboxField
+              label={t("affectsProduction")}
+              checked={draft.affects_production}
+              onChange={(checked) => setDraft({ ...draft, affects_production: checked })}
             />
             <Field label={t("minSelections")}>
               <Input

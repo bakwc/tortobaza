@@ -19,7 +19,7 @@ from catalog.models import (
 )
 from catalog.auto_translate import KIND_FIELDS, LANGUAGES, schedule_translation
 from catalog.responsive_urls import detail_image, list_primary_image
-from menu.models import Modifier, TechCard
+from menu.models import Modifier, ModifierGroup, TechCard
 
 
 def public_base_url(context: dict) -> str:
@@ -214,6 +214,7 @@ class SiteOptionGroupSerializer(serializers.ModelSerializer):
             "name_ru",
             "selection_type",
             "is_required_default",
+            "affects_production",
             "min_selections",
             "max_selections",
             "options",
@@ -512,7 +513,10 @@ class SiteTranslationRequestSerializer(serializers.Serializer):
 class SiteOptionSerializer(serializers.ModelSerializer):
     price_delta = serializers.DecimalField(max_digits=10, decimal_places=2)
     weight_kg = serializers.DecimalField(max_digits=6, decimal_places=3, allow_null=True)
-    modifiers = serializers.PrimaryKeyRelatedField(queryset=Modifier.objects.all(), many=True)
+    modifiers = serializers.PrimaryKeyRelatedField(
+        queryset=Modifier.objects.select_related("group"), many=True
+    )
+    tech_card = serializers.PrimaryKeyRelatedField(queryset=TechCard.objects.all(), allow_null=True)
     group = serializers.IntegerField(source="group_id", read_only=True)
     group_name_en = serializers.CharField(source="group.name_en", read_only=True)
     group_name_ka = serializers.CharField(source="group.name_ka", read_only=True)
@@ -533,6 +537,7 @@ class SiteOptionSerializer(serializers.ModelSerializer):
             "weight_kg",
             "is_active",
             "modifiers",
+            "tech_card",
         ]
         extra_kwargs = {
             "name_en": {"allow_blank": True},
@@ -542,6 +547,16 @@ class SiteOptionSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         require_filled(attrs, "name", "Name is required in at least one language.")
+        seen_groups: set[int] = set()
+        for modifier in attrs["modifiers"]:
+            group = modifier.group
+            if group.selection_type != ModifierGroup.SELECTION_SINGLE:
+                continue
+            if group.pk in seen_groups:
+                raise serializers.ValidationError(
+                    f"Only one modifier can be selected in group {group.name}."
+                )
+            seen_groups.add(group.pk)
         return attrs
 
     def update(self, instance, validated_data):

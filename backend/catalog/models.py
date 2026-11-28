@@ -167,6 +167,7 @@ class OptionGroup(models.Model):
         verbose_name=_("Selection type"),
     )
     is_required_default = models.BooleanField(default=True, verbose_name=_("Required by default"))
+    affects_production = models.BooleanField(default=True, verbose_name=_("Affects production"))
     min_selections = models.PositiveIntegerField(default=0, verbose_name=_("Minimum selections"))
     max_selections = models.PositiveIntegerField(
         null=True,
@@ -215,6 +216,14 @@ class Option(models.Model):
         blank=True,
         related_name="catalog_options",
         verbose_name=_("Modifiers"),
+    )
+    tech_card = models.ForeignKey(
+        "menu.TechCard",
+        related_name="catalog_options",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name=_("Tech card"),
     )
 
     class Meta:

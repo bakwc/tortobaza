@@ -110,6 +110,7 @@ export const SiteOptionDetailSchema = z.object({
   weight_kg: z.string().nullable(),
   is_active: z.boolean(),
   modifiers: z.array(z.number()),
+  tech_card: z.number().nullable(),
 });
 
 export const SiteModifierChoiceSchema = z.object({
@@ -127,6 +128,7 @@ export const SiteOptionGroupSchema = z.object({
   name_ru: blankString,
   selection_type: z.enum(["single", "multi"]),
   is_required_default: z.boolean(),
+  affects_production: z.boolean(),
   min_selections: z.number(),
   max_selections: z.number().nullable(),
   options: z.array(SiteOptionSchema),
