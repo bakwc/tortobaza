@@ -74,6 +74,12 @@ _STATUS_MARKS = {
     CrmOrder.STATUS_DELIVERED: "🔵",
 }
 
+_READY_PHOTO_APPROVED = {
+    CrmOrder.STATUS_CLIENT_APPROVED,
+    CrmOrder.STATUS_IN_DELIVERY,
+    CrmOrder.STATUS_DELIVERED,
+}
+
 
 def _esc(value: str) -> str:
     return html.escape(value, quote=False)
@@ -504,7 +510,7 @@ def _telegram_post(
 
 
 def _telegram_data(method: str, response: requests.Response) -> dict:
-    if method == "editMessageText" and response.status_code == 400:
+    if method in {"editMessageText", "editMessageCaption"} and response.status_code == 400:
         data = response.json()
         if "message is not modified" in data["description"]:
             return data
@@ -590,23 +596,33 @@ def _post_photos(order: CrmOrder, chat_id: str) -> list[dict]:
     return posted
 
 
+def _ready_photo_approved(order: CrmOrder) -> bool:
+    return order.status in _READY_PHOTO_APPROVED
+
+
 def _ready_photo_caption(order: CrmOrder) -> str:
-    lines = [f"#{order.pk} · {order.date.strftime('%d.%m.%Y')}"]
+    href = html.escape(_crm_order_view_url(order), quote=True)
+    label = f"#{order.pk} · {order.date.strftime('%d.%m.%Y')}"
+    lines = [f'<a href="{href}">{label}</a>']
+    if _ready_photo_approved(order):
+        lines.append("✅ одобрен")
+    else:
+        lines.append("🟡 ожидает одобрения")
     items = list(order.items.all())
     if items:
         for item in items:
             name = item.name.strip()
             if not name and item.tech_card_id is not None:
                 name = item.tech_card.name
-            title = name
+            title = _esc(name)
             if item.quantity > 1:
                 title = f"{item.quantity} × {title}"
             weight = _weight_kg_text(item.weight_kg)
             if weight is not None:
-                title = f"{title} · {weight} кг"
+                title = f"{title} · {_esc(weight)} кг"
             lines.append(title)
     else:
-        parts = [part for part in [order.filling.strip(), order.weight.strip()] if part]
+        parts = [_esc(part) for part in [order.filling.strip(), order.weight.strip()] if part]
         if parts:
             lines.append(" · ".join(parts))
     return "\n".join(lines)
@@ -616,7 +632,8 @@ def _post_ready_photos(
     images: list[CrmOrderReadyImage],
     chat_id: str,
     caption: str,
-) -> None:
+) -> int:
+    caption_message_id = 0
     for i in range(0, len(images), 10):
         chunk = images[i : i + 10]
         chunk_caption = caption if i == 0 else ""
@@ -626,7 +643,10 @@ def _post_ready_photos(
             fields = {"chat_id": chat_id}
             if chunk_caption:
                 fields["caption"] = chunk_caption
-            _telegram_multipart("sendPhoto", fields, [("photo", name, content)])
+                fields["parse_mode"] = "HTML"
+            result = _telegram_multipart("sendPhoto", fields, [("photo", name, content)])
+            if i == 0:
+                caption_message_id = result["result"]["message_id"]
             continue
         files = []
         media = []
@@ -637,12 +657,28 @@ def _post_ready_photos(
             item = {"type": "photo", "media": f"attach://{attach}"}
             if idx == 0 and chunk_caption:
                 item["caption"] = chunk_caption
+                item["parse_mode"] = "HTML"
             media.append(item)
-        _telegram_multipart(
+        result = _telegram_multipart(
             "sendMediaGroup",
             {"chat_id": chat_id, "media": json.dumps(media)},
             files,
         )
+        if i == 0:
+            caption_message_id = result["result"][0]["message_id"]
+    return caption_message_id
+
+
+def _edit_ready_photo_caption(chat_id: str, message_id: int, caption: str) -> None:
+    _telegram_json(
+        "editMessageCaption",
+        {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "caption": caption,
+            "parse_mode": "HTML",
+        },
+    )
 
 
 def sync_ready_photos_to_telegram(order_id: int) -> None:
@@ -656,16 +692,38 @@ def sync_ready_photos_to_telegram(order_id: int) -> None:
             .prefetch_related("ready_images", "items__tech_card")
             .get(pk=order_id)
         )
+        approved = _ready_photo_approved(order)
         if order.ready_photos_posted:
-            return
-        images = list(order.ready_images.all())
-        if not images:
-            return
-        list(order.items.all())
-        caption = _ready_photo_caption(order)
-    _post_ready_photos(images, chat_id, caption)
+            if order.ready_photos_message_id is None or order.ready_photos_approved == approved:
+                return
+            list(order.items.all())
+            caption = _ready_photo_caption(order)
+            message_id = order.ready_photos_message_id
+            images = None
+        else:
+            images = list(order.ready_images.all())
+            if not images:
+                return
+            list(order.items.all())
+            caption = _ready_photo_caption(order)
+            message_id = None
+    if message_id is not None:
+        _edit_ready_photo_caption(chat_id, message_id, caption)
+        order.ready_photos_approved = approved
+        order.save(update_fields=["ready_photos_approved", "updated_at"])
+        return
+    posted_id = _post_ready_photos(images, chat_id, caption)
     order.ready_photos_posted = True
-    order.save(update_fields=["ready_photos_posted", "updated_at"])
+    order.ready_photos_message_id = posted_id
+    order.ready_photos_approved = approved
+    order.save(
+        update_fields=[
+            "ready_photos_posted",
+            "ready_photos_message_id",
+            "ready_photos_approved",
+            "updated_at",
+        ]
+    )
 
 
 def _delete_media(chat_id: str, media: list) -> None:

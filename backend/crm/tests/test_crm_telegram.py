@@ -155,10 +155,22 @@ class CrmTelegramTests(TestCase):
             return FakeResponse({"ok": True, "result": {"message_id": mid}})
         chat_id = data["chat_id"]
         caption = data.get("caption", "")
-        if not caption and data.get("media"):
-            caption = json.loads(data["media"])[0].get("caption", "")
+        parse_mode = data.get("parse_mode", "")
+        if data.get("media"):
+            first = json.loads(data["media"])[0]
+            if not caption:
+                caption = first.get("caption", "")
+            if not parse_mode:
+                parse_mode = first.get("parse_mode", "")
         self.calls.append(
-            {"method": method, "payload": None, "chat_id": chat_id, "caption": caption, "timeout": timeout}
+            {
+                "method": method,
+                "payload": None,
+                "chat_id": chat_id,
+                "caption": caption,
+                "parse_mode": parse_mode,
+                "timeout": timeout,
+            }
         )
         if method == "sendMediaGroup":
             ids = [self._next_message_id() for _ in files]
@@ -1374,11 +1386,17 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(self.calls[0]["method"], "sendPhoto")
         self.assertEqual(self.calls[0]["chat_id"], "ready-chat")
         self.assertEqual(self.calls[0]["timeout"], (3, 15))
-        self.assertIn(f"#{order.id}", self.calls[0]["caption"])
+        self.assertEqual(self.calls[0]["parse_mode"], "HTML")
+        label = f"#{order.id} · {order.date.strftime('%d.%m.%Y')}"
+        href = f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.id}"
+        self.assertIn(f'<a href="{href}">{label}</a>', self.calls[0]["caption"])
+        self.assertIn("🟡 ожидает одобрения", self.calls[0]["caption"])
         self.assertIn("Медовик", self.calls[0]["caption"])
         self.assertIn("1.5 кг", self.calls[0]["caption"])
         order.refresh_from_db()
         self.assertTrue(order.ready_photos_posted)
+        self.assertIsNotNone(order.ready_photos_message_id)
+        self.assertFalse(order.ready_photos_approved)
         self.calls.clear()
         sync_ready_photos_to_telegram(order.id)
         self.assertEqual(self.calls, [])
@@ -1391,6 +1409,11 @@ class CrmTelegramTests(TestCase):
         sync_ready_photos_to_telegram(order.id)
         self.assertEqual(self.calls[0]["method"], "sendMediaGroup")
         self.assertEqual(self.calls[0]["chat_id"], "ready-chat")
+        self.assertEqual(self.calls[0]["parse_mode"], "HTML")
+        label = f"#{order.id} · {order.date.strftime('%d.%m.%Y')}"
+        href = f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.id}"
+        self.assertIn(f'<a href="{href}">{label}</a>', self.calls[0]["caption"])
+        self.assertIn("🟡 ожидает одобрения", self.calls[0]["caption"])
         self.assertIn("Vanilla", self.calls[0]["caption"])
         self.assertIn("2kg", self.calls[0]["caption"])
 
@@ -1401,3 +1424,37 @@ class CrmTelegramTests(TestCase):
         self.assertEqual(self.calls, [])
         order.refresh_from_db()
         self.assertFalse(order.ready_photos_posted)
+
+    @override_settings(TELEGRAM_READY_CAKES_CHAT_ID="ready-chat")
+    def test_ready_photos_caption_updates_when_approved(self):
+        order = self._create_order(delta=timedelta(hours=2))
+        CrmOrderReadyImage.objects.create(order=order, image=_jpeg("ready.jpg"), position=0)
+        sync_ready_photos_to_telegram(order.id)
+        order.refresh_from_db()
+        message_id = order.ready_photos_message_id
+        label = f"#{order.id} · {order.date.strftime('%d.%m.%Y')}"
+        href = f"https://sweet-chill.ge/ru/crm?date={order.date.isoformat()}&amp;order={order.id}"
+        link = f'<a href="{href}">{label}</a>'
+        self.calls.clear()
+        order.status = CrmOrder.STATUS_CLIENT_APPROVED
+        order.save(update_fields=["status"])
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["method"], "editMessageCaption")
+        self.assertEqual(self.calls[0]["payload"]["chat_id"], "ready-chat")
+        self.assertEqual(self.calls[0]["payload"]["message_id"], message_id)
+        self.assertEqual(self.calls[0]["payload"]["parse_mode"], "HTML")
+        self.assertIn(link, self.calls[0]["payload"]["caption"])
+        self.assertIn("✅ одобрен", self.calls[0]["payload"]["caption"])
+        self.assertNotIn("ожидает одобрения", self.calls[0]["payload"]["caption"])
+        order.refresh_from_db()
+        self.assertTrue(order.ready_photos_approved)
+        self.calls.clear()
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls, [])
+        order.status = CrmOrder.STATUS_IN_DELIVERY
+        order.save(update_fields=["status"])
+        sync_ready_photos_to_telegram(order.id)
+        self.assertEqual(self.calls, [])
+        order.refresh_from_db()
+        self.assertTrue(order.ready_photos_approved)

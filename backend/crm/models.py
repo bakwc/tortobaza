@@ -251,6 +251,12 @@ class CrmOrder(models.Model):
     )
     late_prep_closed = models.BooleanField(default=False, verbose_name=_("Late prep closed"))
     ready_photos_posted = models.BooleanField(default=False, verbose_name=_("Ready photos posted"))
+    ready_photos_message_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Ready photos message id"),
+    )
+    ready_photos_approved = models.BooleanField(default=False, verbose_name=_("Ready photos approved"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated at"))
 
