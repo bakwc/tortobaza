@@ -12,8 +12,8 @@ from rest_framework.views import APIView
 
 from accounts.models import chef_identity
 from accounts.permissions import SectionPermission
-from wishlist.models import Idea, Task, WishlistItem
-from wishlist.serializers import IdeaSerializer, TaskSerializer, WishlistItemSerializer
+from wishlist.models import Idea, Task, TaskComment, WishlistItem
+from wishlist.serializers import IdeaSerializer, TaskCommentSerializer, TaskSerializer, WishlistItemSerializer
 
 
 class WishlistListView(APIView):
@@ -91,7 +91,13 @@ class IdeaDetailView(APIView):
 
 
 def task_queryset():
-    return Task.objects.select_related("author__profile", "assignee__profile")
+    return Task.objects.select_related("author__profile", "assignee__profile").prefetch_related(
+        "comments__author__profile"
+    )
+
+
+def comment_queryset(task_pk: int):
+    return TaskComment.objects.filter(task_id=task_pk).select_related("author__profile")
 
 
 class TaskListView(APIView):
@@ -132,6 +138,37 @@ class TaskDetailView(APIView):
 
     def delete(self, request, pk: int):
         instance = get_object_or_404(task_queryset(), pk=pk)
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TaskCommentListView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("wishlist")]
+    serializer_class = TaskCommentSerializer
+
+    def post(self, request, pk: int):
+        task = get_object_or_404(task_queryset(), pk=pk)
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save(task=task, author=request.user)
+        return Response(self.serializer_class(instance).data, status=status.HTTP_201_CREATED)
+
+
+class TaskCommentDetailView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated, SectionPermission("wishlist")]
+    serializer_class = TaskCommentSerializer
+
+    def put(self, request, pk: int, comment_pk: int):
+        instance = get_object_or_404(comment_queryset(pk), pk=comment_pk)
+        serializer = self.serializer_class(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        return Response(self.serializer_class(instance).data)
+
+    def delete(self, request, pk: int, comment_pk: int):
+        instance = get_object_or_404(comment_queryset(pk), pk=comment_pk)
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from accounts.models import chef_identity
-from wishlist.models import Idea, Task, WishlistItem
+from wishlist.models import Idea, Task, TaskComment, WishlistItem
 
 
 class WishlistItemSerializer(serializers.ModelSerializer):
@@ -46,10 +46,23 @@ class IdeaSerializer(serializers.ModelSerializer):
         ]
 
 
+class TaskCommentSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TaskComment
+        fields = ["id", "body", "author", "author_name", "created_at"]
+        read_only_fields = ["author", "author_name", "created_at"]
+
+    def get_author_name(self, obj: TaskComment) -> str:
+        return chef_identity(obj.author)[0]
+
+
 class TaskSerializer(serializers.ModelSerializer):
     assignee = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_active=True))
     author_name = serializers.SerializerMethodField()
     assignee_name = serializers.SerializerMethodField()
+    comments = TaskCommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Task
@@ -64,8 +77,9 @@ class TaskSerializer(serializers.ModelSerializer):
             "assignee_name",
             "created_at",
             "completed_at",
+            "comments",
         ]
-        read_only_fields = ["author", "author_name", "assignee_name", "created_at", "completed_at"]
+        read_only_fields = ["author", "author_name", "assignee_name", "created_at", "completed_at", "comments"]
 
     def get_author_name(self, obj: Task) -> str:
         return chef_identity(obj.author)[0]

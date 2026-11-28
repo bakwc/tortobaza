@@ -2,16 +2,17 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { DndContext, PointerSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EditorDialog } from "@/components/menu/EditorDialog";
-import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { Card, CardTitle, CheckboxField, ErrorText, Field, NativeSelect, QueryState } from "@/components/menu/ui";
 import { WishlistShell } from "@/components/wishlist/WishlistShell";
 import { useCan } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
+import { formatCrmDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Task, TaskBody, TaskStatus } from "@/lib/api/types";
 
@@ -55,7 +56,17 @@ function isStatus(value: string): value is TaskStatus {
   return value === "todo" || value === "in_progress" || value === "done";
 }
 
-function TaskCard({ task, canDrag, onOpen }: { task: Task; canDrag: boolean; onOpen: () => void }) {
+function TaskCard({
+  task,
+  canDrag,
+  locale,
+  onOpen,
+}: {
+  task: Task;
+  canDrag: boolean;
+  locale: string;
+  onOpen: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     disabled: !canDrag,
@@ -74,7 +85,11 @@ function TaskCard({ task, canDrag, onOpen }: { task: Task; canDrag: boolean; onO
       )}
     >
       <div className="text-sm font-medium">{task.title}</div>
-      <div className="mt-1 text-xs text-[var(--ink)]/50">{task.author_name}</div>
+      <div className="mt-1 text-xs text-[var(--ink)]/50">
+        {task.author_name}
+        {" · "}
+        {formatCrmDateTime(task.created_at, locale)}
+      </div>
     </div>
   );
 }
@@ -97,6 +112,7 @@ function StatusCell({ id, children }: { id: string; children: ReactNode }) {
 export function TasksPanel() {
   const t = useTranslations("wishlist");
   const stock = useTranslations("stock");
+  const locale = useLocale();
   const canEdit = useCan("edit_wishlist");
   const [hideOldDone, setHideOldDone] = useState(true);
   const items = useTasks(hideOldDone);
@@ -104,6 +120,9 @@ export function TasksPanel() {
   const assignees = items.assignees.data ?? [];
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [commentText, setCommentText] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const editing = rows.find((row) => row.id === editingId) ?? null;
   const groups = useMemo(() => {
@@ -121,6 +140,11 @@ export function TasksPanel() {
   const open = (row: Task | null) => {
     items.save.reset();
     items.remove.reset();
+    items.saveComment.reset();
+    items.removeComment.reset();
+    setCommentText("");
+    setEditingCommentId(null);
+    setEditingCommentText("");
     setEditingId(row === null ? null : row.id);
     setDraft(draftFrom(row));
   };
@@ -182,7 +206,13 @@ export function TasksPanel() {
                           {group.tasks
                             .filter((task) => task.status === status)
                             .map((task) => (
-                              <TaskCard key={task.id} task={task} canDrag={canEdit} onOpen={() => open(task)} />
+                              <TaskCard
+                                key={task.id}
+                                task={task}
+                                canDrag={canEdit}
+                                locale={locale}
+                                onOpen={() => open(task)}
+                              />
                             ))}
                         </StatusCell>
                       ))}
@@ -253,9 +283,106 @@ export function TasksPanel() {
               </NativeSelect>
             </Field>
             {editing !== null ? (
-              <Field label={t("author")}>
-                <Input readOnly value={editing.author_name} />
-              </Field>
+              <>
+                <Field label={t("author")}>
+                  <Input readOnly value={editing.author_name} />
+                </Field>
+                <Field label={t("createdAt")}>
+                  <Input readOnly value={formatCrmDateTime(editing.created_at, locale)} />
+                </Field>
+                <div className="grid gap-3">
+                  <div className="text-sm font-medium">{t("comments")}</div>
+                  {editing.comments.length === 0 ? (
+                    <p className="text-sm text-[var(--muted-2)]">{t("noComments")}</p>
+                  ) : (
+                    editing.comments.map((comment) => (
+                      <div key={comment.id} className="rounded-xl border border-[var(--line)] px-3 py-2">
+                        {editingCommentId === comment.id ? (
+                          <div className="grid gap-2">
+                            <Textarea
+                              value={editingCommentText}
+                              onChange={(event) => setEditingCommentText(event.target.value)}
+                            />
+                            <div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={items.saveComment.isPending || editingCommentText.trim() === ""}
+                                onClick={() =>
+                                  items.saveComment.mutate(
+                                    {
+                                      taskId: editing.id,
+                                      commentId: comment.id,
+                                      body: { body: editingCommentText.trim() },
+                                    },
+                                    { onSuccess: () => setEditingCommentId(null) },
+                                  )
+                                }
+                              >
+                                {t("saveComment")}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+                            <div className="mt-1 text-xs text-[var(--ink)]/50">
+                              {comment.author_name}
+                              {" · "}
+                              {formatCrmDateTime(comment.created_at, locale)}
+                            </div>
+                            {canEdit ? (
+                              <div className="mt-2 flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingCommentId(comment.id);
+                                    setEditingCommentText(comment.body);
+                                  }}
+                                >
+                                  {t("editComment")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={items.removeComment.isPending}
+                                  onClick={() => items.removeComment.mutate({ taskId: editing.id, commentId: comment.id })}
+                                >
+                                  {t("deleteComment")}
+                                </Button>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    ))
+                  )}
+                  {canEdit ? (
+                    <div className="grid gap-2">
+                      <Textarea value={commentText} onChange={(event) => setCommentText(event.target.value)} />
+                      <div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={items.saveComment.isPending || commentText.trim() === ""}
+                          onClick={() =>
+                            items.saveComment.mutate(
+                              { taskId: editing.id, commentId: null, body: { body: commentText.trim() } },
+                              { onSuccess: () => setCommentText("") },
+                            )
+                          }
+                        >
+                          {t("addComment")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <ErrorText error={items.saveComment.error ?? items.removeComment.error} />
+                </div>
+              </>
             ) : null}
           </div>
         </EditorDialog>

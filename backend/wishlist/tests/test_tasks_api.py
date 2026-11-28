@@ -113,3 +113,92 @@ class TaskApiTests(TestCase):
             format="json",
         )
         self.assertEqual(created.status_code, 400)
+
+    def test_viewer_cannot_comment(self):
+        task = Task.objects.create(
+            title="Купить коробки",
+            author=self.editor,
+            assignee=self.viewer,
+        )
+        self.client.force_authenticate(user=self.viewer)
+        response = self.client.post(
+            f"/api/wishlist/tasks/{task.pk}/comments/",
+            {"body": "Завтра"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_comment_author_is_current_user(self):
+        self.client.force_authenticate(user=self.editor)
+        created = self.client.post("/api/wishlist/tasks/", self.body(), format="json")
+        pk = created.data["id"]
+        self.assertIsNotNone(created.data["created_at"])
+        response = self.client.post(
+            f"/api/wishlist/tasks/{pk}/comments/",
+            {"body": "Завтра"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["author"], self.editor.pk)
+        self.assertEqual(response.data["body"], "Завтра")
+        self.assertIsNotNone(response.data["created_at"])
+        listed = self.client.get("/api/wishlist/tasks/", {"hide_old_done": "false"})
+        row = next(item for item in listed.data if item["id"] == pk)
+        self.assertEqual(row["created_at"], created.data["created_at"])
+        self.assertEqual(len(row["comments"]), 1)
+        self.assertEqual(row["comments"][0]["id"], response.data["id"])
+        self.assertEqual(row["comments"][0]["author"], self.editor.pk)
+
+    def test_comment_update_keeps_author(self):
+        self.client.force_authenticate(user=self.editor)
+        created = self.client.post("/api/wishlist/tasks/", self.body(), format="json")
+        pk = created.data["id"]
+        comment = self.client.post(
+            f"/api/wishlist/tasks/{pk}/comments/",
+            {"body": "Завтра"},
+            format="json",
+        )
+        updated = self.client.put(
+            f"/api/wishlist/tasks/{pk}/comments/{comment.data['id']}/",
+            {"body": "Послезавтра"},
+            format="json",
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.data["body"], "Послезавтра")
+        self.assertEqual(updated.data["author"], self.editor.pk)
+        self.assertEqual(updated.data["created_at"], comment.data["created_at"])
+
+    def test_comment_delete(self):
+        self.client.force_authenticate(user=self.editor)
+        created = self.client.post("/api/wishlist/tasks/", self.body(), format="json")
+        pk = created.data["id"]
+        comment = self.client.post(
+            f"/api/wishlist/tasks/{pk}/comments/",
+            {"body": "Завтра"},
+            format="json",
+        )
+        deleted = self.client.delete(f"/api/wishlist/tasks/{pk}/comments/{comment.data['id']}/")
+        self.assertEqual(deleted.status_code, 204)
+        listed = self.client.get("/api/wishlist/tasks/", {"hide_old_done": "false"})
+        row = next(item for item in listed.data if item["id"] == pk)
+        self.assertEqual(row["comments"], [])
+
+    def test_blank_comment_rejected(self):
+        self.client.force_authenticate(user=self.editor)
+        created = self.client.post("/api/wishlist/tasks/", self.body(), format="json")
+        response = self.client.post(
+            f"/api/wishlist/tasks/{created.data['id']}/comments/",
+            {"body": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_comments_ordered_by_created_at(self):
+        self.client.force_authenticate(user=self.editor)
+        created = self.client.post("/api/wishlist/tasks/", self.body(), format="json")
+        pk = created.data["id"]
+        first = self.client.post(f"/api/wishlist/tasks/{pk}/comments/", {"body": "Первый"}, format="json")
+        second = self.client.post(f"/api/wishlist/tasks/{pk}/comments/", {"body": "Второй"}, format="json")
+        listed = self.client.get("/api/wishlist/tasks/", {"hide_old_done": "false"})
+        row = next(item for item in listed.data if item["id"] == pk)
+        self.assertEqual([item["id"] for item in row["comments"]], [first.data["id"], second.data["id"]])

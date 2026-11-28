@@ -204,6 +204,7 @@ import {
   WriteOffSchema,
   IdeaSchema,
   TaskAssigneeSchema,
+  TaskCommentSchema,
   TaskSchema,
   WishlistItemSchema,
   type ComponentRefBody,
@@ -254,6 +255,8 @@ import {
   type Task,
   type TaskAssignee,
   type TaskBody,
+  type TaskComment,
+  type TaskCommentBody,
   type WishlistItem,
   type WishlistItemBody,
 } from "./types";
@@ -437,6 +440,23 @@ export function endpoints(fetcher: Fetcher) {
       async list(hideOldDone: boolean): Promise<Task[]> {
         const raw = await fetcher<unknown>(`/api/wishlist/tasks/?hide_old_done=${hideOldDone}`);
         return parse(z.array(TaskSchema), raw);
+      },
+      async createComment(taskId: number, body: TaskCommentBody): Promise<TaskComment> {
+        const raw = await fetcher<unknown>(`/api/wishlist/tasks/${taskId}/comments/`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        return parse(TaskCommentSchema, raw);
+      },
+      async updateComment(taskId: number, commentId: number, body: TaskCommentBody): Promise<TaskComment> {
+        const raw = await fetcher<unknown>(`/api/wishlist/tasks/${taskId}/comments/${commentId}/`, {
+          method: "PUT",
+          body: JSON.stringify(body),
+        });
+        return parse(TaskCommentSchema, raw);
+      },
+      async removeComment(taskId: number, commentId: number): Promise<void> {
+        await fetcher<void>(`/api/wishlist/tasks/${taskId}/comments/${commentId}/`, { method: "DELETE" });
       },
     },
     taskAssignees: {

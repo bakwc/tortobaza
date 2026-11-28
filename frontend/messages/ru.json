@@ -1362,7 +1362,14 @@
     "statusTodo": "ToDo",
     "statusInProgress": "InProgress",
     "statusDone": "Done",
-    "hideOldDone": "Скрыть старые выполненные задачи"
+    "hideOldDone": "Скрыть старые выполненные задачи",
+    "createdAt": "Создана",
+    "comments": "Комментарии",
+    "addComment": "Добавить",
+    "editComment": "Редактировать",
+    "saveComment": "Сохранить",
+    "deleteComment": "Удалить",
+    "noComments": "Комментариев пока нет"
   },
   "employees": {
     "add": "Добавить",

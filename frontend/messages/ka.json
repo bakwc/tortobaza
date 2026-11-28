@@ -1362,7 +1362,14 @@
     "statusTodo": "ToDo",
     "statusInProgress": "InProgress",
     "statusDone": "Done",
-    "hideOldDone": "ძველი შესრულებული დავალებების დამალვა"
+    "hideOldDone": "ძველი შესრულებული დავალებების დამალვა",
+    "createdAt": "შექმნილია",
+    "comments": "კომენტარები",
+    "addComment": "დამატება",
+    "editComment": "რედაქტირება",
+    "saveComment": "შენახვა",
+    "deleteComment": "წაშლა",
+    "noComments": "კომენტარები ჯერ არ არის"
   },
   "employees": {
     "add": "დამატება",

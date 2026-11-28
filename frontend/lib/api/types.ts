@@ -2071,6 +2071,14 @@ export const IdeaSchema = z.object({
 
 export const TaskStatusSchema = z.enum(["todo", "in_progress", "done"]);
 
+export const TaskCommentSchema = z.object({
+  id: z.number(),
+  body: z.string(),
+  author: z.number(),
+  author_name: z.string(),
+  created_at: z.string(),
+});
+
 export const TaskSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -2082,6 +2090,7 @@ export const TaskSchema = z.object({
   assignee_name: z.string(),
   created_at: z.string(),
   completed_at: z.string().nullable(),
+  comments: z.array(TaskCommentSchema),
 });
 
 export const TaskAssigneeSchema = z.object({
@@ -2481,6 +2490,7 @@ export type WishlistItem = z.infer<typeof WishlistItemSchema>;
 export type IdeaStatus = z.infer<typeof IdeaStatusSchema>;
 export type Idea = z.infer<typeof IdeaSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+export type TaskComment = z.infer<typeof TaskCommentSchema>;
 export type Task = z.infer<typeof TaskSchema>;
 export type TaskAssignee = z.infer<typeof TaskAssigneeSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
@@ -2548,6 +2558,10 @@ export type TaskBody = {
   description: string;
   status: TaskStatus;
   assignee: number;
+};
+
+export type TaskCommentBody = {
+  body: string;
 };
 
 export type SupplyBody = {

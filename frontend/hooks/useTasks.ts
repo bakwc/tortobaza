@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { TaskBody } from "@/lib/api/types";
+import type { TaskBody, TaskCommentBody } from "@/lib/api/types";
 
 const key = ["tasks"] as const;
 
@@ -25,5 +25,25 @@ export function useTasks(hideOldDone: boolean) {
     mutationFn: (id: number) => api.tasks.remove(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
-  return { list, assignees, save, remove };
+  const saveComment = useMutation({
+    mutationFn: ({
+      taskId,
+      commentId,
+      body,
+    }: {
+      taskId: number;
+      commentId: number | null;
+      body: TaskCommentBody;
+    }) =>
+      commentId === null
+        ? api.tasks.createComment(taskId, body)
+        : api.tasks.updateComment(taskId, commentId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+  });
+  const removeComment = useMutation({
+    mutationFn: ({ taskId, commentId }: { taskId: number; commentId: number }) =>
+      api.tasks.removeComment(taskId, commentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+  });
+  return { list, assignees, save, remove, saveComment, removeComment };
 }

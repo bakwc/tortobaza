@@ -123,3 +123,28 @@ class Task(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class TaskComment(models.Model):
+    task = models.ForeignKey(
+        Task,
+        related_name="comments",
+        on_delete=models.CASCADE,
+        verbose_name=_("Task"),
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="task_comments",
+        on_delete=models.PROTECT,
+        verbose_name=_("Author"),
+    )
+    body = models.TextField(verbose_name=_("Comment"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        verbose_name = _("Task comment")
+        verbose_name_plural = _("Task comments")
+
+    def __str__(self) -> str:
+        return self.body

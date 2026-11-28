@@ -1362,7 +1362,14 @@
     "statusTodo": "ToDo",
     "statusInProgress": "InProgress",
     "statusDone": "Done",
-    "hideOldDone": "Hide old completed tasks"
+    "hideOldDone": "Hide old completed tasks",
+    "createdAt": "Created",
+    "comments": "Comments",
+    "addComment": "Add",
+    "editComment": "Edit",
+    "saveComment": "Save",
+    "deleteComment": "Delete",
+    "noComments": "No comments yet"
   },
   "employees": {
     "add": "Add",
