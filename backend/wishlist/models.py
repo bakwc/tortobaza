@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.db.models import Case, IntegerField, When
 from django.utils.translation import gettext_lazy as _
@@ -80,3 +81,45 @@ class Idea(models.Model):
 
     def __str__(self) -> str:
         return self.description
+
+
+class Task(models.Model):
+    STATUS_TODO = "todo"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_DONE = "done"
+    STATUS_CHOICES = [
+        (STATUS_TODO, _("To do")),
+        (STATUS_IN_PROGRESS, _("In progress")),
+        (STATUS_DONE, _("Done")),
+    ]
+
+    title = models.CharField(max_length=200, verbose_name=_("Title"))
+    description = models.TextField(blank=True, default="", verbose_name=_("Description"))
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default=STATUS_TODO,
+        verbose_name=_("Status"),
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="authored_tasks",
+        on_delete=models.PROTECT,
+        verbose_name=_("Author"),
+    )
+    assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="assigned_tasks",
+        on_delete=models.PROTECT,
+        verbose_name=_("Assignee"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created at"))
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Completed at"))
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = _("Task")
+        verbose_name_plural = _("Tasks")
+
+    def __str__(self) -> str:
+        return self.title

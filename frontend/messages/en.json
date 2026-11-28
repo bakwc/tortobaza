@@ -1352,7 +1352,17 @@
     "statusRejected": "Won't do",
     "statusSucceeded": "Checked, took off",
     "statusFailed": "Checked, didn't take off",
-    "empty": "Nothing yet"
+    "empty": "Nothing yet",
+    "tasks": "Tasks",
+    "newTask": "New task",
+    "taskTitle": "Title",
+    "taskDescription": "Description",
+    "author": "Author",
+    "assignee": "Assignee",
+    "statusTodo": "ToDo",
+    "statusInProgress": "InProgress",
+    "statusDone": "Done",
+    "hideOldDone": "Hide old completed tasks"
   },
   "employees": {
     "add": "Add",

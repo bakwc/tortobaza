@@ -2069,6 +2069,26 @@ export const IdeaSchema = z.object({
   status: IdeaStatusSchema,
 });
 
+export const TaskStatusSchema = z.enum(["todo", "in_progress", "done"]);
+
+export const TaskSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string(),
+  status: TaskStatusSchema,
+  assignee: z.number(),
+  author: z.number(),
+  author_name: z.string(),
+  assignee_name: z.string(),
+  created_at: z.string(),
+  completed_at: z.string().nullable(),
+});
+
+export const TaskAssigneeSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+
 export const SupplyTransactionSchema = z.object({
   id: z.number(),
   date: z.string(),
@@ -2460,6 +2480,9 @@ export type WriteOffReason = z.infer<typeof WriteOffReasonSchema>;
 export type WishlistItem = z.infer<typeof WishlistItemSchema>;
 export type IdeaStatus = z.infer<typeof IdeaStatusSchema>;
 export type Idea = z.infer<typeof IdeaSchema>;
+export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+export type Task = z.infer<typeof TaskSchema>;
+export type TaskAssignee = z.infer<typeof TaskAssigneeSchema>;
 export type SupplyTransaction = z.infer<typeof SupplyTransactionSchema>;
 export type SupplyReceipt = z.infer<typeof SupplyReceiptSchema>;
 export type Supply = z.infer<typeof SupplySchema>;
@@ -2518,6 +2541,13 @@ export type IdeaBody = {
   cost: string | null;
   duration_seconds: number | null;
   status: IdeaStatus;
+};
+
+export type TaskBody = {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  assignee: number;
 };
 
 export type SupplyBody = {

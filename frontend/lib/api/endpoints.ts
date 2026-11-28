@@ -203,6 +203,8 @@ import {
   WriteOffReasonSchema,
   WriteOffSchema,
   IdeaSchema,
+  TaskAssigneeSchema,
+  TaskSchema,
   WishlistItemSchema,
   type ComponentRefBody,
   type Ingredient,
@@ -249,6 +251,9 @@ import {
   type WriteOffReasonBody,
   type Idea,
   type IdeaBody,
+  type Task,
+  type TaskAssignee,
+  type TaskBody,
   type WishlistItem,
   type WishlistItemBody,
 } from "./types";
@@ -427,6 +432,19 @@ export function endpoints(fetcher: Fetcher) {
     ),
     wishlistItems: resource<WishlistItem, WishlistItemBody>(fetcher, "/api/wishlist/", WishlistItemSchema),
     ideas: resource<Idea, IdeaBody>(fetcher, "/api/wishlist/ideas/", IdeaSchema),
+    tasks: {
+      ...resource<Task, TaskBody>(fetcher, "/api/wishlist/tasks/", TaskSchema),
+      async list(hideOldDone: boolean): Promise<Task[]> {
+        const raw = await fetcher<unknown>(`/api/wishlist/tasks/?hide_old_done=${hideOldDone}`);
+        return parse(z.array(TaskSchema), raw);
+      },
+    },
+    taskAssignees: {
+      async list(): Promise<TaskAssignee[]> {
+        const raw = await fetcher<unknown>("/api/wishlist/tasks/assignees/");
+        return parse(z.array(TaskAssigneeSchema), raw);
+      },
+    },
     inventoryWriteOffs: resource<WriteOff, WriteOffBody>(fetcher, "/api/inventory/write-offs/", WriteOffSchema),
     inventoryCounts: resource<InventoryCount, InventoryCountBody>(
       fetcher,

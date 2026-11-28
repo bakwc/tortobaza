@@ -1352,7 +1352,17 @@
     "statusRejected": "არ გავაკეთებთ",
     "statusSucceeded": "შევამოწმეთ - აფრინდა",
     "statusFailed": "შევამოწმეთ - არ აფრინდა",
-    "empty": "ჯერ ცარიელია"
+    "empty": "ჯერ ცარიელია",
+    "tasks": "დავალებები",
+    "newTask": "ახალი დავალება",
+    "taskTitle": "სახელი",
+    "taskDescription": "აღწერა",
+    "author": "ავტორი",
+    "assignee": "შემსრულებელი",
+    "statusTodo": "ToDo",
+    "statusInProgress": "InProgress",
+    "statusDone": "Done",
+    "hideOldDone": "ძველი შესრულებული დავალებების დამალვა"
   },
   "employees": {
     "add": "დამატება",
