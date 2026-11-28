@@ -43,7 +43,9 @@ _LABEL_WORDS = {
 _DISTINCTIVE_LENGTH = 10
 _NICKNAME_LENGTH = 4
 _TOP_LIMIT = 20
-_SPAN_DAYS = (1, 7, 14, 30, 60, 90, 180, 365)
+_SPAN_DAYS = (7, 14, 30, 60, 90, 180, 365)
+_ACTIVE_DAYS = 90
+_SLEEPING_DAYS = 180
 _UNIT_RE = re.compile(
     r"(\d+(?:[.,]\d+)?)\s*"
     r"(килограммов|килограмма|килограмм|кг|kgs|kg|"
@@ -242,7 +244,7 @@ def clients(today: date) -> dict:
         "months": _movement(customers, months),
         "cohorts": _cohorts(customers, today),
         "gaps": _gaps(customers),
-        "tenure": _tenure(customers),
+        "statuses": _statuses(customers, today),
         "frequency": _frequency(customers),
         "top_revenue": [_customer_row(customer) for customer in _top_revenue(customers)],
         "top_orders": [_customer_row(customer) for customer in _top_orders(customers)],
@@ -838,15 +840,16 @@ def _cohorts(customers: dict[str, Customer], today: date) -> list[dict]:
     return rows
 
 
-def _span_bins(values: list[int], at_most: bool) -> list[dict]:
+def _span_bins(values: list[int]) -> list[dict]:
     total = Decimal(len(values))
     bins = []
+    lower = 0
     for days in _SPAN_DAYS:
-        if at_most:
-            count = sum(1 for value in values if value <= days)
-        else:
-            count = sum(1 for value in values if value >= days)
+        count = sum(1 for value in values if lower < value <= days)
         bins.append({"days": days, "count": count, "share": _share(Decimal(count), total)})
+        lower = days
+    count = sum(1 for value in values if value > lower)
+    bins.append({"days": None, "count": count, "share": _share(Decimal(count), total)})
     return bins
 
 
@@ -866,16 +869,22 @@ def _gaps(customers: dict[str, Customer]) -> dict:
     ]
     return {
         "median": None if not gaps else _num(Decimal(str(median(gaps)))),
-        "bins": _span_bins(gaps, True),
+        "bins": _span_bins(gaps),
     }
 
 
-def _tenure(customers: dict[str, Customer]) -> dict:
-    spans = [
-        (customer.orders[-1].date - customer.orders[0].date).days
-        for customer in _repeat(customers)
-    ]
-    return {"bins": _span_bins(spans, False)}
+def _statuses(customers: dict[str, Customer], today: date) -> dict:
+    idle = [(today - customer.orders[-1].date).days for customer in _repeat(customers)]
+    total = Decimal(len(idle))
+    groups = {
+        "active": sum(1 for days in idle if days <= _ACTIVE_DAYS),
+        "sleeping": sum(1 for days in idle if _ACTIVE_DAYS < days <= _SLEEPING_DAYS),
+        "lost": sum(1 for days in idle if days > _SLEEPING_DAYS),
+    }
+    return {
+        name: {"clients": count, "share": _share(Decimal(count), total)}
+        for name, count in groups.items()
+    }
 
 
 def _frequency(customers: dict[str, Customer]) -> dict:

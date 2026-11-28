@@ -23,7 +23,6 @@ import {
 } from "@/components/analytics/widgets";
 
 const SPAN_KEY = {
-  1: "span1",
   7: "span7",
   14: "span14",
   30: "span30",
@@ -40,9 +39,13 @@ function returnShare(part: number, total: number): number | null {
   return Math.round((part / total) * 100);
 }
 
-function spanRows(bins: AnalyticsClients["gaps"]["bins"], label: (days: SpanDays) => string) {
+function spanKey(days: number | null) {
+  return days === null ? "spanOver" : SPAN_KEY[days as SpanDays];
+}
+
+function spanRows(bins: AnalyticsClients["gaps"]["bins"], label: (days: number | null) => string) {
   return bins.map((bin) => ({
-    label: label(bin.days as SpanDays),
+    label: label(bin.days),
     share: Math.round(Number(bin.share) * 100),
     count: bin.count,
   }));
@@ -93,6 +96,8 @@ export function ClientsPanel() {
           share: Math.round((Number(report.repeat_revenue) / Number(report.known_revenue)) * 100),
         });
   const header = report.cohorts[0];
+  const statusHint = (share: string | null) =>
+    share === null ? null : t("statusShare", { share: Math.round(Number(share) * 100) });
 
   return (
     <div className="grid gap-6">
@@ -191,22 +196,35 @@ export function ClientsPanel() {
             <Note>{t("gapNote")}</Note>
             <Note>{t("gapMedian", { days: formatAmount(report.gaps.median) })}</Note>
             <SpanChart
-              rows={spanRows(report.gaps.bins, (days) => t(SPAN_KEY[days]))}
+              rows={spanRows(report.gaps.bins, (days) => t(spanKey(days)))}
               color={COLOR_REVENUE}
             />
           </>
         )}
       </Section>
-      <Section title={t("tenure")}>
-        {report.gaps.median === null ? (
+      <Section title={t("statuses")}>
+        {report.repeat_clients === 0 ? (
           <Note>{t("gapEmpty")}</Note>
         ) : (
           <>
-            <Note>{t("tenureNote")}</Note>
-            <SpanChart
-              rows={spanRows(report.tenure.bins, (days) => t(SPAN_KEY[days]))}
-              color={COLOR_ORDERS}
-            />
+            <Note>{t("statusesNote")}</Note>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Metric
+                label={t("statusActive")}
+                value={formatAmount(report.statuses.active.clients)}
+                hint={statusHint(report.statuses.active.share)}
+              />
+              <Metric
+                label={t("statusSleeping")}
+                value={formatAmount(report.statuses.sleeping.clients)}
+                hint={statusHint(report.statuses.sleeping.share)}
+              />
+              <Metric
+                label={t("statusLost")}
+                value={formatAmount(report.statuses.lost.clients)}
+                hint={statusHint(report.statuses.lost.share)}
+              />
+            </div>
           </>
         )}
       </Section>
