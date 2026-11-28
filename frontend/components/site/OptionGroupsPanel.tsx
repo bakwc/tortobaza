@@ -612,40 +612,30 @@ export function OptionGroupsPanel() {
                   </div>
                 ) : null}
                 {row.image_src && row.image_width && row.image_height ? (
-                  activeOptionKey === row.key ? (
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      {canEdit ? (
-                        <ImageCropEditor
-                          src={row.image_src}
-                          width={row.image_width}
-                          height={row.image_height}
-                          crop={cropFromOption(row)}
-                          onChange={(crop) =>
-                            setDraft({
-                              ...draft,
-                              options: draft.options.map((item) =>
-                                item.key === row.key
-                                  ? {
-                                      ...item,
-                                      crop_left: crop.crop_left,
-                                      crop_top: crop.crop_top,
-                                      crop_size: crop.crop_size,
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
-                      ) : null}
-                      <OptionImagePreview
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {canEdit ? (
+                      <ImageCropEditor
                         src={row.image_src}
                         width={row.image_width}
                         height={row.image_height}
                         crop={cropFromOption(row)}
-                        label={row.name_ru || row.name_en}
+                        onChange={(crop) =>
+                          setDraft({
+                            ...draft,
+                            options: draft.options.map((item) =>
+                              item.key === row.key
+                                ? {
+                                    ...item,
+                                    crop_left: crop.crop_left,
+                                    crop_top: crop.crop_top,
+                                    crop_size: crop.crop_size,
+                                  }
+                                : item,
+                            ),
+                          })
+                        }
                       />
-                    </div>
-                  ) : (
+                    ) : null}
                     <OptionImagePreview
                       src={row.image_src}
                       width={row.image_width}
@@ -653,7 +643,7 @@ export function OptionGroupsPanel() {
                       crop={cropFromOption(row)}
                       label={row.name_ru || row.name_en}
                     />
-                  )
+                  </div>
                 ) : null}
               </div>
             ))}
