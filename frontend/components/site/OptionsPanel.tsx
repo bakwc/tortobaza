@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
-import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { Card, CardTitle, CheckboxField, Field, QueryState } from "@/components/menu/ui";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import {
   LocaleTabs,
   TranslateFieldsButton,
@@ -206,19 +207,21 @@ export function OptionsPanel() {
               />
             </Field>
             <Field label={t("techCard")}>
-              <NativeSelect
-                value={draft.tech_card ?? ""}
-                onChange={(event) =>
-                  setDraft({ ...draft, tech_card: event.target.value === "" ? null : Number(event.target.value) })
-                }
-              >
-                <option value="">{t("noTechCard")}</option>
-                {(techCards.data ?? []).map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-              </NativeSelect>
+              <SearchSelect
+                options={[
+                  { value: "", label: t("noTechCard") },
+                  ...(techCards.data ?? []).map((row) => ({ value: String(row.id), label: row.name })),
+                ]}
+                value={draft.tech_card === null ? "" : String(draft.tech_card)}
+                onChange={(value) => setDraft({ ...draft, tech_card: value === "" ? null : Number(value) })}
+                placeholder={t("noTechCard")}
+                required={false}
+                name={null}
+                className=""
+                onCreate={null}
+                createPending={false}
+                keepSelectedOnDigit={false}
+              />
             </Field>
             <div className="flex items-end pb-3">
               <CheckboxField

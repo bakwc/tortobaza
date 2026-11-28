@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EditorDialog } from "@/components/menu/EditorDialog";
 import { Card, CardTitle, CheckboxField, Field, NativeSelect, QueryState } from "@/components/menu/ui";
+import { SearchSelect } from "@/components/menu/SearchSelect";
 import { ImageCropEditor } from "@/components/site/ImageCropEditor";
 import { OptionImagePreview } from "@/components/site/ImageSitePreview";
 import {
@@ -126,6 +127,10 @@ export function OptionGroupsPanel() {
   const visibility = useVisibility();
   const groups = useSiteOptionGroups();
   const techCards = useSiteTechCards();
+  const techCardOptions = [
+    { value: "", label: t("noTechCard") },
+    ...(techCards.data ?? []).map((card) => ({ value: String(card.id), label: card.name })),
+  ];
   const visibleGroups = (groups.list.data ?? []).flatMap((row) => {
     const options = row.options.filter((option) => matchesVisibility(option.is_active, visibility));
     if (visibility !== "all" && options.length === 0) return [];
@@ -473,29 +478,27 @@ export function OptionGroupsPanel() {
                     />
                   </Field>
                   <Field label={t("techCard")}>
-                    <NativeSelect
-                      value={row.tech_card ?? ""}
-                      onChange={(event) =>
+                    <SearchSelect
+                      options={techCardOptions}
+                      value={row.tech_card === null ? "" : String(row.tech_card)}
+                      onChange={(value) =>
                         setDraft({
                           ...draft,
                           options: draft.options.map((item) =>
                             item.key === row.key
-                              ? {
-                                  ...item,
-                                  tech_card: event.target.value === "" ? null : Number(event.target.value),
-                                }
+                              ? { ...item, tech_card: value === "" ? null : Number(value) }
                               : item,
                           ),
                         })
                       }
-                    >
-                      <option value="">{t("noTechCard")}</option>
-                      {(techCards.data ?? []).map((card) => (
-                        <option key={card.id} value={card.id}>
-                          {card.name}
-                        </option>
-                      ))}
-                    </NativeSelect>
+                      placeholder={t("noTechCard")}
+                      required={false}
+                      name={null}
+                      className=""
+                      onCreate={null}
+                      createPending={false}
+                      keepSelectedOnDigit={false}
+                    />
                   </Field>
                 </div>
                 {canEdit ? (
